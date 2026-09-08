@@ -27,13 +27,15 @@
 // n'ajoute AUCUN segment d'URL : `/integrations` reste
 // `/integrations`, sa canonique ne bouge pas.
 //
-// -- CE QUI N'EST PAS TRADUIT, ET C'EST DIT À L'ÉCRAN -----------------
+// -- SES SIX PAGES FILLES SONT TRADUITES AUSSI (8 septembre) ----------
 //
-// Les six pages détaillées sont en français. Leur CARTE garde donc son
-// titre français (règle du chrome, 8 septembre : un libellé passe en
-// anglais uniquement quand la page derrière est lisible en anglais), et
-// `outilsLangueDesPages` l'annonce au lieu de laisser la surprise au
-// clic. Cette ligne disparaît le jour où ces six pages ont leur texte.
+// Cette note disait "les six pages détaillées sont en français", et la
+// carte de chacune gardait son titre français pour ne pas promettre de
+// l'anglais derrière le clic (règle du chrome). C'est fait : leur texte
+// vit dans `lib/site/outils/*.ts`, une entrée par langue, donc
+// `outilsLangueDesPages` vaut `null` et le bloc ci dessous ne rend
+// plus rien. Il RESTE, parce que c'est lui qui reparlera le jour où une
+// septième page arrivera sans son anglais.
 
 import Link from "next/link";
 import type { Metadata } from "next";

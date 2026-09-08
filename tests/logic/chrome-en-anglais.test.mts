@@ -62,8 +62,8 @@ const RACINE = process.cwd();
  */
 function source(chemin: string): string {
   return readFileSync(join(RACINE, chemin), "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/^\s*\/\/.*$/gm, " ");
+    .replace(/^\s*\/\/.*$/gm, " ")
+    .replace(/\/\*[\s\S]*?\*\//g, " ");
 }
 
 /** Tous les liens du chrome, menu, pied, et les deux boutons. */

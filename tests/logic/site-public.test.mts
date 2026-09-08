@@ -263,8 +263,8 @@ describe("les pages légales sont déclarées sur le domaine de vente", () => {
     "utf8",
   );
   const sansCommentaires = src
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
+    .replace(/^\s*\/\/.*$/gm, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
 
   test("les chemins légaux sont DÉRIVÉS, jamais recopiés à la main", () => {
     // La source est `ADRESSES_LEGALES_FR`, qui porte la page canonique

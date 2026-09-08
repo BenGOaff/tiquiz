@@ -53,7 +53,7 @@ const lire = (p: string) => fs.readFileSync(path.join(process.cwd(), p), "utf8")
  * semaine.
  */
 const sansCommentaires = (src: string) =>
-  src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+  src.replace(/(^|[^:])\/\/.*$/gm, "$1").replace(/\/\*[\s\S]*?\*\//g, "");
 
 /** Les couples (générateur, bloc) qui existent vraiment. */
 const COUPLES: { id: GenerateurId; bloc: Bloc }[] = GENERATEURS.flatMap((id) =>

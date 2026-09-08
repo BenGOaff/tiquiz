@@ -67,8 +67,8 @@ function nombres(s: string): string[] {
 /** La source de la page, sans ses commentaires : ils CITENT les motifs. */
 function sourcePage(): string {
   return readFileSync(cheminPageDuSite(CHEMIN_A_PROPOS), "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/^\s*\/\/.*$/gm, " ");
+    .replace(/^\s*\/\/.*$/gm, " ")
+    .replace(/\/\*[\s\S]*?\*\//g, " ");
 }
 
 describe("la page auteur existe dans les deux langues", () => {

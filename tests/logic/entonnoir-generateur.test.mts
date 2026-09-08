@@ -267,8 +267,8 @@ test("le filtre de la liste montre ceux qui sont entrés par le générateur", (
  *  présence tombe sur sa propre explication (leçon du 2 septembre). */
 function sansCommentaires(chemin: string): string {
   return readFileSync(chemin, "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/^\s*\/\/.*$/gm, " ");
+    .replace(/^\s*\/\/.*$/gm, " ")
+    .replace(/\/\*[\s\S]*?\*\//g, " ");
 }
 
 test("une lecture ratée ne fabrique PAS un ensemble vide", () => {

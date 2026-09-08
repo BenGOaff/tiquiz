@@ -107,8 +107,8 @@ test("aucune sortie du middleware ne rend une reponse sans poseSa", () => {
   // présence de quelque chose dans du code, donc il tomberait sinon sur
   // sa propre explication (règle du 3 septembre).
   const code = middleware
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/^\s*\/\/.*$/gm, " ");
+    .replace(/^\s*\/\/.*$/gm, " ")
+    .replace(/\/\*[\s\S]*?\*\//g, " ");
 
   // Le corps de `poseSa` rend `res` sans s'appeler lui même : c'est la
   // seule exception, et elle est bornée à sa propre fonction.

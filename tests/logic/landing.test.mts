@@ -78,7 +78,7 @@ function texteDuBloc(nom: string): string {
 
 const SOURCE = racine("lib/site/landing.ts");
 /** Le module SANS ses commentaires : sinon un contrôle tombe sur sa propre explication. */
-const CODE = SOURCE.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, " ");
+const CODE = SOURCE.replace(/^\s*\/\/.*$/gm, " ").replace(/\/\*[\s\S]*?\*\//g, " ");
 
 // LA LANDING EST TROIS FICHIERS DEPUIS LE 6 SEPTEMBRE, et ce filet les
 // lit tous les trois. Bene : "/ = la landing courte, /tarifs = la vraie
@@ -90,7 +90,7 @@ const CODE = SOURCE.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, "
 // la presence ou l'ORDRE de quelque chose dans un fichier tombe sinon
 // sur sa propre explication (leçon du 3 septembre, trois fois).
 const sansCommentaires = (t: string) =>
-  t.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, " ").replace(/^\s*\/\/.*$/gm, " ");
+  t.replace(/^\s*\/\/.*$/gm, " ").replace(/\{?\/\*[\s\S]*?\*\/\}?/g, " ");
 const PAGE_ACCUEIL = sansCommentaires(racine("app/(site)/apercu-landing-8f2c9d41/page.tsx"));
 const CHEMIN_TARIFS = cheminPageDuSite("/tarifs");
 const PAGE_TARIFS = sansCommentaires(racine(CHEMIN_TARIFS));

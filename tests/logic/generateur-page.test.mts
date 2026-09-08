@@ -49,8 +49,8 @@ const PAGE = join(RACINE, cheminPageDuSite(CHEMIN_GENERATEUR));
  *  explication (faute refaite cinq fois dans ce dépôt). */
 function sansCommentaires(chemin: string): string {
   return readFileSync(chemin, "utf-8")
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/^\s*\/\/.*$/gm, " ");
+    .replace(/^\s*\/\/.*$/gm, " ")
+    .replace(/\/\*[\s\S]*?\*\//g, " ");
 }
 
 test("le nombre de quiz annoncé est celui que le compteur applique", () => {

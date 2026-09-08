@@ -162,8 +162,8 @@ describe("L'écran suit le parcours", () => {
   // explication écrite juste au dessus. C'est la faute déjà payée le
   // 2 septembre sur la reprise du quiz de la page de vente.
   const src = lire("app/generateurs/[generateur]/GenerateurClient.tsx")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
+    .replace(/^\s*\/\/.*$/gm, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
 
   test("chaque section est gatée sur son étape", () => {
     for (const e of ["projet", "reglages", "pistes", "contenus"]) {
@@ -434,8 +434,8 @@ describe("Les séquences fixes", () => {
 describe("les pistes : le lancement vit au pied des réglages", () => {
   const ecran = lire("app/generateurs/[generateur]/GenerateurClient.tsx");
   const sansCommentaires = ecran
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
+    .replace(/^\s*\/\/.*$/gm, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
 
   test("obtenir des pistes fait AVANCER, ça ne remplit pas l'écran courant", () => {
     const debut = sansCommentaires.indexOf("async function demanderPistes");
@@ -528,7 +528,7 @@ describe("les pistes : le lancement vit au pied des réglages", () => {
 
 describe("l'écran de production suit le labo de l'Atelier", () => {
   const ecran = lire("app/generateurs/[generateur]/GenerateurClient.tsx");
-  const src = ecran.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const src = ecran.replace(/^\s*\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
 
   test("une grille de dossiers, et un seul document ouvert à la fois", () => {
     assert.match(src, /ouvert === null/, "la grille de dossiers a disparu");
@@ -585,7 +585,7 @@ describe("l'écran de production suit le labo de l'Atelier", () => {
       "app/generateurs/[generateur]/GenerateurClient.tsx",
       "app/generateurs/mes-contenus/MesContenusClient.tsx",
     ]) {
-      const code = lire(f).replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+      const code = lire(f).replace(/^\s*\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
       assert.ok(!code.includes("hasStructure"), `${f} branche encore sur hasStructure`);
       assert.match(code, /<BonusDocument doc=\{parseBonusDoc\(markdown\)\} \/>/, f);
     }

@@ -26,7 +26,7 @@ const racine = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 // la presence de quelque chose dans un fichier tombe sinon sur sa propre
 // explication (leçon du 3 septembre, trois fois).
 const sansCommentaires = (t: string) =>
-  t.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, " ").replace(/^\s*\/\/.*$/gm, " ");
+  t.replace(/^\s*\/\/.*$/gm, " ").replace(/\{?\/\*[\s\S]*?\*\/\}?/g, " ");
 
 const VIEWER = sansCommentaires(racine("components/quiz/PublicQuizClient.tsx"));
 const PAGE_QUIZ = sansCommentaires(racine("app/q/[quizId]/page.tsx"));

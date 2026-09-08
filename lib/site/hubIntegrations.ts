@@ -217,16 +217,20 @@ const EN: TexteHub = {
   outilsTitre: "Pick your tool",
   outilsEt: "and",
   zapierResume: "What the free plan really covers, and the point where you have to start paying.",
-  // LES SIX PAGES DÉTAILLÉES SONT EN FRANÇAIS, ET ON LE DIT.
+  // LES SIX PAGES DÉTAILLÉES ONT LEUR ANGLAIS : PLUS RIEN À ANNONCER.
   //
-  // C'est la règle du chrome (8 septembre) : un libellé passe en anglais
-  // uniquement quand la page derrière est vraiment lisible en anglais.
-  // Ces six cartes gardent donc leur titre français, et cette ligne
-  // explique pourquoi au lieu de laisser la surprise au clic.
+  // Cette ligne a existé une demi-journée, et c'était sa raison d'être :
+  // tant que les pages derrière les cartes étaient en français, la
+  // règle du chrome (8 septembre) gardait leur titre en français et
+  // cette phrase disait pourquoi, au lieu de laisser la surprise au
+  // clic. Leur texte vit maintenant dans `lib/site/outils/*.ts`, une
+  // entrée par langue, donc la phrase mentirait.
   //
-  // Elle disparaît le jour où les six pages ont leur texte anglais :
-  // c'est ce jour là, et pas avant, que le titre des cartes se traduit.
-  outilsLangueDesPages: "The detailed pages below are in French for now.",
+  // Le garde-fou s'auto-corrige et il a fait exactement son travail :
+  // `hub-en-anglais.test.mts` exige la ligne tant qu'AUCUNE fille n'est
+  // traduite, exige qu'elle DISPARAISSE quand les six le sont, et
+  // refuse l'entre deux ("2 pages filles sur 6 sont traduites").
+  outilsLangueDesPages: null,
   avantTitre: "Before you start, whichever tool you pick",
   avantCorps:
     "The API key lives in Systeme.io, under Settings, API. It is what lets an outside tool create a contact and set a tag. It opens your whole contact list: treat it like a password, and only paste it into a tool you trust.",

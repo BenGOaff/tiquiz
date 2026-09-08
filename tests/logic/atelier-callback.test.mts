@@ -86,8 +86,8 @@ test("l'ecran de consentement ne dit plus FormaQuiz", () => {
   // l'élève lit à l'écran.
   const visible = src
     .replace(/^import .*$/gm, "")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
+    .replace(/^\s*\/\/.*$/gm, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
 
   assert.ok(
     !/formaquiz/i.test(visible),

@@ -114,14 +114,15 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   },
   {
     chemin: "/integrations",
-    // LE HUB EST BILINGUE, SES SIX PAGES FILLES NON.
+    // LE HUB ET SES SIX PAGES FILLES SONT BILINGUES (8 septembre).
     //
-    // On ne déclare que les langues qu'une page a VRAIMENT (règle du
-    // 8 septembre) : `contenuHub("en")` porte son texte entier, alors
-    // que les six pages d'outil sont encore en français. Les déclarer
-    // ici mettrait `/en/integrations/tally-systeme-io` dans le sitemap
-    // ET dans ses `hreflang`, et Google y trouverait du français sous
-    // une adresse anglaise.
+    // Cette note disait "ses six pages filles NON", et c'était vrai le
+    // matin : leur texte vit maintenant dans `lib/site/outils/*.ts`, une
+    // entrée par langue. On ne déclare que les langues qu'une page a
+    // VRAIMENT, et c'est la règle qui compte : déclarer une langue
+    // absente mettrait l'adresse anglaise dans le sitemap ET dans ses
+    // `hreflang`, et Google y trouverait du français, donc jugerait
+    // l'anglais sur du contenu dupliqué.
     langues: LANGUES_PUBLIQUES,
     titre: "Connecter ses outils à Systeme.io",
     resume:
@@ -130,6 +131,7 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   },
   {
     chemin: "/integrations/zapier-systeme-io",
+    langues: LANGUES_PUBLIQUES,
     titre: "Zapier et Systeme.io",
     resume:
       "L'application Systeme.io est accessible dès le plan gratuit de Zapier. Les actions disponibles, les limites chiffrées, et le moment où le plan gratuit ne suffit plus.",
@@ -137,6 +139,7 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   },
   {
     chemin: "/integrations/tally-systeme-io",
+    langues: LANGUES_PUBLIQUES,
     titre: "Connecter Tally à Systeme.io",
     resume:
       "Tally n'a pas d'intégration Systeme.io. Les trois méthodes (webhook et code, Zapier, Make), ce que chacune coûte, et le piège de l'identifiant de tag.",
@@ -144,6 +147,7 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   },
   {
     chemin: "/integrations/typeform-systeme-io",
+    langues: LANGUES_PUBLIQUES,
     titre: "Connecter Typeform à Systeme.io",
     resume:
       "Typeform n'a pas d'intégration Systeme.io native. La méthode avec Zapier, les deux pièges de configuration, et le coût réel des deux abonnements.",
@@ -151,6 +155,7 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   },
   {
     chemin: "/integrations/google-forms-systeme-io",
+    langues: LANGUES_PUBLIQUES,
     titre: "Connecter Google Forms à Systeme.io",
     resume:
       "Afficher un Google Forms dans une page Systeme.io est possible, mais il n'envoie rien dans les contacts. Zapier lit la feuille de calcul liée, pas le formulaire.",
@@ -158,6 +163,7 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   },
   {
     chemin: "/integrations/interact-systeme-io",
+    langues: LANGUES_PUBLIQUES,
     titre: "Connecter Interact à Systeme.io",
     resume:
       "La documentation d'Interact demande un compte Zapier Pro, un tag créé à la main dans Systeme.io par résultat de quiz, et un Zap par résultat. Les citations et leur source.",
@@ -165,6 +171,7 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   },
   {
     chemin: "/integrations/jotform-systeme-io",
+    langues: LANGUES_PUBLIQUES,
     titre: "Connecter Jotform à Systeme.io",
     resume:
       "Jotform annonce une intégration Systeme.io, mais son bouton ouvre Zapier : l'adresse porte integration=Zapier et aucune clé API Systeme.io n'est demandée.",

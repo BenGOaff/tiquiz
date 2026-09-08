@@ -10974,7 +10974,7 @@ dans ce sens là.
 | **le hub et les 8 pages de fonctionnalités** | **fr + en** |
 | **`/generateur-de-quiz`** | **fr + en** |
 | **`/a-propos`** | **fr + en** |
-| **`/integrations`** (le HUB seul, ses 6 pages filles restent fr) | **fr + en** |
+| **`/integrations`** et ses **6 pages d'outil** | **fr + en** |
 | `/affiliation` | fr |
 | les 10 articles du blog | fr |
 | ses 4 articles anglais | **SERVIS** sur `/en/blog/<slug>` |
@@ -11395,7 +11395,7 @@ QUATRE versions fautives (un `alt` anglais remis en français, `€30,000`
 module recopiée dans la page) : les quatre rougissent.
 
 
-### Le hub intégrations passe en anglais, ses SIX pages filles non (8 septembre)
+### Le hub intégrations passe en anglais, puis ses six pages filles (8 septembre)
 
 Suite du chantier. `/integrations` est servi en `fr` et en `en`, et il a
 déménagé dans `app/(site-langues)/` (c'est le seul groupe qui lit
@@ -11416,11 +11416,17 @@ Les deux portent leurs trois `hreflang`, chacune sa canonique, et
 
 #### CE QUI EST TRADUIT, ET CE QUI NE L'EST PAS
 
-**Le TABLEAU comparatif l'est, les SIX CARTES d'outil non.** Le tableau
-est de la donnée pure : `outilsPourLangue(langue)` garde le nom, le
-slug et le logo, et ne change que les trois champs de texte. Les cartes,
-elles, MÈNENT aux six pages détaillées, qui sont en français (1409
-lignes) : traduire leur titre promettrait de l'anglais derrière le clic.
+🚨 **CE BLOC DISAIT "les SIX CARTES d'outil non". C'EST PÉRIMÉ depuis le
+8 septembre au soir** : les six pages d'outil sont servies en anglais
+(voir la section suivante), donc les cartes le sont aussi, et
+`outilsLangueDesPages` rend `null`. Je le corrige en place plutôt que
+d'empiler (règle du 31 août).
+
+**Ce qui reste vrai, et qui est la mécanique :** le tableau est de la
+donnée pure, `outilsPourLangue(langue)` garde le nom, le slug et le logo
+et ne change que les trois champs de texte. **Une carte ne se traduit
+QUE quand la page derrière l'est** : sinon son titre promet de l'anglais
+derrière le clic.
 
 **Le français rend `OUTILS` LUI MÊME**, pas une copie : deux tableaux
 pour la même langue finiraient par ne plus dire la même chose. Et
@@ -11429,9 +11435,12 @@ oublier un ne compile pas : un outil manquant afficherait du FRANÇAIS
 dans une ligne anglaise, la page s'afficherait parfaitement, et personne
 ne le verrait.
 
-**ET UNE LIGNE LE DIT** (`outilsLangueDesPages`), au lieu de laisser la
-surprise au clic. C'est la règle du chrome, appliquée à une carte : un
-libellé resté français est une INFORMATION, pas un oubli.
+**ET UNE LIGNE LE DISAIT** (`outilsLangueDesPages`), au lieu de laisser
+la surprise au clic. C'est la règle du chrome, appliquée à une carte : un
+libellé resté français est une INFORMATION, pas un oubli. Elle rend
+`null` depuis que les six pages sont traduites, et **la fonction reste**
+: le jour où une septième page d'outil arrive sans son anglais, elle
+reparle toute seule.
 
 **LE GARDE-FOU S'AUTO-CORRIGE, et c'est le point.** Tant qu'aucune page
 fille ne déclare l'anglais, la ligne est OBLIGATOIRE ; le jour où les
@@ -11440,9 +11449,10 @@ intermédiaire ("2 pages filles sur 6 sont traduites : finir, ou retirer
 la langue déclarée"). Un garde-fou qui fige l'état du jour aurait
 empêché de finir le travail.
 
-**Et le sitemap ne déclare l'anglais QUE sur le hub** : le poser sur les
-six enfants mettrait `/en/integrations/tally-systeme-io` dans le sitemap
-ET dans ses `hreflang`, et Google y trouverait du français sous une
+**Et le sitemap ne déclarait l'anglais QUE sur le hub**, tant que les
+six enfants n'avaient pas leur texte : le poser plus tôt aurait mis
+`/en/integrations/tally-systeme-io` dans le sitemap
+ET dans ses `hreflang`, et Google y aurait trouvé du français sous une
 adresse anglaise, donc jugerait l'anglais sur du contenu dupliqué.
 
 #### CE QUE `git checkout --` M'A COÛTÉ, ET C'EST NOUVEAU
@@ -11948,3 +11958,140 @@ rend un ensemble vide, la route qui refabrique l'ensemble à la main, un
 produit sans récurrence compté comme mensuel, un annuel non lissé, un
 plan inconnu compté zéro, le taux de change sans sa source) : les dix
 rougissent.
+
+### Les six pages d'outil passent en anglais (8 septembre 2026, le soir)
+
+Suite immédiate. Les six pages filles du hub (`zapier-`, `tally-`,
+`typeform-`, `jotform-`, `google-forms-`, `interact-systeme-io`) sont
+servies en `fr` et en `en`, elles ont déménagé dans
+`app/(site-langues)/`, et le sitemap déclare les deux langues sur
+chacune.
+
+**MESURÉ sur le serveur, les 14 adresses**, avec l'en-tête `Host` du
+domaine de vente (sans lui, le middleware ne voit pas un hôte de vente
+et la mesure ne dit rien de ce que le visiteur reçoit) :
+
+| | `<html lang>` | mots rendus | `hrefLang` |
+|---|---|---|---|
+| les 7 françaises | `fr` | 694 à 971 | fr + en + x-default |
+| les 7 anglaises | `en` | 688 à 949 | fr + en + x-default |
+
+Chacune porte SA canonique, et le français ne bouge pas d'un caractère.
+
+**LE TEXTE VIT DANS `lib/site/outils/<outil>.ts`, UN PAR OUTIL.** Le
+hub porte déjà 350 lignes de son côté ; y ajouter six pages entières
+aurait fait un fichier que personne ne relit. Chaque module suit le
+geste des 8 pages de fonctionnalités : la STRUCTURE une fois (le chemin,
+les captures, leurs dimensions), et `TRADUCTIONS` typé
+`Record<Exclude<LanguePublique, "fr">, T>`, donc **une langue déclarée
+sans son texte ne compile pas**.
+
+**Les phrases dont le milieu porte du code ou du gras passent par
+`<Phrase segments={...} />`** : une chaîne coupée en trois avec du JSX
+au milieu ne se traduit pas, et c'est exactement là qu'un traducteur
+recolle les morceaux dans le mauvais ordre.
+
+**Les liens passent par `hrefPourLangue`, jamais par un `/en/` écrit à
+la main** : leur CTA mène à `/signup`, servi par l'APP, qui n'a aucune
+version préfixée. Un préfixe posé à l'aveugle ferait un 404 au bout du
+seul bouton de la page (la leçon des pages de fonctionnalités, le matin
+même).
+
+**Les deux CITATIONS d'Interact ne bougent PAS** (`CITATIONS_INTERACT`),
+et elles sont en anglais dans les deux langues : c'est la parole d'un
+concurrent, relevée sur sa page d'aide en ligne le 1er septembre. Une
+citation traduite n'est plus une citation.
+
+### 🚨 LE MÊME DÉCOUPEUR DE COMMENTAIRES, RECOPIÉ 20 FOIS, ET L'ORDRE ÉTAIT FAUX PARTOUT
+
+C'est la trouvaille de la séance, et elle est plus grande que ce
+chantier.
+
+Un test est sorti rouge en annonçant **"la page n'appelle plus
+`contenuHub`"** sur une page qui l'appelle deux fois. La cause tient en
+deux lignes :
+
+```
+.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "")   // les blocs, EN PREMIER
+.replace(/^\s*\/\/.*$/gm, "")             // les lignes, ensuite
+```
+
+**Une ligne `//` peut contenir `/*`**, et c'est banal : tout commentaire
+qui cite un chemin en glob en porte un. Le motif de bloc s'ouvre alors
+DANS cette ligne et court jusqu'au premier `*/` du fichier, c'est à dire
+jusqu'à la fin du prochain vrai commentaire de bloc.
+
+**MESURÉ sur la page du hub** : la ligne 35 ouvre, la ligne 172 ferme,
+et **11126 octets tombent à 4168**. Tout ce qui vit entre les deux
+disparaît, `contenuHub(` compris.
+
+**L'ORDRE EST LA SEULE CHOSE QUI COMPTE ICI, ET IL ÉTAIT FAUX PARTOUT :**
+20 fichiers de tests portaient ce découpeur, recopié à la main, et
+**aucun** ne retirait les lignes en premier.
+
+| | |
+|---|---|
+| fichiers du dépôt qui portent le motif qui collisionne | **14** |
+| `QuizDetailClient.tsx` | **15757 octets** avalés |
+| `lib/site/pagesPubliques.ts` | 3157 |
+| `components/embed/EmbedPreviewClient.tsx` | 629 |
+
+**ET LE VRAI DANGER EST L'ASSERTION NÉGATIVE.** Ici le test a rougi,
+donc il a été vu. Un garde-fou qui INTERDIT quelque chose dans une zone
+avalée passe au vert pour toujours, sans que rien ne le dise.
+
+**Prouvé, pas supposé** : un `setSessionToken("")` (qui jetterait le
+quiz d'un visiteur) posé dans la fenêtre avalée d'`EmbedPreviewClient`
+fait rougir `generateur-page.test.mts` avec l'ordre sûr (`# fail 1`) et
+**passe au vert avec l'ordre naïf** (`# fail 0`).
+
+**Règle : `tests/logic/aide/sansCommentaires.mts`, et personne ne
+recopie ce découpage.** Les lignes `//` PUIS les blocs `/* */`, et le
+remplacement est une ESPACE : deux identifiants séparés par un
+commentaire ne doivent pas se coller. Les 20 fichiers ont été remis dans
+le bon ordre ; le partagé est celui qu'on appelle désormais.
+
+C'est la dix-neuvième fois qu'un contrôle ne distingue pas ce qu'il est
+censé distinguer, et la première où la faute vivait dans VINGT tests à
+la fois. **Une règle recopiée finit toujours par en oublier un ; une
+règle recopiée FAUSSE les casse tous en silence.**
+
+### ET `git checkout --` A DÉTRUIT DU TRAVAIL NON COMMITTÉ, DEUX FOIS
+
+Pour rejouer une version fautive, j'ai fait `git checkout --
+tests/logic/`. **Ça restaure l'état du DÉPÔT, pas celui de la séance :**
+le réordonnancement des 20 fichiers ET la réécriture entière de
+`hub-integrations.test.mts` (510 lignes, faite le même après-midi) sont
+parties d'un coup. Même geste, même perte, dix minutes plus tôt, sur
+`generateur-page.test.mts`.
+
+Le fichier a été récupéré **mot pour mot dans le transcript de la
+séance** (`/root/.claude/projects/.../<session>.jsonl`), pas réécrit de
+mémoire : une réécriture de mémoire aurait perdu les raisons écrites à
+côté de chaque garde.
+
+**Règle : on sauvegarde avec `cp`, on restaure avec `cp`.** Un
+`git checkout --` sur un travail non committé, et un `rm -rf` de
+répertoire (qui emporte des voisins qu'on n'avait pas en tête), ne sont
+pas des outils de rejeu.
+
+### DEUX GARDES QUI NE MESURAIENT RIEN, TROUVÉS EN LES REJOUANT
+
+Les deux étaient dans le fichier réécrit, et les deux sont passés au
+vert sur une version fautive :
+
+1. **le contrôle "aucune phrase du module n'est recopiée dans la page"**
+   a été rejoué avec une phrase tapée à la main. `etiquette` vaut
+   `"Intégrations"`, soit 12 caractères, donc SOUS le filtre de 20 que
+   le garde applique. **Une version fautive écrite avec une valeur
+   inventée ne mesure rien** : rejouée avec la vraie première phrase
+   longue du module, elle rougit ;
+2. **le contrôle "la page Interact cite sa source et la rend
+   cliquable"** cherchait `CITATIONS_INTERACT` dans la source. Une page
+   qui garde son `import` et affiche une AUTRE liste passait au vert :
+   **un garde qui cherche un NOM ne distingue pas RENDRE d'IMPORTER.**
+   Il vise maintenant le site de rendu (`CITATIONS_INTERACT.map`,
+   `href={DOC_INTERACT}`).
+
+Test : `tests/logic/hub-en-anglais.test.mts` (8 cas) et
+`tests/logic/hub-integrations.test.mts` (19 cas).

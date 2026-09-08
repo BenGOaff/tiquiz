@@ -38,6 +38,50 @@ import Link from "next/link";
 
 import { chromeIntegrations } from "@/lib/site/hubIntegrations";
 import type { LanguePublique } from "@/lib/site/langues";
+import type { Segment } from "@/lib/site/outils/segments";
+
+/**
+ * Une phrase dont le milieu porte du code, du gras ou un lien interne.
+ *
+ * Les trois vivent dans le module de texte de la page, en SEGMENTS : sans
+ * ça il faudrait injecter la balise en `innerHTML`, sur du texte qui vient
+ * d'un fichier de langue.
+ *
+ * `lien` est une FONCTION passée par la page, jamais un `/en/` posé ici :
+ * c'est elle qui sait dans quel espace de langue elle est servie, et un
+ * préfixe deviné fabriquerait un 404 au bout d'un lien interne.
+ */
+export function Phrase({
+  segments,
+  lien,
+}: {
+  segments: readonly Segment[];
+  lien: (chemin: string) => string;
+}) {
+  return (
+    <>
+      {segments.map((s, i) => {
+        if (typeof s === "string") return <span key={i}>{s}</span>;
+        if ("code" in s) {
+          return (
+            <code
+              key={i}
+              className="rounded bg-[var(--tq-panneau)] px-1.5 py-0.5 text-[0.9em]"
+            >
+              {s.code}
+            </code>
+          );
+        }
+        if ("gras" in s) return <strong key={i}>{s.gras}</strong>;
+        return (
+          <Link key={i} href={lien(s.chemin)}>
+            {s.lien}
+          </Link>
+        );
+      })}
+    </>
+  );
+}
 
 /** Le fil d'Ariane visible, doublé d'un JSON-LD par la page. */
 export function FilDAriane({

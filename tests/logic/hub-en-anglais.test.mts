@@ -38,6 +38,7 @@ import { OUTILS, outilsPourLangue, ENFANTS_DU_HUB } from "@/lib/site/integration
 import { CHEMIN_HUB, contenuHub, chromeIntegrations } from "@/lib/site/hubIntegrations";
 
 import { sourcePageDuSite, cheminPageDuSite } from "./aide/pageDuSite.mts";
+import { sansCommentaires } from "./aide/sansCommentaires.mts";
 
 /** Toutes les chaines qui SE LISENT, quelle que soit leur profondeur. */
 function textes(valeur: unknown): string[] {
@@ -53,9 +54,7 @@ function tout(langue: (typeof LANGUES_PUBLIQUES)[number]): string {
 
 /** La source de la page, sans ses commentaires : ils CITENT les motifs. */
 function sourcePage(): string {
-  return sourcePageDuSite(CHEMIN_HUB)
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/^\s*\/\/.*$/gm, " ");
+  return sansCommentaires(sourcePageDuSite(CHEMIN_HUB));
 }
 
 describe("le hub integrations existe dans les deux langues", () => {

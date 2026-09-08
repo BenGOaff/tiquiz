@@ -60,7 +60,7 @@ const lire = (p: string) => fs.readFileSync(path.join(RACINE, p), "utf8");
 /** La source SANS ses commentaires : un contrôle qui mesure une présence
  *  ou un ORDRE dans un fichier tombe sinon sur sa propre explication. */
 function sansCommentaires(src: string): string {
-  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  return src.replace(/^\s*\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
 }
 
 // ─────────────────────────────────────────────────────────────────────
