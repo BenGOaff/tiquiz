@@ -1687,7 +1687,8 @@
       "scores": "Puntuaciones",
       "tag": "Etiqueta Systeme.io",
       "question": "P"
-    }
+    },
+    "embedBackToGenerator": "Volver al generador"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nueva contraseña",

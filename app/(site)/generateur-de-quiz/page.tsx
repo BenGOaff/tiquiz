@@ -138,8 +138,7 @@ export default async function Page({ searchParams }: PageProps) {
               Comment ça <span className="tql-surb">marche</span>
             </h2>
             <p className="tql-p">
-              Trois gestes, et le troisième est celui qui compte : rien n&apos;est figé,
-              tout se corrige.
+              Suis ces 3 étapes pour créer ton premier quiz interactif.
             </p>
           </div>
           <div className="tql-grille-3">
@@ -162,8 +161,9 @@ export default async function Page({ searchParams }: PageProps) {
               Ce que l&apos;IA écrit <span className="tql-surb">à ta place</span>
             </h2>
             <p className="tql-p">
-              Pas un squelette à remplir : un quiz entier, lisible, que tu peux
-              publier tel quel ou réécrire mot par mot.
+              Tiquiz te donne un quiz déjà optimisé pour attirer tes futurs clients
+              et les amener à te confier leur email. Mais tu gardes la main sur
+              tout : édite-le à l&apos;infini.
             </p>
           </div>
           <div className="tql-grille-2">

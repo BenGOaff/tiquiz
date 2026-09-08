@@ -10530,10 +10530,19 @@ le bandeau de fin. Plus deux JSON-LD (`WebApplication` et `FAQPage`)
 construits depuis les MÊMES données que l'écran.
 
 **AUCUN CHIFFRE N'EST ÉCRIT À LA MAIN** (`lib/site/generateurQuiz.ts`) :
-la limite horaire est LUE dans `lib/embed/rateLimit.ts`, le nombre de
-langues dans `QUIZ_LANGUAGES`, les limites du gratuit dans
+les bornes du générateur public sont LUES dans `lib/embed/limites.ts`,
+le nombre de langues dans `QUIZ_LANGUAGES`, les limites du gratuit dans
 `FREE_LIMITS`. Un chiffre recopié est un chiffre faux au prochain
 changement, et il vit ici à l'endroit exact où un lecteur le vérifie.
+
+**ET CES TROIS NOMBRES VIVENT DANS UN MODULE PUR, PAS DANS
+`rateLimit.ts`, POUR UNE RAISON QUI N'EST PAS COSMÉTIQUE :** ce dernier
+importe `supabaseAdmin`, **qui LÈVE au chargement du module** quand une
+variable d'environnement manque. Une page publique qui l'importerait
+pour afficher une limite répondrait donc 500 sans base, et le runner de
+tests ne pourrait pas la charger du tout. C'est le piège du 30 août
+(`commentairesStore.ts`, qui faisait répondre 500 à toute la page
+d'article), évité avant d'être payé.
 
 **`offers.price: "0"` est justifié dans le module** : la route de
 génération ne demande aucune session, donc c'est un fait, pas une
@@ -10578,12 +10587,220 @@ endroit où ça se tranche est son écran.
 **La génération anonyme n'a AUCUN plafond de dépense.**
 `ANTHROPIC_EMBED_DAILY_BUDGET` est NOMMÉE dans un commentaire de
 `lib/embed/rateLimit.ts` et **lue nulle part** : neuvième fois que ce
-dépôt paie une règle écrite en commentaire. Le seul garde-fou est
-`HOURLY_LIMIT_PER_IP = 10`, donc une IP par heure ; le modèle est Haiku,
-ce qui adoucit sans fermer. **Aucun coût en euros n'a été mesuré**, et
-il ne faut pas en citer un.
+dépôt paie une règle écrite en commentaire.
 
-Test : `tests/logic/generateur-page.test.mts` (11 cas), vérifié en
-rejouant TROIS versions fautives (`contexte="iframe"` sur la page
-dédiée, la boîte en `h-[85vh]`, la limite horaire recopiée à la main) :
-les trois rougissent.
+🚨 **ET C'EST PLUS URGENT DEPUIS LE 8 SEPTEMBRE, parce que les deux
+moitiés qui adoucissaient ont bougé le même jour.** Cette page écrivait
+"le seul garde-fou est `HOURLY_LIMIT_PER_IP = 10`, donc une IP par
+heure ; le modèle est Haiku, ce qui adoucit sans fermer". Les deux
+lignes sont périmées, et je les corrige ici plutôt que d'empiler :
+
+| | avant | maintenant |
+|---|---|---|
+| la borne | 10 par IP et par heure | **2 par IP et par 24 h** |
+| le modèle | Haiku | **le même que l'éditeur payant** |
+
+La borne resserre, le modèle desserre : chaque génération anonyme coûte
+désormais ce qu'elle coûte à une cliente qui paie. **Aucun coût en euros
+n'a été mesuré**, et il ne faut pas en citer un ; ce qui est certain,
+c'est qu'un plafond de dépense reste la seule chose qui arrêterait un
+botnet tournant sur mille adresses.
+
+Test : `tests/logic/generateur-page.test.mts`, vérifié en rejouant
+`contexte="iframe"` sur la page dédiée et la boîte en `h-[85vh]` : les
+deux rougissent.
+
+### Le générateur public écrivait avec le PLUS PETIT modèle (Béné, 8 septembre 2026)
+
+"Le générateur de quiz ne fonctionne pas : j'ai cette erreur `JSON IA
+invalide. Réessaie.` au lieu du quiz généré." Et, séparément : "Tu as
+bien utilisé le même prompt et la même IA pour générer le quiz ? Je
+trouve le résultat pas ouf."
+
+**Les deux phrases décrivent la MÊME cause, et elle est mesurée.**
+
+| | le modèle demandé |
+|---|---|
+| `/api/quiz/generate` (l'éditeur payant) | `resolveAnthropicModel(..., "opus")` |
+| `/api/embed/quiz/generate` (le générateur public) | **`"haiku"`** |
+
+Le prompt, lui, était bien le même des deux côtés (`buildQuizGeneration
+Prompt`), et le parsing du JSON est identique ligne pour ligne. Le
+générateur public écrivait donc avec le plus petit modèle de la famille,
+sur un prompt long et un schéma JSON strict : ça donne exactement les
+deux symptômes qu'elle décrit, un contenu moins bon ET du JSON parfois
+malformé, donc "JSON IA invalide" sur l'écran qui doit donner envie.
+
+🚨 **ET CETTE PAGE AVAIT ÉCRIT LE CONTRAIRE, À MOITIÉ.** La section du
+2 septembre dit : "Le prompt, lui, était déjà le même des deux côtés :
+c'est vérifié, pas supposé." **C'était vrai, et cette phrase a servi de
+preuve que la génération était identique, ce qui était faux.** C'est mot
+pour mot la faute du 3 septembre sur les prompts de l'Atelier : **une
+phrase exacte sur une moitié laisse croire l'autre moitié.** Dire ce
+qu'on a vérifié ne suffit pas ; il faut dire aussi ce qu'on n'a pas
+vérifié.
+
+**Règle : `lib/quiz/modeleGeneration.ts` porte le DÉFAUT, et les deux
+routes l'appellent.** La SURCHARGE reste par surface (le générateur
+public lit `ANTHROPIC_MODEL_EMBED` puis `ANTHROPIC_MODEL`) : c'est ce
+qui permet de le redescendre un jour de trafic anormal sans toucher à
+l'éditeur payant. Ce qui ne peut plus arriver, c'est que les deux
+DÉFAUTS divergent sans que personne ne le voie.
+
+### ET LE SUJET DU QUIZ PARTAIT DANS LE CHAMP DE L'OFFRE
+
+Trouvé en comparant les deux appels ligne à ligne. Le générateur public
+faisait :
+
+```
+buildQuizGenerationPrompt({ ..., intention: topic })
+```
+
+`intention`, dans ce prompt, c'est **"pourquoi tu crées ce quiz"**,
+c'est à dire l'OFFRE PAYANTE vers laquelle chaque bouton doit ramener.
+On disait donc au modèle que l'offre de la créatrice était le sujet de
+son quiz, et il écrivait des CTA qui vendent... le sujet.
+
+`buildQuizGenerationPrompt` prend maintenant un `sujet` à lui, émis
+seulement quand il est fourni : un champ vide n'est jamais rendu avec un
+tiret (règle du 1er septembre, une ligne "OFFRE : -" apprend au modèle
+qu'il a le droit d'en inventer une).
+
+### LES RÉGLAGES SONT CEUX DU VRAI TIQUIZ, PAS UNE VERSION ALLÉGÉE
+
+Béné : "il faudrait aussi demander au départ si le visiteur veut un quiz
+scoré ou profil, en expliquant brièvement ce que c'est, pour montrer que
+les deux sont dispo." Puis : "pour obtenir la même qualité de quiz, il
+faut réutiliser la fonction 'créer un quiz avec l'ia' du vrai tiquiz.
+Mais en rendant ça un peu plus UX UI friendly, plus joli. **On doit
+coller au mieux à l'intérieur de tiquiz en fait.**"
+
+Le formulaire public demandait cinq champs et un compteur de questions.
+Il demande maintenant les MÊMES choses que `QuizFormClient`, avec ses
+MOTS (relevés dans le namespace `quizForm` de `messages/fr.json`) :
+
+| Le réglage | Ce qu'il décide |
+|---|---|
+| Format, court ou long | le nombre de questions, DÉDUIT (4 ou 8) |
+| **Type : par profil, ou avec un score** | la mécanique d'attribution du résultat |
+| nombre de profils, ou de tranches | le libellé CHANGE avec la mécanique |
+| ton | imposé au modèle |
+| "Pourquoi tu crées ce quiz ?" | l'offre, facultative |
+| prénom et genre | la personnalisation dynamique |
+
+**LES DEUX CARTES DE TYPE NE SONT PAS DÉCORATIVES : c'est LA décision
+qui bloque** (drame Véronique, 2 août, deux jours perdus sur un quiz
+scoré qu'elle voulait par profil). Elles disent donc le QUESTIONNEMENT,
+"qui es-tu ?" et "où en es-tu ?", jamais la mécanique.
+
+**`questionCount` a DISPARU du formulaire, et c'est délibéré** : le vrai
+formulaire le DÉDUIT du format. Deux réglages pour une seule décision,
+c'est un des deux qui finit par mentir.
+
+**Et le libellé du nombre de résultats CHANGE avec la mécanique** : en
+scoring ce ne sont pas des profils mais des tranches de score, et les
+appeler pareil est exactement ce qui a coûté deux jours à Véronique.
+
+### L'ÉDITEUR PREND TOUT L'ÉCRAN, ET LE RETOUR VIT DANS SA BARRE
+
+"La mise en page de l'éditeur est éclatée sur la page du générateur,
+c'est pas représentatif, ça donne pas envie, il faut mettre le véritable
+éditeur en pleine page, en mettant un bouton pour revenir sur le
+générateur."
+
+Elle a raison, et c'est mesurable : l'éditeur est une grille à trois
+colonnes bâtie pour un écran entier. Enfermé dans la colonne d'une page
+marketing, il rend ses colonnes à 300 px, donc il montre au visiteur un
+outil qui a l'air cassé, sur la page exacte qui doit lui donner envie.
+
+`cadreDuGenerateur("page")` rend donc `fixed inset-0 z-50` pour
+l'éditeur, et **AUCUNE barre à nous au dessus** : l'éditeur est en
+`h-screen`, donc tout ce qu'on lui mettrait sur la tête lui volerait la
+même hauteur en bas, et le bas serait ROGNÉ (règle du 7 septembre, un
+débordement n'est une perte que s'il est rogné, et ici il le serait). Le
+retour vit dans SA barre à lui, à la place exacte où une créatrice
+connectée trouve sa flèche.
+
+**Et le défilement de la page qui est DERRIÈRE est verrouillé.** Sans
+ça, la molette traverse et fait défiler la page marketing sous
+l'éditeur, ce qui est exactement le "c'est pas représentatif". C'est le
+MÊME paramètre qui décide des deux (`verrouillerLeDefilement`) : dans
+une iframe il n'y a rien derrière, donc rien à verrouiller.
+
+**Le jeton n'est PAS effacé au retour** : c'est le même quiz, on revient
+sur le formulaire, on ne recommence pas de zéro.
+
+### DEUX QUIZ PAR RÉSEAU, ET LA FENÊTRE EST DE 24 H
+
+"Limiter à 2 quiz générés gratos pour une même adresse IP."
+
+C'était 10 par heure, et ça n'a plus rien d'anodin depuis le même jour :
+le générateur public écrit désormais avec le modèle de l'éditeur payant.
+
+**LA FENÊTRE EST DE 24 H, PAS "À VIE", ET C'EST UNE DÉCISION.** Une
+adresse IP ne désigne pas une personne : en 4G, un opérateur en partage
+une seule entre des milliers d'abonnés (CGNAT), et un bureau, un espace
+de coworking ou une salle de formation sortent tous par la même. Bloquer
+à vie sur ce signal fermerait la porte à des inconnus qui n'ont jamais
+rien généré, et **personne ne le verrait jamais** : ils partiraient,
+c'est tout. Si Béné veut plus strict, c'est UNE constante à changer.
+
+**Les trois nombres vivent dans `lib/embed/limites.ts`**, pas dans
+`rateLimit.ts` : voir plus haut, `supabaseAdmin` lève au chargement.
+
+### SES TROIS RÉÉCRITURES, MOT POUR MOT
+
+Elle a réécrit trois phrases de la page. Elles sont posées telles
+quelles, sans "amélioration" :
+
+| Ce qui était écrit | Ce qu'elle a écrit |
+|---|---|
+| "L'IA écrit tes questions, options et profils. Quelques secondes." | "Tiquiz rédige tes questions et les profils, ça vaut le coup de patienter quelques secondes 😉" |
+| "Trois gestes, et le troisième est celui qui compte : rien n'est figé, tout se corrige." | "Suis ces 3 étapes pour créer ton premier quiz interactif" |
+| "Pas un squelette à remplir : un quiz entier, lisible, que tu peux publier tel quel ou réécrire mot par mot." | "Tiquiz te donne un quiz déjà optimisé pour attirer tes futurs clients et les amener à te confier leur email. Mais tu gardes la main sur tout : édites-le à l'infini" |
+
+Sa deuxième remarque nomme le défaut de la première version : "c'est
+mal traduit de l'anglais". Une phrase qui commence par "Trois gestes, et
+le troisième est celui qui compte" est une figure de style qui n'apprend
+rien ; "Suis ces 3 étapes pour créer ton premier quiz interactif" dit ce
+qu'on doit faire.
+
+### 🚨 LE MULTILANGUE : la réponse honnête est NON, et voici les chiffres
+
+Béné : "d'ailleurs toutes les pages et mêmes les articles doivent être
+multilangues, j'espère que tu as anticipé."
+
+**Non, et je le dis dans ce sens là plutôt que de laisser croire.**
+Mesuré le 8 septembre, pas déduit :
+
+| | langues servies |
+|---|---|
+| l'APPLICATION (l'éditeur, le viewer, les écrans) | **7** (`SUPPORTED_LOCALES`) |
+| la landing et `/tarifs` | **2** (`langue: "fr"` et `"en"` dans `lib/site/landing.ts`) |
+| les 8 pages de fonctionnalités | **1** (l'en-tête du module le dit) |
+| `/generateur-de-quiz` | **1** |
+| les 11 articles du blog | **1** : ils ne portent aucune clé de langue |
+
+Traduire les 8 pages de fonctionnalités, le générateur et le hub dans
+les 7 langues est un vrai chantier, chiffrable et faisable. **Traduire
+le BLOG est autre chose**, et c'est sa décision, pas la mienne : 11
+articles fois 7 langues font 77 pages à tenir à jour, et chaque
+correction de chiffre (le prix, le taux d'affiliation, un lien mort) se
+paierait alors sept fois. Le pipeline `blog:reparer` ne sait corriger
+qu'une langue.
+
+### MES DEUX FAUTES DE CE PASSAGE
+
+**1. `export { X } from "..."` ne crée AUCUN binding local.** J'ai voulu
+re-exporter les bornes depuis `lib/site/generateurQuiz.ts` et les
+interpoler dans la FAQ du même fichier : la valeur n'existait pas dans
+la portée du module, et `tsc` l'a dit. Il faut un vrai `import` PUIS un
+`export { X }` nu.
+
+**2. Un garde-fou qui figeait `h-screen` a rougi sur une correction
+juste.** Il exigeait la chaîne littérale, donc il refusait le passage en
+`fixed inset-0`, c'est à dire exactement ce qu'elle demandait. **HUITIÈME
+fois qu'un test qui fige une FORMULATION empêche de corriger la
+formulation** ; il vise maintenant le FAIT (le cadre occupe tout le
+viewport, il ne pose aucune borne qui rognerait l'éditeur, et une
+surcouche verrouille le défilement de ce qui est derrière).

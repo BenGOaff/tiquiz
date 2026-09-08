@@ -32,9 +32,24 @@
 
 import { test, expect } from "@playwright/test";
 
-/** Les pages publiques du site, celles qu'un visiteur froid ouvre. */
+/**
+ * Les pages publiques du site, celles qu'un visiteur froid ouvre.
+ *
+ * LA LISTE EST ÉCRITE À LA MAIN, ET CE N'EST PAS L'IDÉAL : une liste
+ * oublie la page ajoutee demain (c'est exactement ce qui est arrive a
+ * /generateur-de-quiz, cree le 8 septembre et absent de ce filet
+ * jusqu'au meme jour). Elle n'est pas DERIVEE de PAGES_PUBLIQUES parce
+ * que ce module en porte d'autres (/affiliation, /a-propos,
+ * /integrations, les articles) qui n'ont jamais ete mesurees ici : les
+ * ajouter d'un coup est un chantier a part, et un filet qui rougit sur
+ * des pages qu'on n'a pas regardees finit desactive.
+ *
+ * -> Toute page publique ajoutee s'ajoute ICI le jour ou elle est
+ *    ecrite.
+ */
 const PAGES = [
   "/apercu-landing-8f2c9d41",
+  "/generateur-de-quiz",
   "/tarifs",
   "/fonctionnalites",
   "/fonctionnalites/generation-ia",

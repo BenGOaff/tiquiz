@@ -1687,7 +1687,8 @@
       "scores": "النقاط",
       "tag": "وسم Systeme.io",
       "question": "س"
-    }
+    },
+    "embedBackToGenerator": "العودة إلى المولّد"
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",

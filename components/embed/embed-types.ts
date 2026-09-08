@@ -35,12 +35,34 @@ export type EmbedQuiz = {
   results: EmbedResult[];
 };
 
+/**
+ * CE QUE LE VISITEUR RÈGLE, ET C'EST LE MÊME JEU QUE DANS TIQUIZ.
+ *
+ * Béné, 8 septembre 2026 : "pour obtenir la même qualité de quiz, il
+ * faut réutiliser la fonction 'créer un quiz avec l'ia' du vrai tiquiz
+ * [...] on doit coller au mieux à l'intérieur de tiquiz en fait."
+ *
+ * Les champs portent donc les MÊMES noms et les MÊMES valeurs que
+ * `components/quiz/QuizFormClient.tsx` : `format`, `quizType`,
+ * `resultCount`, `intention`. Un visiteur qui découvre l'outil ici
+ * retrouve exactement les mêmes réglages une fois inscrit.
+ *
+ * `questionCount` a DISPARU, et c'est délibéré : le vrai formulaire le
+ * DÉDUIT du format (court -> 4, long -> 8). Deux réglages pour une
+ * seule décision, c'est un des deux qui finit par mentir.
+ */
 export type EmbedInputs = {
   topic: string;
   audience: string;
   objective: string;
-  questionCount: number;
+  /** "Pourquoi tu crées ce quiz ?" : l'offre vers laquelle il ramène. Facultatif. */
+  intention: string;
   tone: string;
+  format: "short" | "long";
+  /** Par profil (qui es-tu ?) ou avec un score (où en es-tu ?). */
+  quizType: "profile" | "scoring";
+  /** Nombre de profils, ou de tranches de score. */
+  resultCount: number;
   askFirstName: boolean;
   askGender: boolean;
 };

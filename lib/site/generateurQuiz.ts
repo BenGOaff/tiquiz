@@ -38,19 +38,24 @@
 
 import { FREE_LIMITS } from "@/lib/planLimits";
 import { HOTE_VENTE } from "@/lib/publicHost";
+import { FENETRE_HEURES, LIMITE_PAR_IP } from "@/lib/embed/limites";
 
 /** L'adresse de la page. Écrite ICI, lue par le sitemap et la nav. */
 export const CHEMIN_GENERATEUR = "/generateur-de-quiz";
 
 /**
- * LE NOMBRE DE GÉNÉRATIONS OFFERTES, LU DANS LE CODE QUI LES COMPTE.
+ * LE NOMBRE DE QUIZ OFFERTS, ET SA FENÊTRE, LUS DANS LE MODULE QUI
+ * LES FAIT RESPECTER.
  *
- * `HOURLY_LIMIT_PER_IP` vaut 10 dans `lib/embed/rateLimit.ts`. On ne le
- * recopie pas en toutes lettres dans la page : un chiffre écrit à la
- * main est un chiffre faux au premier réglage, et il vit ici dans une
- * page qui promet quelque chose. Le test compare les deux.
+ * On ne recopie RIEN en toutes lettres dans la page : un chiffre écrit
+ * à la main est un chiffre faux au premier réglage, et il vit ici dans
+ * une page qui PROMET quelque chose à une visiteuse.
+ *
+ * `lib/embed/limites.ts` est pur exprès : `rateLimit.ts` importe
+ * `supabaseAdmin`, donc cette page répondrait 500 sans base si elle
+ * allait le chercher là bas.
  */
-export const GENERATIONS_PAR_HEURE = 10;
+export { LIMITE_PAR_IP, FENETRE_HEURES };
 
 /** Le nombre d'entrées du catalogue de langues (`lib/quizLanguages.ts`). */
 export const LANGUES_ET_VARIANTES = 100;
@@ -167,7 +172,7 @@ export interface QuestionGenerateur {
 export const FAQ: readonly QuestionGenerateur[] = [
   {
     q: "Le générateur est vraiment gratuit ?",
-    r: `Oui, et sans compte. Tu arrives sur la page, tu décris ton quiz, l'IA l'écrit. Aucune adresse email n'est demandée pour générer, et aucune carte bancaire nulle part. La seule borne est technique : ${GENERATIONS_PAR_HEURE} générations par heure depuis la même connexion, pour qu'une boucle accidentelle ne fasse pas tourner le moteur toute la nuit.`,
+    r: `Oui, et sans compte. Tu arrives sur la page, tu décris ton quiz, l'IA l'écrit. Aucune adresse email n'est demandée pour générer, et aucune carte bancaire nulle part. La seule borne est technique : ${LIMITE_PAR_IP} quiz par ${FENETRE_HEURES} heures depuis la même connexion, pour qu'une boucle accidentelle ne fasse pas tourner le moteur toute la nuit.`,
   },
   {
     q: "Qu'est-ce qui se passe si je ferme l'onglet ?",

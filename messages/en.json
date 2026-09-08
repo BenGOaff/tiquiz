@@ -1687,7 +1687,8 @@
       "scores": "Scores",
       "tag": "Systeme.io tag",
       "question": "Q"
-    }
+    },
+    "embedBackToGenerator": "Back to the generator"
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",

@@ -18,13 +18,15 @@ import { QUIZ_LANGUAGES } from "@/lib/quizLanguages";
 import { PAGES_PUBLIQUES } from "@/lib/site/pagesPubliques";
 import { PIED } from "@/lib/site/nav";
 import { cadreDuGenerateur, remisePourLeBouton } from "@/lib/embed/remise";
+import { buildQuizGenerationPrompt } from "@/lib/prompts/quiz/system";
 import {
   CE_QUE_LIA_ECRIT,
   CE_QUIL_NE_FAIT_PAS,
   CHEMIN_GENERATEUR,
   ETAPES,
   FAQ,
-  GENERATIONS_PAR_HEURE,
+  FENETRE_HEURES,
+  LIMITE_PAR_IP,
   LANGUES_ET_VARIANTES,
   applicationJsonLd,
   faqJsonLd,
@@ -42,20 +44,47 @@ function sansCommentaires(chemin: string): string {
     .replace(/^\s*\/\/.*$/gm, " ");
 }
 
-test("le nombre de générations annoncé est celui que le code applique", () => {
+test("le nombre de quiz annoncé est celui que le compteur applique", () => {
   // ON NE RECOPIE PAS UN CHIFFRE DANS UNE PAGE QUI PROMET QUELQUE CHOSE.
-  // `HOURLY_LIMIT_PER_IP` n'est pas exporté (c'est une constante interne
-  // du limiteur) : on la LIT dans sa source, ce qui reste une mesure et
-  // pas une recopie. Le jour où elle bouge, la page ment, et ce test
-  // rougit avant la visiteuse.
-  const source = readFileSync(join(RACINE, "lib/embed/rateLimit.ts"), "utf-8");
-  const m = /const HOURLY_LIMIT_PER_IP\s*=\s*(\d+)/.exec(source);
-  assert.ok(m, "HOURLY_LIMIT_PER_IP a disparu ou a change de forme");
-  assert.equal(
-    GENERATIONS_PAR_HEURE,
-    Number(m![1]),
-    "la page annonce un nombre de generations que le limiteur n'applique pas",
+  // Les deux moitiés comptent, et une seule ne prouverait rien :
+  //
+  //  1. la FAQ INTERPOLE les valeurs (elle ne les réécrit pas) ;
+  //  2. le compteur les LIT dans le même module pur, au lieu de porter
+  //     son propre littéral.
+  //
+  // Sans la deuxième, la page pourrait annoncer 2 pendant que le
+  // limiteur en applique 10, et personne ne le verrait avant qu'une
+  // visiteuse ne se fasse couper.
+  const reponse = FAQ.find((q) => q.r.includes("La seule borne est technique"));
+  assert.ok(reponse, "la FAQ ne dit plus quelle est la borne");
+  assert.match(
+    reponse!.r,
+    new RegExp(`${LIMITE_PAR_IP} quiz par ${FENETRE_HEURES} heures`),
+    "la FAQ annonce une borne que le module ne porte pas",
   );
+
+  const compteur = sansCommentaires(join(RACINE, "lib/embed/rateLimit.ts"));
+  assert.match(
+    compteur,
+    /from "@\/lib\/embed\/limites"/,
+    "le compteur ne lit plus les bornes dans le module pur",
+  );
+  assert.doesNotMatch(
+    compteur,
+    /const\s+(LIMITE_PAR_IP|LIMITE_PAR_EMAIL|FENETRE_HEURES)\s*=/,
+    "le compteur redéclare une borne au lieu de la lire : les deux vont diverger",
+  );
+});
+
+test("la page publique n'importe jamais le compteur, qui tire supabaseAdmin", () => {
+  // `lib/embed/rateLimit.ts` importe `supabaseAdmin`, qui LÈVE au
+  // chargement quand une variable d'environnement manque. Un module lu
+  // par une page publique (et par ce runner) qui l'importerait ferait
+  // répondre 500 sans base : c'est le drame du 30 août, où un `import`
+  // en tête de `commentairesStore.ts` tuait toute la page d'article.
+  const page = sansCommentaires(join(RACINE, "lib/site/generateurQuiz.ts"));
+  assert.doesNotMatch(page, /lib\/embed\/rateLimit/);
+  assert.match(page, /from "@\/lib\/embed\/limites"/);
 });
 
 test("le nombre de langues annoncé est celui du catalogue", () => {
@@ -148,24 +177,80 @@ test("hors iframe le bouton NAVIGUE, dans une iframe il envoie un message", () =
   assert.equal(remisePourLeBouton("iframe", jeton).genre, "message");
 });
 
-test("le cadre de la page ne ROGNE pas l'éditeur", () => {
-  // L'editeur est en `h-screen` chez lui (QuizDetailClient). Une boite
-  // plus courte que son contenu, avec `overflow-hidden`, lui couperait
-  // le bas SANS qu'aucune capture ne le dise : un debordement n'est une
-  // perte que s'il est rogne, et la il le serait.
+test("le cadre de la page ne ROGNE pas l'éditeur, et lui rend l'écran", () => {
+  // DEUX FAITS, ET LE TEST NE FIGE AUCUNE ÉCRITURE.
+  //
+  // 1. L'éditeur est en `h-screen` chez lui (`QuizDetailClient`). Une
+  //    boîte plus COURTE, avec `overflow-hidden`, lui couperait le bas
+  //    SANS qu'aucune capture ne le dise : un débordement n'est une
+  //    perte que s'il est rogné, et là il le serait.
+  // 2. Béné, 8 septembre : "il faut mettre le véritable éditeur en
+  //    pleine page." Une boîte bornée par la colonne d'une page
+  //    marketing rend une grille à trois colonnes en 300 px de large,
+  //    donc un outil qui a l'air cassé sur la page qui doit donner
+  //    envie.
+  //
+  // La première version de ce test exigeait la chaîne `h-screen` dans
+  // la boîte. Il est donc sorti ROUGE le jour où la boîte est passée en
+  // surcouche `fixed inset-0`, c'est à dire sur une correction JUSTE :
+  // huitième fois qu'un garde-fou qui fige une FORMULATION empêche de
+  // corriger la formulation. Il vise maintenant le FAIT.
   const editeur = readFileSync(join(RACINE, "components/quiz/QuizDetailClient.tsx"), "utf-8");
   assert.ok(
     editeur.includes('"h-screen flex flex-col bg-background overflow-hidden"'),
     "la racine de l'editeur a change de hauteur : relire cadreDuGenerateur",
   );
+
   const cadre = cadreDuGenerateur("page");
-  assert.ok(cadre.editeur.includes("h-screen"), "la boite est plus courte que l'editeur");
+  // Le viewport ENTIER, et rien de moins : `fixed inset-0` ou `h-screen`.
+  const rendLeViewport = /fixed\s+inset-0/.test(cadre.editeur) || /\bh-screen\b/.test(cadre.editeur);
+  assert.ok(rendLeViewport, "la boite est plus courte que l'editeur : son bas serait rogne");
   assert.ok(
-    !/h-\[\d+vh\]/.test(cadre.editeur),
-    "une hauteur en vh plus petite que 100 rognerait le bas de l'editeur",
+    !/h-\[\d+vh\]|max-h-|max-w-/.test(cadre.editeur),
+    "une boite bornee rogne l'editeur ou l'ecrase : il lui faut l'ecran",
   );
-  // Et dans une iframe, aucune boite : le document est a lui tout seul.
+  // Une surcouche verrouille ce qu'il y a DERRIÈRE, sinon la molette
+  // traverse et la page marketing défile sous l'éditeur.
+  if (/fixed/.test(cadre.editeur)) {
+    assert.ok(cadre.verrouillerLeDefilement, "la surcouche laisse defiler la page derriere");
+  }
+
+  // Et dans une iframe, aucune boite ni aucun verrou : le document est
+  // a lui tout seul, il n'y a rien derriere.
   assert.equal(cadreDuGenerateur("iframe").editeur, "");
+  assert.equal(cadreDuGenerateur("iframe").verrouillerLeDefilement, false);
+});
+
+test("l'éditeur pleine page porte un retour vers le générateur", () => {
+  // Béné, 8 septembre : "en mettant un bouton pour revenir sur le
+  // générateur." Sans lui, la surcouche est un cul-de-sac : le visiteur
+  // n'a plus aucun moyen de refaire un quiz, et la page marketing est
+  // hors d'atteinte derrière.
+  //
+  // Le retour vit DANS la barre de l'éditeur, à la place exacte où une
+  // créatrice connectée trouve sa flèche : c'est le "on doit coller au
+  // mieux à l'intérieur de tiquiz".
+  const editeur = sansCommentaires(join(RACINE, "components/quiz/QuizDetailClient.tsx"));
+  assert.match(
+    editeur,
+    /isEmbed && onEmbedRetour/,
+    "l'editeur n'offre plus de retour au generateur",
+  );
+  assert.match(
+    editeur,
+    /t\("embedBackToGenerator"\)/,
+    "le retour n'a pas de libelle traduit : l'interface existe en 7 langues",
+  );
+
+  const client = sansCommentaires(join(RACINE, "components/embed/EmbedPreviewClient.tsx"));
+  assert.match(client, /onEmbedRetour=\{/, "le generateur ne passe aucun retour a l'editeur");
+  // Le retour ne JETTE pas le quiz : il existe en base, son jeton est
+  // gardé, et repartir dessus est un clic. Remettre le jeton à vide
+  // ferait repartir une deuxième génération sans le quiz déjà écrit.
+  assert.ok(
+    !/setSessionToken\(""\)/.test(client),
+    "le retour vide le jeton : le quiz deja ecrit serait perdu",
+  );
 });
 
 test("la page est déclarée au sitemap ET atteignable depuis le pied de page", () => {
@@ -190,4 +275,85 @@ test("aucun tiret cadratin dans ce que la visiteuse lit", () => {
   for (const texte of visible) {
     assert.ok(!/[—–]/.test(texte), `tiret cadratin dans : ${texte.slice(0, 60)}`);
   }
+});
+
+test("le formulaire public expose les MÊMES réglages que le vrai Tiquiz", () => {
+  // Béné, 8 septembre : "pour obtenir la même qualité de quiz, il faut
+  // réutiliser la fonction 'créer un quiz avec l'ia' du vrai tiquiz
+  // [...] on doit coller au mieux à l'intérieur de tiquiz en fait." Et,
+  // nommément : "il faudrait aussi demander au départ si le visiteur
+  // veut un quiz scoré ou profil, en expliquant brièvement ce que c'est,
+  // pour montrer que les deux sont dispo."
+  //
+  // C'EST LA DÉCISION QUI BLOQUE : Véronique a perdu deux jours sur un
+  // quiz scoré qu'elle voulait par profil (2 août 2026), parce que rien
+  // ne le lui avait demandé.
+  const form = sansCommentaires(join(RACINE, "components/embed/EmbedForm.tsx"));
+  for (const champ of ["format", "quizType", "resultCount", "intention", "tone"]) {
+    assert.match(
+      form,
+      new RegExp(`inputs\\.${champ}\\b`),
+      `le formulaire public n'expose pas ${champ} : le visiteur ne voit pas ce que Tiquiz sait faire`,
+    );
+  }
+  // Les deux mécaniques sont EXPLIQUÉES, jamais nommées toutes seules.
+  const mots = sansCommentaires(join(RACINE, "components/embed/embed-i18n.ts"));
+  assert.match(mots, /typeProfileDesc:/);
+  assert.match(mots, /typeScoringDesc:/);
+
+  // ET LE NOMBRE DE QUESTIONS N'EST PLUS UN RÉGLAGE À CÔTÉ DU FORMAT :
+  // le vrai formulaire le DÉDUIT (court -> 4, long -> 8), et deux
+  // réglages pour une seule décision, c'est un des deux qui mentira.
+  assert.ok(
+    !/inputs\.questionCount/.test(form),
+    "le format ET un compteur de questions : deux reglages pour une decision",
+  );
+  const route = sansCommentaires(join(RACINE, "app/api/embed/quiz/generate/route.ts"));
+  assert.match(
+    route,
+    /questionCount\s*=\s*format === "long"/,
+    "la route ne deduit plus le nombre de questions du format",
+  );
+});
+
+test("le SUJET du quiz n'est plus lu comme une intention business", () => {
+  // C'ÉTAIT UNE CAUSE MESURÉE DU "résultat pas ouf" (Béné, 8 septembre).
+  // Le premier champ du générateur public s'appelle "Sujet de ton quiz",
+  // et il était poussé dans `intention` : le modèle lisait donc
+  // "INTENTION BUSINESS : la productivité pour entrepreneurs débordés"
+  // et devait faire servir CHAQUE CTA de résultat à ça.
+  const route = sansCommentaires(join(RACINE, "app/api/embed/quiz/generate/route.ts"));
+  assert.ok(
+    !/intention:\s*topic/.test(route),
+    "le sujet repart dans l'intention business : chaque CTA servira un sujet",
+  );
+  assert.match(route, /sujet:\s*topic/, "le sujet n'a plus de place dans le prompt");
+
+  // Et la fente existe VRAIMENT dans le prompt partagé : sans elle,
+  // `sujet` serait passé et jeté en silence.
+  const prompt = buildQuizGenerationPrompt({
+    objective: "qualifier",
+    target: "freelances",
+    sujet: "la productivite pour entrepreneurs debordes",
+    intention: "vendre ma formation a 27 euros",
+  });
+  assert.match(prompt.user, /SUJET DU QUIZ : la productivite/);
+  assert.match(prompt.user, /INTENTION BUSINESS : vendre ma formation/);
+  // Sans sujet, aucune ligne vide : le formulaire de l'app n'a pas ce
+  // champ, et une ligne "SUJET DU QUIZ :" nue apprend au modele qu'il
+  // peut en inventer un.
+  const sansSujet = buildQuizGenerationPrompt({ objective: "qualifier", target: "freelances" });
+  assert.ok(!sansSujet.user.includes("SUJET DU QUIZ"), "une ligne SUJET vide part au modele");
+});
+
+test("les bornes annoncées au visiteur sont celles qui s'appliquent", () => {
+  // Les deux messages de refus annonçaient encore "1h" alors que la
+  // fenêtre est passée à 24 h : un message qui promet un délai plus
+  // court que le vrai fait revenir quelqu'un pour rien.
+  const route = sansCommentaires(join(RACINE, "app/api/embed/quiz/generate/route.ts"));
+  assert.ok(
+    !/dans 1h|dans 1 h/.test(route),
+    "un refus annonce encore une heure : la fenetre est de 24 h",
+  );
+  assert.match(route, /\$\{FENETRE_HEURES\}/, "le delai est recopie au lieu d'etre lu");
 });

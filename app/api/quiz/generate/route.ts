@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { modeleGenerationQuiz } from "@/lib/quiz/modeleGeneration";
 import {
   buildQuizGenerationPrompt,
   buildQuizImportPrompt,
@@ -27,10 +27,12 @@ const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
 
 function getClaudeModel(): string {
-  // Génération de quiz/sondage = rédaction fine → Opus par défaut (qualité
-  // d'écriture max). Override possible via env dédiée, fallback "opus".
-  // Cf. lib/anthropicModel pour le safety net des anciens IDs.
-  return resolveAnthropicModel(process.env.TIQUIZ_QUIZ_MODEL || process.env.ANTHROPIC_MODEL, "opus");
+  // Génération de quiz/sondage = rédaction fine → Opus par défaut.
+  // Le défaut vit dans lib/quiz/modeleGeneration : le générateur public
+  // tournait sur haiku pendant que celui-ci tournait sur opus, et la
+  // divergence a coûté la qualité du seul écran que voit un visiteur
+  // froid (mesuré le 8 septembre).
+  return modeleGenerationQuiz("app");
 }
 
 export async function POST(req: NextRequest) {

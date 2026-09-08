@@ -103,11 +103,21 @@ export function cadreDuGenerateur(contexte: ContexteGenerateur): {
   enveloppe: string;
   /** L'enveloppe de l'éditeur, qui est lui même en `h-screen`. */
   editeur: string;
+  /**
+   * Faut-il empêcher la page qui est DERRIÈRE de défiler ?
+   *
+   * Seulement quand l'éditeur est posé en surcouche : sans ça, la molette
+   * traverse et fait défiler la page marketing sous l'éditeur, ce qui est
+   * exactement le "c'est pas représentatif" de Béné. Dans une iframe il
+   * n'y a rien derrière, donc rien à verrouiller.
+   */
+  verrouillerLeDefilement: boolean;
 } {
   if (contexte === "iframe") {
     return {
       enveloppe: "min-h-[100dvh] bg-background text-foreground flex flex-col",
       editeur: "",
+      verrouillerLeDefilement: false,
     };
   }
   return {
@@ -117,13 +127,26 @@ export function cadreDuGenerateur(contexte: ContexteGenerateur): {
     // fond crème à tout ce qu'il contient, et l'outil ne doit pas les
     // hériter.
     enveloppe: "text-foreground flex flex-col rounded-2xl border bg-background overflow-hidden",
-    // L'ÉDITEUR EST EN `h-screen` CHEZ LUI, et c'est ce qui décide de
-    // cette valeur : une boîte plus COURTE que son contenu le
-    // ROGNERAIT, donc la créatrice perdrait le bas de son éditeur sans
-    // qu'aucun test ne le dise (règle du 7 septembre : un débordement
-    // n'est une perte que s'il est rogné, et ici il le serait). On pose
-    // donc exactement la même hauteur, et `overflow-hidden` ne coupe
-    // alors rien : il tient les coins arrondis.
-    editeur: "h-screen overflow-hidden rounded-2xl border bg-background",
+    // L'ÉDITEUR PREND TOUT L'ÉCRAN, ET C'EST UNE DEMANDE (Béné,
+    // 8 septembre) : "la mise en page de l'éditeur est éclatée sur la
+    // page du générateur, c'est pas représentatif, ça donne pas envie,
+    // il faut mettre le véritable éditeur en pleine page, en mettant un
+    // bouton pour revenir sur le générateur."
+    //
+    // Elle a raison, et c'est mesurable : l'éditeur est une grille à
+    // trois colonnes bâtie pour un écran entier. Enfermé dans la
+    // colonne d'une page marketing, il rend ses colonnes à 300 px, donc
+    // il montre au visiteur un outil qui a l'air cassé, sur la page
+    // exacte qui doit lui donner envie.
+    //
+    // `fixed inset-0` lui rend le viewport, comme DANS Tiquiz. Et on ne
+    // pose AUCUNE barre à nous au dessus : l'éditeur est en `h-screen`,
+    // donc tout ce qu'on lui mettrait sur la tête lui volerait la même
+    // hauteur en bas, et le bas serait ROGNÉ (règle du 7 septembre : un
+    // débordement n'est une perte que s'il est rogné, et ici il le
+    // serait). Le retour vit donc DANS sa barre à lui, à la place exacte
+    // où une créatrice connectée trouve sa flèche.
+    editeur: "fixed inset-0 z-50 overflow-hidden bg-background",
+    verrouillerLeDefilement: true,
   };
 }
