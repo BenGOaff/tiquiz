@@ -90,6 +90,9 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   },
   {
     chemin: "/affiliation",
+    // Traduite le 8 septembre : `lib/site/pageAffiliation.ts` porte les
+    // deux pages du programme dans les deux langues.
+    langues: LANGUES_PUBLIQUES,
     titre: "Programme d'affiliation Tiquiz",
     resume:
       "40 % de commission récurrente sur chaque abonnement Tiquiz, tant que le filleul reste client. Cookie d'un an, versement dès 20 €, facture éditée par nous.",
@@ -97,6 +100,7 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   },
   {
     chemin: "/affiliation-atelier",
+    langues: LANGUES_PUBLIQUES,
     titre: "Affiliation de l'Atelier du Quiz",
     resume:
       "70 % de commission sur chaque vente de l'Atelier du Quiz, la formation de 7 jours à 47 €.",

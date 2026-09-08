@@ -410,9 +410,10 @@ test("le menu et le pied de page suivent la langue, mais SEULEMENT ou l'anglais 
   // 404 dans le menu, sur toutes les pages a la fois.
   //
   // LA PREMISSE EST VERIFIEE, ET ELLE A DEJA BOUGE : ce test portait sur
-  // `/integrations`, qui a recu sa version anglaise le 8 septembre. Sans
+  // `/integrations`, puis `/affiliation`, et les deux ont recu leur
+  // version anglaise le 8 septembre. Sans
   // cette ligne il serait passe au vert en ne mesurant plus rien.
-  for (const fixture of ["/affiliation", "/affiliation-atelier"]) {
+  for (const fixture of ["/newsletter"]) {
     const page = PAGES_PUBLIQUES.find((p) => p.chemin === fixture);
     assert.ok(page, `${fixture} n'est plus dans PAGES_PUBLIQUES`);
     assert.ok(

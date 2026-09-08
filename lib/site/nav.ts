@@ -101,7 +101,7 @@ export const MENU: readonly LienSite[] = [
   // un article sur les quiz doit pouvoir trouver la formation sans
   // savoir qu'elle vit sur un autre domaine.
   { href: ATELIER_SALES_URL, libelle: "L'Atelier du Quiz" },
-  { href: "/affiliation", libelle: "Affiliation" },
+  { href: "/affiliation", libelle: "Affiliation", en: "Affiliate" },
   { href: "/a-propos", libelle: "À propos", en: "About" },
   { href: "/support", libelle: "Aide" },
 ] as const;
@@ -178,8 +178,8 @@ export const PIED: readonly ColonnePied[] = [
     titre: "Gagner avec Tiquiz",
     titreEn: "Earn with Tiquiz",
     liens: [
-      { href: "/affiliation", libelle: "Programme d'affiliation" },
-      { href: "/affiliation-atelier", libelle: "Affiliation Atelier du Quiz" },
+      { href: "/affiliation", libelle: "Programme d'affiliation", en: "Affiliate programme" },
+      { href: "/affiliation-atelier", libelle: "Affiliation Atelier du Quiz", en: "L'Atelier affiliate programme" },
       { href: AFFILIATE_DASHBOARD_URL, libelle: "Espace affilié" },
     ],
   },
@@ -316,8 +316,9 @@ const APP_MULTILANGUE: readonly string[] = ["/login", "/signup", "/support"];
  * -- ON NE TRADUIT QUE CE QUI MÈNE VRAIMENT À DE L'ANGLAIS -------------
  *
  * Traduire les huit entrées d'un coup promettrait de l'anglais derrière
- * chaque clic : `/a-propos`, `/integrations` et `/affiliation` n'ont
- * aucune version anglaise, et c'est un mensonge, pas une commodité.
+ * chaque clic : au 8 septembre, toutes les pages du menu sont
+ * traduites SAUF `/newsletter`, et annoncer une langue qu'une page n'a
+ * pas est un mensonge, pas une commodité.
  *
  * Un libellé resté français est donc une INFORMATION : il dit que la
  * page derrière est française. Et la disponibilité se lit aux MÊMES

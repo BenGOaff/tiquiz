@@ -21,8 +21,8 @@
 //   francaise.
 //
 // Traduire les huit entrees d'un coup promettrait de l'anglais derriere
-// chaque clic, alors que `/integrations` et `/affiliation`
-// n'ont aucune version anglaise. C'est un mensonge, pas une commodite,
+// chaque clic, alors que `/newsletter` n'a aucune version anglaise.
+// C'est un mensonge, pas une commodite,
 // et c'est l'interdit numero un de Bene.
 //
 // Verifie en rejouant TROIS versions fautives (un `en` pose sur une
@@ -97,20 +97,20 @@ describe("le chrome du site suit la langue de la page", () => {
 
   test("un `en` pose sur une page SANS version anglaise ne s'affiche jamais", () => {
     // Le sens de l'erreur : on ne peut pas mentir par inadvertance.
-    // `/affiliation` existe, il est dans le sitemap, et il n'a pas de
+    // `/newsletter` existe, il est dans le sitemap, et il n'a pas de
     // texte anglais (mesure du 8 septembre).
     //
     // Le test VERIFIE d'abord sa propre premisse, et c'est ce qui l'a
-    // sauve DEUX FOIS : sa fixture etait `/a-propos`, puis
-    // `/integrations`, et les deux ont recu leur version anglaise le
+    // sauve TROIS FOIS : sa fixture etait `/a-propos`, puis `/integrations`,
+    // puis `/affiliation`, et les trois ont recu leur version anglaise le
     // 8 septembre. Sans cette ligne il serait passe au vert en ne
     // mesurant plus rien du tout.
     assert.ok(
-      !languesDeclarees("/affiliation").includes("en"),
-      "ce test repose sur le fait que /affiliation n'a pas de version anglaise",
+      !languesDeclarees("/newsletter").includes("en"),
+      "ce test repose sur le fait que /newsletter n'a pas de version anglaise",
     );
-    const menteur: LienSite = { href: "/affiliation", libelle: "Affiliation", en: "Affiliate" };
-    assert.equal(libellePourLangue(menteur, "en"), "Affiliation");
+    const menteur: LienSite = { href: "/newsletter", libelle: "La newsletter", en: "The newsletter" };
+    assert.equal(libellePourLangue(menteur, "en"), "La newsletter");
   });
 
   test("une adresse servie par l'APP se traduit sans jamais etre prefixee", () => {
