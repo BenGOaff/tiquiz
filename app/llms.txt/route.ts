@@ -25,6 +25,7 @@ import { resolvePublicUrl } from "@/lib/authLinks";
 import { hoteCanonique } from "@/lib/publicHost";
 import { SALES_HOSTS } from "@/lib/sales/salesHosts";
 import { listerArticles } from "@/lib/blog/articles";
+import { LANGUE_SANS_PREFIXE } from "@/lib/site/langues";
 import { PAGES_PUBLIQUES } from "@/lib/site/pagesPubliques";
 import { OWNER_CATALOG, OWNER_PRODUCT_ORDER } from "@/lib/checkout/catalog";
 import { ORIGINE_BLOG } from "@/lib/blog/seo";
@@ -233,7 +234,7 @@ function construireLlmsTxtVente(): string {
   }
   lignes.push("");
 
-  const articles = listerArticles();
+  const articles = listerArticles(LANGUE_SANS_PREFIXE);
   if (articles.length > 0) {
     lignes.push("## Articles");
     lignes.push("");

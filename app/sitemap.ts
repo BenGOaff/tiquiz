@@ -29,7 +29,7 @@ import { SALES_HOSTS } from "@/lib/sales/salesHosts";
 import { listerArticles } from "@/lib/blog/articles";
 import { RUBRIQUES } from "@/lib/blog/rubriques";
 import { PAGES_PUBLIQUES, languesDePage } from "@/lib/site/pagesPubliques";
-import { cheminPourLangue } from "@/lib/site/langues";
+import { cheminPourLangue, LANGUE_SANS_PREFIXE } from "@/lib/site/langues";
 import { ADRESSES_LEGALES_FR } from "@/lib/site/adressesLegales";
 import { echapperMotifLike } from "@/lib/db/motifLike";
 
@@ -102,7 +102,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: "weekly" as const,
         priority: 0.6,
       })),
-      ...listerArticles().map((a) => ({
+      ...listerArticles(LANGUE_SANS_PREFIXE).map((a) => ({
         url: `${HOTE_VENTE}/blog/${a.slug}`,
         lastModified: new Date(`${a.publieLe}T12:00:00Z`),
         changeFrequency: "monthly" as const,

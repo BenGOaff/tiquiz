@@ -15,11 +15,11 @@ import { listerArticles } from "@/lib/blog/articles";
 import { CHEMIN_FLUX, construireFlux, dateRss, echapperXml } from "@/lib/blog/flux";
 import { epinglePour } from "@/lib/blog/partage";
 
-const FLUX = construireFlux(listerArticles());
+const FLUX = construireFlux(listerArticles("fr"));
 
 test("le flux porte un item par article publié", () => {
   const items = FLUX.match(/<item>/g) ?? [];
-  assert.equal(items.length, listerArticles().length);
+  assert.equal(items.length, listerArticles("fr").length);
   assert.ok(items.length > 0, "un blog vide rendrait ce test muet");
 });
 
@@ -28,7 +28,7 @@ test("L'IMAGE DU FLUX EST L'ÉPINGLE, jamais la couverture paysage", () => {
   // les automatisations quand elles demandent l'image d'un article, et
   // le premier usage de ce flux est de publier sur Pinterest, où une
   // image en 16/9 ne circule pas.
-  for (const a of listerArticles()) {
+  for (const a of listerArticles("fr")) {
     const epingle = epinglePour(a.slug);
     if (!epingle) continue;
     assert.ok(
@@ -41,7 +41,7 @@ test("L'IMAGE DU FLUX EST L'ÉPINGLE, jamais la couverture paysage", () => {
     );
   }
   // Et la couverture n'est pas perdue : elle vit dans la description.
-  const premier = listerArticles()[0];
+  const premier = listerArticles("fr")[0];
   if (premier?.couverture) {
     assert.ok(FLUX.includes(`<img src="https://tiquiz.fr${premier.couverture}"`));
   }

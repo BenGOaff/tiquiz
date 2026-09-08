@@ -60,7 +60,7 @@ function toutesLesPages(): string[] {
     "/",
     ...PAGES_PUBLIQUES.map((p) => p.chemin),
     ...RUBRIQUES.map((r) => `/blog/rubrique/${r.id}`),
-    ...listerArticles().map((a) => `/blog/${a.slug}`),
+    ...listerArticles("fr").map((a) => `/blog/${a.slug}`),
     // Les deux écrans où le lien finit par se transformer en argent.
     "/signup",
     "/commande/mensuel",

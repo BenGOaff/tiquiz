@@ -201,3 +201,42 @@ console.log(
     ? "Rien a corriger : l'anglais est deja d'aplomb, et rien d'interdit n'y survit."
     : "Rien ne survit de ce qui est interdit.",
 );
+
+// ── LE SOMMAIRE, ECRIT DEPUIS LE CONTENU CORRIGE ──
+//
+// C'EST LA REPARATION QUI L'ECRIT, JAMAIS L'IMPORT, et ce n'est pas un
+// detail d'ordonnancement : la reparation corrige `titre`, `description`
+// et `motsCles`. Un sommaire ecrit a l'import porterait donc les
+// versions NON corrigees, c'est a dire l'ancien prix et les promesses
+// fausses, et ce sommaire est exactement ce qui s'affiche sur la liste
+// du blog et dans l'`og:description` d'un partage.
+//
+// Sens de l'erreur : sans reparation il n'y a pas de sommaire, donc
+// aucun article anglais n'est servi. Rien vaut mieux qu'un titre faux.
+const sommaire = [...corriges.values()]
+  .map((txt) => JSON.parse(txt))
+  .map((a) => ({
+    slug: a.slug,
+    langue: a.langue,
+    // L'APPARIEMENT VOYAGE AVEC LE SOMMAIRE : sans lui, retrouver la
+    // version anglaise d'un article francais demanderait d'ouvrir les
+    // quatre fichiers a chaque rendu de page.
+    traductionDe: a.traductionDe,
+    titre: a.titre,
+    description: a.description,
+    publieLe: a.publieLe,
+    couverture: a.couverture,
+  }))
+  // Du plus recent au plus ancien, comme le sommaire francais : les
+  // deux listes sont lues par le MEME composant.
+  .sort((x, y) => (x.publieLe < y.publieLe ? 1 : x.publieLe > y.publieLe ? -1 : 0));
+
+if (!VERIFIE) {
+  fs.writeFileSync(
+    path.join(DOSSIER, "index.json"),
+    `${JSON.stringify(sommaire, null, 2)}\n`,
+    "utf8",
+  );
+}
+console.log(`Sommaire : ${sommaire.length} article(s)${VERIFIE ? " (rien ecrit)" : ""}.`);
+

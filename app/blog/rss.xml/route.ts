@@ -17,13 +17,14 @@
 // d'une panne de base serait un flux sur lequel on ne peut pas compter.
 
 import { listerArticles } from "@/lib/blog/articles";
+import { LANGUE_SANS_PREFIXE } from "@/lib/site/langues";
 import { construireFlux } from "@/lib/blog/flux";
 
 export const dynamic = "force-static";
 export const revalidate = 3600;
 
 export function GET(): Response {
-  return new Response(construireFlux(listerArticles()), {
+  return new Response(construireFlux(listerArticles(LANGUE_SANS_PREFIXE)), {
     headers: {
       "content-type": "application/rss+xml; charset=utf-8",
       "cache-control": "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",

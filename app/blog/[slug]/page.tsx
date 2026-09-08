@@ -64,6 +64,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 import { lireArticle, listerArticles, tousLesSlugs } from "@/lib/blog/articles";
+import { LANGUE_SANS_PREFIXE } from "@/lib/site/langues";
 import { articlesVoisins, extraireResume } from "@/lib/blog/gabarit";
 import { normaliserImages } from "@/lib/blog/imagesArticle";
 import { lireCommentairesPublies } from "@/lib/blog/commentairesStore";
@@ -90,8 +91,14 @@ export const dynamic = "force-static";
 export const dynamicParams = false;
 export const revalidate = 600;
 
+// CETTE ROUTE SERT LA LANGUE SANS PREFIXE, ET ELLE LE DIT.
+//
+// L'anglais aura ses PROPRES segments (`/en/blog/<slug>`) : ses slugs
+// different des francais, donc il ne peut pas passer par ici, et un
+// defaut devine servirait du francais sous une adresse anglaise sans
+// que rien ne s'affiche de travers.
 export function generateStaticParams() {
-  return tousLesSlugs().map((slug) => ({ slug }));
+  return tousLesSlugs(LANGUE_SANS_PREFIXE).map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({
@@ -100,7 +107,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const a = lireArticle(slug);
+  const a = lireArticle(slug, LANGUE_SANS_PREFIXE);
   if (!a) return {};
   const image = a.couverture ? `${ORIGINE_BLOG}${a.couverture}` : undefined;
   return {
@@ -148,7 +155,7 @@ function jourLisible(iso: string): string {
 
 export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const a = lireArticle(slug);
+  const a = lireArticle(slug, LANGUE_SANS_PREFIXE);
   if (!a) notFound();
 
   const { resume, corps } = extraireResume(a.blocs);
@@ -157,7 +164,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   const minutes = minutesDeLecture(a.blocs);
   const faq = jsonLdFaq(a);
   const rubrique = rubriqueDe(a.slug);
-  const voisins = articlesVoisins(a, listerArticles(), 3);
+  const voisins = articlesVoisins(a, listerArticles(LANGUE_SANS_PREFIXE), 3);
 
   const url = urlArticle(a.slug);
   const epingle = epinglePour(a.slug);

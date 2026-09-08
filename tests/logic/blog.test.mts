@@ -21,8 +21,8 @@ import { estHrefSur, attributsLien, minutesDeLecture, nettoyerBloc, sommaire, te
 import { jsonLdArticle, jsonLdFaq, jsonLdFilDAriane, ORIGINE_BLOG, urlArticle } from "../../lib/blog/seo.ts";
 import { reponctuer } from "../../lib/blog/reponctuation.ts";
 
-const ARTICLES = listerArticles();
-const COMPLETS = tousLesSlugs().map((s) => lireArticle(s)!);
+const ARTICLES = listerArticles("fr");
+const COMPLETS = tousLesSlugs("fr").map((s) => lireArticle(s, "fr")!);
 
 function toutLeTexte(): string {
   return JSON.stringify(COMPLETS);
@@ -73,7 +73,7 @@ test("l'arithmetique de l'article d'affiliation est refaite, pas rafistolee", ()
   // Remplacer un prix sans refaire le calcul laisse un prix juste et un
   // resultat faux, ce qui est pire que de n'avoir rien touche : c'est
   // ce qui avait produit le 108 EUR.
-  const a = lireArticle("rente-mensuelle-affiliation-tiquiz")!;
+  const a = lireArticle("rente-mensuelle-affiliation-tiquiz", "fr")!;
   const texte = JSON.stringify(a);
   assert.ok(texte.includes("5,67 €"), "la commission mensuelle, sur le HT");
   assert.ok(texte.includes("170 €/mois"), "30 filleuls a 5,67 EUR");
@@ -233,7 +233,7 @@ test("l'affiliation ne parle plus du code Systeme.io", () => {
   // Le code public est le notre depuis le 24 aout. Envoyer l'affilie
   // chercher un "code qui commence par sa" le renvoie dans un espace
   // qui ne le paie plus.
-  const a = lireArticle("rente-mensuelle-affiliation-tiquiz")!;
+  const a = lireArticle("rente-mensuelle-affiliation-tiquiz", "fr")!;
   const texte = JSON.stringify(a);
   assert.ok(!/commence par ?"sa"/.test(texte), "ancien identifiant Systeme.io");
   assert.ok(!/dashboard Systeme io/i.test(texte), "ancien espace affilie");
@@ -278,14 +278,14 @@ test("aucune image ne pointe encore sur le CDN de Systeme.io", () => {
 
 test("un slug ne peut pas servir a lire un fichier du serveur", () => {
   // `path.join` accepte parfaitement `../../.env`.
-  assert.equal(lireArticle("../../.env"), null);
-  assert.equal(lireArticle("../package"), null);
-  assert.equal(lireArticle(""), null);
-  assert.equal(lireArticle("MAJUSCULES"), null);
+  assert.equal(lireArticle("../../.env", "fr"), null);
+  assert.equal(lireArticle("../package", "fr"), null);
+  assert.equal(lireArticle("", "fr"), null);
+  assert.equal(lireArticle("MAJUSCULES", "fr"), null);
 });
 
 test("un slug inconnu rend null, il ne jette pas", () => {
-  assert.equal(lireArticle("article-qui-nexiste-pas"), null);
+  assert.equal(lireArticle("article-qui-nexiste-pas", "fr"), null);
 });
 
 // ── LE RENDU ──
@@ -359,7 +359,7 @@ test("la canonique designe NOTRE adresse, jamais l'ancienne", () => {
 });
 
 test("le JSON-LD d'un article porte ce qu'un moteur attend", () => {
-  const a = lireArticle("vendre-avec-un-quiz")!;
+  const a = lireArticle("vendre-avec-un-quiz", "fr")!;
   const ld = jsonLdArticle(a) as Record<string, unknown>;
   assert.equal(ld["@type"], "BlogPosting");
   assert.equal(ld.headline, a.titre);

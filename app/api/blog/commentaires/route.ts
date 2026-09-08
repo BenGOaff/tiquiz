@@ -27,6 +27,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { tousLesSlugs } from "@/lib/blog/articles";
+import { LANGUES_PUBLIQUES } from "@/lib/site/langues";
 import { jugerCommentaire } from "@/lib/blog/commentaires";
 import { enregistrerCommentaire } from "@/lib/blog/commentairesStore";
 import { envoyerAlerteCommentaire } from "@/lib/email/commentaireBlogAlerte";
@@ -66,9 +67,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, raison: "corps-illisible" }, { status: 400 });
   }
 
+  // TOUTES les langues servies, pas seulement le francais : un
+  // commentaire arrive avec le slug de l'article qu'il commente, et les
+  // slugs anglais ne ressemblent pas aux francais. N'accepter qu'une
+  // langue refuserait en silence les commentaires de l'autre.
   const verdict = jugerCommentaire(
     corps as Parameters<typeof jugerCommentaire>[0],
-    tousLesSlugs(),
+    LANGUES_PUBLIQUES.flatMap((l) => tousLesSlugs(l)),
   );
   if (!verdict.ok) {
     // Le piège attrapé répond 200 : dire à un robot qu'il a été repéré

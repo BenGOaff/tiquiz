@@ -18,7 +18,7 @@ import { listerArticles } from "@/lib/blog/articles";
 import { codeVerificationPinterest, diagnosticVerificationPinterest } from "@/lib/site/pinterest";
 
 test("chaque article publié a son épingle verticale sur le disque", () => {
-  for (const a of listerArticles()) {
+  for (const a of listerArticles("fr")) {
     if (!a.couverture) continue;
     assert.ok(epinglePour(a.slug), `épingle manquante pour ${a.slug}`);
   }
@@ -27,7 +27,7 @@ test("chaque article publié a son épingle verticale sur le disque", () => {
 test("une épingle désigne l'ARTICLE, jamais le sommaire du blog", () => {
   // Le morceau qu'on ne peut pas oublier : épinglée depuis la liste, une
   // carte sans `data-pin-url` renverrait le lecteur sur /blog.
-  const [a] = listerArticles();
+  const [a] = listerArticles("fr");
   assert.ok(a);
   const attrs = attributsEpingle(a);
   assert.equal(attrs["data-pin-url"], `https://tiquiz.fr/blog/${a.slug}`);

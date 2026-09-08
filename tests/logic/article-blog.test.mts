@@ -44,9 +44,9 @@ import {
   PHRASE_REFUS,
 } from "../../lib/blog/commentaires.ts";
 
-const SLUGS = tousLesSlugs();
-const COMPLETS = SLUGS.map((s) => lireArticle(s)!);
-const RESUMES = listerArticles();
+const SLUGS = tousLesSlugs("fr");
+const COMPLETS = SLUGS.map((s) => lireArticle(s, "fr")!);
+const RESUMES = listerArticles("fr");
 
 // ── LE TL;DR EST UN CHAPEAU, PAS UN PARAGRAPHE ──
 
@@ -67,7 +67,7 @@ test("un article SANS TL;DR garde son corps intact", () => {
   // L'etude de cas de Jocelyne n'en a pas. Fabriquer un resume a partir
   // des premieres phrases donnerait un encadre qui repete mot pour mot
   // le paragraphe juste en dessous.
-  const a = lireArticle("cas-client-jocelyne-tdah")!;
+  const a = lireArticle("cas-client-jocelyne-tdah", "fr")!;
   const { resume, corps } = extraireResume(a.blocs);
   assert.equal(resume, null);
   assert.equal(corps.length, a.blocs.length);
@@ -240,7 +240,7 @@ test("le schema duplique de l'etude de cas ne s'affiche plus deux fois", () => {
   // `svg-gwenn-3-axes.svg` apparait deux fois d'affilee : l'import a
   // duplique le bloc, et le lecteur se demandait ce qu'il avait rate
   // entre les deux.
-  const a = lireArticle("cas-client-jocelyne-tdah")!;
+  const a = lireArticle("cas-client-jocelyne-tdah", "fr")!;
   const avant = a.blocs.filter((b) => b.type === "image" && b.src.includes("gwenn-3-axes")).length;
   assert.equal(avant, 2, "le doublon est bien dans le contenu importe");
   const apres = normaliserImages(a.blocs).filter(

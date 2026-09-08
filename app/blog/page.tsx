@@ -13,6 +13,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 import { listerArticles } from "@/lib/blog/articles";
+import { LANGUE_SANS_PREFIXE } from "@/lib/site/langues";
 import { ORIGINE_BLOG, jsonLdListe } from "@/lib/blog/seo";
 import { rubriqueDe } from "@/lib/blog/rubriques";
 import CarteArticle, { jourLisible } from "@/components/site/CarteArticle";
@@ -40,7 +41,7 @@ const DESCRIPTION =
 // On ne DESSINE pas une image pour ça : on prend celle que la page
 // montre déjà en haut, la couverture de l'article en une. Elle est
 // vraie, elle change avec le blog, et personne n'a à la maintenir.
-const COUVERTURE_UNE = listerArticles()[0]?.couverture ?? null;
+const COUVERTURE_UNE = listerArticles(LANGUE_SANS_PREFIXE)[0]?.couverture ?? null;
 
 export const metadata: Metadata = {
   title: TITRE,
@@ -75,7 +76,7 @@ export const metadata: Metadata = {
 };
 
 export default function BlogIndex() {
-  const articles = listerArticles();
+  const articles = listerArticles(LANGUE_SANS_PREFIXE);
   const [une, ...reste] = articles;
   const derniers = reste.slice(0, 4);
   // LA GRILLE PORTE TOUT LE BLOG, PLUS SEULEMENT SIX ARTICLES.

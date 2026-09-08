@@ -27,6 +27,7 @@
 // le ranger serait la pire des réponses.
 
 import { listerArticles, type ResumeArticle } from "@/lib/blog/articles";
+import { LANGUE_SANS_PREFIXE } from "@/lib/site/langues";
 
 export interface Rubrique {
   /** Le segment d'URL : `/blog/rubrique/<id>`. */
@@ -94,7 +95,9 @@ export function trouverRubrique(id: string | null | undefined): Rubrique | null 
 
 /** Les articles d'une rubrique, du plus récent au plus ancien. */
 export function articlesDeLaRubrique(id: string): ResumeArticle[] {
-  return listerArticles().filter((a) => CLASSEMENT[a.slug] === id);
+  // `CLASSEMENT` est indexe par des slugs FRANCAIS : cette fonction ne
+  // peut donc parler que de cette langue la, et elle le dit.
+  return listerArticles(LANGUE_SANS_PREFIXE).filter((a) => CLASSEMENT[a.slug] === id);
 }
 
 /**

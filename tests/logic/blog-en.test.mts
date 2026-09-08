@@ -216,3 +216,98 @@ test("chaque image anglaise est chez nous, et aucune ne manque", () => {
     );
   }
 });
+
+// ─────────────────────────────────────────────────────────────────────
+// LE SOMMAIRE ANGLAIS, ET LA LANGUE QUI NE SE DEVINE PAS
+// ─────────────────────────────────────────────────────────────────────
+
+test("le sommaire anglais est ECRIT depuis le contenu corrige", () => {
+  const sommaire = JSON.parse(fs.readFileSync(path.join(DOSSIER, "index.json"), "utf8"));
+  const tous = articles();
+  assert.equal(sommaire.length, tous.length, "un article, une ligne de sommaire");
+
+  const parSlug = new Map(tous.map((a) => [a.objet.slug, a.objet]));
+  for (const ligne of sommaire) {
+    const complet = parSlug.get(ligne.slug);
+    assert.ok(complet, `le sommaire annonce ${ligne.slug}, qui existe sur le disque`);
+
+    // LE SOMMAIRE NE PEUT PAS PORTER UN TITRE QUE L'ARTICLE NE PORTE
+    // PLUS, et c'est tout l'interet de le faire ecrire par la
+    // REPARATION plutot que par l'import : la reparation corrige
+    // `titre` et `description`, et ce sont exactement les deux chaines
+    // qui s'affichent sur la liste du blog et dans l'`og:description`
+    // d'un partage. Ecrit a l'import, le sommaire republierait l'ancien
+    // prix sur la page la plus visitee du blog.
+    assert.equal(ligne.titre, complet.titre, `${ligne.slug} : meme titre des deux cotes`);
+    assert.equal(
+      ligne.description,
+      complet.description,
+      `${ligne.slug} : meme description des deux cotes`,
+    );
+    assert.equal(ligne.langue, "en", `${ligne.slug} declare sa langue dans le sommaire`);
+    assert.equal(
+      ligne.traductionDe,
+      complet.traductionDe,
+      `${ligne.slug} : l'appariement voyage avec le sommaire`,
+    );
+  }
+
+  // Aucun interdit ne survit dans le sommaire non plus : c'est un
+  // fichier a part, et un controle qui ne regarderait que les articles
+  // laisserait passer une description fausse sur la page de liste.
+  const brut = fs.readFileSync(path.join(DOSSIER, "index.json"), "utf8");
+  for (const i of INTERDITS_EN) {
+    const m = brut.match(i.motif);
+    assert.equal(m, null, `le sommaire porte encore "${m?.[0]}" : ${i.pourquoi}`);
+  }
+});
+
+test("la langue est un PARAMETRE de la lecture, jamais un defaut devine", async () => {
+  const { listerArticles, lireArticle, tousLesSlugs, adressesDeLArticle } = await import(
+    "@/lib/blog/articles"
+  );
+
+  // Les deux langues repondent, et elles ne se melangent pas.
+  const fr = listerArticles("fr");
+  const en = listerArticles("en");
+  assert.ok(fr.length >= 10, "le blog francais repond");
+  assert.equal(en.length, 4, "le blog anglais repond");
+  const slugsFr = new Set(tousLesSlugs("fr"));
+  for (const a of en) {
+    assert.ok(!slugsFr.has(a.slug), `${a.slug} n'existe que du cote anglais`);
+    // UN DEFAUT A "fr" SERVIRAIT DU FRANCAIS SOUS UNE ADRESSE ANGLAISE,
+    // et la page s'afficherait parfaitement : c'est la forme de panne
+    // que tout ce chantier existe pour empecher. Un slug anglais lu
+    // dans le dossier francais doit donc rendre `null`, pas un article.
+    assert.equal(lireArticle(a.slug, "fr"), null, `${a.slug} est introuvable en francais`);
+    assert.ok(lireArticle(a.slug, "en"), `${a.slug} est lisible en anglais`);
+  }
+
+  // L'APPARIEMENT REND LES DEUX ADRESSES, DANS LES DEUX SENS.
+  for (const a of en) {
+    const complet = lireArticle(a.slug, "en")!;
+    const depuisEn = adressesDeLArticle(a.slug, "en");
+    const depuisFr = adressesDeLArticle(complet.traductionDe!, "fr");
+    assert.deepEqual(depuisEn, depuisFr, `${a.slug} : la meme paire vue des deux cotes`);
+    assert.equal(depuisEn.fr, `/blog/${complet.traductionDe}`);
+    assert.equal(depuisEn.en, `/en/blog/${a.slug}`);
+  }
+
+  // ET UN ARTICLE FRANCAIS SANS VERSION ANGLAISE N'EN ANNONCE AUCUNE.
+  //
+  // Six des dix articles francais n'ont pas de version anglaise.
+  // Declarer une paire vers une page absente est pire que n'en declarer
+  // aucune : Google la suit et tombe sur un 404.
+  const traduits = new Set(
+    en.map((a) => lireArticle(a.slug, "en")!.traductionDe),
+  );
+  const orphelins = fr.filter((a) => !traduits.has(a.slug));
+  assert.ok(orphelins.length > 0, "des articles francais n'ont pas de version anglaise");
+  for (const a of orphelins) {
+    assert.equal(
+      adressesDeLArticle(a.slug, "fr").en,
+      undefined,
+      `${a.slug} n'annonce aucune version anglaise`,
+    );
+  }
+});
