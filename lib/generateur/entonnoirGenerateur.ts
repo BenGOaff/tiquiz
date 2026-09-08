@@ -30,12 +30,20 @@
 // personne ne compte les vues de l'iframe, donc il n'y a pas de
 // dénominateur à lui donner, et en inventer un serait pire que se taire.
 //
-// ── LE COÛT EST UNE ESTIMATION, ET IL EST EN DOLLARS ─────────────────
+// ── LE COÛT EST UNE ESTIMATION, ET IL EST CONVERTI EN EUROS ──────────
 //
 // Il se calcule à partir des jetons ÉCRITS EN BASE et de la table de
 // tarifs (`tarifsIa.ts`, avec sa date de relevé). Anthropic facture en
-// dollars, Tiquiz encaisse en euros, et on ne convertit pas : voir la
-// note de `tarifsIa.ts`.
+// dollars, Tiquiz encaisse en euros : la conversion passe par le taux
+// DATÉ de `tarifsIa.ts`, parce que Béné a demandé le ROI et accepté
+// l'imprécision ("même si c'est imprécis à quelques euros prêt").
+//
+// ── LE ROI COMPARE UN COÛT PAYÉ UNE FOIS À UN REVENU RÉCURRENT ───────
+//
+// C'est l'asymétrie qu'il faut DIRE, sinon le ratio se lit comme un
+// multiple sur une même période : la génération se paie UNE fois, et
+// l'abonnement rentre CHAQUE mois tant que la personne reste. Le ratio
+// est donc généreux par construction, et l'écran l'écrit.
 //
 // ── UN TAUX SUR TROIS PERSONNES N'EST PAS UN TAUX ────────────────────
 //
@@ -44,7 +52,7 @@
 // s'affichent toujours : ils sont exacts dès la première ligne.
 
 import { isPaidPlan } from "@/lib/planLimits";
-import { coutMillicents } from "@/lib/generateur/tarifsIa";
+import { coutMillicents, centsEurosDepuisMillicents, TAUX_USD_EUR } from "@/lib/generateur/tarifsIa";
 import { CHEMIN_GENERATEUR, SOURCE_GENERATEUR } from "@/lib/site/generateurQuiz";
 import { MIN_VUES_POUR_UN_TAUX, type LigneTrafic } from "@/lib/trafic/entonnoir";
 
@@ -101,6 +109,8 @@ export interface EntonnoirGenerateur {
   /** `null` quand personne ne s'est inscrit : on ne divise pas par zéro. */
   coutParInscritMillicents: number | null;
   coutParAbonneMillicents: number | null;
+  /** Ce que ça coûte, comparé à ce que ça rapporte. Voir l'en-tête. */
+  roi: RoiGenerateur;
 }
 
 /** Un taux en %, à une décimale, ou `null` si le dénominateur est trop maigre. */
@@ -148,6 +158,15 @@ function estAbonne(g: LigneGeneration): boolean {
 export function construireEntonnoirGenerateur(args: {
   lignesTrafic: readonly LigneTrafic[];
   generations: readonly LigneGeneration[];
+  /**
+   * OBLIGATOIRE : le revenu mensuel de chaque plan, en centimes d'euro.
+   *
+   * Jamais deviné à l'intérieur. Un module qui irait chercher le
+   * catalogue lui même déciderait à la place de l'appelant du sens de
+   * "revenu", et c'est la règle du 1er août : quand un cas a deux
+   * mécaniques, la mécanique est un PARAMÈTRE.
+   */
+  revenus: ReadonlyMap<string, number>;
 }): EntonnoirGenerateur {
   const vues = vuesDuGenerateur(args.lignesTrafic);
   // SEULES LES GÉNÉRATIONS DE CETTE PAGE, sinon le taux ment.
@@ -155,6 +174,7 @@ export function construireEntonnoirGenerateur(args: {
   const inscrits = duGenerateur.filter((g) => g.compte !== null).length;
   const abonnes = duGenerateur.filter(estAbonne).length;
   const cout = additionnerLeCout(duGenerateur);
+  const roi = calculerRoi(duGenerateur.filter(estAbonne), cout.millicents, args.revenus);
 
   return {
     vues,
@@ -168,7 +188,98 @@ export function construireEntonnoirGenerateur(args: {
     coutInconnu: cout.inconnu,
     coutParInscritMillicents: inscrits > 0 ? Math.round(cout.millicents / inscrits) : null,
     coutParAbonneMillicents: abonnes > 0 ? Math.round(cout.millicents / abonnes) : null,
+    roi,
   };
+}
+
+/**
+ * Le ROI, sur les seuls abonnés comptés par l'entonnoir.
+ *
+ * Le ratio se calcule sur le coût NON ARRONDI : arrondir d'abord au
+ * centime ferait diviser par zéro dès que la période coûte moins d'un
+ * centime, c'est à dire aujourd'hui.
+ */
+function calculerRoi(
+  abonnes: readonly LigneGeneration[],
+  coutMillicentsTotal: number,
+  revenus: ReadonlyMap<string, number>,
+): RoiGenerateur {
+  let revenuMensuelCents = 0;
+  let revenuInconnu = 0;
+  for (const a of abonnes) {
+    const m = a.plan === null ? undefined : revenus.get(a.plan);
+    if (m === undefined) revenuInconnu += 1;
+    else revenuMensuelCents += m;
+  }
+  const coutEurosExact = (coutMillicentsTotal / 100_000) * TAUX_USD_EUR;
+  return {
+    coutEuroCents: centsEurosDepuisMillicents(coutMillicentsTotal),
+    revenuMensuelCents,
+    revenuInconnu,
+    parEuroDepense:
+      coutEurosExact > 0
+        ? Math.round((revenuMensuelCents / 100 / coutEurosExact) * 10) / 10
+        : null,
+  };
+}
+
+/**
+ * LE REVENU MENSUEL ÉQUIVALENT DE CHAQUE PLAN, en centimes d'euro.
+ *
+ * Le catalogue est PASSÉ, jamais lu ici : c'est ce qui rend les trois
+ * branches exerçables par un test (une échéance mensuelle, une annuelle,
+ * un produit sans récurrence). Un module qui irait chercher
+ * `OWNER_CATALOG` lui même porterait une branche que rien n'exerce,
+ * c'est à dire le piège de `simuler()` (31 août).
+ *
+ * UNE ÉCHÉANCE ANNUELLE EST LISSÉE SUR DOUZE MOIS, exactement comme le
+ * simulateur d'affiliation (31 août) : c'est la seule façon
+ * d'additionner deux récurrences. Annoncer 170 € le mois de l'échéance
+ * et 0 € les onze autres serait exact et inutilisable.
+ *
+ * UN PRODUIT SANS RÉCURRENCE N'ENTRE PAS : son montant n'est pas un
+ * revenu mensuel, et le compter en ferait un. Il ressort alors en
+ * `revenuInconnu`, donc VISIBLE, jamais en zéro silencieux.
+ *
+ * Et quand deux produits ouvrent le même plan, le MOINS CHER gagne : on
+ * ne surestime jamais un revenu qu'on n'a pas mesuré.
+ */
+export function revenuMensuelParPlan(
+  produits: readonly {
+    plan: string;
+    amountCents: number;
+    interval: "month" | "year" | null;
+  }[],
+): ReadonlyMap<string, number> {
+  const par = new Map<string, number>();
+  for (const p of produits) {
+    if (p.interval === null) continue;
+    const mensuel = p.interval === "year" ? Math.round(p.amountCents / 12) : p.amountCents;
+    const deja = par.get(p.plan);
+    par.set(p.plan, deja === undefined ? mensuel : Math.min(deja, mensuel));
+  }
+  return par;
+}
+
+export interface RoiGenerateur {
+  /** Ce que l'IA a coûté, converti en centimes d'EURO. */
+  coutEuroCents: number;
+  /** Le revenu MENSUEL des abonnés venus par la page dédiée, en centimes. */
+  revenuMensuelCents: number;
+  /**
+   * Combien d'abonnés dont le plan n'a pas de prix mensuel connu.
+   *
+   * Un plan à vie, un plan bêta, un produit sans récurrence : leur
+   * revenu ne se compte pas en mensuel. On les MONTRE au lieu de les
+   * compter zéro, sinon le revenu se lit comme complet.
+   */
+  revenuInconnu: number;
+  /**
+   * Combien d'euros de revenu MENSUEL par euro dépensé en IA, une
+   * décimale. `null` quand le coût connu est nul : on ne divise pas par
+   * zéro, et un ratio sur un coût inconnu ne voudrait rien dire.
+   */
+  parEuroDepense: number | null;
 }
 
 export interface LigneSource {

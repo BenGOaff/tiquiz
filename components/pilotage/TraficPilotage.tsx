@@ -28,11 +28,18 @@ import { OWNER_CATALOG } from "@/lib/checkout/catalog";
 import {
   construireEntonnoirGenerateur,
   repartitionParSource,
+  revenuMensuelParPlan,
   MIN_POUR_UN_TAUX_AVAL,
   type LigneGeneration,
 } from "@/lib/generateur/entonnoirGenerateur";
 import { SOURCE_GENERATEUR } from "@/lib/site/generateurQuiz";
-import { TARIFS_MAJ, dollars } from "@/lib/generateur/tarifsIa";
+import {
+  TARIFS_MAJ,
+  TAUX_USD_EUR,
+  TAUX_USD_EUR_MAJ,
+  dollars,
+  enEuros,
+} from "@/lib/generateur/tarifsIa";
 import {
   construireEntonnoir,
   MIN_VUES_POUR_UN_TAUX,
@@ -466,7 +473,10 @@ function GenerateurBloc({
 }) {
   const lisible = Boolean(generateur && generateur.lisible);
   const generations = generateur && generateur.lisible ? generateur.generations : [];
-  const e = construireEntonnoirGenerateur({ lignesTrafic, generations });
+  // Le revenu de chaque plan vient du CATALOGUE, jamais recopié : c'est
+  // ce que le bon de commande encaisse vraiment.
+  const revenus = revenuMensuelParPlan(Object.values(OWNER_CATALOG));
+  const e = construireEntonnoirGenerateur({ lignesTrafic, generations, revenus });
   const parSource = repartitionParSource(generations);
   const prixMensuel = OWNER_CATALOG.mensuel.amountCents;
 
@@ -552,14 +562,15 @@ function GenerateurBloc({
               <div className="rounded-lg border border-border/60 p-4">
                 <p className="text-xs text-muted-foreground">Total sur la période</p>
                 <p className="mt-1 text-2xl font-semibold tabular-nums">
-                  {dollars(e.coutMillicents)}
+                  {enEuros(e.coutMillicents)}
                 </p>
+                <p className="text-xs text-muted-foreground">{dollars(e.coutMillicents)}</p>
                 <p className="mt-1 text-xs text-muted-foreground">page dédiée seulement</p>
               </div>
               <div className="rounded-lg border border-border/60 p-4">
                 <p className="text-xs text-muted-foreground">Par inscrit gratuit</p>
                 <p className="mt-1 text-2xl font-semibold tabular-nums">
-                  {e.coutParInscritMillicents === null ? "-" : dollars(e.coutParInscritMillicents)}
+                  {e.coutParInscritMillicents === null ? "-" : enEuros(e.coutParInscritMillicents)}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {e.coutParInscritMillicents === null ? "personne ne s'est encore inscrit" : "coût d'acquisition d'un contact"}
@@ -568,7 +579,7 @@ function GenerateurBloc({
               <div className="rounded-lg border border-border/60 p-4">
                 <p className="text-xs text-muted-foreground">Par abonné</p>
                 <p className="mt-1 text-2xl font-semibold tabular-nums">
-                  {e.coutParAbonneMillicents === null ? "-" : dollars(e.coutParAbonneMillicents)}
+                  {e.coutParAbonneMillicents === null ? "-" : enEuros(e.coutParAbonneMillicents)}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {e.coutParAbonneMillicents === null
@@ -588,9 +599,61 @@ function GenerateurBloc({
             ) : null}
             <p className="mt-3 text-xs text-muted-foreground">
               Le coût est une <strong>estimation</strong> : il se calcule à partir des jetons
-              réellement consommés et de la table de tarifs relevée le {TARIFS_MAJ}. Il est en
-              dollars parce qu&apos;Anthropic facture en dollars, et on ne convertit pas : un taux
-              de change inventé serait faux le lendemain. Compare donc les deux à la main.
+              réellement consommés et de la table de tarifs relevée le {TARIFS_MAJ}. Anthropic
+              facture en dollars, donc les euros passent par un taux de change relevé le{" "}
+              {TAUX_USD_EUR_MAJ} (1 $ = {TAUX_USD_EUR.toFixed(2).replace(".", ",")} €). À quelques
+              centimes près, pas au centime.
+            </p>
+          </div>
+
+          <div className={`${CARTE} p-5`}>
+            <h3 className="text-sm font-semibold">Ce que ça rapporte</h3>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-lg border border-border/60 p-4">
+                <p className="text-xs text-muted-foreground">Dépensé en IA</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {enEuros(e.coutMillicents)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">une fois, à la génération</p>
+              </div>
+              <div className="rounded-lg border border-border/60 p-4">
+                <p className="text-xs text-muted-foreground">Revenu mensuel des abonnés</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {euros(e.roi.revenuMensuelCents)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {e.roi.revenuMensuelCents === 0
+                    ? "aucun abonné venu par la page dédiée"
+                    : "chaque mois, tant qu'ils restent"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border/60 p-4">
+                <p className="text-xs text-muted-foreground">Par euro dépensé</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {e.roi.parEuroDepense === null ? "-" : `${e.roi.parEuroDepense} €`}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {e.roi.parEuroDepense === null
+                    ? "aucun coût calculable sur cette période"
+                    : "de revenu mensuel"}
+                </p>
+              </div>
+            </div>
+            {e.roi.revenuInconnu > 0 ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                {nombre(e.roi.revenuInconnu)} abonné{e.roi.revenuInconnu > 1 ? "s" : ""} sur un
+                plan sans prix mensuel connu (accès à vie, bêta) : leur revenu n&apos;est pas dans
+                le total ci dessus, donc c&apos;est un plancher.
+              </p>
+            ) : null}
+            <p className="mt-3 text-xs text-muted-foreground">
+              Les deux nombres ne parlent pas de la même durée, et c&apos;est ce qui rend le ratio
+              généreux : le coût est payé <strong>une seule fois</strong>, le revenu revient{" "}
+              <strong>chaque mois</strong> tant que la personne reste abonnée. Le revenu vient du
+              catalogue, un abonnement annuel étant lissé sur douze mois.
+              {e.coutInconnu > 0
+                ? " Et le coût est lui aussi un plancher, puisque des générations n'ont aucun coût calculable."
+                : null}
             </p>
           </div>
 
@@ -626,7 +689,7 @@ function GenerateurBloc({
                         <td className="py-2 text-right tabular-nums">{nombre(l.inscrits)}</td>
                         <td className="py-2 text-right tabular-nums">{nombre(l.abonnes)}</td>
                         <td className="py-2 text-right tabular-nums">
-                          {dollars(l.coutMillicents)}
+                          {enEuros(l.coutMillicents)}
                           {l.coutInconnu > 0 ? " +" : null}
                         </td>
                       </tr>

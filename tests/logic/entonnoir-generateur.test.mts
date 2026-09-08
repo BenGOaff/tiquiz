@@ -27,13 +27,21 @@ import {
   construireEntonnoirGenerateur,
   repartitionParSource,
   comptesDuGenerateurSiLisible,
+  revenuMensuelParPlan,
   vuesDuGenerateur,
   type LigneGeneration,
 } from "@/lib/generateur/entonnoirGenerateur";
-import { TARIFS_MAJ, coutMillicents, tarifDuModele } from "@/lib/generateur/tarifsIa";
+import {
+  TARIFS_MAJ,
+  TAUX_USD_EUR,
+  TAUX_USD_EUR_MAJ,
+  coutMillicents,
+  tarifDuModele,
+} from "@/lib/generateur/tarifsIa";
 import { CHEMIN_GENERATEUR, SOURCE_GENERATEUR } from "@/lib/site/generateurQuiz";
 import { MIN_VUES_POUR_UN_TAUX, type LigneTrafic } from "@/lib/trafic/entonnoir";
 import { buildPeople } from "@/lib/admin/people";
+import { OWNER_CATALOG } from "@/lib/checkout/catalog";
 import {
   CRITERES_PAR_DEFAUT,
   compterVenusDuGenerateur,
@@ -58,11 +66,16 @@ function vue(chemin: string, vues: number): LigneTrafic {
   return { jour: "2026-09-08", chemin, source: "direct", vues };
 }
 
+// Le revenu de chaque plan, tel que le catalogue le donne : 17 EUR/mois
+// et 170 EUR/an lissés sur douze mois.
+const REVENUS = revenuMensuelParPlan(Object.values(OWNER_CATALOG));
+
 // ── 1. LE DÉNOMINATEUR ET LE NUMÉRATEUR PARLENT DE LA MÊME PAGE ──────
 
 test("l'entonnoir ne compte QUE les quiz générés sur la page dédiée", () => {
   const e = construireEntonnoirGenerateur({
     lignesTrafic: [vue(CHEMIN_GENERATEUR, 200)],
+    revenus: REVENUS,
     generations: [
       gen(),
       gen(),
@@ -127,6 +140,7 @@ test("le préfixe le PLUS LONG gagne", () => {
 test("une génération sans jetons est COMPTÉE comme inconnue, pas comme gratuite", () => {
   const e = construireEntonnoirGenerateur({
     lignesTrafic: [vue(CHEMIN_GENERATEUR, 200)],
+    revenus: REVENUS,
     generations: [
       gen(),
       // Une ligne d'avant le 8 septembre : aucun jeton n'était écrit.
@@ -145,6 +159,7 @@ test("la table des tarifs porte sa date de relevé", () => {
 test("le coût par inscrit vaut null quand personne ne s'est inscrit", () => {
   const e = construireEntonnoirGenerateur({
     lignesTrafic: [vue(CHEMIN_GENERATEUR, 200)],
+    revenus: REVENUS,
     generations: [gen(), gen()],
   });
   assert.equal(e.inscrits, 0);
@@ -157,6 +172,7 @@ test("le coût par inscrit vaut null quand personne ne s'est inscrit", () => {
 test("sous le seuil, le taux est null et les COMPTES restent exacts", () => {
   const e = construireEntonnoirGenerateur({
     lignesTrafic: [vue(CHEMIN_GENERATEUR, MIN_VUES_POUR_UN_TAUX - 1)],
+    revenus: REVENUS,
     generations: [gen({ compte: "u1" })],
   });
   assert.equal(e.tauxVersQuiz, null, "pas assez de vues pour un taux");
@@ -182,6 +198,7 @@ test("les abonnés se comptent avec isPaidPlan, pas avec une liste recopiée", (
   ];
   const e = construireEntonnoirGenerateur({
     lignesTrafic: [vue(CHEMIN_GENERATEUR, 500)],
+    revenus: REVENUS,
     generations,
   });
   assert.equal(e.inscrits, MIN_POUR_UN_TAUX_AVAL + 3);
@@ -303,4 +320,96 @@ test("le muet voyage jusqu'à l'écran : la route DIT si elle a pu lire", () => 
     !/comptesDuGenerateur\(/.test(route),
     "aucun ensemble fabriqué dans la route : c'est là que le vide naissait",
   );
+});
+
+// ── 5. LE ROI, ET LA CONVERSION EN EUROS ─────────────────────────────
+//
+// Béné, 8 septembre 2026 : "je veux le ROI tu peux faire une conversion
+// même si c'est imprécis à quelques euros prêt". Elle a levé le refus
+// de convertir : ce qui est mesuré ici, c'est que le taux est DATÉ et
+// que rien n'est compté pour zéro.
+
+test("une échéance ANNUELLE est lissée sur douze mois", () => {
+  const revenus = revenuMensuelParPlan([
+    { plan: "monthly", amountCents: 1700, interval: "month" },
+    { plan: "yearly", amountCents: 17000, interval: "year" },
+  ]);
+  assert.equal(revenus.get("monthly"), 1700);
+  // 17000 / 12 = 1416,67 -> 1417 centimes. Annoncer 17000 le mois de
+  // l'échéance et 0 les onze autres serait exact et inutilisable.
+  assert.equal(revenus.get("yearly"), 1417);
+});
+
+test("un produit SANS récurrence n'est pas un revenu mensuel", () => {
+  const revenus = revenuMensuelParPlan([
+    { plan: "lifetime", amountCents: 5700, interval: null },
+  ]);
+  // Il ne rentre pas : son abonné ressortira en `revenuInconnu`, donc
+  // VISIBLE, jamais compté comme 57 EUR par mois.
+  assert.equal(revenus.get("lifetime"), undefined);
+});
+
+test("deux produits pour le même plan : le MOINS cher gagne", () => {
+  const revenus = revenuMensuelParPlan([
+    { plan: "monthly", amountCents: 2900, interval: "month" },
+    { plan: "monthly", amountCents: 1700, interval: "month" },
+  ]);
+  // On ne surestime jamais un revenu qu'on n'a pas mesuré.
+  assert.equal(revenus.get("monthly"), 1700);
+});
+
+test("un abonné dont le plan est inconnu est COMPTÉ, jamais mis à zéro", () => {
+  const e = construireEntonnoirGenerateur({
+    lignesTrafic: [vue(CHEMIN_GENERATEUR, 200)],
+    revenus: REVENUS,
+    generations: [
+      gen({ compte: "u1", plan: "monthly" }),
+      gen({ compte: "u2", plan: "lifetime" }),
+    ],
+  });
+  assert.equal(e.abonnes, 2);
+  assert.equal(e.roi.revenuMensuelCents, 1700, "seul le mensuel a un prix mensuel connu");
+  assert.equal(e.roi.revenuInconnu, 1, "l'accès à vie se DIT, il ne compte pas zéro");
+});
+
+test("le ratio est null quand aucun coût n'est calculable", () => {
+  const e = construireEntonnoirGenerateur({
+    lignesTrafic: [vue(CHEMIN_GENERATEUR, 200)],
+    revenus: REVENUS,
+    generations: [
+      gen({ compte: "u1", plan: "monthly", modele: "un-modele-jamais-releve" }),
+    ],
+  });
+  assert.equal(e.coutMillicents, 0);
+  assert.equal(e.coutInconnu, 1);
+  assert.equal(e.roi.parEuroDepense, null, "on ne divise pas par zéro");
+});
+
+test("le coût est converti au taux DATÉ, et le ratio est calculé avant l'arrondi", () => {
+  const e = construireEntonnoirGenerateur({
+    lignesTrafic: [vue(CHEMIN_GENERATEUR, 200)],
+    revenus: REVENUS,
+    generations: [gen({ compte: "u1", plan: "monthly" })],
+  });
+  const attendu = Math.round((e.coutMillicents / 1000) * TAUX_USD_EUR);
+  assert.equal(e.roi.coutEuroCents, attendu);
+
+  // Une génération coûte quelques centimes : arrondir le coût AVANT de
+  // diviser rendrait le ratio faux, voire infini.
+  assert.ok(e.roi.coutEuroCents < 100, "le repère : le coût est sous un euro");
+  assert.ok(
+    e.roi.parEuroDepense !== null && e.roi.parEuroDepense > 0,
+    "le ratio existe quand même",
+  );
+});
+
+test("le taux de change porte sa date et sa source", () => {
+  assert.match(TAUX_USD_EUR_MAJ, /^\d{4}-\d{2}-\d{2}$/);
+  assert.ok(TAUX_USD_EUR > 0.5 && TAUX_USD_EUR < 1.5, "un taux plausible euro / dollar");
+
+  // La SOURCE est écrite à côté, comme `TARIFS_MAJ` et comme `TAUX_UE`
+  // de la TVA : un taux sans provenance est un taux que personne ne
+  // saura revérifier.
+  const src = readFileSync("lib/generateur/tarifsIa.ts", "utf8");
+  assert.match(src, /open\.er-api\.com|exchangerate/i);
 });

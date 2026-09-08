@@ -11509,13 +11509,56 @@ jeton n'était écrit), ou son modèle n'est pas dans la table. Un zéro
 ferait lire le total comme le coût complet, et c'est exactement le
 chiffre qui fait dépenser (règle du 22 août).
 
-### ON NE CONVERTIT PAS LES DEVISES, ET L'ÉCRAN LE DIT
+### ON CONVERTIT EN EUROS, ET LE TAUX EST DATÉ (corrigé le 8 septembre)
 
-Anthropic facture en DOLLARS, Tiquiz encaisse en EUROS. Il n'y a donc
-**aucun ratio de ROI** : l'écran met le coût par inscrit et le coût par
-abonné À CÔTÉ des 17 € du palier le moins cher (lu dans `OWNER_CATALOG`,
-jamais recopié) et laisse la comparaison se faire. C'est la règle du
-1er septembre, posée pour les prix de Typeform et de Zapier sur le blog.
+🚨 **Cette section a dit le contraire pendant une demi-journée.** Elle
+écrivait "on ne convertit pas les devises, il n'y a donc aucun ratio de
+ROI", en s'appuyant sur la règle du 1er septembre. **Béné a tranché :**
+"je veux le ROI tu peux faire une conversion même si c'est imprécis à
+quelques euros prêt". Je corrige en place plutôt que d'empiler.
+
+**Mon refus répondait à côté.** La règle du 1er septembre interdit de
+convertir un PRIX AFFICHÉ à un lecteur (le tarif de Zapier sur le blog),
+parce qu'un tarif annoncé faux se vérifie en un clic. Ici c'est un COÛT
+INTERNE, sur son écran à elle, qu'elle doit comparer à un revenu en
+euros : ne pas convertir ne la protégeait de rien, ça lui laissait la
+division à faire de tête.
+
+`TAUX_USD_EUR = 0.86`, relevé le 8 septembre sur `open.er-api.com`
+(1 USD = 0,860364 EUR, horodaté du même jour), avec `TAUX_USD_EUR_MAJ`
+à côté : **la même mécanique que `TARIFS_MAJ` et que `TAUX_UE` de la
+TVA**. L'écran affiche le taux ET sa date, pour que le chiffre se lise
+pour ce qu'il est.
+
+### LE ROI COMPARE UN COÛT PAYÉ UNE FOIS À UN REVENU RÉCURRENT
+
+C'est l'asymétrie qu'il faut DIRE, et l'écran l'écrit : la génération se
+paie **une seule fois**, l'abonnement rentre **chaque mois** tant que la
+personne reste. Le ratio est donc généreux par construction ; le taire
+en ferait un multiple sur une même période, c'est à dire un chiffre
+gonflé affiché comme un fait.
+
+**Le revenu vient du CATALOGUE, et il est PASSÉ, jamais lu dedans.**
+`revenuMensuelParPlan(produits)` prend la liste en paramètre : c'est ce
+qui rend ses trois branches exerçables par un test, au lieu d'une
+branche que rien n'exerce (le piège de `simuler()`, 31 août). Et
+`construireEntonnoirGenerateur` exige `revenus` : le compilateur refuse
+un appelant qui se tait.
+
+Trois décisions dedans, et les trois comptent :
+
+- **une échéance ANNUELLE est LISSÉE sur douze mois**, exactement comme
+  le simulateur d'affiliation (31 août) : c'est la seule façon
+  d'additionner deux récurrences ;
+- **un produit SANS récurrence n'entre pas** : son montant n'est pas un
+  revenu mensuel. Son abonné ressort en `revenuInconnu`, donc AFFICHÉ,
+  jamais compté zéro ;
+- **quand deux produits ouvrent le même plan, le MOINS cher gagne** : on
+  ne surestime jamais un revenu qu'on n'a pas mesuré.
+
+**Le ratio se calcule sur le coût NON ARRONDI** : arrondir au centime
+avant de diviser ferait diviser par zéro dès qu'une période coûte moins
+d'un centime, c'est à dire aujourd'hui.
 
 ### "JE N'AI PAS PU LIRE" N'EST PAS "PERSONNE N'ENTRE PAR LÀ"
 
@@ -11571,13 +11614,16 @@ forme dans un fichier.
   L'écran les compte dans `coutInconnu` ;
 - **le coût affiché est une ESTIMATION** : il vient de la table de
   tarifs, pas d'une facture Anthropic. Aucun montant réel n'a été
-  relevé sur son compte ;
+  relevé sur son compte, et le taux de change est arrondi à deux
+  décimales ;
 - **Tipote n'a PAS de jumeau**, vérifié et pas supposé : aucune
   migration ni aucun fichier n'y mentionne `embed_quiz_sessions`.
 
-Test : `tests/logic/entonnoir-generateur.test.mts` (17 cas), vérifié en
-rejouant SIX versions fautives (l'entonnoir qui compte toutes les
+Test : `tests/logic/entonnoir-generateur.test.mts` (24 cas), vérifié en
+rejouant DIX versions fautives (l'entonnoir qui compte toutes les
 sources, un tarif par défaut sur un modèle inconnu, un coût inconnu
 compté pour zéro, le chemin comparé en préfixe, la fonction pure qui
-rend un ensemble vide, la route qui refabrique l'ensemble à la main) :
-les six rougissent.
+rend un ensemble vide, la route qui refabrique l'ensemble à la main, un
+produit sans récurrence compté comme mensuel, un annuel non lissé, un
+plan inconnu compté zéro, le taux de change sans sa source) : les dix
+rougissent.
