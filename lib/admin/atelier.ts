@@ -41,6 +41,18 @@ export interface AtelierPerson {
   daysDone: number;
 }
 
+/**
+ * Le trafic de `atelierduquiz.fr`, tel que l'Atelier le compte.
+ *
+ * `lisible: false` = ON N'A PAS PU LIRE (migration pas encore passée,
+ * base muette). Ce n'est PAS zéro vue, et l'écran doit dire la
+ * différence : un site annoncé désert fait prendre des décisions
+ * (règle du 23 août).
+ */
+export type AtelierTrafic =
+  | { lisible: true; lignes: { jour: string; chemin: string; source: string; vues: number }[] }
+  | { lisible: false; raison: string };
+
 export interface AtelierView {
   /** A-t-on VRAIMENT pu lire l'Atelier ? */
   reachable: boolean;
@@ -54,6 +66,12 @@ export interface AtelierView {
     | "read_failed";
   people: AtelierPerson[];
   sales: Sale[];
+  /**
+   * Absent quand l'Atelier n'a pas répondu du tout, ou quand SA version
+   * déployée ne rend pas encore ce champ. Les deux se lisent "je n'ai
+   * pas pu regarder", jamais "il n'y a rien".
+   */
+  trafic?: AtelierTrafic;
 }
 
 const VIDE: AtelierView = { reachable: false, people: [], sales: [] };
@@ -78,7 +96,18 @@ function texte(v: unknown): string | null {
  */
 const DELAI_MS = 12000;
 
-export async function fetchAtelier(env: NodeJS.ProcessEnv = process.env): Promise<AtelierView> {
+export async function fetchAtelier(
+  env: NodeJS.ProcessEnv = process.env,
+  /**
+   * LA PÉRIODE EST UN PARAMÈTRE, jamais devinée ici.
+   *
+   * Le trafic de l'Atelier et les ventes de Tiquiz s'affichent sur le
+   * même écran : deux périodes différentes diviseraient des pommes par
+   * des poires, et rien ne le dirait. `null` = depuis le début, ce que
+   * le pilotage appelle déjà comme ça.
+   */
+  periode?: { debut: string | null; fin: string | null },
+): Promise<AtelierView> {
   const secret = String(env.PARTNER_SHARED_SECRET ?? "").trim();
   if (!secret) {
     console.warn(
@@ -88,7 +117,11 @@ export async function fetchAtelier(env: NodeJS.ProcessEnv = process.env): Promis
   }
 
   try {
-    const res = await fetch(`${ATELIER_BASE_URL}/api/partner/pilotage`, {
+    const q = new URLSearchParams();
+    if (periode?.debut) q.set("debut", periode.debut);
+    if (periode?.fin) q.set("fin", periode.fin);
+    const suffixe = q.toString() ? `?${q.toString()}` : "";
+    const res = await fetch(`${ATELIER_BASE_URL}/api/partner/pilotage${suffixe}`, {
       headers: { "x-partner-secret": secret },
       cache: "no-store",
       // UN DÉLAI MAXIMUM, comme tout appel vers une autre app. Sans lui,
@@ -120,6 +153,7 @@ export async function fetchAtelier(env: NodeJS.ProcessEnv = process.env): Promis
       ok?: boolean;
       people?: unknown[];
       sales?: unknown[];
+      trafic?: unknown;
     };
     if (!json.ok) return { ...VIDE, reason: "read_failed" };
 
@@ -167,7 +201,33 @@ export async function fetchAtelier(env: NodeJS.ProcessEnv = process.env): Promis
       });
     }
 
-    return { reachable: true, people, sales };
+    // ON BORNE CE QUI ARRIVE D'UNE AUTRE APP, sans rien décider ici.
+    //
+    // Un Atelier pas encore déployé ne rend pas ce champ : on laisse
+    // `trafic` absent plutôt que d'inventer un tableau vide, qui se
+    // lirait "aucune visite" sur un site qui en a.
+    const t = (json.trafic ?? null) as Record<string, unknown> | null;
+    let trafic: AtelierTrafic | undefined;
+    if (t && t.lisible === true) {
+      const lignes: { jour: string; chemin: string; source: string; vues: number }[] = [];
+      for (const brut of (t.lignes as unknown[]) ?? []) {
+        const l = (brut ?? {}) as Record<string, unknown>;
+        const jour = String(l.jour ?? "").trim();
+        const chemin = String(l.chemin ?? "").trim();
+        if (!jour || !chemin) continue;
+        lignes.push({
+          jour,
+          chemin,
+          source: String(l.source ?? "direct").trim() || "direct",
+          vues: Number(l.vues) || 0,
+        });
+      }
+      trafic = { lisible: true, lignes };
+    } else if (t && t.lisible === false) {
+      trafic = { lisible: false, raison: String(t.raison ?? "read_failed").slice(0, 200) };
+    }
+
+    return { reachable: true, people, sales, trafic };
   } catch (e) {
     // "Trop lent" et "injoignable" ne se corrigent pas au meme endroit :
     // l'un est une app qui rame, l'autre une app qui ne repond plus.

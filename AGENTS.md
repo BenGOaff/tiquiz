@@ -10339,3 +10339,128 @@ les taux, la page de retour comptée comme un bon de commande, le
 middleware qui décide tout seul au lieu d'appeler le module pur, l'écran
 qui affiche zéro au lieu de dire qu'il n'a pas pu lire) : les cinq
 rougissent.
+
+### Le compteur de l'Atelier, et le dénominateur qui mentait (7 septembre 2026)
+
+Béné : "il me faut aussi le compteur de l'Atelier."
+
+En le branchant, **un défaut introduit la veille est apparu**, et il est
+plus grave que ce qu'elle demandait.
+
+#### `resume.ventes` ADDITIONNE LES DEUX SITES
+
+`app/api/admin/pilotage/route.ts` appelle
+`resumePeriode({ sales: [...sales, ...atelier.sales] })`. Mon entonnoir
+divisait donc **les vues de tiquiz.fr** par **les ventes de Tiquiz ET de
+l'Atelier** : le numérateur et le dénominateur ne parlaient pas de la
+même population, et rien ne le disait. Le taux sortait gonflé, affiché
+comme un fait, c'est à dire exactement le chiffre qui fait dépenser
+(règle du 22 août).
+
+**Règle : chaque site a son entonnoir, avec SES ventes.**
+`ventesParSite: { tiquiz, atelier }` vient de la route, et l'écran nomme
+chaque bloc (`tiquiz.fr`, `atelierduquiz.fr`). Fusionner les deux
+donnerait un taux qui ne parle d'aucun des deux : ils n'ont ni le même
+public, ni le même prix, ni le même tunnel.
+
+**Et il n'y a qu'UNE définition de "une vente comptée dans cette
+période"** : `compterVentes(sales, periode)` est exportée de
+`resumePeriode.ts`, et `resumePeriode` l'appelle LUI AUSSI. Un filtre
+réécrit à la main à côté aurait donné deux règles de comptage, et c'est
+le défaut que ce dépôt paie en boucle.
+
+#### LE PILOTAGE VA LIRE CHEZ L'ATELIER, L'ATELIER NE POUSSE PAS
+
+C'est le motif de `fetchAtelier` (21 août), et il est meilleur qu'un
+push : une panne de Tiquiz ferait perdre les vues de l'Atelier POUR
+TOUJOURS. En les gardant dans SA base, une panne de Tiquiz ne coûte que
+l'affichage.
+
+**Le trafic voyage dans la porte QUI EXISTE DÉJÀ**
+(`GET /api/partner/pilotage`), à côté des élèves et des ventes. Une
+deuxième porte voudrait dire un deuxième secret, un deuxième délai
+maximum et un deuxième `reachable` : le pilotage pourrait alors montrer
+les ventes de l'Atelier sans son trafic. Le test compte les portes et
+en exige UNE.
+
+**La période est un PARAMÈTRE de `fetchAtelier`**, jamais devinée : deux
+périodes différentes sur un écran qui les divise l'une par l'autre
+donneraient un taux faux, et rien ne le dirait.
+
+#### TROIS ÉTATS POUR L'ATELIER, ET ILS NE SE CONFONDENT PAS
+
+| | ce que ça veut dire |
+|---|---|
+| champ absent | son serveur n'a pas répondu, OU sa version n'est pas déployée |
+| `lisible: false` | il a répondu, sa table n'a pas pu être lue (SA migration) |
+| `lisible: true` | on affiche |
+
+Les deux premiers rendent une PHRASE, jamais un zéro. Un écran qui
+afficherait "0 vue" ferait conclure que sa page de vente n'intéresse
+personne (règle du 23 août).
+
+#### AUCUN MONTANT SUR LE BLOC DE L'ATELIER, ET C'EST DÉLIBÉRÉ
+
+`encaisseCents` est devenu OPTIONNEL sur le composant `Entonnoir`.
+`resume.encaisseCents` additionne les deux sites, et **je n'ai pas
+mesuré comment ce total se compose par site** (les montants estimés
+`amountSource: "plan"` sont écartés d'un chiffre d'affaires depuis le
+22 août, et je ne l'ai pas revérifié ici).
+
+Le bloc de l'Atelier montre donc ses vues et ses ventes, qui sont
+exactes, et **pas de montant**. Afficher un chiffre d'affaires qu'on n'a
+pas mesuré est exactement ce qui fait prendre une décision sur un
+chiffre faux. Le jour où le partage est mesuré, le paramètre le reçoit.
+
+Test : les 4 cas ajoutés à `tests/logic/trafic-et-ventes.test.mts`,
+vérifiés en rejouant QUATRE versions fautives (l'entonnoir de Tiquiz qui
+reprend le total des deux sites, `resumePeriode` qui recompte à la main,
+les deux cas muets de l'Atelier fondus en un seul, `fetchAtelier` qui
+devine la période) : les quatre rougissent.
+
+## Le favicon d'une créatrice n'était jamais servi (Béné, 7 septembre 2026)
+
+En lisant le journal du serveur de dev, elle a posé la bonne question :
+"pour le favicon c'est pas un conflit entre NOS favicon et ceux que nos
+users ajoutent pour leur branding dans tiquiz et tipote quand ils
+ajoutent leur domaine ?"
+
+**Si. Et c'était un vrai bug, MESURÉ en production avant d'y toucher**
+(cache Cloudflare contourné) :
+
+| | ce qui répondait | taille | en-tête |
+|---|---|---|---|
+| `quiz.tipote.com` | `image/x-icon` | 7030 o, 128x128 | `max-age=14400` |
+| `app.tipote.com` | `image/png` | 13372 o, 512x512 | `max-age=300, s-maxage=300` |
+
+`app/favicon.ico/route.ts` pose `max-age=300` et ne peut JAMAIS rendre
+`image/x-icon` (elle lit un PNG et le déclare comme tel). Tipote portait
+donc sa signature ; **Tiquiz servait le fichier statique
+`public/favicon.ico`, qui masquait la route.**
+
+Conséquence : sur Tiquiz, le favicon qu'une créatrice a téléversé pour
+son domaine perso n'était **jamais** servi. Le fichier statique gagne,
+et la route ne tournait pas une seule fois.
+
+**Le serveur de dev le disait à chaque requête** ("A conflicting public
+file and page file was found for path /favicon.ico"), et personne ne
+lisait cette ligne : elle passait pour du bruit. C'est la famille des
+images en 403 du 31 août, où le geste était juste et n'atteignait pas sa
+cible.
+
+🚨 **FICHIER SUPPRIMÉ : `public/favicon.ico`.** Il était identique à
+l'octet près à `public/favicon-tiquiz.png`, que la route sert par
+défaut : sur nos domaines, rien ne bouge. **Et il doit être retiré du
+serveur à la main** : un copier-coller n'enlève pas ce qui a disparu,
+donc le fichier survivrait et continuerait de masquer la route.
+
+Garde-fou : `tests/logic/favicon-des-clientes.test.mts`, dans les DEUX
+dépôts (Tipote porte la même route et n'a pas encore eu le fichier
+statique : un garde-fou qui ne protège qu'un des deux jumeaux ne protège
+personne). Vérifié en rejouant la version d'avant, des deux côtés : il
+rougit.
+
+**Il LIT le nom du fichier par défaut dans la route**, il ne le recopie
+pas : Tiquiz sert `favicon-tiquiz.png`, Tipote `favicon.png`, et une
+liste écrite dans le test divergerait au premier renommage en disant
+vert sur un fichier disparu.
