@@ -56,9 +56,14 @@ function etat(html) {
   return eval(`(${m[1]})`);
 }
 
+// NOTRE GABARIT NE CONNAIT QUE h2 ET h3 (`lib/blog/articles.ts`).
+// Ses pages descendent jusqu'a h4 : le laisser passer donnerait un
+// niveau que le sommaire ne sait pas ranger, donc un titre qui
+// disparait de la table des matieres sans un mot.
 function niveauDuTitre(html) {
   const m = String(html).match(/<h([1-6])\b/i);
-  return m ? Number(m[1]) : 2;
+  const n = m ? Number(m[1]) : 2;
+  return n <= 2 ? 2 : 3;
 }
 
 function texteNu(html) {
@@ -114,13 +119,13 @@ function blocsDe(ents, racine, fichiers, images) {
         const f = fichiers?.[String(e.fileId)];
         if (f?.path) {
           images.add(f.path);
-          out.push({ type: "image", src: f.path, alt: "", largeur: e.width ?? null });
+          out.push({ type: "image", src: f.path, alt: "" });
         }
         return;
       }
       case "Button": {
         const texte = texteNu(e.text ?? "");
-        if (texte) out.push({ type: "cta", texte, href: e.linkUrl ?? "" });
+        if (texte) out.push({ type: "cta", texte, url: e.linkUrl ?? "" });
         return;
       }
       case "Faq": {
@@ -137,7 +142,11 @@ function blocsDe(ents, racine, fichiers, images) {
             .join("");
           if (it.title) items.push({ question: texteNu(it.title), reponse });
         }
-        if (items.length) out.push({ type: "faq", items });
+        // LA FORME EST CELLE QUE `lib/blog/articles.ts` DECLARE
+        // (`questions`, `url`), jamais celle de Systeme.io. Un champ
+        // mal nomme ne leve rien : le bloc se rend VIDE, et ca ne se
+        // voit que sur la page.
+        if (items.length) out.push({ type: "faq", questions: items });
         return;
       }
       case "RawHtml":

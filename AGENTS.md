@@ -10962,15 +10962,17 @@ sortie de `PAGES_PUBLIQUES`) : les deux rougissent. Un test qui n'en
 tiendrait qu'un passerait au vert sur une page où l'affiliation est
 morte, et ça ne se voit sur AUCUN écran.
 
-### 🚨 CE QUI N'EST PAS FAIT, ET C'EST L'ESSENTIEL DU CHANTIER
+### CE QUI EST SERVI EN ANGLAIS, ET CE QUI NE L'EST PAS
 
-L'ADRESSE existe, le CONTENU non. Il faut le dire dans ce sens là.
+L'adresse existe partout, le CONTENU sur deux pages. Il faut le dire
+dans ce sens là.
 
 | | langues servies |
 |---|---|
 | `/tarifs` | **fr + en** |
 | les 8 pages de fonctionnalités, `/generateur-de-quiz`, `/integrations`, `/a-propos`, `/affiliation` | fr |
-| les 10 articles du blog | fr : ils ne portent AUCUNE clé de langue |
+| les 10 articles du blog | fr |
+| ses 4 articles anglais | **importés et corrigés sur le disque, PAS ENCORE SERVIS** |
 
 **Ses 4 articles anglais sont mesurés, et ils s'apparient 1 pour 1 avec
 4 des 10 français** (relevé sur `tipote.blog/posts`, en lisant
@@ -10985,16 +10987,101 @@ monthly-recurring-income-tiquiz...   <-> rente-mensuelle-affiliation-tiquiz
 
 Les 6 autres français n'ont pas de version anglaise.
 
-**ET UN BLOCAGE DE CONTENU A ÉTÉ TROUVÉ AVANT L'IMPORT.** La
-`description` de son article d'affiliation ANGLAIS annonce "40 %
-lifetime commission, paid on the 10th, no threshold, no conditions",
-c'est à dire **exactement les promesses fausses corrigées côté français
-les 31 août et 1er septembre** : il y a un seuil de 20 €, un délai de
-30 jours, et le versement a lieu ENTRE le 10 et le 13.
-`lib/blog/faitsProgramme.ts` ne porte que des motifs FRANÇAIS : l'import
-anglais a donc besoin de sa propre table de corrections, sinon on
-republie en anglais ce qu'on vient de corriger en français, sur la page
-qui recrute les affiliés.
+### LES 4 ARTICLES ANGLAIS SONT IMPORTÉS, ET SURTOUT CORRIGÉS
+
+**Publier son anglais tel quel aurait republié en anglais ce qu'on vient
+de corriger en français**, sur les deux pages qui vendent et qui
+recrutent les affiliés. Ses articles datent d'avant le 6 août : ils
+portent l'ancien tarif, la vente bêta à vie qui n'existe plus, et
+l'article d'affiliation annonce mot pour mot les promesses fausses
+corrigées les 31 août et 1er septembre ("no threshold", "paid on the
+10th", 40 % écrit comme un plafond, plus **une section entière sur
+Tipote** à 50 % à vie sur des plans de $19 à $99/mois).
+
+**Trois pièces, et les trois sont obligatoires :**
+
+| | |
+|---|---|
+| `scripts/importer-blog-en.mjs` | lit `window.__PRELOADED_STATE__` (du JavaScript, pas du JSON) et ne corrige RIEN, exprès |
+| `lib/blog/faitsEn.ts` | la table anglaise : 54 règles qui mordent, 94 corrections |
+| `scripts/reparer-blog-en.mjs` | l'applique, et REFUSE de finir en silence |
+
+**L'IMPORT NE CORRIGE RIEN, ET C'EST VOULU** : un ré-import écraserait
+toute retouche faite dans le JSON. C'est la mécanique de
+`faitsProgramme.ts` depuis le 31 août, et le test appelle LA MÊME
+fonction : le contenu est propre quand la réparation ne change plus
+rien.
+
+**LES PRIX SE LISENT, ILS NE SE RECOPIENT PAS.** Les deux tarifs Tiquiz
+viennent de `faitsProgramme.ts` (exportés le 8 septembre : deux copies
+d'un prix finissent toujours par diverger, et le blog annoncerait alors
+deux tarifs selon la langue lue). Les prix des CONCURRENTS viennent de
+`liensIntegrations.ts`, la même source que le français : son anglais
+annonçait "Typeform at $59/month" et "$88/month" à cinq endroits, sur
+les deux pages qui nous comparent à Typeform et Zapier, c'est à dire
+exactement là où un lecteur va vérifier. **Les devises ne se convertissent
+pas** (règle du 1er septembre) : Typeform et Zapier facturent en dollars,
+Tiquiz en euros.
+
+**LA SECTION SUR TIPOTE EST REMPLACÉE, PAS CORRIGÉE PHRASE PAR PHRASE.**
+Une section entière qui promet un produit qui n'est pas en vente ne se
+rafistole pas : `remplacerSection` échange les blocs entre le titre qui
+ouvre et celui qui ferme, et **il LÈVE si le titre de fermeture est
+introuvable** (on n'écrit rien plutôt que de manger la fin de
+l'article). Ce qui remplace parle de l'Atelier du Quiz, qui est vendu, à
+70 %, avec son montant calculé.
+
+### ET LA TYPOGRAPHIE ÉTAIT FRANÇAISE DANS UN TEXTE ANGLAIS
+
+Béné, le même jour : "il faut à chaque fois utiliser le champ sémantique,
+les expressions, tournures de phrases, ponctuation etc .. propre à chaque
+langue, c'est pas uniquement du mot à mot."
+
+**Elle avait raison, et c'était MESURABLE. Les fautes étaient les
+MIENNES**, posées par ma propre table de corrections :
+
+| | son anglais d'origine | ce que j'écrivais |
+|---|---|---|
+| un pourcentage | `40%`, `80%`, toujours collé | **27 fois `40 %`** |
+| un montant | `$9`, `$88`, jamais "9 USD" | **22 fois `17 EUR`** |
+
+Son import n'en portait AUCUNE (mesuré : zéro dans les quatre fichiers).
+`eur()` rend donc `€5.67` (symbole devant, point décimal, virgule des
+milliers) et `usd()` rend `$29.99`, à l'anglaise, et le `%` se colle.
+
+**Et trois espaces devant une ponctuation vivaient dans SA prose**
+("And now ?" deux fois, "three options : " une fois).
+`ponctuationAnglaise()` les retire, avec les mêmes gardes que
+l'insertion française du 3 août, dans l'autre sens : on ne touche qu'à
+une ponctuation qui TERMINE. Ça protège un `https://`, une heure
+(`12:30`), un `&nbsp;` et un `style="color:red"`, tous testés. Et elle
+est IDEMPOTENTE par construction : une fois l'espace retirée, le motif
+ne trouve plus rien.
+
+**C'est la faute du 1er août dans une autre robe** : une règle écrite
+pour une langue, appliquée telle quelle à une autre.
+
+### UNE RÈGLE MUETTE NE VEUT PAS DIRE LA MÊME CHOSE SELON LE MOMENT
+
+Mon premier jet REFUSAIT dès qu'une règle ne mordait pas. Sur un import
+frais c'est juste (une règle muette est une règle fausse, leçon du
+4 septembre). Sur un contenu DÉJÀ corrigé, aucune règle ne peut mordre,
+et c'est exactement le résultat attendu : **le script ne pouvait donc
+tourner qu'une seule fois**, et le test, qui appelle la même mécanique,
+n'aurait jamais pu passer.
+
+**Le discriminant est "combien ont mordu", pas "il en reste une" :** des
+règles qui mordent À CÔTÉ de règles muettes disent que celles là sont
+fausses ; zéro morsure sur toute la table dit que le travail est déjà
+fait. Le contrôle des interdits, lui, tourne dans les DEUX cas : c'est
+la vraie preuve.
+
+**Et il lit le contenu CORRIGÉ, gardé en mémoire, jamais le disque.** En
+`--verifie` rien n'est écrit : relire le disque aurait fait dire au
+contrôle que TOUT survit, sur une réparation parfaitement bonne.
+Quatorzième fois qu'un contrôle ne distingue pas ce qu'il est censé
+distinguer, et cette fois il a été attrapé avant d'envoyer chercher au
+mauvais endroit.
 
 **Aucun switcher de langue n'est posé, et c'est un choix.** Le site
 public n'en a jamais eu ; avec UNE page traduite, un lien "English" dans

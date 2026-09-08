@@ -47,10 +47,17 @@
 // règle finiraient par ne plus être d'accord (leçon de la
 // reponctuation, 30 août).
 
-/** Le prix mensuel TTC, tel que le catalogue le vend. */
-const PRIX_MENSUEL_TTC = 17;
+/**
+ * Le prix mensuel TTC, tel que le catalogue le vend.
+ *
+ * EXPORTE depuis le 8 septembre : la table anglaise (`faitsEn.ts`) les
+ * RELIT ici au lieu de les recopier. Deux copies d'un prix finissent
+ * toujours par diverger, et c'est le blog qui annoncerait alors deux
+ * tarifs pour le meme abonnement selon la langue lue.
+ */
+export const PRIX_MENSUEL_TTC = 17;
 /** Le prix annuel TTC. */
-const PRIX_ANNUEL_TTC = 170;
+export const PRIX_ANNUEL_TTC = 170;
 /** Le taux de BASE annoncé publiquement. */
 const TAUX_BASE = 0.4;
 
