@@ -356,6 +356,15 @@ export const CSS = `
 .tql-grille-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;margin-top:32px}
 .tql-bento{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:40px}
 .tql-bento .tql-carte{padding:24px 22px}
+
+/* LA BOITE QUI PORTE LE GENERATEUR (/generateur-de-quiz).
+   Elle ne fait QUE poser le rythme vertical : l'outil dessine sa propre
+   carte (cadreDuGenerateur, dans lib/embed/remise.ts), et la redessiner
+   ici donnerait deux bordures l'une dans l'autre.
+   AUCUN ACCENT GRAVE dans ce commentaire : il vit DANS le litteral de
+   gabarit, et un accent grave le terminerait. Neuvieme fois, et elle a
+   ete faite dans la phrase meme qui l'interdit. */
+.tql-outil{margin-top:40px}
 .tql-picto{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;
   border-radius:12px;background:var(--pale);color:var(--b);margin-bottom:14px}
 

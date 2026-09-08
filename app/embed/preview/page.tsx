@@ -35,6 +35,11 @@ export default async function EmbedPreviewPage(props: {
       // (Béné, 31 août 2026 : "il faut bien que ce soit ça qui
       // s'affiche pour les nouveaux partout").
       checkoutUrl={sp.checkout ?? "https://tiquiz.fr/"}
+      // CETTE PAGE VIT DANS UNE IFRAME, c'est sa raison d'etre : la
+      // page hote ecoute le message et navigue elle meme, et le
+      // generateur a le document pour lui tout seul. La page dediee
+      // (/generateur-de-quiz) passe "page".
+      contexte="iframe"
     />
   );
 }

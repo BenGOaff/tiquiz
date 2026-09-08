@@ -15,6 +15,7 @@ import { getEmbedStrings } from "./embed-i18n";
 import type {
   EmbedInputs, EmbedLocale, EmbedPhase,
 } from "./embed-types";
+import { cadreDuGenerateur, type ContexteGenerateur } from "@/lib/embed/remise";
 
 // QuizDetailClient is heavy (drag-and-drop, dnd-kit, recharts in some
 // imports). Code-split it so the form step doesn't pull the whole
@@ -29,6 +30,18 @@ type Props = {
   locale: EmbedLocale;
   source: string;
   checkoutUrl: string;
+  /**
+   * OÙ LE GÉNÉRATEUR EST POSÉ, et ce n'est jamais deviné.
+   *
+   * `iframe` sur la page de vente (le pont de la page hôte écoute et
+   * le document est à nous tout seuls), `page` sur la page dédiée
+   * `/generateur-de-quiz`, où `window.parent` est `window` (le message
+   * ne serait entendu par personne) et où le générateur vit à
+   * l'intérieur d'une section du site. Voir `lib/embed/remise.ts` : un
+   * seul paramètre décide des deux, parce que deux paramètres séparés
+   * finiraient par se contredire.
+   */
+  contexte: ContexteGenerateur;
 };
 
 const STORAGE_KEY = "tiquiz_embed_session";
@@ -40,9 +53,14 @@ const DEFAULT_INPUTS: EmbedInputs = {
 };
 
 export default function EmbedPreviewClient({
-  initialSessionToken, locale, source, checkoutUrl,
+  initialSessionToken, locale, source, checkoutUrl, contexte,
 }: Props) {
   const t = getEmbedStrings(locale);
+  // Le cadre dépend de l'endroit où le générateur est posé : plein écran
+  // dans une iframe, borné dans une section de page. Une seule source
+  // (`lib/embed/remise.ts`), donc l'enveloppe et la remise ne peuvent
+  // pas se contredire.
+  const cadre = cadreDuGenerateur(contexte);
   const [phase, setPhase] = useState<EmbedPhase>(initialSessionToken ? "loading" : "form");
   const [sessionToken, setSessionToken] = useState(initialSessionToken);
   const [quizId, setQuizId] = useState<string>("");
@@ -199,11 +217,17 @@ export default function EmbedPreviewClient({
   // whole iframe viewport (it uses h-screen + its own internal
   // grid). The earlier phases sit inside a centered, padded wrapper.
   if (phase === "edit" && quizId) {
-    return <QuizDetailClient quizId={quizId} embedSessionToken={sessionToken} />;
+    return cadre.editeur
+      ? (
+        <div className={cadre.editeur}>
+          <QuizDetailClient quizId={quizId} embedSessionToken={sessionToken} embedContexte={contexte} />
+        </div>
+      )
+      : <QuizDetailClient quizId={quizId} embedSessionToken={sessionToken} embedContexte={contexte} />;
   }
 
   return (
-    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col">
+    <div className={cadre.enveloppe}>
       {/* Generous outer padding so neither the form nor the loader
           ever touches the iframe edge. The iframe itself carries the
           rounded corners + shadow — we keep the content area calm

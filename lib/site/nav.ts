@@ -121,6 +121,7 @@ export const PIED: readonly ColonnePied[] = [
       // /fonctionnalites et supprime l'autre." Le premier menait à `/`,
       // qui est la page où on est déjà en lisant le pied.
       { href: "/fonctionnalites", libelle: "Ce que fait Tiquiz" },
+      { href: "/generateur-de-quiz", libelle: "Générateur de quiz" },
       // ET LE TARIF MÈNE À LA PAGE DE TARIFS, plus au bon de commande
       // mensuel : envoyer quelqu'un payer avant qu'il ait vu les trois
       // paliers, c'est lui faire choisir sans les avoir comparés.

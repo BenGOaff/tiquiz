@@ -10464,3 +10464,126 @@ rougit.
 pas : Tiquiz sert `favicon-tiquiz.png`, Tipote `favicon.png`, et une
 liste écrite dans le test divergerait au premier renommage en disant
 vert sur un fichier disparu.
+
+## Le générateur de quiz a sa page, et le bouton y était MORT (8 septembre 2026)
+
+Béné : "le générateur de quiz sur une page dédiée, optimisée seo, dans
+le style du blog et des pages de ventes etc."
+
+### CE QUE LA MESURE A TROUVÉ AVANT D'ÉCRIRE LA PAGE
+
+Le générateur anonyme existe depuis des mois, dans une iframe sur la
+page de vente. Son bouton principal, celui qui transforme un visiteur en
+inscrit, faisait :
+
+```
+window.parent.postMessage({ type: "tiquiz-embed-checkout", ... })
+```
+
+**Hors iframe, `window.parent` EST `window`.** Le message part vers la
+page elle même, personne n'écoute, et le bouton ne fait RIEN. Aucune
+erreur, aucun symptôme : il s'affiche, on clique, il ne se passe rien.
+C'est le `ok: false` muet du 3 août, sur le seul bouton qui rapporte de
+l'argent, et il aurait été posé tel quel sur la page dédiée.
+
+**La cause profonde : le mode embed était DÉDUIT de la présence du
+jeton** (`const isEmbed = !!embedSessionToken`). Or le jeton dit "ce quiz
+est anonyme", il ne dit PAS "on est dans une iframe" : sur la page
+dédiée, les deux cessent d'être vrais ensemble.
+
+### UN SEUL PARAMÈTRE, DEUX CONSÉQUENCES QUI DOIVENT RESTER D'ACCORD
+
+`lib/embed/remise.ts` (pur, testé) prend `contexte: "iframe" | "page"`
+et en tire les DEUX choses qui en découlent :
+
+| | `iframe` | `page` |
+|---|---|---|
+| le bouton | `postMessage` au pont de la page hôte | NAVIGUE vers l'inscription |
+| le cadre | `100dvh` + fond de l'app | une carte dans une section du site |
+
+**Deux paramètres séparés finiraient par se désaccorder**, et la
+combinaison "cadre de page + remise d'iframe" donne exactement le bouton
+mort. Et il est OBLIGATOIRE : les props de `QuizDetailClient` sont une
+UNION DISCRIMINÉE, donc fournir un jeton sans dire où l'on est **ne
+compile pas**. C'est la règle du 1er août, dans sa forme la plus stricte.
+
+**L'adresse d'inscription n'est PAS réécrite** : elle vit dans
+`lib/embed/reprise.ts` depuis le 2 septembre, avec sa validation d'UUID
+et son chemin RELATIF (la page est servie sur `tiquiz.fr` en public et
+sur le domaine de l'app derrière la clé d'aperçu).
+
+**L'éditeur est en `h-screen` chez lui, donc sa boîte l'est aussi.** Une
+boîte plus COURTE avec `overflow-hidden` ROGNERAIT le bas de l'éditeur,
+et la règle du 7 septembre dit qu'un débordement n'est une perte que
+s'il est rogné : ici il le serait. Le test rejoue `h-[85vh]` et rougit.
+
+### CE QUE LA PAGE DIT, ET POURQUOI ELLE EST RÉFÉRENÇABLE
+
+**Le contenu est rendu par le SERVEUR : 1208 mots dans le HTML servi**,
+mesuré. Une page dont l'outil est monté par le navigateur ne dit RIEN à
+un moteur (c'est le défaut du viewer public, relevé le 7 septembre) :
+l'outil vit à l'intérieur d'une page qui, elle, se lit sans JavaScript.
+
+Six sections : le haut de page avec l'outil DEDANS, les trois étapes,
+ce que l'IA écrit à ta place, ce que le générateur ne fait pas, la FAQ,
+le bandeau de fin. Plus deux JSON-LD (`WebApplication` et `FAQPage`)
+construits depuis les MÊMES données que l'écran.
+
+**AUCUN CHIFFRE N'EST ÉCRIT À LA MAIN** (`lib/site/generateurQuiz.ts`) :
+la limite horaire est LUE dans `lib/embed/rateLimit.ts`, le nombre de
+langues dans `QUIZ_LANGUAGES`, les limites du gratuit dans
+`FREE_LIMITS`. Un chiffre recopié est un chiffre faux au prochain
+changement, et il vit ici à l'endroit exact où un lecteur le vérifie.
+
+**`offers.price: "0"` est justifié dans le module** : la route de
+génération ne demande aucune session, donc c'est un fait, pas une
+formule commerciale. Le test exige que la raison reste écrite à côté.
+
+**Les trois refus disent ce qui se passe À LA PLACE.** Un refus qui ne
+le dit pas n'est pas un refus, c'est une excuse (règle du 6 septembre) :
+le profil est PRÉÉCRIT, le parcours est LINÉAIRE, le branding est un jeu
+de réglages. Chaque `source` citée est un fichier dont le test vérifie
+l'EXISTENCE : une fonctionnalité retirée fait rougir la page qui la
+vend.
+
+### CE QUI A ÉTÉ MESURÉ SUR LA PAGE RENDUE
+
+Aucun débordement à 1440, 900 et 390 px. Chaque section porte au moins
+100 px de padding haut ET bas (sa règle du 4 septembre). La boîte de
+l'outil fait 1120 / 868 / 358 px. Aucun paragraphe centré ne dépasse
+2,5 lignes rendues. Les deux JSON-LD sont présents. Le rendu a été
+REGARDÉ, section par section : il est dans le style du site.
+
+### 🚨 CE QUE JE N'AI PAS PU MESURER, ET QUI SE DIT
+
+**Le formulaire du générateur ne s'hydrate pas dans ce conteneur.** Une
+sonde posée dans `EmbedPreviewClient` ne s'exécute **0 fois**, les trois
+menus rendent 48 px de large et vides, et le bouton ne déclenche aucun
+appel. Aucune erreur, aucune requête en échec, 38 scripts chargés.
+
+**C'est IDENTIQUE sur `/embed/preview`, qui est en production depuis des
+mois** : ce n'est donc pas ce chantier. Et l'hydratation marche
+généralement ici (`DeclencheurAnims` marque bien ses blocs sur la
+landing). Deux hypothèses ont été éliminées par la mesure (un faux
+`.env.local` ne change rien, retirer le JSON-LD ne change rien), et la
+production est INJOIGNABLE depuis ce navigateur
+(`ERR_CONNECTION_RESET`, alors que `curl` répond 200).
+
+**Je ne sais donc pas si c'est l'environnement ou un vrai bug, et une
+cause plausible n'est pas une cause** (règle du 2 septembre). Le seul
+endroit où ça se tranche est son écran.
+
+### ET CE QUI A ÉTÉ TROUVÉ EN CHEMIN, QUI N'EST PAS DU CODE
+
+**La génération anonyme n'a AUCUN plafond de dépense.**
+`ANTHROPIC_EMBED_DAILY_BUDGET` est NOMMÉE dans un commentaire de
+`lib/embed/rateLimit.ts` et **lue nulle part** : neuvième fois que ce
+dépôt paie une règle écrite en commentaire. Le seul garde-fou est
+`HOURLY_LIMIT_PER_IP = 10`, donc une IP par heure ; le modèle est Haiku,
+ce qui adoucit sans fermer. **Aucun coût en euros n'a été mesuré**, et
+il ne faut pas en citer un.
+
+Test : `tests/logic/generateur-page.test.mts` (11 cas), vérifié en
+rejouant TROIS versions fautives (`contexte="iframe"` sur la page
+dédiée, la boîte en `h-[85vh]`, la limite horaire recopiée à la main) :
+les trois rougissent.
