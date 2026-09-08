@@ -15,6 +15,7 @@ import { test } from "node:test";
 
 import { attributsEpingle, attributsEpinglePour, epinglePour } from "@/lib/blog/partage";
 import { listerArticles } from "@/lib/blog/articles";
+import { metadonneesSommaire } from "@/lib/blog/metaSommaire";
 import { codeVerificationPinterest, diagnosticVerificationPinterest } from "@/lib/site/pinterest";
 
 test("chaque article publié a son épingle verticale sur le disque", () => {
@@ -29,7 +30,7 @@ test("une épingle désigne l'ARTICLE, jamais le sommaire du blog", () => {
   // carte sans `data-pin-url` renverrait le lecteur sur /blog.
   const [a] = listerArticles("fr");
   assert.ok(a);
-  const attrs = attributsEpingle(a);
+  const attrs = attributsEpingle(a, "fr");
   assert.equal(attrs["data-pin-url"], `https://tiquiz.fr/blog/${a.slug}`);
   assert.match(attrs["data-pin-media"] ?? "", /^https:\/\/tiquiz\.fr\/blog\/pin\/.+\.jpg$/);
   assert.ok((attrs["data-pin-description"] ?? "").length > 10);
@@ -42,19 +43,32 @@ test("sans épingle construite, on ne désigne RIEN", () => {
 });
 
 test("la LISTE des articles porte les attributs, pas seulement l'article", () => {
+  // ON VISE LE FAIT, PAS L'ENDROIT. La carte et le sommaire ont demenage
+  // (`components/site/SommaireBlog.tsx`, 8 septembre) : un test qui
+  // figeait `attributsEpingle(une)` dans `app/blog/page.tsx` serait sorti
+  // ROUGE sur une correction juste. Ce qui compte, c'est que les deux
+  // ECRANS demandent les attributs et les POSENT sur l'image.
   const carte = readFileSync("components/site/CarteArticle.tsx", "utf8");
-  assert.match(carte, /attributsEpingle\(article\)/);
+  assert.match(carte, /attributsEpingle\(article,/);
   assert.match(carte, /\{\.\.\.epingle\}/);
-  const index = readFileSync("app/blog/page.tsx", "utf8");
-  assert.match(index, /attributsEpingle\(une\)/);
+  const sommaire = readFileSync("components/site/SommaireBlog.tsx", "utf8");
+  assert.match(sommaire, /\{\.\.\.attributsEpingle\(une,/);
 });
 
 test("le sommaire du blog et les rubriques déclarent enfin une image", () => {
   // Elles n'en avaient AUCUNE : partagées, elles sortaient nues sur
   // Pinterest, LinkedIn et Facebook.
-  const index = readFileSync("app/blog/page.tsx", "utf8");
-  assert.match(index, /COUVERTURE_UNE/);
-  assert.match(index, /openGraph:[\s\S]{0,600}images:/);
+  //
+  // On APPELLE la fonction au lieu de chercher le nom d'une constante :
+  // une constante se renomme, et le test rougirait alors sur une page
+  // parfaitement correcte.
+  for (const langue of ["fr", "en"] as const) {
+    const meta = metadonneesSommaire(langue);
+    const images = meta.openGraph && "images" in meta.openGraph ? meta.openGraph.images : null;
+    assert.ok(Array.isArray(images) && images.length > 0, `og:image manquante en ${langue}`);
+    const url = String((images[0] as { url?: unknown }).url ?? "");
+    assert.match(url, /^https:\/\/tiquiz\.fr\/blog\/img\/.+/, langue);
+  }
   const rubrique = readFileSync("app/blog/rubrique/[rubrique]/page.tsx", "utf8");
   assert.match(rubrique, /articlesDeLaRubrique\(r\.id\)\[0\]\?\.couverture/);
   assert.match(rubrique, /openGraph:[\s\S]{0,600}images:/);

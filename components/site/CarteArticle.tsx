@@ -15,9 +15,11 @@ import Link from "next/link";
 import type { ResumeArticle } from "@/lib/blog/articles";
 import { rubriqueDe } from "@/lib/blog/rubriques";
 import { attributsEpingle } from "@/lib/blog/partage";
+import { cheminArticle, motsDuBlog } from "@/lib/blog/motsDuBlog";
+import type { LanguePublique } from "@/lib/site/langues";
 
-export function jourLisible(iso: string): string {
-  return new Intl.DateTimeFormat("fr-FR", {
+export function jourLisible(iso: string, locale = "fr-FR"): string {
+  return new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -27,12 +29,25 @@ export function jourLisible(iso: string): string {
 
 export default function CarteArticle({
   article,
+  langue,
   priorite = false,
 }: {
   article: ResumeArticle;
+  /**
+   * LA LANGUE DE LA LISTE OU CETTE CARTE VIT.
+   *
+   * Obligatoire : elle decide vers ou pointe le lien. Un defaut
+   * enverrait chaque carte anglaise sur `/blog/<slug-anglais>`, une
+   * adresse qui repond 404, et la carte s'afficherait parfaitement.
+   */
+  langue: LanguePublique;
   /** La première carte visible : elle se charge tout de suite. */
   priorite?: boolean;
 }) {
+  const m = motsDuBlog(langue);
+  // Les rubriques sont indexees par des slugs FRANCAIS : une carte
+  // anglaise n'en a donc pas, et son etiquette ne s'affiche pas. C'est
+  // honnete, et mieux qu'une etiquette francaise sur une carte anglaise.
   const rubrique = rubriqueDe(article.slug);
   // CE QUE PINTEREST PREND QUAND ON ÉPINGLE DEPUIS LA LISTE.
   //
@@ -40,10 +55,10 @@ export default function CarteArticle({
   // pas dans un flux vertical. `attributsEpingle` désigne l'épingle
   // 1000 x 1500 de l'article ET l'adresse de l'article, sinon l'épingle
   // ramènerait le lecteur sur le sommaire du blog.
-  const epingle = attributsEpingle(article);
+  const epingle = attributsEpingle(article, langue);
   return (
     <article className="tq-carte group">
-      <Link href={`/blog/${article.slug}`} className="block">
+      <Link href={cheminArticle(article.slug, langue)} className="block">
         {article.couverture ? (
           <div className="tq-carte-media">
             {/* Pas de `next/image` : ces visuels sont déjà recompressés
@@ -70,7 +85,7 @@ export default function CarteArticle({
           </p>
           <p className="tq-doux mt-3 text-xs">
             Béné{" | "}
-            <time dateTime={article.publieLe}>{jourLisible(article.publieLe)}</time>
+            <time dateTime={article.publieLe}>{jourLisible(article.publieLe, m.locale)}</time>
           </p>
         </div>
       </Link>

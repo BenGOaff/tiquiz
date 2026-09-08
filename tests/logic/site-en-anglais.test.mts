@@ -44,7 +44,11 @@ import {
   alternatesDeLangue,
   cheminPourLangue,
   langueDuChemin,
+  CHEMINS_HORS_REECRITURE,
+  serviParUneRouteDeLangue,
 } from "../../lib/site/langues.ts";
+import { listerArticles } from "../../lib/blog/articles.ts";
+import { metadonneesSommaire } from "../../lib/blog/metaSommaire.ts";
 import { PAGES_PUBLIQUES, languesDePage } from "../../lib/site/pagesPubliques.ts";
 import { clicASignaler } from "../../lib/affiliate/signalerClic.ts";
 import { vueASignaler } from "../../lib/trafic/vueASignaler.ts";
@@ -253,4 +257,130 @@ test("aucun /fr/ n'est fabrique nulle part", () => {
     false,
     "poser /fr/ jetterait le referencement de chaque adresse deja indexee",
   );
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// 5. LE BLOG A SES PROPRES SEGMENTS `/en/blog/...`
+// ─────────────────────────────────────────────────────────────────────
+
+test("un chemin hors reecriture se reconnait par SEGMENT, jamais par debut de chaine", () => {
+  assert.equal(serviParUneRouteDeLangue("/blog"), true);
+  assert.equal(serviParUneRouteDeLangue("/blog/mon-article"), true);
+  assert.equal(serviParUneRouteDeLangue("/blog/rubrique/methode"), true);
+  // Le faux positif qu'on rate toujours : un chemin qui COMMENCE par les
+  // memes lettres. Sans la comparaison par segment, `/blogueurs`
+  // repondrait 404 sous `/en/`.
+  assert.equal(serviParUneRouteDeLangue("/blogueurs"), false);
+  assert.equal(serviParUneRouteDeLangue("/tarifs"), false);
+});
+
+test("chaque chemin exclu de la reecriture a VRAIMENT sa route anglaise", () => {
+  // C'est le garde qui compte : une entree ajoutee a la liste sans sa
+  // route repondrait 404 sur une page qui existe en francais, et rien
+  // ne le dirait avant qu'un lecteur ne clique.
+  assert.ok(CHEMINS_HORS_REECRITURE.length > 0, "une liste vide rendrait ce test muet");
+  for (const chemin of CHEMINS_HORS_REECRITURE) {
+    assert.ok(
+      fs.existsSync(path.join(RACINE, "app", "en", chemin.replace(/^\//, ""), "page.tsx")),
+      `${chemin} est exclu de la reecriture mais n'a aucune route app/en${chemin}`,
+    );
+  }
+});
+
+test("le middleware EXCLUT ces chemins, et le cookie affilie survit quand meme", () => {
+  const src = sansCommentaires(lire("middleware.ts"));
+  assert.match(
+    src,
+    /serviParUneRouteDeLangue\(decoupe\.cheminNu\)/,
+    "sans cette exclusion, /en/blog servirait le blog FRANCAIS",
+  );
+  // Le `next()` de cette branche passe par `poseSa` comme la
+  // reecriture : une affiliee qui envoie du monde sur un article
+  // anglais doit etre payee comme partout ailleurs.
+  assert.match(
+    src,
+    /poseSa\(\s*NextResponse\.next\(\{\s*request:\s*\{\s*headers:\s*entetes\s*\}\s*\}\)\s*\)/,
+    "la branche hors reecriture doit poser le cookie affilie",
+  );
+});
+
+test("le blog anglais a du contenu, et les deux sommaires partagent leur corps", () => {
+  // Un `hreflang` vers un sommaire vide ferait juger l'anglais sur une
+  // page qui dit "rien pour le moment".
+  assert.ok(listerArticles("en").length > 0, "aucun article anglais : le hreflang mentirait");
+
+  // UN SEUL CORPS. Deux pages qui redessineraient chacune leur sommaire
+  // divergeraient en une semaine, et c'est le defaut que ce depot paie
+  // en boucle.
+  for (const route of ["app/blog/page.tsx", "app/en/blog/page.tsx"]) {
+    const src = sansCommentaires(lire(route));
+    assert.match(src, /SommaireBlog/, `${route} doit passer par le corps partage`);
+    assert.match(src, /metadonneesSommaire\(/, `${route} doit passer par les metadonnees partagees`);
+  }
+});
+
+test("le sommaire anglais est canonique sur SON adresse, et les deux se citent", () => {
+  const en = metadonneesSommaire("en");
+  assert.equal(en.alternates?.canonical, "https://tiquiz.fr/en/blog");
+  assert.equal(en.alternates?.languages?.en, "https://tiquiz.fr/en/blog");
+  assert.equal(en.alternates?.languages?.fr, "https://tiquiz.fr/blog");
+  assert.equal(en.alternates?.languages?.["x-default"], "https://tiquiz.fr/blog");
+
+  const fr = metadonneesSommaire("fr");
+  assert.equal(fr.alternates?.canonical, "https://tiquiz.fr/blog");
+  assert.equal(fr.alternates?.languages?.en, "https://tiquiz.fr/en/blog");
+});
+
+test("TOUTE PAGE `/en/` PORTE LE CADRE DU SITE", () => {
+  // MESURE DU 8 SEPTEMBRE, en servant les deux adresses :
+  //
+  //   /blog      -> <header> 1, <footer> 1
+  //   /en/blog   -> <header> 0, <footer> 0
+  //
+  // `app/blog/layout.tsx` n'enveloppe QUE `/blog`. Un segment `/en/`
+  // reel n'en herite pas, donc les quatre articles anglais sortaient
+  // sans aucune sortie vers le reste du site, sans les liens LEGAUX du
+  // pied de page, et sans le maillage interne dont ces pages ont
+  // justement besoin pour ranker.
+  //
+  // Rien ne le disait : la page s'affiche parfaitement. C'est la meme
+  // famille que le bloc figé du 5 septembre, ou le geste etait juste et
+  // n'atteignait pas sa cible.
+  //
+  // ON REGARDE LA CHAINE DE LAYOUTS, jamais un fichier nomme : une
+  // prochaine page `/en/<x>` posee ailleurs doit rougir ici, et c'est
+  // exactement celle qu'on oublierait.
+  const racineEn = path.join(RACINE, "app", "en");
+  assert.ok(fs.existsSync(racineEn), "app/en doit exister");
+
+  const pages: string[] = [];
+  const parcourir = (dossier: string) => {
+    for (const e of fs.readdirSync(dossier, { withFileTypes: true })) {
+      const p = path.join(dossier, e.name);
+      if (e.isDirectory()) parcourir(p);
+      else if (e.name === "page.tsx") pages.push(p);
+    }
+  };
+  parcourir(racineEn);
+  assert.ok(pages.length > 0, "aucune page /en/ : ce test serait muet");
+
+  for (const page of pages) {
+    // On remonte de dossier en dossier jusqu'a `app/en`, comme Next le
+    // fait pour composer ses layouts.
+    let dossier = path.dirname(page);
+    let cadre = false;
+    for (;;) {
+      const layout = path.join(dossier, "layout.tsx");
+      if (fs.existsSync(layout) && /SiteShell/.test(sansCommentaires(fs.readFileSync(layout, "utf8")))) {
+        cadre = true;
+        break;
+      }
+      if (path.resolve(dossier) === path.resolve(racineEn)) break;
+      dossier = path.dirname(dossier);
+    }
+    assert.ok(
+      cadre,
+      `${path.relative(RACINE, page)} sort sans en-tete ni pied de page : aucun layout de sa chaine ne rend SiteShell`,
+    );
+  }
 });

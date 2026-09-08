@@ -50,14 +50,24 @@ import type { ResumeArticle } from "./articles";
 import { epinglePour } from "./partage";
 import { ORIGINE_BLOG } from "./seo";
 import { rubriqueDe } from "./rubriques";
+import { baliseLangue, cheminArticle, cheminBlog, motsDuBlog } from "./motsDuBlog";
+import { cheminPourLangue, type LanguePublique } from "@/lib/site/langues";
 
-/** Le titre et la description du flux, lus par les lecteurs et les robots. */
-export const TITRE_FLUX = "Le blog Tiquiz";
-export const DESCRIPTION_FLUX =
-  "Comment un quiz capte des leads qualifies, les tague par profil et les transforme en clients.";
-
-/** L'adresse du flux. Écrite UNE fois : la route, la balise de decouverte et le llms.txt la lisent ici. */
+/**
+ * L'adresse du flux, chemin NU.
+ *
+ * Écrite UNE fois : la route, la balise de decouverte et le llms.txt la
+ * lisent ici. Passer par `cheminFlux(langue)` plutot que par cette
+ * constante partout ou une langue est en jeu : sur une page anglaise,
+ * annoncer le flux francais dirait a un lecteur de flux d'aller
+ * chercher des articles francais.
+ */
 export const CHEMIN_FLUX = "/blog/rss.xml";
+
+/** L'adresse du flux d'une langue. */
+export function cheminFlux(langue: LanguePublique): string {
+  return cheminPourLangue(CHEMIN_FLUX, langue);
+}
 
 /**
  * Échappe ce qui part dans une balise XML.
@@ -102,13 +112,26 @@ function octets(urlAbsolue: string): number {
 }
 
 /** Le flux RSS 2.0 complet, prêt à être servi. */
-export function construireFlux(articles: readonly ResumeArticle[]): string {
+export function construireFlux(
+  articles: readonly ResumeArticle[],
+  /**
+   * LA LANGUE EST UN PARAMETRE OBLIGATOIRE.
+   *
+   * Sans elle, un flux construit sur les articles anglais porterait des
+   * liens `tiquiz.fr/blog/<slug-anglais>`, c'est a dire quatre adresses
+   * qui repondent 404, sous un `<language>fr-FR</language>`. Rien ne
+   * l'aurait dit : le flux serait valide, et chaque publication
+   * automatisee aurait envoye du monde nulle part.
+   */
+  langue: LanguePublique,
+): string {
+  const m = motsDuBlog(langue);
   const maintenant =
     articles.length > 0 ? dateRss(articles[0]!.publieLe) : new Date().toUTCString();
 
   const items = articles
     .map((a) => {
-      const lien = `${ORIGINE_BLOG}/blog/${a.slug}`;
+      const lien = `${ORIGINE_BLOG}${cheminArticle(a.slug, langue)}`;
       const epingle = epinglePour(a.slug);
       const rubrique = rubriqueDe(a.slug);
       const couverture = a.couverture ? `${ORIGINE_BLOG}${a.couverture}` : null;
@@ -120,7 +143,7 @@ export function construireFlux(articles: readonly ResumeArticle[]): string {
           ? `<p><img src="${echapperXml(couverture)}" alt="" width="1200" height="675" /></p>`
           : "",
         `<p>${echapperXml(a.description)}</p>`,
-        `<p><a href="${echapperXml(lien)}">Lire l'article</a></p>`,
+        `<p><a href="${echapperXml(lien)}">${echapperXml(m.lireLArticle)}</a></p>`,
       ]
         .filter(Boolean)
         .join("");
@@ -147,12 +170,12 @@ export function construireFlux(articles: readonly ResumeArticle[]): string {
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">',
     "  <channel>",
-    `    <title>${echapperXml(TITRE_FLUX)}</title>`,
-    `    <link>${ORIGINE_BLOG}/blog</link>`,
-    `    <description>${echapperXml(DESCRIPTION_FLUX)}</description>`,
-    "    <language>fr-FR</language>",
+    `    <title>${echapperXml(m.nomDuBlog)}</title>`,
+    `    <link>${ORIGINE_BLOG}${cheminBlog(langue)}</link>`,
+    `    <description>${echapperXml(m.sommaire.metaDescription)}</description>`,
+    `    <language>${baliseLangue(langue).inLanguage}</language>`,
     `    <lastBuildDate>${maintenant}</lastBuildDate>`,
-    `    <atom:link href="${ORIGINE_BLOG}${CHEMIN_FLUX}" rel="self" type="application/rss+xml" />`,
+    `    <atom:link href="${ORIGINE_BLOG}${cheminFlux(langue)}" rel="self" type="application/rss+xml" />`,
     items,
     "  </channel>",
     "</rss>",

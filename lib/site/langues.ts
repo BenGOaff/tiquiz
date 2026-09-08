@@ -167,3 +167,48 @@ export function alternatesDeLangue(
  * créatrice à travers une réécriture.
  */
 export const ENTETE_LANGUE = "x-tq-langue";
+
+/**
+ * Les chemins nus qui ont leur PROPRE segment `/en/...`, donc que le
+ * middleware ne doit PAS reecrire.
+ *
+ * -- POURQUOI UNE EXCEPTION EXISTE ------------------------------------
+ *
+ * La reecriture `/en/<chemin>` -> `/<chemin>` fait voyager la langue
+ * dans un en-tete de REQUETE. Ca suppose deux choses, et le blog n'en
+ * remplit aucune :
+ *
+ *   - la page doit etre rendue A LA DEMANDE. Les pages d'article et le
+ *     sommaire sont `force-static`, donc prerendus au BUILD, donc sans
+ *     requete et sans en-tete a lire ;
+ *   - le chemin nu doit designer la MEME page dans les deux langues. Les
+ *     slugs anglais different des francais
+ *     ("create-quiz-systeme-io" contre "comment-creer-quiz-systeme-io"),
+ *     donc `dynamicParams = false` repondrait 404 sur chacun.
+ *
+ * Le blog a donc de VRAIS segments (`app/en/blog/...`), et ce sont eux
+ * qui repondent. Sans cette liste, la reecriture les court-circuiterait
+ * et servirait le blog FRANCAIS sous `/en/blog` : la page s'afficherait
+ * parfaitement, et Google indexerait du francais sous une adresse
+ * anglaise. C'est exactement la panne que tout ce chantier existe pour
+ * empecher.
+ *
+ * ON NOMME LES CHEMINS SERVIS PAR UNE ROUTE REELLE, jamais l'inverse :
+ * un oubli laisse une page francaise sous `/en/`, ce qui se voit ; une
+ * liste d'exceptions inversee laisserait un 404 sur une page qui
+ * existe, ce qui se voit aussi mais coute une page indexee.
+ */
+export const CHEMINS_HORS_REECRITURE = ["/blog"] as const;
+
+/**
+ * Vrai quand un chemin nu est servi par un segment `/en/...` reel.
+ *
+ * La comparaison se fait par SEGMENT, jamais par debut de chaine :
+ * sinon `/blogueurs` serait pris pour `/blog` et repondrait 404 sous
+ * `/en/`. C'est la regle du 2 septembre (le didacticiel hors du quiz),
+ * transposee aux langues.
+ */
+export function serviParUneRouteDeLangue(cheminNu: string): boolean {
+  const nu = cheminNu.startsWith("/") ? cheminNu : `/${cheminNu}`;
+  return CHEMINS_HORS_REECRITURE.some((base) => nu === base || nu.startsWith(`${base}/`));
+}

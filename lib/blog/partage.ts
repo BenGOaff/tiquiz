@@ -31,6 +31,8 @@ import path from "node:path";
 
 import type { Article, ResumeArticle } from "./articles";
 import { ORIGINE_BLOG } from "./seo";
+import { cheminArticle } from "./motsDuBlog";
+import type { LanguePublique } from "@/lib/site/langues";
 
 /** Le dossier des épingles, servi depuis `public/`. */
 const DOSSIER_PIN = "/blog/pin";
@@ -98,8 +100,15 @@ export function textePartage(a: Article | ResumeArticle): string {
  */
 export function attributsEpingle(
   a: Article | ResumeArticle,
+  langue: LanguePublique,
 ): Record<string, string> {
-  return attributsEpinglePour(a.slug, `${ORIGINE_BLOG}/blog/${a.slug}`, textePartage(a));
+  // `data-pin-url` PORTE LA LANGUE DE L'ARTICLE.
+  //
+  // C'est le morceau qu'on ne peut pas oublier (regle du 1er septembre)
+  // : une epingle prise sur la carte d'un article anglais et qui
+  // pointerait vers `/blog/<slug-anglais>` ramenerait le lecteur sur un
+  // 404, et l'epingle ne ramenerait personne.
+  return attributsEpinglePour(a.slug, `${ORIGINE_BLOG}${cheminArticle(a.slug, langue)}`, textePartage(a));
 }
 
 /**

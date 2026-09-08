@@ -24,7 +24,7 @@ export const dynamic = "force-static";
 export const revalidate = 3600;
 
 export function GET(): Response {
-  return new Response(construireFlux(listerArticles(LANGUE_SANS_PREFIXE)), {
+  return new Response(construireFlux(listerArticles(LANGUE_SANS_PREFIXE), LANGUE_SANS_PREFIXE), {
     headers: {
       "content-type": "application/rss+xml; charset=utf-8",
       "cache-control": "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",

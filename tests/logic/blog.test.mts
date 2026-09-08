@@ -353,14 +353,14 @@ test("la canonique designe NOTRE adresse, jamais l'ancienne", () => {
   // Laisser la canonique sur tipote.fr reviendrait a dire a Google "la
   // vraie page est ailleurs", donc a garantir de ne jamais ranker.
   for (const a of ARTICLES) {
-    assert.equal(urlArticle(a.slug), `${ORIGINE_BLOG}/blog/${a.slug}`);
-    assert.ok(!urlArticle(a.slug).includes("tipote.fr"));
+    assert.equal(urlArticle(a.slug, "fr"), `${ORIGINE_BLOG}/blog/${a.slug}`);
+    assert.ok(!urlArticle(a.slug, "fr").includes("tipote.fr"));
   }
 });
 
 test("le JSON-LD d'un article porte ce qu'un moteur attend", () => {
   const a = lireArticle("vendre-avec-un-quiz", "fr")!;
-  const ld = jsonLdArticle(a) as Record<string, unknown>;
+  const ld = jsonLdArticle(a, "fr") as Record<string, unknown>;
   assert.equal(ld["@type"], "BlogPosting");
   assert.equal(ld.headline, a.titre);
   assert.equal(ld.datePublished, a.publieLe);
@@ -387,7 +387,7 @@ test("une FAQPage n'est declaree que si l'article a vraiment des questions", () 
 });
 
 test("le fil d'Ariane remonte au blog", () => {
-  const ld = jsonLdFilDAriane(ARTICLES[0]) as { itemListElement: { item: string }[] };
+  const ld = jsonLdFilDAriane(ARTICLES[0], "fr") as { itemListElement: { item: string }[] };
   assert.equal(ld.itemListElement.length, 2);
   assert.equal(ld.itemListElement[0].item, `${ORIGINE_BLOG}/blog`);
 });
