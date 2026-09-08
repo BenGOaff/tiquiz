@@ -47,6 +47,7 @@ import {
   CHEMIN_GENERATEUR,
   ETAPES,
   FAQ,
+  SOURCE_GENERATEUR,
   applicationJsonLd,
   faqJsonLd,
 } from "@/lib/site/generateurQuiz";
@@ -117,7 +118,7 @@ export default async function Page({ searchParams }: PageProps) {
             <EmbedPreviewClient
               initialSessionToken={sp?.session ?? ""}
               locale="fr"
-              source={sp?.source ?? "page-generateur"}
+              source={sp?.source ?? SOURCE_GENERATEUR}
               // Le repli du bon de commande n'est jamais lu ici : c'est
               // la page hôte d'une iframe qui s'en sert, et il n'y a pas
               // d'iframe. Il reste passé parce que la prop est requise.

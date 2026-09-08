@@ -11425,3 +11425,159 @@ rejouant la version d'avant que ça s'est vu, jamais en le relisant.
 Test : `tests/logic/visuels-perimes.test.mts` (4 cas), vérifié en
 rejouant TROIS versions fautives (le filtre retiré, un visuel redessiné,
 le retrait après l'appariement) : les trois rougissent.
+
+## Qui entre par le générateur, et ce qu'il devient (Béné, 8 septembre 2026)
+
+"Dans admin, fais moi apparaitre qui entre par le générateur dans mes
+contacts et dans les stat comment le générateur convertit : visites /
+inscrits gratos / abonnés et le ROI."
+
+### CE QUI MANQUAIT, MESURÉ AVANT D'ÉCRIRE UNE LIGNE
+
+Les QUATRE marches de l'entonnoir étaient déjà toutes lisibles :
+
+| | d'où ça vient |
+|---|---|
+| les visites | `trafic_jour`, chemin `/generateur-de-quiz` |
+| les quiz générés | `embed_quiz_sessions.created_at` + `source` |
+| les inscrits | `claimed_by_user_id` (le quiz a été rattaché) |
+| les abonnés | le `plan` de ces comptes |
+
+**Seul le ROI n'avait AUCUNE entrée** : `/api/embed/quiz/generate`
+faisait `const json = await res.json()` et ne touchait jamais
+`json.usage`. Les jetons repartaient dans le vide à chaque génération,
+donc aucun coût ne pouvait être calculé, même rétroactivement.
+
+🚨 Migration : `supabase/migrations/20260908_generateur_usage.sql`
+(**Supabase de TIQUIZ**). Trois colonnes sur `embed_quiz_sessions`
+(`modele_ia`, `jetons_entree`, `jetons_sortie`) plus un index sur
+`created_at`.
+
+**TROIS COLONNES, PAS CINQ, ET C'EST MESURÉ :** l'appel de l'embed ne
+pose aucun `cache_control`, donc des colonnes de jetons de cache
+seraient une branche que rien n'exerce, c'est à dire le piège de
+`simuler()` (31 août).
+
+**L'usage est capturé AVANT la lecture du JSON.** Une réponse tronquée
+coûte exactement les mêmes jetons qu'une réponse complète : la ranger
+après le `JSON.parse` ferait perdre le coût des générations qui ratent,
+donc précisément celles qu'on veut chiffrer. Et l'écriture est
+best-effort et CRIE : un compteur qui tombe ne doit jamais coûter un
+quiz à un visiteur.
+
+### LE NUMÉRATEUR ET LE DÉNOMINATEUR PARLENT DE LA MÊME PAGE
+
+C'est la règle qui rend ce tableau honnête, et c'est le défaut du
+7 septembre sur l'entonnoir des ventes, à un jour d'écart.
+
+Le générateur est servi à DEUX endroits : sa page dédiée
+(`source: "page-generateur"`) et l'iframe de la page de vente
+(`source: "tiquiz-fr"`). **Personne ne compte les vues de l'iframe.**
+Diviser TOUS les quiz générés par les vues de la seule page dédiée
+gonflerait le taux, et rien ne le dirait.
+
+L'entonnoir ne compte donc que la page dédiée ; ce que l'iframe apporte
+se lit à côté, **en COMPTES, sans aucun pourcentage**. Inventer un
+dénominateur serait pire que se taire.
+
+**Et la pastille sur une fiche client, elle, compte TOUTES les portes**
+(`comptesDuGenerateur`) : quelqu'un arrivé par l'iframe est entré par le
+générateur tout autant. C'est l'entonnoir qui filtre, parce que lui
+DIVISE ; une pastille ne divise rien.
+
+**Le chemin se compare à l'IDENTIQUE, jamais en préfixe** : une future
+`/generateur-de-quiz-pro` serait une autre page, et les additionner
+rendrait le taux faux le jour où elle existe.
+
+### UN MODÈLE INCONNU RÉPOND `null`, JAMAIS UN PRIX APPROCHÉ
+
+`lib/generateur/tarifsIa.ts` porte la table des tarifs Anthropic **avec
+sa date de relevé** (`TARIFS_MAJ`), exactement comme `TAUX_UE` de la TVA
+européenne : un tarif faux ne se voit sur aucun écran, il se voit sur la
+facture.
+
+**La famille Opus est passée de 15 $ / 75 $ à 5 $ / 25 $ par million de
+jetons.** Appliquer le tarif du jour à un modèle plus ancien diviserait
+son coût par trois, en silence. On ne reconnaît donc que ce qui a été
+RELEVÉ, par PRÉFIXE (les identifiants portent une date), et **le préfixe
+le plus LONG gagne** : sinon `claude-opus-5` attraperait
+`claude-opus-5-1` le jour où leurs tarifs différeraient.
+
+**Une génération sans coût calculable est COMPTÉE (`coutInconnu`), pas
+mise à zéro.** Deux cas : la ligne est antérieure au 8 septembre (aucun
+jeton n'était écrit), ou son modèle n'est pas dans la table. Un zéro
+ferait lire le total comme le coût complet, et c'est exactement le
+chiffre qui fait dépenser (règle du 22 août).
+
+### ON NE CONVERTIT PAS LES DEVISES, ET L'ÉCRAN LE DIT
+
+Anthropic facture en DOLLARS, Tiquiz encaisse en EUROS. Il n'y a donc
+**aucun ratio de ROI** : l'écran met le coût par inscrit et le coût par
+abonné À CÔTÉ des 17 € du palier le moins cher (lu dans `OWNER_CATALOG`,
+jamais recopié) et laisse la comparaison se faire. C'est la règle du
+1er septembre, posée pour les prix de Typeform et de Zapier sur le blog.
+
+### "JE N'AI PAS PU LIRE" N'EST PAS "PERSONNE N'ENTRE PAR LÀ"
+
+Trois états, et ils ne se confondent pas : champ absent (le serveur n'a
+pas la version), `lisible: false` (la migration n'est pas passée),
+`lisible: true`. Les deux premiers rendent une PHRASE qui nomme la
+cause, jamais un zéro.
+
+**Et la décision vit dans la fonction PURE**
+(`comptesDuGenerateurSiLisible`), pas dans la route :
+`buildPeople` reçoit `undefined` quand la lecture a raté, jamais un
+ensemble VIDE. Un ensemble vide se lirait "personne n'entre par le
+générateur", et enverrait chercher un trafic manquant au lieu d'une
+panne. Enfermée dans la route, cette moitié n'était pas testable, et
+c'est LITTÉRALEMENT là que mon garde-fou a d'abord menti (voir plus
+bas).
+
+**Le seuil aval est le dixième de celui des vues** (10 contre 100) : un
+quiz généré est bien plus rare qu'une vue, et une inscription plus rare
+encore. Exiger 100 rendrait ces deux taux invisibles pendant des mois.
+Les COMPTES, eux, s'affichent toujours : ils sont exacts dès la première
+ligne.
+
+### DANS SES CONTACTS : une pastille ET un filtre
+
+Sa phrase dit "dans mes contacts", donc les deux : une pastille
+`Générateur` sur la ligne (un mot, lisible sur un téléphone) et une puce
+`Entrés par le générateur N` à côté des filtres produit.
+
+**Ce n'est ni un statut ni un produit, donc c'est un filtre à part** :
+quelqu'un entré par le générateur peut être abonné, gratuit ou parti.
+`FiltreEntree` n'a que deux valeurs et **pas de "non"** : la question est
+"montre moi ceux là", jamais "montre moi les autres".
+
+### MA FAUTE, ET C'EST LA DIX-SEPTIÈME DE LA SEMAINE
+
+Mon contrôle du cas muet cherchait `/venusDuGenerateur:[^,]*lisible/`
+dans la route. **Il est resté VERT sur la version fautive**, celle qui
+fabrique un ensemble vide : le mot `lisible` apparaît dans les deux
+formes, à l'intérieur de l'argument.
+
+**Un contrôle qui ne distingue pas ce qu'il est censé distinguer est
+pire qu'un contrôle absent**, et cette fois c'était le contrôle censé
+protéger la seule moitié du chantier qui peut mentir à Béné. La
+correction n'a pas été de durcir la regex : la décision a DÉMÉNAGÉ dans
+un module pur, donc elle se teste par son COMPORTEMENT et plus par sa
+forme dans un fichier.
+
+### CE QUI N'EST PAS MESURÉ, ET QUI SE DIT
+
+- **aucun coût pour les générations d'AVANT le 8 septembre** : les
+  jetons n'étaient pas écrits, et ils ne peuvent pas être retrouvés.
+  L'écran les compte dans `coutInconnu` ;
+- **le coût affiché est une ESTIMATION** : il vient de la table de
+  tarifs, pas d'une facture Anthropic. Aucun montant réel n'a été
+  relevé sur son compte ;
+- **Tipote n'a PAS de jumeau**, vérifié et pas supposé : aucune
+  migration ni aucun fichier n'y mentionne `embed_quiz_sessions`.
+
+Test : `tests/logic/entonnoir-generateur.test.mts` (17 cas), vérifié en
+rejouant SIX versions fautives (l'entonnoir qui compte toutes les
+sources, un tarif par défaut sur un modèle inconnu, un coût inconnu
+compté pour zéro, le chemin comparé en préfixe, la fonction pure qui
+rend un ensemble vide, la route qui refabrique l'ensemble à la main) :
+les six rougissent.

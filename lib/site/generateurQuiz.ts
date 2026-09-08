@@ -44,6 +44,21 @@ import { FENETRE_HEURES, LIMITE_PAR_IP } from "@/lib/embed/limites";
 export const CHEMIN_GENERATEUR = "/generateur-de-quiz";
 
 /**
+ * CE QUE LA PAGE DÉDIÉE ÉCRIT DANS `embed_quiz_sessions.source`.
+ *
+ * C'est la clé qui permet à l'écran Trafic de diviser les quiz générés
+ * ICI par les vues de CETTE page. L'iframe de la page de vente envoie
+ * `tiquiz-fr`, et mélanger les deux gonflerait le taux sans que rien ne
+ * le dise : deux populations, un seul dénominateur.
+ *
+ * Elle vit ici et pas dans la page, parce que l'entonnoir du pilotage
+ * la lit aussi (`lib/generateur/entonnoirGenerateur.ts`). Deux chaînes
+ * écrites séparément finiraient par ne plus se retrouver, et l'écran
+ * afficherait zéro quiz sur une page qui en génère.
+ */
+export const SOURCE_GENERATEUR = "page-generateur";
+
+/**
  * LE NOMBRE DE QUIZ OFFERTS, ET SA FENÊTRE, LUS DANS LE MODULE QUI
  * LES FAIT RESPECTER.
  *

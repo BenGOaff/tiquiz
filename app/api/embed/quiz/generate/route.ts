@@ -259,6 +259,26 @@ export async function POST(req: NextRequest) {
         }
 
         const json = await res.json() as Record<string, unknown>;
+
+        // CE QUE CETTE GÉNÉRATION A COÛTÉ, ÉCRIT AVANT TOUT LE RESTE.
+        //
+        // Béné, 8 septembre : "comment le générateur convertit : visites
+        // / inscrits gratos / abonnés et le ROI". Les quatre marches se
+        // lisaient déjà ; le ROI n'avait AUCUNE entrée, parce que
+        // `json.usage` était jeté ici même.
+        //
+        // C'EST ÉCRIT AVANT LA LECTURE DU JSON, ET C'EST VOULU : une
+        // réponse vide, tronquée ou illisible a coûté exactement les
+        // mêmes jetons qu'une réponse réussie. Ne compter que les
+        // succès ferait croire le générateur moins cher qu'il n'est,
+        // c'est à dire le chiffre qui fait dépenser (règle du 22 août).
+        //
+        // Et ça ne bloque RIEN : si la migration du 8 septembre n'est
+        // pas encore passée, PostgREST refuse l'update, on crie dans le
+        // journal, et le visiteur repart avec son quiz. On perd la
+        // mesure, jamais le livrable.
+        await enregistrerUsage(sessionToken, json);
+
         const parts = Array.isArray(json?.content) ? json.content : [];
         const raw = (parts as Record<string, unknown>[])
           .map((p) => (p?.type === "text" ? String(p?.text ?? "") : ""))
@@ -450,4 +470,38 @@ export async function POST(req: NextRequest) {
       "X-Accel-Buffering": "no",
     },
   });
+}
+
+/**
+ * Range `usage` de la réponse Anthropic sur la session.
+ *
+ * ON STOCKE DES FAITS (le modèle, les jetons), JAMAIS UN MONTANT. Le
+ * prix vit dans `lib/generateur/tarifsIa.ts` avec sa date de relevé :
+ * figer un montant dans la base rendrait l'historique impossible à
+ * corriger le jour où la table de tarifs est fausse.
+ *
+ * Ne lève jamais, ne rend rien : le seul appelant est un flux SSE en
+ * train de livrer un quiz.
+ */
+async function enregistrerUsage(sessionToken: string, json: Record<string, unknown>): Promise<void> {
+  const usage = (json?.usage ?? null) as Record<string, unknown> | null;
+  if (!usage) return;
+  const entier = (v: unknown): number | null => {
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 ? Math.round(n) : null;
+  };
+  const modele = typeof json?.model === "string" ? json.model.slice(0, 120) : null;
+  const { error } = await supabaseAdmin
+    .from("embed_quiz_sessions")
+    .update({
+      modele_ia: modele,
+      jetons_entree: entier(usage.input_tokens),
+      jetons_sortie: entier(usage.output_tokens),
+    })
+    .eq("id", sessionToken);
+  if (error) {
+    console.error(
+      `[embed/generate] usage non enregistre (migration 20260908_generateur_usage passee ?) : ${error.message}`,
+    );
+  }
 }

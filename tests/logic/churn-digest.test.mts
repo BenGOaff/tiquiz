@@ -22,6 +22,7 @@ function personne(over: Partial<Person> & { email: string }): Person {
     name: over.name ?? null,
     userId: null,
     hasTiquizAccount: true,
+    venuDuGenerateur: false,
     plan: "monthly",
     status: over.status ?? "abonne",
     createdAt: null,

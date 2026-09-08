@@ -51,6 +51,8 @@ import { fetchAtelier } from "@/lib/admin/atelier";
 import { lirePeriode, tronqueeParLeJournal, DEBUT_DU_JOURNAL } from "@/lib/pilotage/periode";
 import { compterVentes, resumePeriode } from "@/lib/pilotage/resumePeriode";
 import { lireTrafic } from "@/lib/pilotage/trafic";
+import { lireGenerations } from "@/lib/pilotage/generateurEntree";
+import { comptesDuGenerateurSiLisible } from "@/lib/generateur/entonnoirGenerateur";
 import { lireComptesTipote, lireCoutAffiliation } from "@/lib/pilotage/affilies";
 import { buildMrr, serieChurn } from "@/lib/admin/mrr";
 import { derniersMois } from "@/lib/admin/adminStats";
@@ -225,11 +227,33 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       };
     });
 
+    // QUI EST ENTRE PAR LE GENERATEUR (Bene, 8 septembre).
+    //
+    // Lu UNE fois, et servi aux deux ecrans : la pastille sur la fiche
+    // client, et l'entonnoir de l'ecran Trafic. Deux lectures separees
+    // finiraient par porter deux periodes differentes, et la liste
+    // dirait le contraire du tableau.
+    //
+    // ATTENTION A LA PERIODE : la pastille "venu par le generateur" est
+    // un FAIT sur une personne, pas une statistique de periode. Elle se
+    // lit donc SANS borne, sinon quelqu'un entre en aout disparaitrait
+    // de la liste des le mois suivant, ce qui se lirait comme un non.
+    const generationsDeToujours = await lireGenerations({ debut: null, fin: null });
+    const generationsDeLaPeriode = await lireGenerations({
+      debut: periode.debut,
+      fin: periode.fin,
+    });
+
     const vue = buildPeople({
       profiles: lignes,
       sales: [...sales, ...atelier.sales],
       churn,
       atelier: atelier.people,
+      // ON NE PASSE L'ENSEMBLE QUE SI LA LECTURE A RÉUSSI, et c'est la
+      // fonction pure qui le décide : un ensemble vide fabriqué ici se
+      // lirait "personne n'entre par le générateur" (règle du 23 août),
+      // et cette décision doit rester testable.
+      venusDuGenerateur: comptesDuGenerateurSiLisible(generationsDeToujours),
     });
 
     return NextResponse.json({
@@ -327,6 +351,19 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         tiquiz: compterVentes(sales, periode),
         atelier: compterVentes(atelier.sales, periode),
       },
+      // LE GENERATEUR : ce qu'il amene, et ce qu'il coute.
+      //
+      // Meme periode et meme appel que le trafic, pour la meme raison :
+      // l'ecran divise les quiz generes par les vues de la page, et deux
+      // periodes differentes donneraient un taux qui ne veut rien dire.
+      //
+      // `lisible: false` = la migration 20260908_generateur_usage n'est
+      // pas passee, ou la base est muette. Ce n'est pas "aucun quiz
+      // genere".
+      generateur: generationsDeLaPeriode,
+      // La pastille de la liste ne vaut que si on a pu lire : sans ca,
+      // l'ecran ferait passer une panne de lecture pour un non.
+      generateurLisible: generationsDeToujours.lisible,
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
