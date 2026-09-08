@@ -103,7 +103,7 @@ export const MENU: readonly LienSite[] = [
   { href: ATELIER_SALES_URL, libelle: "L'Atelier du Quiz" },
   { href: "/affiliation", libelle: "Affiliation", en: "Affiliate" },
   { href: "/a-propos", libelle: "À propos", en: "About" },
-  { href: "/support", libelle: "Aide" },
+  { href: "/support", libelle: "Aide", en: "Help" },
 ] as const;
 
 /**
@@ -171,7 +171,7 @@ export const PIED: readonly ColonnePied[] = [
       { href: "/tarifs", libelle: "Tarifs et abonnement", en: "Pricing and plans" },
       { href: ATELIER_SALES_URL, libelle: "L'Atelier du Quiz" },
       { href: "/blog", libelle: "Le blog", en: "The blog" },
-      { href: "/newsletter", libelle: "La newsletter" },
+      { href: "/newsletter", libelle: "La newsletter", en: "The newsletter" },
     ],
   },
   {
@@ -188,12 +188,12 @@ export const PIED: readonly ColonnePied[] = [
     titreEn: "Integrations",
     liens: [
       { href: "/integrations", libelle: "Tous les outils", en: "All the tools" },
-      { href: "/integrations/zapier-systeme-io", libelle: "Zapier et Systeme.io" },
-      { href: "/integrations/tally-systeme-io", libelle: "Tally et Systeme.io" },
-      { href: "/integrations/typeform-systeme-io", libelle: "Typeform et Systeme.io" },
-      { href: "/integrations/google-forms-systeme-io", libelle: "Google Forms et Systeme.io" },
-      { href: "/integrations/interact-systeme-io", libelle: "Interact et Systeme.io" },
-      { href: "/integrations/jotform-systeme-io", libelle: "Jotform et Systeme.io" },
+      { href: "/integrations/zapier-systeme-io", libelle: "Zapier et Systeme.io", en: "Zapier and Systeme.io" },
+      { href: "/integrations/tally-systeme-io", libelle: "Tally et Systeme.io", en: "Tally and Systeme.io" },
+      { href: "/integrations/typeform-systeme-io", libelle: "Typeform et Systeme.io", en: "Typeform and Systeme.io" },
+      { href: "/integrations/google-forms-systeme-io", libelle: "Google Forms et Systeme.io", en: "Google Forms and Systeme.io" },
+      { href: "/integrations/interact-systeme-io", libelle: "Interact et Systeme.io", en: "Interact and Systeme.io" },
+      { href: "/integrations/jotform-systeme-io", libelle: "Jotform et Systeme.io", en: "Jotform and Systeme.io" },
     ],
   },
   {
@@ -315,10 +315,15 @@ const APP_MULTILANGUE: readonly string[] = ["/login", "/signup", "/support"];
  *
  * -- ON NE TRADUIT QUE CE QUI MÈNE VRAIMENT À DE L'ANGLAIS -------------
  *
- * Traduire les huit entrées d'un coup promettrait de l'anglais derrière
- * chaque clic : au 8 septembre, toutes les pages du menu sont
- * traduites SAUF `/newsletter`, et annoncer une langue qu'une page n'a
- * pas est un mensonge, pas une commodité.
+ * Traduire une entrée d'un coup promettrait de l'anglais derrière le
+ * clic, et annoncer une langue qu'une page n'a pas est un mensonge, pas
+ * une commodité.
+ *
+ * ETAT AU 8 SEPTEMBRE AU SOIR, apres la traduction de `/newsletter` :
+ * toutes les pages INTERNES du menu portent leur `en`. Ne restent en
+ * francais que les deux liens EXTERNES (l'Atelier, l'espace affilie),
+ * et `libellePourLangue` refuserait de toute facon d'y traduire quoi
+ * que ce soit : leur adresse ne sert aucun segment de langue.
  *
  * Un libellé resté français est donc une INFORMATION : il dit que la
  * page derrière est française. Et la disponibilité se lit aux MÊMES

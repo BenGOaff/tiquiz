@@ -20,10 +20,13 @@
 //   INFORMATION, pas un oubli : il dit que la page derriere est
 //   francaise.
 //
-// Traduire les huit entrees d'un coup promettrait de l'anglais derriere
-// chaque clic, alors que `/newsletter` n'a aucune version anglaise.
-// C'est un mensonge, pas une commodite,
-// et c'est l'interdit numero un de Bene.
+// Traduire une entree d'un coup promettrait de l'anglais derriere le
+// clic. C'est un mensonge, pas une commodite, et c'est l'interdit
+// numero un de Bene.
+//
+// AU 8 SEPTEMBRE AU SOIR, toutes les pages INTERNES du menu portent
+// leur `en` : la regle ne retire donc plus rien aujourd'hui, elle
+// protege la prochaine page ajoutee sans sa traduction.
 //
 // Verifie en rejouant TROIS versions fautives (un `en` pose sur une
 // page sans version anglaise, le pied revenu a `l.libelle`, une adresse
@@ -97,20 +100,35 @@ describe("le chrome du site suit la langue de la page", () => {
 
   test("un `en` pose sur une page SANS version anglaise ne s'affiche jamais", () => {
     // Le sens de l'erreur : on ne peut pas mentir par inadvertance.
-    // `/newsletter` existe, il est dans le sitemap, et il n'a pas de
-    // texte anglais (mesure du 8 septembre).
     //
-    // Le test VERIFIE d'abord sa propre premisse, et c'est ce qui l'a
-    // sauve TROIS FOIS : sa fixture etait `/a-propos`, puis `/integrations`,
-    // puis `/affiliation`, et les trois ont recu leur version anglaise le
-    // 8 septembre. Sans cette ligne il serait passe au vert en ne
-    // mesurant plus rien du tout.
-    assert.ok(
-      !languesDeclarees("/newsletter").includes("en"),
-      "ce test repose sur le fait que /newsletter n'a pas de version anglaise",
+    // -- LA FIXTURE EST SYNTHETIQUE, ET C'EST LA QUATRIEME REECRITURE --
+    //
+    // Ce test pointait vers une VRAIE page du site sans version
+    // anglaise. Il en a use QUATRE : `/a-propos`, `/integrations`,
+    // `/affiliation`, puis `/newsletter`, et les quatre ont fini
+    // traduites. Sa ligne de premisse l'a sauve a chaque fois (sans
+    // elle il serait passe au vert en ne mesurant plus rien), mais au
+    // 8 septembre au soir il ne reste AUCUNE page interne francaise
+    // seule : la fixture n'avait plus ou se poser.
+    //
+    // Elle est donc INVENTEE, et c'est ce qui la rend stable : un
+    // chemin que rien ne declare ne peut pas etre traduit un jour. Le
+    // test mesure le COMPORTEMENT de `libellePourLangue` (elle refuse
+    // un `en` que rien ne sert), plus le fait qu'il mesure quelque
+    // chose (la fixture est bien inconnue des trois sources).
+    const inconnue = "/cette-page-n-existe-pas-tq";
+    assert.deepEqual(
+      languesDeclarees(inconnue),
+      [],
+      "la fixture doit rester inconnue du sitemap, sinon ce test ne mesure plus rien",
     );
-    const menteur: LienSite = { href: "/newsletter", libelle: "La newsletter", en: "The newsletter" };
-    assert.equal(libellePourLangue(menteur, "en"), "La newsletter");
+    assert.equal(
+      hrefPourLangue(inconnue, "en"),
+      inconnue,
+      "la fixture doit rester inconnue de la reecriture /en/",
+    );
+    const menteur: LienSite = { href: inconnue, libelle: "Une page", en: "A page" };
+    assert.equal(libellePourLangue(menteur, "en"), "Une page");
   });
 
   test("une adresse servie par l'APP se traduit sans jamais etre prefixee", () => {

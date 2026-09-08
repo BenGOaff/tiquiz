@@ -11,38 +11,47 @@
 //
 // LE SERVEUR REND UNE RAISON, L'ÉCRAN REND LA PHRASE. C'est la règle de
 // la suppression d'un quiz et de l'import PDF, appliquée ici.
+//
+// -- IL NE PORTE PLUS UNE SEULE PHRASE (8 septembre 2026) --------------
+//
+// Béné : "oui traduis la newsletter." Ses cinq raisons d'échec et ses
+// six libellés vivaient EN DUR ici, donc un lecteur anglophone lisait
+// un formulaire français au milieu d'une page anglaise. C'est le
+// reproche du client anglophone du 7 septembre, transposé.
+//
+// Ils vivent maintenant dans `lib/site/newsletter.ts`, avec le reste de
+// la page : deux endroits qui portent le texte d'un même écran
+// finissent toujours par ne plus dire la même chose.
+//
+// La LANGUE est une prop, jamais devinée : ce composant est monté par
+// une page qui, elle, connaît déjà la langue de son adresse. La deviner
+// ici (un cookie, `navigator.language`) donnerait un formulaire anglais
+// sous un titre français, et l'inverse.
+//
+// L'ADRESSE DE CONTACT VIENT DU SERVEUR, ELLE N'EST PAS ÉCRITE ICI.
+// Le 31 août, cette phrase portait `hello@tiquiz.fr` en dur. J'ai cru à
+// une adresse inventée et je l'ai remplacée : **c'était MA correction
+// qui était fausse.** La leçon n'est pas "il fallait la laisser en
+// dur" : c'est qu'une adresse écrite à la main dans un message d'erreur
+// est invérifiable, dans les deux sens. Elle vient de
+// `adresseExpediteur()`, la MÊME source que l'expéditeur des emails.
 
 import { useState } from "react";
 
-/**
- * L'ADRESSE DE CONTACT VIENT DU SERVEUR, ELLE N'EST PAS ÉCRITE ICI.
- *
- * Le 31 août, cette phrase portait `hello@tiquiz.fr` en dur. J'ai cru
- * à une adresse inventée et je l'ai remplacée par celle des pages
- * légales : **c'était MA correction qui était fausse.** Béné l'avait
- * mise en place la veille, sur Cloudflare, chez Resend et dans le
- * `.env`, et c'est l'adresse de Tiquiz et de l'Atelier.
- *
- * La leçon n'est pas "il fallait la laisser en dur" : c'est qu'une
- * adresse écrite à la main dans un message d'erreur est invérifiable,
- * dans les deux sens. Elle vient donc de `adresseExpediteur()`
- * (`lib/email/tiquizShell.ts`), la MÊME source que l'expéditeur des
- * emails. Si l'adresse change, la phrase change avec, et on ne peut
- * plus se tromper ni dans un sens ni dans l'autre.
- */
-function phrases(contact: string): Record<string, string> {
-  return {
-    email_manquant: "Il manque ton adresse email.",
-    email_invalide: "Cette adresse ne ressemble pas à une adresse email. Vérifie la frappe ?",
-    consentement_manquant: "Coche la case pour que je puisse t'envoyer la newsletter.",
-    trop_de_demandes: "Trop de tentatives depuis cette connexion. Réessaie dans une heure.",
-    indisponible: `Je n'ai pas réussi à t'inscrire, et ce n'est pas de ta faute. Réessaie dans un moment, ou écris à ${contact}.`,
-  };
-}
+import type { LanguePublique } from "@/lib/site/langues";
+import { contenuNewsletter, phraseEchecNewsletter } from "@/lib/site/newsletter";
 
-export default function FormulaireNewsletter({ contact }: { contact: string }) {
-  const PHRASES = phrases(contact);
-  const PHRASE_PAR_DEFAUT = PHRASES.indisponible;
+export default function FormulaireNewsletter({
+  contact,
+  langue,
+  lienConfidentialite,
+}: {
+  contact: string;
+  langue: LanguePublique;
+  /** L'adresse de la politique, résolue par la page (jamais préfixée ici). */
+  lienConfidentialite: string;
+}) {
+  const t = contenuNewsletter(langue).formulaire;
   const [etat, setEtat] = useState<"repos" | "envoi" | "ok">("repos");
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -68,26 +77,20 @@ export default function FormulaireNewsletter({ contact }: { contact: string }) {
         return;
       }
       setEtat("repos");
-      setErreur(PHRASES[String(data.raison)] ?? PHRASE_PAR_DEFAUT);
+      setErreur(phraseEchecNewsletter(t, data.raison, contact));
     } catch {
       // La panne réseau est le SEUL cas où on ne sait rien. On le dit
       // comme tel plutôt que d'accuser l'adresse de la personne.
       setEtat("repos");
-      setErreur("La connexion a coupé. Réessaie ?");
+      setErreur(t.reseau);
     }
   }
 
   if (etat === "ok") {
     return (
-      <div
-        role="status"
-        className="rounded-2xl border border-[var(--tq-bord)] bg-white p-7"
-      >
-        <p className="text-lg font-bold">C&apos;est fait, tu es inscrit.</p>
-        <p className="tq-doux mt-2 leading-relaxed">
-          Tu recevras le prochain email avec les autres. Si tu ne trouves rien d&apos;ici quelques
-          jours, regarde dans tes indésirables et fais-moi sortir de là (ça aide tout le monde).
-        </p>
+      <div role="status" className="rounded-2xl border border-[var(--tq-bord)] bg-white p-7">
+        <p className="text-lg font-bold">{t.succesTitre}</p>
+        <p className="tq-doux mt-2 leading-relaxed">{t.succesCorps}</p>
       </div>
     );
   }
@@ -96,23 +99,23 @@ export default function FormulaireNewsletter({ contact }: { contact: string }) {
     <form onSubmit={envoyer} className="rounded-2xl border border-[var(--tq-bord)] bg-white p-7">
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block">
-          <span className="text-sm font-semibold">Ton prénom</span>
+          <span className="text-sm font-semibold">{t.labelPrenom}</span>
           <input
             name="prenom"
             type="text"
             autoComplete="given-name"
-            placeholder="Gwenn"
+            placeholder={t.placeholderPrenom}
             className="mt-1.5 w-full rounded-lg border border-[var(--tq-bord)] px-3.5 py-2.5 outline-none focus:border-[var(--tq-bleu)]"
           />
         </label>
         <label className="block">
-          <span className="text-sm font-semibold">Ton email</span>
+          <span className="text-sm font-semibold">{t.labelEmail}</span>
           <input
             name="email"
             type="email"
             required
             autoComplete="email"
-            placeholder="gwenn@exemple.fr"
+            placeholder={t.placeholderEmail}
             className="mt-1.5 w-full rounded-lg border border-[var(--tq-bord)] px-3.5 py-2.5 outline-none focus:border-[var(--tq-bleu)]"
           />
         </label>
@@ -126,18 +129,17 @@ export default function FormulaireNewsletter({ contact }: { contact: string }) {
           className="mt-1 h-4 w-4 shrink-0 accent-[var(--tq-bleu)]"
         />
         <span className="tq-doux text-sm leading-relaxed">
-          J&apos;accepte de recevoir les emails de Béné. Je peux me désinscrire en un clic, en bas
-          de chaque email.{" "}
+          {t.consentementAvant}
           {/* Un lien légal ne fait JAMAIS quitter la page (règle du 24
               août) : la personne est au milieu d'un formulaire, et
               revenir lui ferait tout resaisir. */}
           <a
-            href="/politique-de-confidentialite"
+            href={lienConfidentialite}
             target="_blank"
             rel="noopener noreferrer"
             className="underline underline-offset-2"
           >
-            Politique de confidentialité
+            {t.lienConfidentialite}
           </a>
           .
         </span>
@@ -150,7 +152,7 @@ export default function FormulaireNewsletter({ contact }: { contact: string }) {
       ) : null}
 
       <button type="submit" disabled={etat === "envoi"} className="tq-bouton mt-5 w-full sm:w-auto">
-        {etat === "envoi" ? "Une seconde..." : "Je m'inscris"}
+        {etat === "envoi" ? t.boutonEnvoi : t.bouton}
       </button>
     </form>
   );

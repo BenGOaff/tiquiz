@@ -10779,13 +10779,17 @@ Mesuré le 8 septembre, pas déduit :
 | | langues servies |
 |---|---|
 | l'APPLICATION (l'éditeur, le viewer, les écrans) | **7** (`SUPPORTED_LOCALES`) |
-| la landing et `/tarifs` | **2** (`langue: "fr"` et `"en"` dans `lib/site/landing.ts`) |
-| les 8 pages de fonctionnalités | 🚨 **2 depuis le 8 septembre** (le hub et les 8 pages, voir plus bas) |
-| `/generateur-de-quiz` | 🚨 **2 depuis le 8 septembre** (son texte anglais vit dans `TEXTES_EN`, `lib/site/generateurQuiz.ts`) |
+| **TOUTES les pages du site public** | **2** (fr + en), au 8 septembre au soir |
 | le blog | **10 articles fr, 4 en** (servis depuis le 8 septembre) |
 
-Traduire le générateur, le hub intégrations, `/a-propos` et
-`/affiliation` reste un vrai chantier, chiffrable et faisable.
+🚨 **CE BLOC DISAIT "il reste un vrai chantier" SUR QUATRE PAGES. C'EST
+PÉRIMÉ**, et je le corrige en place plutôt que d'empiler (règle du
+31 août). Le générateur, le hub intégrations et ses six pages filles,
+`/a-propos`, `/affiliation`, `/affiliation-atelier` et `/newsletter`
+ont été traduits le 8 septembre : **il ne reste AUCUNE page interne du
+site en français seul.** Le détail de chaque passage vit dans les
+sections ci dessous.
+
 **Traduire le BLOG est autre chose**, et c'est sa décision, pas la
 mienne : 10 articles fois 7 langues font 70 pages à tenir à jour, et
 chaque correction de chiffre (le prix, le taux d'affiliation, un lien
@@ -10965,8 +10969,8 @@ morte, et ça ne se voit sur AUCUN écran.
 
 ### CE QUI EST SERVI EN ANGLAIS, ET CE QUI NE L'EST PAS
 
-L'adresse existe partout, le CONTENU sur deux pages. Il faut le dire
-dans ce sens là.
+L'adresse existe partout. **Au 8 septembre au soir, le CONTENU aussi :
+il ne reste AUCUNE page interne du site en français seul.**
 
 | | langues servies |
 |---|---|
@@ -10975,9 +10979,15 @@ dans ce sens là.
 | **`/generateur-de-quiz`** | **fr + en** |
 | **`/a-propos`** | **fr + en** |
 | **`/integrations`** et ses **6 pages d'outil** | **fr + en** |
-| `/affiliation` | fr |
+| **`/affiliation`** et **`/affiliation-atelier`** | **fr + en** |
+| **`/newsletter`** | **fr + en** |
 | les 10 articles du blog | fr |
 | ses 4 articles anglais | **SERVIS** sur `/en/blog/<slug>` |
+
+🚨 **CETTE TABLE DISAIT "le CONTENU sur deux pages" ET "`/affiliation` |
+fr". LES DEUX SONT PÉRIMÉES**, corrigées en place le 8 septembre au soir
+plutôt qu'empilées : `/affiliation` et `/affiliation-atelier` ont été
+traduites dans la journée, `/newsletter` le soir.
 
 🚨 **CETTE LIGNE DISAIT "importés et corrigés sur le disque, PAS ENCORE
 SERVIS". C'EST PÉRIMÉ, et je la corrige en place** (règle du 31 août :
@@ -12095,3 +12105,110 @@ vert sur une version fautive :
 
 Test : `tests/logic/hub-en-anglais.test.mts` (8 cas) et
 `tests/logic/hub-integrations.test.mts` (19 cas).
+
+### La newsletter passe en anglais, et c'était la DERNIÈRE (8 septembre 2026, le soir)
+
+Béné : "oui traduis la newsletter."
+
+`/newsletter` était la dernière page interne du site en français seul.
+Elle est servie en `fr` et en `en`, elle a déménagé dans
+`app/(site-langues)/` (le seul groupe qui lit l'en-tête posé par le
+middleware, donc le seul où le chrome et les liens peuvent suivre
+`/en/`), et le sitemap déclare les deux langues.
+
+**MESURÉ sur le serveur, avec l'en-tête `Host` du domaine de vente**
+(sans lui, le middleware ne voit pas un hôte de vente et la mesure ne
+dit rien de ce que le visiteur reçoit) :
+
+| | `/newsletter` | `/en/newsletter` |
+|---|---|---|
+| `<html lang>` | `fr` | `en` |
+| canonique | `.../newsletter` | `.../en/newsletter` |
+| `hreflang` | fr + en + x-default | fr + en + x-default |
+| h1 | "Une pépite le lundi, une action avant vendredi." | "One nugget on Monday, one action before Friday." |
+| mots rendus | 935 | 896 |
+| lien du formulaire | `/politique-de-confidentialite` | `/privacy` |
+
+`GET /en/newsletter?ref=jocelyne` pose toujours `tq_ref`.
+
+#### LE FORMULAIRE NE PORTE PLUS UNE SEULE PHRASE
+
+C'est la moitié du chantier qu'on ne voit pas. `FormulaireNewsletter` est
+le SEUL composant client du site public, et ses cinq raisons d'échec plus
+ses six libellés vivaient EN DUR dedans : un lecteur anglophone aurait lu
+un formulaire français au milieu d'une page anglaise, et il ne l'aurait
+découvert **qu'en se trompant d'adresse email**, c'est à dire au moment
+exact où il a besoin qu'on lui parle.
+
+Tout vit dans `lib/site/newsletter.ts`, avec le reste de la page : deux
+endroits qui portent le texte d'un même écran finissent toujours par ne
+plus dire la même chose.
+
+**Et ce module doit rester PUR.** Un `next/headers` ou une lecture de
+disque importés là casseraient le bundle **avec un `tsc` vert** : c'est
+la leçon du `node:fs` du 6 septembre, où la landing ne s'affichait plus
+du tout et où aucun test logique ne le disait.
+
+**La LANGUE est une prop, jamais devinée.** La page connaît déjà la
+langue de son adresse ; la deviner dans le composant (un cookie,
+`navigator.language`) donnerait un formulaire anglais sous un titre
+français, et l'inverse.
+
+**LES CINQ REFUS NE SONT PAS ADOUCIS EN ANGLAIS** ("Pas de vente", "Pas
+de faux compte à rebours", "Pas de secret ni de méthode magique", "Pas de
+recommandation que je n'ai pas testée", "Pas de remplissage"). C'est son
+interdit numéro un, et une traduction qui arrondit une promesse la
+transforme en argument commercial.
+
+**Le lien légal suit la langue du TEXTE, pas l'adresse :**
+`/politique-de-confidentialite` en français, `/privacy` en anglais.
+J'ai failli "corriger" le premier en le prenant pour un reste de
+Systeme.io ; mesuré avant d'y toucher, `lib/site/adressesLegales.ts` en
+fait une VRAIE redirection construite par `next.config.ts`. Rien n'était
+cassé, et c'est ma correction qui l'aurait été.
+
+#### HUIT LIBELLÉS DE MENU MENTAIENT ENCORE
+
+Trouvés en branchant le sien : `/support` dans le menu et les six pages
+d'outil du pied portaient un libellé français alors que leur page est
+traduite depuis le matin. Ils ont leur `en`, et `libellePourLangue`
+REFUSE un `en` sur une page qui n'a pas la langue : cet ajout ne peut
+donc pas mentir.
+
+Il ne reste en français que les deux liens EXTERNES (l'Atelier, l'espace
+affilié), et c'est la fonction elle même qui l'impose : leur adresse ne
+sert aucun segment de langue.
+
+#### 🚨 LA FIXTURE DES DEUX GARDES DE LANGUE EST DÉSORMAIS INVENTÉE
+
+Le test "un `en` posé sur une page SANS version anglaise ne s'affiche
+jamais" pointait vers une VRAIE page française seule. **Il en a usé
+QUATRE** : `/a-propos`, `/integrations`, `/affiliation`, puis
+`/newsletter`, et les quatre ont fini traduites.
+
+Sa ligne de prémisse l'a sauvé à chaque fois (sans elle il serait passé
+au vert en ne mesurant plus rien), mais au 8 septembre au soir **la
+fixture n'avait plus où se poser**. Elle est donc SYNTHÉTIQUE
+(`/cette-page-n-existe-pas-tq`), et c'est ce qui la rend stable : un
+chemin que rien ne déclare ne peut pas être traduit un jour. Le test
+garde ses deux assertions de prémisse, donc il ne peut pas devenir muet.
+
+**La leçon : une fixture prise dans le contenu vivant se périme quand le
+contenu avance.** Quand ce qu'un test mesure est un COMPORTEMENT (ici :
+la fonction refuse un `en` que rien ne sert), la fixture doit être
+inventée, pas empruntée.
+
+#### ET UN GARDE-FOU A ROUGI SUR DU CODE JUSTE, POUR LA NEUVIÈME FOIS
+
+`newsletter.test.mts` lisait la SOURCE de `FormulaireNewsletter.tsx` pour
+y trouver les cinq clés de raison. Le jour où les phrases ont déménagé
+dans le module, il est sorti rouge sur une correction parfaitement bonne.
+
+**Un garde-fou qui fige un EMPLACEMENT empêche de déplacer le texte.**
+Il mesure maintenant le COMPORTEMENT, dans LES DEUX LANGUES : chaque
+raison rend une phrase non vide, aucune ne recopie une autre, aucune ne
+laisse un `{contact}` à trou, et une raison inconnue retombe sur
+`indisponible`. Vérifié en rejouant deux versions fautives (une phrase
+dupliquée, la substitution de `{contact}` retirée) : les deux rougissent.
+
+Fichier SUPPRIMÉ : `app/(site)/newsletter/page.tsx`.

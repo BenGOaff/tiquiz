@@ -409,19 +409,34 @@ test("le menu et le pied de page suivent la langue, mais SEULEMENT ou l'anglais 
   // ET ON NE PREFIXE QUE CE QUI EXISTE. Prefixer tout donnerait des
   // 404 dans le menu, sur toutes les pages a la fois.
   //
-  // LA PREMISSE EST VERIFIEE, ET ELLE A DEJA BOUGE : ce test portait sur
-  // `/integrations`, puis `/affiliation`, et les deux ont recu leur
-  // version anglaise le 8 septembre. Sans
-  // cette ligne il serait passe au vert en ne mesurant plus rien.
-  for (const fixture of ["/newsletter"]) {
-    const page = PAGES_PUBLIQUES.find((p) => p.chemin === fixture);
-    assert.ok(page, `${fixture} n'est plus dans PAGES_PUBLIQUES`);
-    assert.ok(
-      !languesDePage(page).includes("en"),
-      `ce test repose sur le fait que ${fixture} n'a pas de version anglaise`,
-    );
-    assert.equal(hrefPourLangue(fixture, "en"), fixture);
-  }
+  // -- LA FIXTURE EST SYNTHETIQUE, QUATRIEME REECRITURE ---------------
+  //
+  // Ce test portait sur une VRAIE page sans version anglaise :
+  // `/a-propos`, puis `/integrations`, puis `/affiliation`, puis
+  // `/newsletter`. Les quatre ont fini traduites, et sa ligne de
+  // premisse l'a sauve a chaque fois. Au 8 septembre au soir il ne
+  // reste AUCUNE page interne francaise seule dans `PAGES_PUBLIQUES` :
+  // la fixture n'a donc plus ou se poser sur une vraie page.
+  //
+  // Elle est INVENTEE, et c'est ce qui la rend stable : un chemin que
+  // rien ne declare ne peut pas etre traduit un jour. La premisse
+  // (« elle est bien inconnue du sitemap ») reste verifiee, parce que
+  // c'est elle qui prouve que le test mesure encore quelque chose.
+  const inconnue = "/cette-page-n-existe-pas-tq";
+  assert.equal(
+    PAGES_PUBLIQUES.find((p) => p.chemin === inconnue),
+    undefined,
+    "la fixture doit rester inconnue de PAGES_PUBLIQUES",
+  );
+  assert.equal(hrefPourLangue(inconnue, "en"), inconnue);
+
+  // ET UNE PAGE DECLAREE EN FRANCAIS SEUL RESTERAIT NON PREFIXEE :
+  // c'est le comportement que la fixture synthetique ne peut pas
+  // exercer, parce qu'elle n'est dans aucune liste. On le mesure donc
+  // sur une page FABRIQUEE, passee directement a `languesDePage`.
+  assert.deepEqual(languesDePage({ chemin: "/x", titre: "x", resume: "x", priorite: 0.5 }), [
+    LANGUE_SANS_PREFIXE,
+  ]);
 
   // UN SLUG D'ARTICLE NE SE TRADUIT PAS PAR UN PREFIXE : l'anglais de
   // `17-raisons-lancer-quiz-business` s'appelle `17-reasons-...`, donc

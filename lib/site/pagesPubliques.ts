@@ -195,6 +195,7 @@ const PAGES_ECRITES: readonly PagePublique[] = [
     resume:
       "Ce qu'elle teste dans ses propres quiz, les chiffres réels, et ce qui rate aussi. Désinscription en un clic.",
     priorite: 0.6,
+    langues: LANGUES_PUBLIQUES,
   },
   {
     chemin: "/support",
