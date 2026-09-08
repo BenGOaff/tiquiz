@@ -9454,7 +9454,10 @@ laquelle le trou s'ouvrirait.
 chemin qui finit par une extension, pour ne pas compter une image comme
 une visite. Un article dont le slug finirait par `.io` ou `.fr`
 tomberait dans ce refus, et l'affiliée qui le partage ne verrait jamais
-un seul clic. Mesuré sur les 11 articles : aucun n'est dans ce cas.
+un seul clic. Mesuré sur les 10 articles : aucun n'est dans ce cas.
+(Cette ligne a dit "11" pendant deux jours : le compte incluait
+`content/blog/index.json`, qui n'est pas un article. Corrigé le
+8 septembre, en place.)
 
 **Vérifié en rejouant deux versions fautives** (une sortie sans
 `poseSa`, un `matcher` qui exclut `/blog`) : les deux rougissent, et la
@@ -10779,7 +10782,7 @@ Mesuré le 8 septembre, pas déduit :
 | la landing et `/tarifs` | **2** (`langue: "fr"` et `"en"` dans `lib/site/landing.ts`) |
 | les 8 pages de fonctionnalités | **1** (l'en-tête du module le dit) |
 | `/generateur-de-quiz` | **1** |
-| les 11 articles du blog | **1** : ils ne portent aucune clé de langue |
+| les 10 articles du blog | **1** : ils ne portent aucune clé de langue |
 
 Traduire les 8 pages de fonctionnalités, le générateur et le hub dans
 les 7 langues est un vrai chantier, chiffrable et faisable. **Traduire
@@ -10804,3 +10807,220 @@ fois qu'un test qui fige une FORMULATION empêche de corriger la
 formulation** ; il vise maintenant le FAIT (le cadre occupe tout le
 viewport, il ne pose aucune borne qui rognerait l'éditeur, et une
 surcouche verrouille le défilement de ce qui est derrière).
+
+## L'anglais a enfin une ADRESSE (Béné, 8 septembre 2026)
+
+"J'ai des users anglophones qui me trouvent sur tipote.blog avec les
+articles en anglais : on doit les récupérer sur le blog tiquiz.fr avec
+les articles et pages en anglais. Mais il faut que ce soit bien fait."
+Et, dans le même message : **"je ne veux pas changer les URL actuelles
+parce qu'elles commencent à ranker doucement."**
+
+### CE QUI BLOQUAIT, ET CE N'ÉTAIT PAS LA TRADUCTION
+
+Mesuré avant d'écrire une ligne, et c'est structurel :
+
+| | |
+|---|---|
+| la langue du site venait de | le COOKIE `ui_locale`, et de rien d'autre |
+| segments de langue dans les URL | **aucun** |
+| balises `hreflang` dans tout le dépôt | **aucune** |
+
+`tiquiz.fr/tarifs` était donc **UNE seule adresse qui changeait de
+langue selon le cookie du visiteur**, et un robot n'envoie jamais de
+cookie. **Il n'existait AUCUNE URL anglaise à indexer.** Traduire du
+texte n'y aurait rien changé : ses lecteurs anglophones n'avaient nulle
+part où atterrir, et Google n'avait rien à ranger dans sa version
+anglaise.
+
+C'est pour ça que ce passage ne traduit presque rien et construit
+l'adresse : le texte sans l'adresse ne sert à personne.
+
+### LE FRANÇAIS NE PORTE AUCUN PRÉFIXE, ET C'EST SA CONTRAINTE
+
+```
+/tarifs        le francais, exactement ou il est aujourd'hui
+/en/tarifs     l'anglais
+```
+
+Poser `/fr/` changerait CHAQUE adresse déjà indexée, c'est à dire jeter
+le référencement qu'elle commence à avoir. `LANGUE_SANS_PREFIXE = "fr"`
+(`lib/site/langues.ts`), et le test refuse qu'un `/fr/` se fabrique
+quelque part.
+
+**ON RÉÉCRIT, ON NE REDIRIGE PAS.** L'adresse vue par le visiteur reste
+`/en/tarifs`, donc c'est elle que Google indexe et elle que le
+`hreflang` apparie. Une redirection vers `/tarifs` ferait disparaître
+l'URL anglaise, c'est à dire tout l'intérêt du chantier.
+
+### L'URL GAGNE SUR LE COOKIE, ET C'EST LA RÈGLE QUI CASSE EN SILENCE
+
+Sans elle, `/en/tarifs` sert du FRANÇAIS à quelqu'un dont le cookie dit
+"fr", et Google indexe du français sous une adresse anglaise. **La page
+s'affiche parfaitement pendant tout ce temps** : c'est exactement la
+forme de panne que ces dépôts paient le plus cher.
+
+Le middleware pose la langue dans un en-tête de requête
+(`ENTETE_LANGUE`), et `i18n/request.ts` le lit AVANT le cookie. Le
+cookie garde tout son rôle : il décide partout où l'URL ne se prononce
+pas, c'est à dire l'app derrière connexion et le français.
+
+**Et c'est la PRÉCÉDENCE qui le dit, pas l'ordre des lignes.** Mon
+premier test mesurait l'ordre des deux `await`, et il ne distinguait
+RIEN : `indexOf("langueDeLUrl(")` tombait sur la DÉCLARATION de la
+fonction, écrite plus haut, donc le test restait vert quand on
+inversait vraiment les deux lignes. Et ces deux lignes ne décident
+rien : c'est le `??` qui décide. **Treizième fois qu'un contrôle ne
+distingue pas ce qu'il est censé distinguer**, et cette fois il a fallu
+rejouer la version fautive pour le voir.
+
+### LA CANONIQUE ANNONCE SA PROPRE LANGUE
+
+`alternatesDeLangue(origine, cheminNu, langueCourante, langues)` prend
+**QUATRE paramètres, et les deux derniers sont ce qui compte.**
+
+Mon premier jet rendait `languages[dispo[0]]`, donc toujours le
+français : **chaque page anglaise aurait annoncé la française comme sa
+version de référence.** Google l'aurait crue, l'anglais n'aurait jamais
+été indexé, et rien à l'écran ne l'aurait dit. `langueCourante` est
+donc un PARAMÈTRE OBLIGATOIRE (règle du 1er août), et le test rejoue la
+version qui devine : il rougit.
+
+**La canonique se lit sur l'ADRESSE, jamais sur le texte affiché.**
+`langueCanonique()` (`lib/site/langueRequete.ts`) lit l'en-tête ;
+`getLocale()` répond la langue du TEXTE, qui peut venir d'un cookie ou
+d'un `?lang=`. Les deux disent la même chose sur `/en/tarifs` et PAS
+sur `/tarifs` visité avec un cookie anglais. Les confondre ferait
+annoncer deux canoniques différentes pour la même URL, et c'est celle
+du robot qui compte.
+
+Ce module lit `next/headers`, donc il ne vit PAS dans `langues.ts` :
+celui là reste pur, donc chargeable par le runner natif.
+
+### ON NE DÉCLARE QUE LES LANGUES QU'UNE PAGE A VRAIMENT
+
+`PagePublique.langues` (`lib/site/pagesPubliques.ts`), absent = le
+français seul. Déclarer une langue qu'une page n'a pas mettrait
+`https://tiquiz.fr/en/<chemin>` dans le sitemap ET dans ses `hreflang`,
+et Google y trouverait du FRANÇAIS sous une adresse anglaise : l'anglais
+serait alors jugé sur du contenu dupliqué.
+
+Le sitemap DÉRIVE cette liste (`languesDePage`), il ne la recopie pas :
+deux listes écrites séparément finissent toujours par diverger, et ce
+fichier le dit dans son propre en-tête depuis le 30 août.
+
+**Une seule page a un texte anglais complet aujourd'hui : `/tarifs`**
+(`contenuLanding("en")` existe depuis le 4 septembre). Le test exige
+que cet objet de langue existe encore : déclarer la langue sans écrire
+le texte est exactement le trou décrit au dessus.
+
+### LA RACINE `/en/` EST EXCLUE, ET C'EST DÉLIBÉRÉ
+
+Sur un hôte de vente, `/` réécrit vers la page de vente CAPTURÉE, qui
+est en français. La servir sous `/en/` serait la panne que tout ce
+chantier existe pour empêcher. Elle répondra le jour où une racine
+anglaise existe (la landing a son texte anglais, et elle attend sa
+validation).
+
+### L'AFFILIATION ET LE COMPTEUR SURVIVENT AU PRÉFIXE
+
+Sa consigne du même jour : "le générateur pourra être offert en lead
+magnet par mes affiliés qui les enverront direct sur cette page avec
+leur ref."
+
+**MESURÉ en servant les deux adresses**, pas déduit :
+
+```
+GET /en/tarifs?ref=jocelyne  ->  set-cookie: tq_ref=jocelyne; Max-Age=31536000
+GET /en/tarifs               ->  200, <title> anglais, lang="en"
+                                 canonical  https://tiquiz.fr/en/tarifs
+                                 hreflang   fr + en + x-default
+GET /tarifs                  ->  200, <title> francais, lang="fr"
+                                 canonical  https://tiquiz.fr/tarifs
+GET /a-propos                ->  aucun hreflang anglais (pas de texte)
+```
+
+La réécriture passe par `poseSa`, comme les onze autres sorties du
+middleware, et le clic comme la vue se comptent AVANT elle, donc sur le
+chemin reçu (`/en/tarifs`). Effet de bord voulu : le compteur de trafic
+range l'anglais sous son propre chemin, donc elle voit ce que l'anglais
+apporte.
+
+### 🚨 CE QUI N'EST PAS FAIT, ET C'EST L'ESSENTIEL DU CHANTIER
+
+L'ADRESSE existe, le CONTENU non. Il faut le dire dans ce sens là.
+
+| | langues servies |
+|---|---|
+| `/tarifs` | **fr + en** |
+| les 8 pages de fonctionnalités, `/generateur-de-quiz`, `/integrations`, `/a-propos`, `/affiliation` | fr |
+| les 10 articles du blog | fr : ils ne portent AUCUNE clé de langue |
+
+**Ses 4 articles anglais sont mesurés, et ils s'apparient 1 pour 1 avec
+4 des 10 français** (relevé sur `tipote.blog/posts`, en lisant
+`window.__PRELOADED_STATE__` : c'est du JavaScript, pas du JSON) :
+
+```
+17-reasons...                        <-> 17-raisons-lancer-quiz-business
+capturing-emails-quiz-strategy       <-> collecter-emails-quiz-strategie
+create-quiz-systeme-io               <-> comment-creer-quiz-systeme-io
+monthly-recurring-income-tiquiz...   <-> rente-mensuelle-affiliation-tiquiz
+```
+
+Les 6 autres français n'ont pas de version anglaise.
+
+**ET UN BLOCAGE DE CONTENU A ÉTÉ TROUVÉ AVANT L'IMPORT.** La
+`description` de son article d'affiliation ANGLAIS annonce "40 %
+lifetime commission, paid on the 10th, no threshold, no conditions",
+c'est à dire **exactement les promesses fausses corrigées côté français
+les 31 août et 1er septembre** : il y a un seuil de 20 €, un délai de
+30 jours, et le versement a lieu ENTRE le 10 et le 13.
+`lib/blog/faitsProgramme.ts` ne porte que des motifs FRANÇAIS : l'import
+anglais a donc besoin de sa propre table de corrections, sinon on
+republie en anglais ce qu'on vient de corriger en français, sur la page
+qui recrute les affiliés.
+
+**Aucun switcher de langue n'est posé, et c'est un choix.** Le site
+public n'en a jamais eu ; avec UNE page traduite, un lien "English" dans
+le pied de page mènerait nulle part sur les vingt autres. Il se pose le
+jour où plusieurs pages existent en anglais.
+
+### LE `.fr` : ce que dit la documentation de Google, pas ma mémoire
+
+Sa question : "c'est très grave que mon domaine soit en .fr ou pas ?"
+
+**Vérifié à la source** (documentation Google sur les sites
+multirégionaux, pas de mémoire) : un domaine national comme `.fr`
+"provide[s] a strong signal to both users and search engines that your
+site is explicitly intended for a certain country". C'est donc un vrai
+handicap pour un lecteur anglophone hors de France, et **ce signal ne
+s'éteint pas** : il est porté par le nom de domaine.
+
+Ce n'est pas bloquant pour autant : `hreflang` dit à Google qu'une
+version anglaise existe, et une recherche en anglais peut la remonter.
+Ce qu'un `.fr` coûte, c'est la préférence par défaut sur un marché
+anglophone.
+
+**Et l'architecture garde la porte ouverte** : l'hôte est un PARAMÈTRE
+d'`alternatesDeLangue`, et les chemins se calculent dans un seul module.
+Déplacer l'anglais sur un `.com` un jour est un changement d'origine,
+pas une réécriture. La décision est la sienne, et elle n'a pas à être
+prise maintenant.
+
+### Le garde-fou
+
+`tests/logic/site-en-anglais.test.mts` (14 cas), vérifié en rejouant
+TROIS versions fautives (la canonique devinée sur la première langue, la
+réécriture `/en/` sans le cookie affilié, le cookie qui gagne sur
+l'adresse) : les trois rougissent.
+
+Il tient les quatre moitiés ensemble, et c'est le point : un test qui
+n'en tiendrait qu'une passerait au vert sur un site où l'anglais n'est
+pas indexé, ou sur un site où une affiliée n'est plus payée sur les
+pages anglaises.
+
+**Le sitemap de ce container répond 500, et ce n'est PAS ce chantier :**
+`app/sitemap.ts` importe `supabaseAdmin`, qui LÈVE au chargement quand
+les variables d'environnement manquent (le piège du 30 août). Vérifié en
+production le 8 septembre : `tiquiz.fr/sitemap.xml` répond **200 avec 46
+adresses**, dont `/tarifs`. Il gagnera `/en/tarifs` au déploiement.

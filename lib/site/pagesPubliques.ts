@@ -17,6 +17,7 @@
 // pied de page : une page que Google connaît et qu'aucun humain ne peut
 // trouver depuis le site est une page qui ne sert à rien.
 import { FONCTIONNALITES } from "@/lib/site/fonctionnalites";
+import { LANGUE_SANS_PREFIXE, type LanguePublique } from "@/lib/site/langues";
 
 export interface PagePublique {
   chemin: string;
@@ -26,6 +27,25 @@ export interface PagePublique {
   resume: string;
   /** La priorité du sitemap. */
   priorite: number;
+  /**
+   * LES LANGUES DANS LESQUELLES CETTE PAGE EXISTE VRAIMENT.
+   *
+   * Absent = la seule langue sans préfixe, donc le français. Ce n'est
+   * pas un défaut de confort : déclarer une langue qu'une page n'a pas
+   * mettrait `https://tiquiz.fr/en/<chemin>` dans le sitemap et dans
+   * ses `hreflang`, et Google y trouverait du FRANÇAIS sous une adresse
+   * anglaise. La page s'afficherait parfaitement, et l'anglais serait
+   * jugé sur du contenu dupliqué.
+   *
+   * Une page entre ici le jour où son texte anglais existe, jamais le
+   * jour où on prévoit de l'écrire.
+   */
+  langues?: readonly LanguePublique[];
+}
+
+/** Les langues d'une page, avec son repli. */
+export function languesDePage(p: PagePublique): readonly LanguePublique[] {
+  return p.langues && p.langues.length > 0 ? p.langues : [LANGUE_SANS_PREFIXE];
 }
 
 const PAGES_ECRITES: readonly PagePublique[] = [
@@ -53,6 +73,10 @@ const PAGES_ECRITES: readonly PagePublique[] = [
     resume:
       "Trois paliers, le premier ne coûte rien et ne demande pas de carte bancaire. Le détail ligne par ligne, ce que ça remplace, et les questions d'argent.",
     priorite: 0.9,
+    // La SEULE page du site qui a un texte anglais complet aujourd'hui
+    // (`contenuLanding("en")`, dans `lib/site/landing.ts`). Les autres
+    // restent en français tant que leur texte n'est pas écrit.
+    langues: ["fr", "en"],
   },
   {
     chemin: "/affiliation",

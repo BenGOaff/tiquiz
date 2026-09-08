@@ -28,7 +28,8 @@ import { hoteCanonique, HOTE_VENTE } from "@/lib/publicHost";
 import { SALES_HOSTS } from "@/lib/sales/salesHosts";
 import { listerArticles } from "@/lib/blog/articles";
 import { RUBRIQUES } from "@/lib/blog/rubriques";
-import { PAGES_PUBLIQUES } from "@/lib/site/pagesPubliques";
+import { PAGES_PUBLIQUES, languesDePage } from "@/lib/site/pagesPubliques";
+import { cheminPourLangue } from "@/lib/site/langues";
 import { ADRESSES_LEGALES_FR } from "@/lib/site/adressesLegales";
 import { echapperMotifLike } from "@/lib/db/motifLike";
 
@@ -113,12 +114,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       // dépend entièrement du fait qu'un robot suive un lien jusqu'à
       // elle. C'est justement pour faire remonter ce domaine qu'on l'a
       // construit : autant les annoncer.
-      ...PAGES_PUBLIQUES.map((p) => ({
-        url: `${HOTE_VENTE}${p.chemin}`,
-        lastModified: new Date(),
-        changeFrequency: "monthly" as const,
-        priority: p.priorite,
-      })),
+      //
+      // ET CHAQUE LANGUE QUE LA PAGE A VRAIMENT (8 septembre).
+      //
+      // `/en/tarifs` est une adresse à part entière : sans elle dans le
+      // sitemap, la version anglaise n'existe que pour qui suit un
+      // `hreflang`, et un robot n'a aucune raison de deviner le préfixe.
+      // La liste vient de la page elle même : une page sans texte
+      // anglais n'émet AUCUNE adresse anglaise, sinon on annoncerait du
+      // français sous une URL anglaise.
+      ...PAGES_PUBLIQUES.flatMap((p) =>
+        languesDePage(p).map((langue) => ({
+          url: `${HOTE_VENTE}${cheminPourLangue(p.chemin, langue)}`,
+          lastModified: new Date(),
+          changeFrequency: "monthly" as const,
+          priority: p.priorite,
+        })),
+      ),
       // LES PAGES LÉGALES, sur CE domaine.
       //
       // Ce sont les adresses que Google lit dans la configuration de

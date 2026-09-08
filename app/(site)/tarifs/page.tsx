@@ -39,6 +39,8 @@ import { getLocale } from "next-intl/server";
 
 import { SUPPORTED_LOCALES } from "@/i18n/config";
 import { HOTE_VENTE } from "@/lib/publicHost";
+import { alternatesDeLangue } from "@/lib/site/langues";
+import { langueCanonique } from "@/lib/site/langueRequete";
 import {
   TEMOIGNAGES,
   colonnesDeTarif,
@@ -61,12 +63,20 @@ async function resoudreLangue(searchParams?: Promise<{ lang?: string }>): Promis
   return await getLocale();
 }
 
+// LA CANONIQUE VIENT DE L'ADRESSE, LE TEXTE VIENT DE LA LANGUE RÉSOLUE.
+//
+// Ce sont deux questions différentes, et les confondre est la panne
+// silencieuse de ce chantier : quelqu'un dont le cookie dit "en" et qui
+// ouvre `/tarifs` lit l'anglais, et cette page reste canonique sur
+// `/tarifs`. Sans ça, deux visiteurs annonceraient deux canoniques pour
+// la même URL, et c'est celle du robot qui compterait.
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const t = contenuLanding(await resoudreLangue(searchParams));
+  const alternates = alternatesDeLangue(HOTE_VENTE, "/tarifs", await langueCanonique());
   return {
     title: t.tarifsMetaTitre,
     description: t.tarifsMetaDescription,
-    alternates: { canonical: `${HOTE_VENTE}/tarifs` },
+    ...(alternates ? { alternates } : {}),
   };
 }
 
