@@ -10946,6 +10946,22 @@ chemin reçu (`/en/tarifs`). Effet de bord voulu : le compteur de trafic
 range l'anglais sous son propre chemin, donc elle voit ce que l'anglais
 apporte.
 
+**ET LA PAGE DU GÉNÉRATEUR COMMISSIONNE COMME LE RESTE**, sa phrase du
+même jour : "le générateur pourra être offert en lead magnet par mes
+affiliés qui les enverront direct sur cette page avec leur ref."
+**Mesuré avant d'écrire le garde-fou : rien ne manquait**, et je le dis
+dans ce sens là. La chaîne a QUATRE maillons, et il les faut tous les
+quatre : le middleware pose `tq_ref` en arrivant ; le clic est compté
+sur ce chemin ; le bouton "Garder mon quiz" NAVIGUE vers `/signup` sur
+la même origine (un `postMessage` ne poserait rien, et une adresse
+absolue perdrait le cookie) ; `/api/auth/signup` relit le cookie et
+appelle `rattacherInscrit`. Les trois cas ajoutés à
+`generateur-page.test.mts` les tiennent ensemble, vérifiés en rejouant
+deux versions fautives (le signup qui ne lit plus le cookie, la page
+sortie de `PAGES_PUBLIQUES`) : les deux rougissent. Un test qui n'en
+tiendrait qu'un passerait au vert sur une page où l'affiliation est
+morte, et ça ne se voit sur AUCUN écran.
+
 ### 🚨 CE QUI N'EST PAS FAIT, ET C'EST L'ESSENTIEL DU CHANTIER
 
 L'ADRESSE existe, le CONTENU non. Il faut le dire dans ce sens là.

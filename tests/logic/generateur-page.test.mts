@@ -16,6 +16,7 @@ import { join } from "node:path";
 import { FREE_LIMITS } from "@/lib/planLimits";
 import { QUIZ_LANGUAGES } from "@/lib/quizLanguages";
 import { PAGES_PUBLIQUES } from "@/lib/site/pagesPubliques";
+import { clicASignaler } from "@/lib/affiliate/signalerClic";
 import { PIED } from "@/lib/site/nav";
 import { cadreDuGenerateur, remisePourLeBouton } from "@/lib/embed/remise";
 import { buildQuizGenerationPrompt } from "@/lib/prompts/quiz/system";
@@ -356,4 +357,68 @@ test("les bornes annoncées au visiteur sont celles qui s'appliquent", () => {
     "un refus annonce encore une heure : la fenetre est de 24 h",
   );
   assert.match(route, /\$\{FENETRE_HEURES\}/, "le delai est recopie au lieu d'etre lu");
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// L'AFFILIATION : la page du générateur commissionne comme le reste
+// ─────────────────────────────────────────────────────────────────────
+//
+// Béné, 8 septembre 2026 : "attention le générateur aussi doit prendre
+// l'affiliation en compte comme TOUT le site tiquiz.fr. Le générateur
+// pourra être offert en lead magnet par mes affiliés qui les enverront
+// direct sur cette page avec leur ref."
+//
+// MESURÉ AVANT D'ÉCRIRE CE BLOC : rien ne manquait. Je le dis dans ce
+// sens là, comme le test du 6 septembre : il ne corrige pas un trou, il
+// EMPÊCHE d'en creuser un. Et c'est exactement le genre de trou qui ne
+// se voit sur aucun écran : la page s'affiche, le quiz se génère, le
+// compte se crée, et l'affiliée n'est payée sur rien.
+//
+// LA CHAÎNE A QUATRE MAILLONS, et il les faut tous les quatre :
+//
+//   1. le middleware pose `tq_ref` en arrivant sur la page ;
+//   2. le clic est COMPTÉ sur ce chemin, sinon l'affiliée voit sa page
+//      s'afficher et son compteur rester à zéro ;
+//   3. le bouton "Garder mon quiz" NAVIGUE vers `/signup` sur la MÊME
+//      origine (un `postMessage` ne poserait rien, et une adresse
+//      absolue ferait perdre le cookie) ;
+//   4. `/api/auth/signup` relit le cookie et rattache l'inscrit.
+//
+// Un test qui n'en tiendrait qu'un passerait au vert sur une page où
+// l'affiliation est morte.
+
+test("un lien affilié compte sur la page du générateur, en français comme en anglais", () => {
+  for (const chemin of ["/generateur-de-quiz", "/en/generateur-de-quiz"]) {
+    assert.equal(
+      clicASignaler({ ref: "jocelyne", pathname: chemin, accept: "text/html" }),
+      true,
+      `une affiliée qui envoie du monde sur ${chemin} doit voir son clic`,
+    );
+  }
+});
+
+test("la page du générateur est déclarée, donc le cookie affilié y passe", () => {
+  // Le `matcher` du middleware couvre tout sauf les fichiers statiques,
+  // et chacune de ses sorties passe par `poseSa`. Ce qui se vérifie
+  // ici, c'est que la page est bien DANS la liste des pages publiques :
+  // c'est elle que le test du tracking parcourt.
+  const chemins = PAGES_PUBLIQUES.map((p) => p.chemin);
+  assert.ok(
+    chemins.includes("/generateur-de-quiz"),
+    "une page hors de cette liste sort du filet du tracking affilié",
+  );
+});
+
+test("le rattachement lit le cookie posé à l'arrivée, il ne le redemande pas", () => {
+  const signup = sansCommentaires(join(RACINE, "app/api/auth/signup/route.ts"));
+  assert.match(
+    signup,
+    /rattacherInscrit\(/,
+    "sans lui, l'affiliée perd son prospect à l'expiration du cookie",
+  );
+  assert.match(
+    signup,
+    /req\.cookies\.get\(REF_COOKIE\)/,
+    "le lien vient du COOKIE posé par le middleware, jamais du corps de la requête",
+  );
 });
