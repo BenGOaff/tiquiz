@@ -11331,6 +11331,134 @@ même cause :
    (une page de fonctionnalité recréée dans `(site)`) : il rougit et il
    la nomme.
 
+### Le CHROME parlait français sur les pages anglaises (8 septembre)
+
+Mesuré en servant les pages, une fois le blog anglais et les
+fonctionnalités en ligne :
+
+```
+/en/blog   ->  Fonctionnalités | Tarifs | Blog | L'Atelier du Quiz |
+               Affiliation | À propos | Aide | Se connecter |
+               Créer un compte gratuit
+               pied : Tiquiz / Gagner avec Tiquiz / Intégrations /
+                      Aide / Le cadre
+               « Fait en France, par une créatrice... »
+```
+
+Contenu anglais, chrome français, sur les pages exactes où atterrissent
+les lecteurs qu'on veut récupérer de `tipote.blog`. C'est le reproche du
+client anglophone du 7 septembre ("some parts of the quiz UI were in
+French"), transposé au site public.
+
+**LA RÈGLE, ET C'EST UN COMPROMIS ASSUMÉ : un libellé passe en anglais
+UNIQUEMENT quand la page derrière est vraiment lisible en anglais.**
+Traduire les huit entrées d'un coup promettrait de l'anglais derrière
+chaque clic, alors que `/a-propos`, `/integrations` et `/affiliation`
+n'ont aucune version anglaise. **Un libellé resté français est donc une
+INFORMATION, pas un oubli** : il dit que la page derrière est française.
+
+`libellePourLangue(lien, langue)` (`lib/site/nav.ts`) lit la
+disponibilité aux MÊMES sources que la destination (`PAGES_PUBLIQUES` +
+`languesDePage`, `CHEMINS_HORS_REECRITURE`, `ADRESSES_LEGALES_FR`) :
+une deuxième liste écrite ici annoncerait une langue que le sitemap ne
+déclare pas. **Le sens de l'erreur est sûr** : un `en` oublié laisse un
+libellé français, c'est à dire le comportement d'hier ; un `en` posé sur
+une page qui n'a pas la langue est REFUSÉ par la fonction, donc il ne
+peut pas mentir.
+
+**TROIS CHOSES NE SUIVENT PAS CETTE RÈGLE, et chacune a sa raison :**
+
+| | pourquoi |
+|---|---|
+| le TITRE d'une colonne du pied (`titrePourLangue`) | ce n'est pas un lien, il ne promet aucune destination |
+| `/login`, `/signup`, `/support` (`APP_MULTILANGUE`) | servis par l'APP, qui résout la langue au cookie, à `Accept-Language`, puis au domaine. Leur LIBELLÉ se traduit, leur ADRESSE ne se préfixe JAMAIS : il n'existe aucun `/en/signup`, et le lien ferait un 404 dans le menu |
+| les six adresses légales françaises | même mécanique, le document existe en 5 langues |
+
+**`/support` a été ajouté à cette liste par la MESURE, pas par analogie :**
+il rend son écran par `getTranslations("supportForm")`, et ce namespace
+porte ses 16 clés en français comme en anglais. Il n'a PAS pu être servi
+dans ce conteneur (il importe `supabaseAdmin`, qui LÈVE au chargement
+sans variables d'environnement, donc 500 : c'est le piège du 30 août,
+pas un défaut de cette page), et c'est écrit à côté.
+
+**ET LES LIBELLÉS D'ACCESSIBILITÉ EN FONT PARTIE** (`CHROME_SITE`) : un
+lecteur d'écran anglophone entendait « Navigation principale » et
+« Ouvrir le menu ». **Un texte qu'on n'affiche pas reste un texte que
+quelqu'un lit.** Le `LIEN_CONNEXION` a rejoint la table au passage : il
+était écrit en dur dans `SiteHeader`, donc il échappait à ce qui décide
+des libellés, et il serait resté français seul au milieu d'un menu
+anglais sans que rien ne le dise.
+
+**MESURÉ après correction, sur le serveur :**
+
+```
+/blog                     nav[Navigation principale]  Fonctionnalités | Tarifs | Blog | ...
+/en/blog                  nav[Main navigation]        Features | Pricing | Blog | L'Atelier du Quiz | Affiliation | À propos | Aide
+/en/tarifs                idem, pied : Tiquiz / Earn with Tiquiz / Integrations / Help / The legal bit
+/en/generateur-de-quiz    idem
+/en/fonctionnalites       idem
+```
+
+Les quatre entrées restées françaises sont exactement les quatre pages
+qui n'ont pas de version anglaise. **Le français ne bouge pas d'un
+caractère**, et le test l'exige dans ce sens là.
+
+Test : `tests/logic/chrome-en-anglais.test.mts` (10 cas), vérifié en
+rejouant TROIS versions fautives (un `en` posé sur `/a-propos`, le pied
+revenu à `l.libelle`, une adresse d'`APP_MULTILANGUE` préfixée en
+`/en/signup`) : les trois rougissent.
+
+### 🚨 ET LA MESURE A TROUVÉ DEUX PAGES QUI DÉCLARENT LA MAUVAISE LANGUE
+
+Relevé **EN PRODUCTION**, `<html lang>` de chaque page publique :
+
+| | ce que la page déclare | ce qu'elle contient |
+|---|---|---|
+| `/`, `/tarifs`, `/fonctionnalites`, `/integrations`, `/a-propos`, `/affiliation`, `/newsletter`, `/legal`, `/privacy` | `fr` | français, juste |
+| **`/blog` et TOUTES ses pages** | **`en`** | **français** |
+| **`/support`** | **`en`** sans en-tête de langue, `fr` avec `Accept-Language: fr` | français |
+
+**`lang` est l'attribut que lisent Google, les lecteurs d'écran et les
+outils de traduction pour savoir dans quelle langue une page est
+écrite.** Dix articles français plus leurs rubriques l'annoncent en
+anglais, et depuis ce chantier c'est pire : leur `hreflang` dit `fr` et
+leur `<html lang>` dit `en`, sur la même page. Deux signaux qui se
+contredisent, sur les pages que Béné veut faire ranker.
+
+**LA CAUSE DU BLOG EST ÉTABLIE.** Ces pages sont `force-static`, donc
+prérendues au BUILD : il n'y a aucune requête, donc `langueParDefaut()`
+ne voit pas l'hôte de vente et retombe sur `DEFAULT_LOCALE`, qui vaut
+`"en"`. Le blog ANGLAIS, lui, est juste PAR ACCIDENT : il tombe sur le
+même repli.
+
+**ET LA CORRECTION ÉVIDENTE NE MARCHE PAS, c'est mesuré.**
+`setRequestLocale` de next-intl (4.9.1) posé dans `app/blog/layout.tsx`,
+avec `requestLocale` lu dans `getRequestConfig` : `/blog` répond
+toujours `lang="en"`. **Le `<html lang>` vit dans le layout RACINE, qui
+rend AVANT le layout du blog** : la langue est déjà décidée quand le
+blog la pose. L'expérience a été RETIRÉE, pas laissée en place : une
+branche que rien n'exerce est un piège que le prochain passage
+rebranche en croyant réparer (leçon de `simuler()`, 31 août).
+
+**IL RESTE DONC DEUX CHEMINS, ET C'EST UNE DÉCISION DE BÉNÉ :**
+
+1. **rendre les pages du blog dynamiques** : `langueParDefaut()` voit
+   alors l'hôte et répond `fr`. Ça coûte le prérendu, que les
+   commentaires de ces fichiers défendent explicitement (vitesse, et la
+   lecture des commentaires qui deviendrait une requête par visite). Et
+   **on ne peut PAS compenser par un cache Cloudflare sur ce HTML** :
+   ces pages portent le `Set-Cookie` affilié, et mettre ça en cache
+   partagé est exactement le piège écrit le 7 septembre ;
+2. **donner au blog sa propre racine** (un groupe de routes de premier
+   niveau avec son propre `<html>`). Ça règle la langue proprement et
+   ça duplique tout ce que le layout racine porte, plus un rechargement
+   complet à chaque passage du blog au reste du site.
+
+**Sur `/support`, je ne sais pas.** Les autres pages dynamiques du même
+domaine répondent `fr` sans en-tête de langue, celle là répond `en`, et
+je n'ai pas établi pourquoi. Une cause plausible n'est pas une cause
+(règle du 2 septembre) : c'est mesuré, ce n'est pas expliqué.
+
 ### Le flux anglais ne portait AUCUNE image (8 septembre)
 
 Mesuré sur le serveur, une fois le blog anglais servi :

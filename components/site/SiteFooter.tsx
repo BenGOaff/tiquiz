@@ -9,13 +9,27 @@
 // pied serait une page que personne ne trouve.
 
 import Link from "next/link";
-import { PIED, attributsLien, estLienExterne, hrefPourLangue } from "@/lib/site/nav";
+import {
+  PIED,
+  CHROME_SITE,
+  attributsLien,
+  estLienExterne,
+  hrefPourLangue,
+  libellePourLangue,
+  titrePourLangue,
+} from "@/lib/site/nav";
 import type { LanguePublique } from "@/lib/site/langues";
 
 export default function SiteFooter({ langue }: { langue: LanguePublique }) {
-  // Voir `SiteHeader` : le libellé reste français, la destination suit
-  // la langue quand la page anglaise existe vraiment.
+  // Voir `SiteHeader` : la destination ET le libellé suivent la même
+  // source. Un libellé anglais ne s'affiche que là où la page anglaise
+  // existe VRAIMENT, donc un libellé resté français dit que la page
+  // derrière est française. Le TITRE d'une colonne, lui, ne promet
+  // aucune destination : il se traduit sans condition.
   const lien = (href: string) => hrefPourLangue(href, langue);
+  const mot = (l: (typeof PIED)[number]["liens"][number]) =>
+    libellePourLangue(l, langue);
+  const t = CHROME_SITE[langue];
   const annee = new Date().getFullYear();
   return (
     <footer className="tq-pied mt-24">
@@ -32,25 +46,24 @@ export default function SiteFooter({ langue }: { langue: LanguePublique }) {
               <img src="/logo-tiquiz.webp" alt="Tiquiz" width={360} height={186} className="h-8 w-auto" />
             </div>
             <p className="mt-3 max-w-[24ch] text-sm leading-relaxed text-[#8d9ab8]">
-              Des quiz qui captent des leads déjà qualifiés, et les taguent tout seuls dans
-              Systeme.io.
+              {t.promesse}
             </p>
           </div>
 
           <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
             {PIED.map((colonne) => (
               <div key={colonne.titre}>
-                <p className="tq-pied-titre">{colonne.titre}</p>
+                <p className="tq-pied-titre">{titrePourLangue(colonne, langue)}</p>
                 <ul className="mt-4 space-y-2.5">
                   {colonne.liens.map((l) => (
                     <li key={l.href}>
                       {estLienExterne(l.href) ? (
                         <a href={l.href} className="text-sm" {...attributsLien(l.href)}>
-                          {l.libelle}
+                          {mot(l)}
                         </a>
                       ) : (
                         <Link href={lien(l.href)} className="text-sm" {...attributsLien(l.href)}>
-                          {l.libelle}
+                          {mot(l)}
                         </Link>
                       )}
                     </li>
@@ -62,8 +75,10 @@ export default function SiteFooter({ langue }: { langue: LanguePublique }) {
         </div>
 
         <div className="mt-12 flex flex-col gap-2 border-t border-white/10 pt-6 text-xs text-[#7f8db0] sm:flex-row sm:items-center sm:justify-between">
-          <p>© {annee} Ethilife. Tiquiz et l&apos;Atelier du Quiz sont des marques d&apos;Ethilife.</p>
-          <p>Fait en France, par une créatrice qui vend avec ses propres quiz.</p>
+          <p>
+            © {annee} {t.marques}
+          </p>
+          <p>{t.faitEnFrance}</p>
         </div>
       </div>
     </footer>
