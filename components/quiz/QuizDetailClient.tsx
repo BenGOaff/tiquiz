@@ -22,6 +22,7 @@ import QuizResultsAnalytics from "@/components/quiz/QuizResultsAnalytics";
 import QuizInsightsPanel from "@/components/quiz/QuizInsightsPanel";
 import { ReadinessRing } from "@/components/ui/readiness-ring";
 import { computeReadiness } from "@/lib/quiz-readiness";
+import { remisePourLeBouton, type ContexteGenerateur } from "@/lib/embed/remise";
 import { televerserAsset } from "@/lib/storage/televerser";
 import { toast } from "sonner";
 import {
@@ -273,20 +274,26 @@ type ProfileBrand = {
   default_google_ads_conversion_id?: string | null;
   default_google_ads_conversion_label?: string | null;
 };
-interface QuizDetailClientProps {
-  quizId: string;
-  /**
-   * Embed-mode session token. When supplied, all /api/quiz/* calls
-   * append ?embed=<token> so the server uses its anonymous-quiz
-   * auth path. Triggers a few UX changes too:
-   *  - SIO sections are hidden (no tags, no API key picker, no
-   *    course/community fields)
-   *  - the user's profile is not fetched (no auth)
-   *  - status changes are forbidden server-side; the publish toggle
-   *    becomes a 'Débloquer Tiquiz' CTA that postMessages the parent
-   */
-  embedSessionToken?: string;
-}
+/**
+ * LE MODE EMBED EST UNE UNION, ET C'EST LE COMPILATEUR QUI L'IMPOSE.
+ *
+ * Le jeton de session dit "ce quiz est anonyme". Il ne dit PAS "on est
+ * dans une iframe" : depuis la page dédiée du 8 septembre
+ * (`/generateur-de-quiz`), le quiz est anonyme et il n'y a aucune
+ * iframe. Deviner l'un de l'autre a coûté un bouton MORT (voir
+ * `lib/embed/remise.ts`), donc `embedContexte` est OBLIGATOIRE dès qu'un
+ * jeton est fourni : un appelant qui se tait ne compile pas.
+ *
+ * Ce que le jeton déclenche par ailleurs, et qui ne change pas :
+ *  - les sections Systeme.io sont masquées (pas de tags, pas de clé,
+ *    pas de formation ni de communauté) ;
+ *  - le profil n'est pas chargé (personne n'est connecté) ;
+ *  - le changement de statut est refusé côté serveur, et le bouton
+ *    "Publier" devient celui qui rend la main.
+ */
+type QuizDetailClientProps =
+  | { quizId: string; embedSessionToken?: undefined; embedContexte?: undefined }
+  | { quizId: string; embedSessionToken: string; embedContexte: ContexteGenerateur };
 
 // Wrap a /api/quiz/* URL with the embed token when it's set so the
 // route handler picks the anonymous-quiz auth path.
@@ -620,7 +627,7 @@ function SortableSidebarResult({ id, index, label, onClick, onRemove, canDelete,
 }
 
 // Main component
-export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDetailClientProps) {
+export default function QuizDetailClient({ quizId, embedSessionToken, embedContexte }: QuizDetailClientProps) {
   // Single source of truth for "is this an anonymous embed render?".
   // Used to short-circuit profile fetches, hide SIO surfaces, and
   // repurpose the publish CTA into the paywall trigger.
@@ -3425,6 +3432,13 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
             <Button
               size="sm"
               onClick={() => {
+                // LA MÉCANIQUE VIENT DU PARAMÈTRE, JAMAIS DE window.
+                //
+                // Hors iframe, `window.parent` EST `window` : le message
+                // partait vers la page elle même, personne n'écoutait, et
+                // le bouton ne faisait RIEN. Voir `lib/embed/remise.ts`.
+                const quoi = remisePourLeBouton(embedContexte, embedSessionToken);
+                if (quoi.genre === "navigation") { window.location.assign(quoi.url); return; }
                 try { window.parent.postMessage({ type: "tiquiz-embed-checkout", session_token: embedSessionToken }, "*"); }
                 catch { /* sandboxed iframe — host page handles fallback */ }
               }}

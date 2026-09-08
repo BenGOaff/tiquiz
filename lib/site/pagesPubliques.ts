@@ -35,6 +35,18 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   // remplacera un jour vit derrière un slug introuvable, en noindex,
   // tant que Béné ne l'a pas validée : la déclarer ici l'annoncerait à
   // Google avant qu'elle ne soit en ligne.
+  // LE GÉNÉRATEUR EST UNE PAGE À PART ENTIÈRE, pas un bout de la
+  // landing : "générateur de quiz" est une requête que quelqu'un tape
+  // avant même de connaître Tiquiz, et l'outil qu'elle cherche est
+  // POSÉ dedans, gratuitement et sans compte. C'est la seule page du
+  // site où la promesse se vérifie sur place, en trente secondes.
+  {
+    chemin: "/generateur-de-quiz",
+    titre: "Générateur de quiz gratuit par IA",
+    resume:
+      "Décris ton sujet et à qui tu parles : l'IA écrit les questions, leurs réponses et les profils de résultat. Sans compte et sans carte bancaire, et le quiz se retrouve dans un compte gratuit.",
+    priorite: 0.9,
+  },
   {
     chemin: "/tarifs",
     titre: "Tarifs Tiquiz",
