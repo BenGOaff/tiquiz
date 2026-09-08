@@ -9454,7 +9454,10 @@ laquelle le trou s'ouvrirait.
 chemin qui finit par une extension, pour ne pas compter une image comme
 une visite. Un article dont le slug finirait par `.io` ou `.fr`
 tomberait dans ce refus, et l'affiliée qui le partage ne verrait jamais
-un seul clic. Mesuré sur les 11 articles : aucun n'est dans ce cas.
+un seul clic. Mesuré sur les 10 articles : aucun n'est dans ce cas.
+(Cette ligne a dit "11" pendant deux jours : le compte incluait
+`content/blog/index.json`, qui n'est pas un article. Corrigé le
+8 septembre, en place.)
 
 **Vérifié en rejouant deux versions fautives** (une sortie sans
 `poseSa`, un `matcher` qui exclut `/blog`) : les deux rougissent, et la
@@ -10530,10 +10533,19 @@ le bandeau de fin. Plus deux JSON-LD (`WebApplication` et `FAQPage`)
 construits depuis les MÊMES données que l'écran.
 
 **AUCUN CHIFFRE N'EST ÉCRIT À LA MAIN** (`lib/site/generateurQuiz.ts`) :
-la limite horaire est LUE dans `lib/embed/rateLimit.ts`, le nombre de
-langues dans `QUIZ_LANGUAGES`, les limites du gratuit dans
+les bornes du générateur public sont LUES dans `lib/embed/limites.ts`,
+le nombre de langues dans `QUIZ_LANGUAGES`, les limites du gratuit dans
 `FREE_LIMITS`. Un chiffre recopié est un chiffre faux au prochain
 changement, et il vit ici à l'endroit exact où un lecteur le vérifie.
+
+**ET CES TROIS NOMBRES VIVENT DANS UN MODULE PUR, PAS DANS
+`rateLimit.ts`, POUR UNE RAISON QUI N'EST PAS COSMÉTIQUE :** ce dernier
+importe `supabaseAdmin`, **qui LÈVE au chargement du module** quand une
+variable d'environnement manque. Une page publique qui l'importerait
+pour afficher une limite répondrait donc 500 sans base, et le runner de
+tests ne pourrait pas la charger du tout. C'est le piège du 30 août
+(`commentairesStore.ts`, qui faisait répondre 500 à toute la page
+d'article), évité avant d'être payé.
 
 **`offers.price: "0"` est justifié dans le module** : la route de
 génération ne demande aucune session, donc c'est un fait, pas une
@@ -10578,12 +10590,1752 @@ endroit où ça se tranche est son écran.
 **La génération anonyme n'a AUCUN plafond de dépense.**
 `ANTHROPIC_EMBED_DAILY_BUDGET` est NOMMÉE dans un commentaire de
 `lib/embed/rateLimit.ts` et **lue nulle part** : neuvième fois que ce
-dépôt paie une règle écrite en commentaire. Le seul garde-fou est
-`HOURLY_LIMIT_PER_IP = 10`, donc une IP par heure ; le modèle est Haiku,
-ce qui adoucit sans fermer. **Aucun coût en euros n'a été mesuré**, et
-il ne faut pas en citer un.
+dépôt paie une règle écrite en commentaire.
 
-Test : `tests/logic/generateur-page.test.mts` (11 cas), vérifié en
-rejouant TROIS versions fautives (`contexte="iframe"` sur la page
-dédiée, la boîte en `h-[85vh]`, la limite horaire recopiée à la main) :
-les trois rougissent.
+🚨 **ET C'EST PLUS URGENT DEPUIS LE 8 SEPTEMBRE, parce que les deux
+moitiés qui adoucissaient ont bougé le même jour.** Cette page écrivait
+"le seul garde-fou est `HOURLY_LIMIT_PER_IP = 10`, donc une IP par
+heure ; le modèle est Haiku, ce qui adoucit sans fermer". Les deux
+lignes sont périmées, et je les corrige ici plutôt que d'empiler :
+
+| | avant | maintenant |
+|---|---|---|
+| la borne | 10 par IP et par heure | **2 par IP et par 24 h** |
+| le modèle | Haiku | **le même que l'éditeur payant** |
+
+La borne resserre, le modèle desserre : chaque génération anonyme coûte
+désormais ce qu'elle coûte à une cliente qui paie. **Aucun coût en euros
+n'a été mesuré**, et il ne faut pas en citer un ; ce qui est certain,
+c'est qu'un plafond de dépense reste la seule chose qui arrêterait un
+botnet tournant sur mille adresses.
+
+Test : `tests/logic/generateur-page.test.mts`, vérifié en rejouant
+`contexte="iframe"` sur la page dédiée et la boîte en `h-[85vh]` : les
+deux rougissent.
+
+### Le générateur public écrivait avec le PLUS PETIT modèle (Béné, 8 septembre 2026)
+
+"Le générateur de quiz ne fonctionne pas : j'ai cette erreur `JSON IA
+invalide. Réessaie.` au lieu du quiz généré." Et, séparément : "Tu as
+bien utilisé le même prompt et la même IA pour générer le quiz ? Je
+trouve le résultat pas ouf."
+
+**Les deux phrases décrivent la MÊME cause, et elle est mesurée.**
+
+| | le modèle demandé |
+|---|---|
+| `/api/quiz/generate` (l'éditeur payant) | `resolveAnthropicModel(..., "opus")` |
+| `/api/embed/quiz/generate` (le générateur public) | **`"haiku"`** |
+
+Le prompt, lui, était bien le même des deux côtés (`buildQuizGeneration
+Prompt`), et le parsing du JSON est identique ligne pour ligne. Le
+générateur public écrivait donc avec le plus petit modèle de la famille,
+sur un prompt long et un schéma JSON strict : ça donne exactement les
+deux symptômes qu'elle décrit, un contenu moins bon ET du JSON parfois
+malformé, donc "JSON IA invalide" sur l'écran qui doit donner envie.
+
+🚨 **ET CETTE PAGE AVAIT ÉCRIT LE CONTRAIRE, À MOITIÉ.** La section du
+2 septembre dit : "Le prompt, lui, était déjà le même des deux côtés :
+c'est vérifié, pas supposé." **C'était vrai, et cette phrase a servi de
+preuve que la génération était identique, ce qui était faux.** C'est mot
+pour mot la faute du 3 septembre sur les prompts de l'Atelier : **une
+phrase exacte sur une moitié laisse croire l'autre moitié.** Dire ce
+qu'on a vérifié ne suffit pas ; il faut dire aussi ce qu'on n'a pas
+vérifié.
+
+**Règle : `lib/quiz/modeleGeneration.ts` porte le DÉFAUT, et les deux
+routes l'appellent.** La SURCHARGE reste par surface (le générateur
+public lit `ANTHROPIC_MODEL_EMBED` puis `ANTHROPIC_MODEL`) : c'est ce
+qui permet de le redescendre un jour de trafic anormal sans toucher à
+l'éditeur payant. Ce qui ne peut plus arriver, c'est que les deux
+DÉFAUTS divergent sans que personne ne le voie.
+
+### ET LE SUJET DU QUIZ PARTAIT DANS LE CHAMP DE L'OFFRE
+
+Trouvé en comparant les deux appels ligne à ligne. Le générateur public
+faisait :
+
+```
+buildQuizGenerationPrompt({ ..., intention: topic })
+```
+
+`intention`, dans ce prompt, c'est **"pourquoi tu crées ce quiz"**,
+c'est à dire l'OFFRE PAYANTE vers laquelle chaque bouton doit ramener.
+On disait donc au modèle que l'offre de la créatrice était le sujet de
+son quiz, et il écrivait des CTA qui vendent... le sujet.
+
+`buildQuizGenerationPrompt` prend maintenant un `sujet` à lui, émis
+seulement quand il est fourni : un champ vide n'est jamais rendu avec un
+tiret (règle du 1er septembre, une ligne "OFFRE : -" apprend au modèle
+qu'il a le droit d'en inventer une).
+
+### LES RÉGLAGES SONT CEUX DU VRAI TIQUIZ, PAS UNE VERSION ALLÉGÉE
+
+Béné : "il faudrait aussi demander au départ si le visiteur veut un quiz
+scoré ou profil, en expliquant brièvement ce que c'est, pour montrer que
+les deux sont dispo." Puis : "pour obtenir la même qualité de quiz, il
+faut réutiliser la fonction 'créer un quiz avec l'ia' du vrai tiquiz.
+Mais en rendant ça un peu plus UX UI friendly, plus joli. **On doit
+coller au mieux à l'intérieur de tiquiz en fait.**"
+
+Le formulaire public demandait cinq champs et un compteur de questions.
+Il demande maintenant les MÊMES choses que `QuizFormClient`, avec ses
+MOTS (relevés dans le namespace `quizForm` de `messages/fr.json`) :
+
+| Le réglage | Ce qu'il décide |
+|---|---|
+| Format, court ou long | le nombre de questions, DÉDUIT (4 ou 8) |
+| **Type : par profil, ou avec un score** | la mécanique d'attribution du résultat |
+| nombre de profils, ou de tranches | le libellé CHANGE avec la mécanique |
+| ton | imposé au modèle |
+| "Pourquoi tu crées ce quiz ?" | l'offre, facultative |
+| prénom et genre | la personnalisation dynamique |
+
+**LES DEUX CARTES DE TYPE NE SONT PAS DÉCORATIVES : c'est LA décision
+qui bloque** (drame Véronique, 2 août, deux jours perdus sur un quiz
+scoré qu'elle voulait par profil). Elles disent donc le QUESTIONNEMENT,
+"qui es-tu ?" et "où en es-tu ?", jamais la mécanique.
+
+**`questionCount` a DISPARU du formulaire, et c'est délibéré** : le vrai
+formulaire le DÉDUIT du format. Deux réglages pour une seule décision,
+c'est un des deux qui finit par mentir.
+
+**Et le libellé du nombre de résultats CHANGE avec la mécanique** : en
+scoring ce ne sont pas des profils mais des tranches de score, et les
+appeler pareil est exactement ce qui a coûté deux jours à Véronique.
+
+### L'ÉDITEUR PREND TOUT L'ÉCRAN, ET LE RETOUR VIT DANS SA BARRE
+
+"La mise en page de l'éditeur est éclatée sur la page du générateur,
+c'est pas représentatif, ça donne pas envie, il faut mettre le véritable
+éditeur en pleine page, en mettant un bouton pour revenir sur le
+générateur."
+
+Elle a raison, et c'est mesurable : l'éditeur est une grille à trois
+colonnes bâtie pour un écran entier. Enfermé dans la colonne d'une page
+marketing, il rend ses colonnes à 300 px, donc il montre au visiteur un
+outil qui a l'air cassé, sur la page exacte qui doit lui donner envie.
+
+`cadreDuGenerateur("page")` rend donc `fixed inset-0 z-50` pour
+l'éditeur, et **AUCUNE barre à nous au dessus** : l'éditeur est en
+`h-screen`, donc tout ce qu'on lui mettrait sur la tête lui volerait la
+même hauteur en bas, et le bas serait ROGNÉ (règle du 7 septembre, un
+débordement n'est une perte que s'il est rogné, et ici il le serait). Le
+retour vit dans SA barre à lui, à la place exacte où une créatrice
+connectée trouve sa flèche.
+
+**Et le défilement de la page qui est DERRIÈRE est verrouillé.** Sans
+ça, la molette traverse et fait défiler la page marketing sous
+l'éditeur, ce qui est exactement le "c'est pas représentatif". C'est le
+MÊME paramètre qui décide des deux (`verrouillerLeDefilement`) : dans
+une iframe il n'y a rien derrière, donc rien à verrouiller.
+
+**Le jeton n'est PAS effacé au retour** : c'est le même quiz, on revient
+sur le formulaire, on ne recommence pas de zéro.
+
+### DEUX QUIZ PAR RÉSEAU, ET LA FENÊTRE EST DE 24 H
+
+"Limiter à 2 quiz générés gratos pour une même adresse IP."
+
+C'était 10 par heure, et ça n'a plus rien d'anodin depuis le même jour :
+le générateur public écrit désormais avec le modèle de l'éditeur payant.
+
+**LA FENÊTRE EST DE 24 H, PAS "À VIE", ET C'EST UNE DÉCISION.** Une
+adresse IP ne désigne pas une personne : en 4G, un opérateur en partage
+une seule entre des milliers d'abonnés (CGNAT), et un bureau, un espace
+de coworking ou une salle de formation sortent tous par la même. Bloquer
+à vie sur ce signal fermerait la porte à des inconnus qui n'ont jamais
+rien généré, et **personne ne le verrait jamais** : ils partiraient,
+c'est tout. Si Béné veut plus strict, c'est UNE constante à changer.
+
+**Les trois nombres vivent dans `lib/embed/limites.ts`**, pas dans
+`rateLimit.ts` : voir plus haut, `supabaseAdmin` lève au chargement.
+
+### SES TROIS RÉÉCRITURES, MOT POUR MOT
+
+Elle a réécrit trois phrases de la page. Elles sont posées telles
+quelles, sans "amélioration" :
+
+| Ce qui était écrit | Ce qu'elle a écrit |
+|---|---|
+| "L'IA écrit tes questions, options et profils. Quelques secondes." | "Tiquiz rédige tes questions et les profils, ça vaut le coup de patienter quelques secondes 😉" |
+| "Trois gestes, et le troisième est celui qui compte : rien n'est figé, tout se corrige." | "Suis ces 3 étapes pour créer ton premier quiz interactif" |
+| "Pas un squelette à remplir : un quiz entier, lisible, que tu peux publier tel quel ou réécrire mot par mot." | "Tiquiz te donne un quiz déjà optimisé pour attirer tes futurs clients et les amener à te confier leur email. Mais tu gardes la main sur tout : édites-le à l'infini" |
+
+Sa deuxième remarque nomme le défaut de la première version : "c'est
+mal traduit de l'anglais". Une phrase qui commence par "Trois gestes, et
+le troisième est celui qui compte" est une figure de style qui n'apprend
+rien ; "Suis ces 3 étapes pour créer ton premier quiz interactif" dit ce
+qu'on doit faire.
+
+### 🚨 LE MULTILANGUE : la réponse honnête est NON, et voici les chiffres
+
+Béné : "d'ailleurs toutes les pages et mêmes les articles doivent être
+multilangues, j'espère que tu as anticipé."
+
+**Non, et je le dis dans ce sens là plutôt que de laisser croire.**
+Mesuré le 8 septembre, pas déduit :
+
+| | langues servies |
+|---|---|
+| l'APPLICATION (l'éditeur, le viewer, les écrans) | **7** (`SUPPORTED_LOCALES`) |
+| **TOUTES les pages du site public** | **2** (fr + en), au 8 septembre au soir |
+| le blog | **10 articles fr, 10 en** (les 4 importés le 8 septembre, les 6 traduits à la main le soir même) |
+
+🚨 **CE BLOC DISAIT "il reste un vrai chantier" SUR QUATRE PAGES. C'EST
+PÉRIMÉ**, et je le corrige en place plutôt que d'empiler (règle du
+31 août). Le générateur, le hub intégrations et ses six pages filles,
+`/a-propos`, `/affiliation`, `/affiliation-atelier` et `/newsletter`
+ont été traduits le 8 septembre : **il ne reste AUCUNE page interne du
+site en français seul.** Le détail de chaque passage vit dans les
+sections ci dessous.
+
+🚨 **CE PARAGRAPHE DISAIT "traduire le BLOG est autre chose, et c'est
+sa décision". PÉRIMÉ pour l'anglais** (Béné, 8 septembre : "oui traduis
+les stp"), corrigé en place. Les 10 articles ont leur version anglaise.
+
+**Ce qui reste vrai, et qui reste sa décision : les CINQ AUTRES
+langues.** 10 articles fois 7 langues font 70 pages à tenir à jour, et
+chaque correction de chiffre (le prix, le taux d'affiliation, un lien
+mort) se paierait alors sept fois. Le pipeline `blog:reparer` ne sait
+corriger qu'une langue à la fois, et il en existe déjà DEUX
+(`faitsProgramme.ts` et `faitsEn.ts`) : une troisième table serait une
+troisième occasion de diverger.
+
+### MES DEUX FAUTES DE CE PASSAGE
+
+**1. `export { X } from "..."` ne crée AUCUN binding local.** J'ai voulu
+re-exporter les bornes depuis `lib/site/generateurQuiz.ts` et les
+interpoler dans la FAQ du même fichier : la valeur n'existait pas dans
+la portée du module, et `tsc` l'a dit. Il faut un vrai `import` PUIS un
+`export { X }` nu.
+
+**2. Un garde-fou qui figeait `h-screen` a rougi sur une correction
+juste.** Il exigeait la chaîne littérale, donc il refusait le passage en
+`fixed inset-0`, c'est à dire exactement ce qu'elle demandait. **HUITIÈME
+fois qu'un test qui fige une FORMULATION empêche de corriger la
+formulation** ; il vise maintenant le FAIT (le cadre occupe tout le
+viewport, il ne pose aucune borne qui rognerait l'éditeur, et une
+surcouche verrouille le défilement de ce qui est derrière).
+
+## L'anglais a enfin une ADRESSE (Béné, 8 septembre 2026)
+
+"J'ai des users anglophones qui me trouvent sur tipote.blog avec les
+articles en anglais : on doit les récupérer sur le blog tiquiz.fr avec
+les articles et pages en anglais. Mais il faut que ce soit bien fait."
+Et, dans le même message : **"je ne veux pas changer les URL actuelles
+parce qu'elles commencent à ranker doucement."**
+
+### CE QUI BLOQUAIT, ET CE N'ÉTAIT PAS LA TRADUCTION
+
+Mesuré avant d'écrire une ligne, et c'est structurel :
+
+| | |
+|---|---|
+| la langue du site venait de | le COOKIE `ui_locale`, et de rien d'autre |
+| segments de langue dans les URL | **aucun** |
+| balises `hreflang` dans tout le dépôt | **aucune** |
+
+`tiquiz.fr/tarifs` était donc **UNE seule adresse qui changeait de
+langue selon le cookie du visiteur**, et un robot n'envoie jamais de
+cookie. **Il n'existait AUCUNE URL anglaise à indexer.** Traduire du
+texte n'y aurait rien changé : ses lecteurs anglophones n'avaient nulle
+part où atterrir, et Google n'avait rien à ranger dans sa version
+anglaise.
+
+C'est pour ça que ce passage ne traduit presque rien et construit
+l'adresse : le texte sans l'adresse ne sert à personne.
+
+### LE FRANÇAIS NE PORTE AUCUN PRÉFIXE, ET C'EST SA CONTRAINTE
+
+```
+/tarifs        le francais, exactement ou il est aujourd'hui
+/en/tarifs     l'anglais
+```
+
+Poser `/fr/` changerait CHAQUE adresse déjà indexée, c'est à dire jeter
+le référencement qu'elle commence à avoir. `LANGUE_SANS_PREFIXE = "fr"`
+(`lib/site/langues.ts`), et le test refuse qu'un `/fr/` se fabrique
+quelque part.
+
+**ON RÉÉCRIT, ON NE REDIRIGE PAS.** L'adresse vue par le visiteur reste
+`/en/tarifs`, donc c'est elle que Google indexe et elle que le
+`hreflang` apparie. Une redirection vers `/tarifs` ferait disparaître
+l'URL anglaise, c'est à dire tout l'intérêt du chantier.
+
+### L'URL GAGNE SUR LE COOKIE, ET C'EST LA RÈGLE QUI CASSE EN SILENCE
+
+Sans elle, `/en/tarifs` sert du FRANÇAIS à quelqu'un dont le cookie dit
+"fr", et Google indexe du français sous une adresse anglaise. **La page
+s'affiche parfaitement pendant tout ce temps** : c'est exactement la
+forme de panne que ces dépôts paient le plus cher.
+
+Le middleware pose la langue dans un en-tête de requête
+(`ENTETE_LANGUE`), et `i18n/request.ts` le lit AVANT le cookie. Le
+cookie garde tout son rôle : il décide partout où l'URL ne se prononce
+pas, c'est à dire l'app derrière connexion et le français.
+
+**Et c'est la PRÉCÉDENCE qui le dit, pas l'ordre des lignes.** Mon
+premier test mesurait l'ordre des deux `await`, et il ne distinguait
+RIEN : `indexOf("langueDeLUrl(")` tombait sur la DÉCLARATION de la
+fonction, écrite plus haut, donc le test restait vert quand on
+inversait vraiment les deux lignes. Et ces deux lignes ne décident
+rien : c'est le `??` qui décide. **Treizième fois qu'un contrôle ne
+distingue pas ce qu'il est censé distinguer**, et cette fois il a fallu
+rejouer la version fautive pour le voir.
+
+### LA CANONIQUE ANNONCE SA PROPRE LANGUE
+
+`alternatesDeLangue(origine, cheminNu, langueCourante, langues)` prend
+**QUATRE paramètres, et les deux derniers sont ce qui compte.**
+
+Mon premier jet rendait `languages[dispo[0]]`, donc toujours le
+français : **chaque page anglaise aurait annoncé la française comme sa
+version de référence.** Google l'aurait crue, l'anglais n'aurait jamais
+été indexé, et rien à l'écran ne l'aurait dit. `langueCourante` est
+donc un PARAMÈTRE OBLIGATOIRE (règle du 1er août), et le test rejoue la
+version qui devine : il rougit.
+
+**La canonique se lit sur l'ADRESSE, jamais sur le texte affiché.**
+`langueCanonique()` (`lib/site/langueRequete.ts`) lit l'en-tête ;
+`getLocale()` répond la langue du TEXTE, qui peut venir d'un cookie ou
+d'un `?lang=`. Les deux disent la même chose sur `/en/tarifs` et PAS
+sur `/tarifs` visité avec un cookie anglais. Les confondre ferait
+annoncer deux canoniques différentes pour la même URL, et c'est celle
+du robot qui compte.
+
+Ce module lit `next/headers`, donc il ne vit PAS dans `langues.ts` :
+celui là reste pur, donc chargeable par le runner natif.
+
+### ON NE DÉCLARE QUE LES LANGUES QU'UNE PAGE A VRAIMENT
+
+`PagePublique.langues` (`lib/site/pagesPubliques.ts`), absent = le
+français seul. Déclarer une langue qu'une page n'a pas mettrait
+`https://tiquiz.fr/en/<chemin>` dans le sitemap ET dans ses `hreflang`,
+et Google y trouverait du FRANÇAIS sous une adresse anglaise : l'anglais
+serait alors jugé sur du contenu dupliqué.
+
+Le sitemap DÉRIVE cette liste (`languesDePage`), il ne la recopie pas :
+deux listes écrites séparément finissent toujours par diverger, et ce
+fichier le dit dans son propre en-tête depuis le 30 août.
+
+**Une seule page a un texte anglais complet aujourd'hui : `/tarifs`**
+(`contenuLanding("en")` existe depuis le 4 septembre). Le test exige
+que cet objet de langue existe encore : déclarer la langue sans écrire
+le texte est exactement le trou décrit au dessus.
+
+### LA RACINE `/en/` EST EXCLUE, ET C'EST DÉLIBÉRÉ
+
+Sur un hôte de vente, `/` réécrit vers la page de vente CAPTURÉE, qui
+est en français. La servir sous `/en/` serait la panne que tout ce
+chantier existe pour empêcher. Elle répondra le jour où une racine
+anglaise existe (la landing a son texte anglais, et elle attend sa
+validation).
+
+### L'AFFILIATION ET LE COMPTEUR SURVIVENT AU PRÉFIXE
+
+Sa consigne du même jour : "le générateur pourra être offert en lead
+magnet par mes affiliés qui les enverront direct sur cette page avec
+leur ref."
+
+**MESURÉ en servant les deux adresses**, pas déduit :
+
+```
+GET /en/tarifs?ref=jocelyne  ->  set-cookie: tq_ref=jocelyne; Max-Age=31536000
+GET /en/tarifs               ->  200, <title> anglais, lang="en"
+                                 canonical  https://tiquiz.fr/en/tarifs
+                                 hreflang   fr + en + x-default
+GET /tarifs                  ->  200, <title> francais, lang="fr"
+                                 canonical  https://tiquiz.fr/tarifs
+GET /a-propos                ->  aucun hreflang anglais (pas de texte)
+```
+
+La réécriture passe par `poseSa`, comme les onze autres sorties du
+middleware, et le clic comme la vue se comptent AVANT elle, donc sur le
+chemin reçu (`/en/tarifs`). Effet de bord voulu : le compteur de trafic
+range l'anglais sous son propre chemin, donc elle voit ce que l'anglais
+apporte.
+
+**ET LA PAGE DU GÉNÉRATEUR COMMISSIONNE COMME LE RESTE**, sa phrase du
+même jour : "le générateur pourra être offert en lead magnet par mes
+affiliés qui les enverront direct sur cette page avec leur ref."
+**Mesuré avant d'écrire le garde-fou : rien ne manquait**, et je le dis
+dans ce sens là. La chaîne a QUATRE maillons, et il les faut tous les
+quatre : le middleware pose `tq_ref` en arrivant ; le clic est compté
+sur ce chemin ; le bouton "Garder mon quiz" NAVIGUE vers `/signup` sur
+la même origine (un `postMessage` ne poserait rien, et une adresse
+absolue perdrait le cookie) ; `/api/auth/signup` relit le cookie et
+appelle `rattacherInscrit`. Les trois cas ajoutés à
+`generateur-page.test.mts` les tiennent ensemble, vérifiés en rejouant
+deux versions fautives (le signup qui ne lit plus le cookie, la page
+sortie de `PAGES_PUBLIQUES`) : les deux rougissent. Un test qui n'en
+tiendrait qu'un passerait au vert sur une page où l'affiliation est
+morte, et ça ne se voit sur AUCUN écran.
+
+### CE QUI EST SERVI EN ANGLAIS, ET CE QUI NE L'EST PAS
+
+L'adresse existe partout. **Au 8 septembre au soir, le CONTENU aussi :
+il ne reste AUCUNE page interne du site en français seul.**
+
+| | langues servies |
+|---|---|
+| `/tarifs` | **fr + en** |
+| **le hub et les 8 pages de fonctionnalités** | **fr + en** |
+| **`/generateur-de-quiz`** | **fr + en** |
+| **`/a-propos`** | **fr + en** |
+| **`/integrations`** et ses **6 pages d'outil** | **fr + en** |
+| **`/affiliation`** et **`/affiliation-atelier`** | **fr + en** |
+| **`/newsletter`** | **fr + en** |
+| les 10 articles du blog | fr |
+| **les 10 articles** | **SERVIS** sur `/en/blog/<slug>`, un pour un avec les 10 français |
+
+🚨 **CETTE TABLE DISAIT "le CONTENU sur deux pages" ET "`/affiliation` |
+fr". LES DEUX SONT PÉRIMÉES**, corrigées en place le 8 septembre au soir
+plutôt qu'empilées : `/affiliation` et `/affiliation-atelier` ont été
+traduites dans la journée, `/newsletter` le soir.
+
+🚨 **CETTE LIGNE DISAIT "importés et corrigés sur le disque, PAS ENCORE
+SERVIS". C'EST PÉRIMÉ, et je la corrige en place** (règle du 31 août :
+une note d'état des lieux se relit quand on corrige ce qu'elle décrit).
+
+MESURÉ le 8 septembre sur le serveur, pas déduit : `/en/blog`,
+`/en/blog/<slug>` et `/en/blog/rss.xml` répondent **200**, la page porte
+`lang="en"`, sa canonique est `https://tiquiz.fr/en/blog/<slug>`, et ses
+trois `hreflang` apparient le bon slug FRANÇAIS (`fr`, `en`,
+`x-default`).
+
+**Et l'anglais est à PARITÉ avec le français, au chiffre près** : 19
+`alt` renseignés et 4 vides des deux côtés. Les quatre vides sont les
+COUVERTURES (celle de l'article, plus les trois cartes d'articles liés),
+et c'est le comportement historique du français : une couverture posée
+juste à côté de son propre titre est décorative, et répéter le titre
+ferait perdre du temps à celle qui écoute.
+
+**Ses 4 articles anglais sont mesurés, et ils s'apparient 1 pour 1 avec
+4 des 10 français** (relevé sur `tipote.blog/posts`, en lisant
+`window.__PRELOADED_STATE__` : c'est du JavaScript, pas du JSON) :
+
+```
+17-reasons...                        <-> 17-raisons-lancer-quiz-business
+capturing-emails-quiz-strategy       <-> collecter-emails-quiz-strategie
+create-quiz-systeme-io               <-> comment-creer-quiz-systeme-io
+monthly-recurring-income-tiquiz...   <-> rente-mensuelle-affiliation-tiquiz
+```
+
+Les 6 autres français n'ont pas de version anglaise.
+
+### LES 4 ARTICLES ANGLAIS SONT IMPORTÉS, ET SURTOUT CORRIGÉS
+
+**Publier son anglais tel quel aurait republié en anglais ce qu'on vient
+de corriger en français**, sur les deux pages qui vendent et qui
+recrutent les affiliés. Ses articles datent d'avant le 6 août : ils
+portent l'ancien tarif, la vente bêta à vie qui n'existe plus, et
+l'article d'affiliation annonce mot pour mot les promesses fausses
+corrigées les 31 août et 1er septembre ("no threshold", "paid on the
+10th", 40 % écrit comme un plafond, plus **une section entière sur
+Tipote** à 50 % à vie sur des plans de $19 à $99/mois).
+
+**Trois pièces, et les trois sont obligatoires :**
+
+| | |
+|---|---|
+| `scripts/importer-blog-en.mjs` | lit `window.__PRELOADED_STATE__` (du JavaScript, pas du JSON) et ne corrige RIEN, exprès |
+| `lib/blog/faitsEn.ts` | la table anglaise : 54 règles qui mordent, 94 corrections |
+| `scripts/reparer-blog-en.mjs` | l'applique, et REFUSE de finir en silence |
+
+**L'IMPORT NE CORRIGE RIEN, ET C'EST VOULU** : un ré-import écraserait
+toute retouche faite dans le JSON. C'est la mécanique de
+`faitsProgramme.ts` depuis le 31 août, et le test appelle LA MÊME
+fonction : le contenu est propre quand la réparation ne change plus
+rien.
+
+**LES PRIX SE LISENT, ILS NE SE RECOPIENT PAS.** Les deux tarifs Tiquiz
+viennent de `faitsProgramme.ts` (exportés le 8 septembre : deux copies
+d'un prix finissent toujours par diverger, et le blog annoncerait alors
+deux tarifs selon la langue lue). Les prix des CONCURRENTS viennent de
+`liensIntegrations.ts`, la même source que le français : son anglais
+annonçait "Typeform at $59/month" et "$88/month" à cinq endroits, sur
+les deux pages qui nous comparent à Typeform et Zapier, c'est à dire
+exactement là où un lecteur va vérifier. **Les devises ne se convertissent
+pas** (règle du 1er septembre) : Typeform et Zapier facturent en dollars,
+Tiquiz en euros.
+
+**LA SECTION SUR TIPOTE EST REMPLACÉE, PAS CORRIGÉE PHRASE PAR PHRASE.**
+Une section entière qui promet un produit qui n'est pas en vente ne se
+rafistole pas : `remplacerSection` échange les blocs entre le titre qui
+ouvre et celui qui ferme, et **il LÈVE si le titre de fermeture est
+introuvable** (on n'écrit rien plutôt que de manger la fin de
+l'article). Ce qui remplace parle de l'Atelier du Quiz, qui est vendu, à
+70 %, avec son montant calculé.
+
+### ET LES 27 IMAGES ANGLAISES N'AVAIENT AUCUN TEXTE ALTERNATIF
+
+Mesuré avant d'écrire une ligne, en les regardant une par une :
+**27 images sur 27**, dans les quatre articles. C'est 100 %, là où le
+français était à 43 % le 31 août.
+
+Un `alt` vide coûte trois choses d'un coup, et **aucune ne se voit à
+l'écran** : une lectrice aveugle n'entend rien (ou s'entend épeler
+`17-reasons-to-launch-business-quiz-4ce3c7f955`), Google ne sait pas ce
+que le schéma montre, et un modèle de langue non plus. Or ces schémas
+portent l'essentiel de l'argumentaire (l'email contre les réseaux, les
+chiffres de segmentation, le tunnel). C'est exactement ce qu'elle vise
+en parlant de GEO.
+
+**UNE DEUXIÈME TABLE, ET C'EST LA MESURE QUI L'IMPOSE.**
+`lib/blog/altImagesEn.ts` vit à côté de `altImages.ts` parce que la clé
+est le CHEMIN de l'image, et que **deux visuels sont PARTAGÉS avec les
+articles français** (`/blog/img/quiz-buzzfeed.webp` et
+`/blog/img/quiz-kerastase.webp`). Une seule table poserait donc du
+FRANÇAIS dans une page anglaise, sur la seule ligne qu'une lectrice
+aveugle anglophone entend : c'est le reproche du client du 7 septembre,
+transposé au blog.
+
+**Et `poserAltEn` existe à côté de `poserAlt` au lieu de prendre une
+langue en paramètre** : une fonction qui accepte les deux tables finit
+par recevoir la mauvaise, et rien ne le dirait.
+
+**LES 27 ONT ÉTÉ REGARDÉES, JAMAIS DEVINÉES.** Leurs noms sont des
+empreintes (`...-4ce3c7f955.webp`) : ils ne disent rien du tout. Deux
+visuels portent une marque que la capture ne permet pas d'identifier
+avec certitude (la bannière à 82M+ quiz takers, l'écran "First, choose
+an intention") : **leur texte dit ce qui est à l'écran et s'arrête là.**
+Nommer au jugé mettrait une marque fausse dans la seule ligne que lisent
+Google, un modèle de langue et une lectrice aveugle.
+
+**Les deux visuels ÉCARTÉS sont dans la table, et sans chiffre.** Ils ne
+s'affichent nulle part depuis `visuelsPerimes.ts`, mais leur texte est
+écrit pour le jour où Béné les redessine, sans le tarif ni la
+projection : ce sont exactement les chiffres qui les ont fait écarter,
+et un texte qui les recopierait serait faux le jour du redessin.
+
+**LE SCRIPT REFUSE MAINTENANT DANS UN QUATRIÈME CAS : une image qui
+sort sans texte alternatif.** La table couvre les 27 ; une image qui
+ressort nue veut donc dire une seule chose, son chemin a changé et la
+table ne le NOMME plus. Ça ne casse rien et ça ne s'affiche pas : c'est
+le genre de trou qui vit des mois.
+
+**Et le contrôle lit le contenu CORRIGÉ, jamais le disque** : en
+`--verifie` rien n'est écrit, donc le disque dirait "27 images nues" sur
+une réparation parfaitement bonne.
+
+### ET MON PROPRE DISCRIMINANT S'EST CASSÉ EN AJOUTANT UNE 4e FAMILLE
+
+`dejaCorrige` valait `compteur.size === 0`, et c'était juste tant que le
+compteur ne portait que les trois familles de règles de texte. Le jour
+où une QUATRIÈME chose s'y est ajoutée (la pose des `alt`), une
+réparation parfaitement bonne sur un contenu déjà corrigé comptait
+27 poses, donc `dejaCorrige` tombait à faux, donc **les 54 règles de
+texte étaient dénoncées comme fausses et le script refusait de finir.**
+
+Il se mesure maintenant sur les SEULES familles que `muettes`
+surveille. **Seizième fois qu'un contrôle ne distingue pas ce qu'il est
+censé distinguer**, et cette fois dans le contrôle même que ce script
+existe pour porter.
+
+**Et la phrase finale ne s'appuie plus dessus** : elle disait "rien à
+corriger" pendant que 27 textes venaient d'être posés.
+
+Test : les 4 cas ajoutés à `tests/logic/blog-en.test.mts`, vérifiés en
+rejouant QUATRE versions fautives (les `alt` retirés du disque, un texte
+français dans la table, `poserAltEn` qui n'écrase plus un `alt` hérité
+de l'import, le même texte dans les deux tables) : les quatre
+rougissent.
+
+### ET LA TYPOGRAPHIE ÉTAIT FRANÇAISE DANS UN TEXTE ANGLAIS
+
+Béné, le même jour : "il faut à chaque fois utiliser le champ sémantique,
+les expressions, tournures de phrases, ponctuation etc .. propre à chaque
+langue, c'est pas uniquement du mot à mot."
+
+**Elle avait raison, et c'était MESURABLE. Les fautes étaient les
+MIENNES**, posées par ma propre table de corrections :
+
+| | son anglais d'origine | ce que j'écrivais |
+|---|---|---|
+| un pourcentage | `40%`, `80%`, toujours collé | **27 fois `40 %`** |
+| un montant | `$9`, `$88`, jamais "9 USD" | **22 fois `17 EUR`** |
+
+Son import n'en portait AUCUNE (mesuré : zéro dans les quatre fichiers).
+`eur()` rend donc `€5.67` (symbole devant, point décimal, virgule des
+milliers) et `usd()` rend `$29.99`, à l'anglaise, et le `%` se colle.
+
+**Et trois espaces devant une ponctuation vivaient dans SA prose**
+("And now ?" deux fois, "three options : " une fois).
+`ponctuationAnglaise()` les retire, avec les mêmes gardes que
+l'insertion française du 3 août, dans l'autre sens : on ne touche qu'à
+une ponctuation qui TERMINE. Ça protège un `https://`, une heure
+(`12:30`), un `&nbsp;` et un `style="color:red"`, tous testés. Et elle
+est IDEMPOTENTE par construction : une fois l'espace retirée, le motif
+ne trouve plus rien.
+
+**C'est la faute du 1er août dans une autre robe** : une règle écrite
+pour une langue, appliquée telle quelle à une autre.
+
+### UNE RÈGLE MUETTE NE VEUT PAS DIRE LA MÊME CHOSE SELON LE MOMENT
+
+Mon premier jet REFUSAIT dès qu'une règle ne mordait pas. Sur un import
+frais c'est juste (une règle muette est une règle fausse, leçon du
+4 septembre). Sur un contenu DÉJÀ corrigé, aucune règle ne peut mordre,
+et c'est exactement le résultat attendu : **le script ne pouvait donc
+tourner qu'une seule fois**, et le test, qui appelle la même mécanique,
+n'aurait jamais pu passer.
+
+**Le discriminant est "combien ont mordu", pas "il en reste une" :** des
+règles qui mordent À CÔTÉ de règles muettes disent que celles là sont
+fausses ; zéro morsure sur toute la table dit que le travail est déjà
+fait. Le contrôle des interdits, lui, tourne dans les DEUX cas : c'est
+la vraie preuve.
+
+**Et il lit le contenu CORRIGÉ, gardé en mémoire, jamais le disque.** En
+`--verifie` rien n'est écrit : relire le disque aurait fait dire au
+contrôle que TOUT survit, sur une réparation parfaitement bonne.
+Quatorzième fois qu'un contrôle ne distingue pas ce qu'il est censé
+distinguer, et cette fois il a été attrapé avant d'envoyer chercher au
+mauvais endroit.
+
+**Aucun switcher de langue n'est posé, et c'est un choix.** Le site
+public n'en a jamais eu ; avec UNE page traduite, un lien "English" dans
+le pied de page mènerait nulle part sur les vingt autres. Il se pose le
+jour où plusieurs pages existent en anglais.
+
+### `/en/tarifs` ÉTAIT UN ORPHELIN : le chrome l'ignorait (8 septembre)
+
+Mesuré sur `/en/blog` servi, une fois le blog anglais en ligne :
+
+```
+<a href="/tarifs">Tarifs</a>
+<a href="/blog">Blog</a>
+```
+
+`/en/tarifs` existe, il est en anglais, il est dans le sitemap, et
+**AUCUN lien du site ne le citait.** Une page qu'aucun lien ne désigne
+n'est atteinte par personne : un lecteur anglophone arrivé de
+`tipote.blog` ne la trouve jamais, et un robot ne la découvre que par le
+sitemap, sans un seul lien interne pour la peser.
+
+**Règle : `hrefPourLangue(href, langue)` (`lib/site/nav.ts`), et les
+LIBELLÉS ne bougent pas.** La décision écrite dans
+`app/en/blog/layout.tsx` reste entière : traduire un libellé sans
+traduire la page promettrait de l'anglais derrière chaque clic. Une
+DESTINATION n'a pas cette contrainte, et c'est la seule moitié qui
+change.
+
+**LA DISPONIBILITÉ SE LIT, ELLE NE SE SUPPOSE PAS.** Préfixer tout en
+`/en/` ferait huit 404 dans le menu, sur toutes les pages à la fois :
+`/a-propos`, `/integrations` et les autres n'ont pas de version
+anglaise. Les deux sources sont celles qui existent déjà,
+`PAGES_PUBLIQUES` (la MÊME que le sitemap et les `hreflang`) et
+`CHEMINS_HORS_REECRITURE` (le blog, qui a son propre segment). Une
+deuxième liste écrite ici annoncerait une langue que le sitemap ne
+déclare pas.
+
+**Et la correspondance y est EXACTE, jamais un préfixe.** `/en/blog`
+existe ; `/en/blog/<slug français>` n'existe pas, parce que les slugs
+anglais sont différents (`17-reasons...` contre
+`17-raisons-lancer-quiz-business`). Un lien construit par préfixe
+mènerait à un 404 que personne ne voit avant de cliquer, et traduire un
+slug n'est pas le travail de cette fonction : c'est `alternatesDeLangue`
+qui apparie les deux, article par article.
+
+**LE SENS DE L'ERREUR :** un chemin oublié laisse un lien vers le
+français, c'est à dire le comportement d'aujourd'hui. Un chemin déclaré
+à tort donne un 404 dans le menu, partout d'un coup.
+
+#### `/tarifs` A SON PROPRE GROUPE DE ROUTES, ET C'EST UNE MESURE
+
+`langue` est une prop OBLIGATOIRE de `SiteShell` : elle ne peut pas se
+deviner (le blog anglais est `force-static`, donc prérendu au BUILD,
+donc sans requête à interroger ; `/en/tarifs`, lui, passe par la
+réécriture du middleware). Restait à savoir QUI la lui donne.
+
+**Un `headers()` dans un layout rend TOUT son groupe dynamique.** Relevé
+avant d'écrire une ligne : sur les 10 pages de `app/(site)/`, **8
+n'appellent aucune API dynamique**, donc elles sont prérendues au build,
+et ce sont exactement celles qui commencent à ranker. Poser la lecture
+de langue dans leur layout commun aurait payé un rendu par requête sur
+ces 8 pages, pour une langue qu'elles n'ont pas.
+
+`/tarifs` vit donc dans `app/(site-langues)/`, un DEUXIÈME groupe de
+routes. Un groupe n'ajoute aucun segment d'URL : `/tarifs` reste
+`/tarifs`, sa canonique et ses `hreflang` ne bougent pas (mesuré après
+le déplacement). Et il ne coûte rien : `/tarifs` lit déjà l'en-tête dans
+sa propre `generateMetadata`, il était donc déjà dynamique.
+
+**Les deux layouts rendent le MÊME `SiteShell`**, donc il n'y a pas deux
+chromes à tenir d'accord : le menu, le pied de page et leurs libellés
+vivent à un seul endroit (`lib/site/nav.ts`). Ce qui est dupliqué, c'est
+une ligne de trois mots, et le test exige que tout appelant de
+`SiteShell` passe sa langue.
+
+**MESURÉ après correction, sur le serveur :**
+
+| | Tarifs | Blog |
+|---|---|---|
+| `/en/blog` | **`/en/tarifs`** | `/en/blog` |
+| `/en/tarifs` | `/en/tarifs` | **`/en/blog`** |
+| `/blog`, `/tarifs`, `/a-propos` | `/tarifs` | `/blog` |
+
+Le chemin anglais boucle donc dans les deux sens, et le français ne
+bouge pas d'un caractère. `/en/tarifs` répond toujours `lang="en"`,
+canonique `https://tiquiz.fr/en/tarifs`, ses trois `hreflang`, et il
+pose encore `tq_ref` sur un `?ref=`.
+
+#### ET DEUX TESTS ONT ROUGI SUR UN CODE JUSTE
+
+`landing.test.mts` et `fonctionnalites.test.mts` portaient
+`app/(site)/tarifs/page.tsx` écrit en dur, à quatre endroits. Le
+déplacement de groupe les a fait rougir alors que rien n'était cassé.
+
+**Un groupe de routes n'ajoute aucun segment d'URL : un chemin sur
+disque n'est donc PAS une adresse, et l'écrire en dur dans un test fige
+un rangement.** `tests/logic/aide/pageDuSite.mts` le CHERCHE, et il
+refuse les deux cas qui comptent : introuvable (la page a vraiment
+disparu), ou trouvée DEUX fois (deux groupes serviraient la même URL, ce
+que Next refuse au build, et le dire ici le dit plus tôt). Vérifié en
+rejouant les deux : ils rougissent.
+
+### Le hub et les 8 pages de fonctionnalités passent en anglais (8 septembre)
+
+Deuxième moitié du chantier : l'adresse existait, il fallait le TEXTE.
+`/fonctionnalites` et ses 8 pages sont servies en `fr` et en `en`, et
+elles ont déménagé dans `app/(site-langues)/` (elles lisent maintenant
+`langueCanonique()`, donc leur groupe est celui qui a le droit).
+
+**UNE STRUCTURE, UN TEXTE PAR LANGUE.** Le slug, le palier, le fichier
+`source`, les deux voisines et le visuel vivent UNE fois, dans
+`FONCTIONNALITES_FR` ; une langue n'apporte que du texte, rangé par
+slug. Dupliquer le tableau entier laisserait `liees` et `source`
+diverger sans que rien ne le dise. Et **`TRADUCTIONS` est un `Record`
+dont les clés sont les 8 slugs**, donc en oublier un ne compile pas :
+sans ça, un slug manquant servirait du FRANÇAIS sous une adresse
+anglaise, la page s'afficherait parfaitement, et Google indexerait du
+contenu dupliqué.
+
+**LE SLUG NE SE TRADUIT PAS**, et c'est une décision : le sitemap, les
+`hreflang` et le menu se calculent alors par simple préfixe. Un slug
+traduit exigerait une deuxième table d'appariement, article par
+article, comme le blog a dû la faire.
+
+**LES LIENS INTERNES DE CES PAGES PASSENT PAR `hrefPourLangue`, jamais
+par `cheminPourLangue`.** La différence n'est pas cosmétique : leur CTA
+mène à `/signup`, qui n'est pas dans `PAGES_PUBLIQUES` et n'a aucune
+version anglaise. Un préfixe posé à l'aveugle aurait fabriqué
+`/en/signup`, c'est à dire un 404 au bout du seul bouton de la page.
+
+**Et le repli de langue du TEXTE est l'ANGLAIS, pas le français**
+(`languePubliqueDuTexte`) : le site public sert deux langues, l'app en
+connaît sept, et `contenuLanding` retombait déjà sur l'anglais depuis
+le 4 septembre. Deux replis différents feraient lire l'anglais sur un
+écran et le français sur le suivant, au même visiteur.
+
+#### ET DEUX AUTRES TESTS ONT ROUGI SUR UN CODE JUSTE
+
+La leçon juste au dessus s'est repayée deux fois dans l'heure, sur la
+même cause :
+
+1. **`landing.test.mts` lisait la feuille de style à
+   `app/(site)/fonctionnalites/styles.ts`.** Une feuille rangée À CÔTÉ
+   de sa page se cite forcément par un chemin de groupe : elle vit
+   maintenant dans `components/fonctionnalites/styles.ts`, à un endroit
+   stable, comme celle de la landing.
+2. **`site-en-anglais.test.mts` collait le chemin d'URL entier** pour
+   savoir si une page vit dans tel groupe. `/fonctionnalites/generation-ia`
+   est servi par `fonctionnalites/[slug]/page.tsx` : un segment
+   DYNAMIQUE ne porte pas le nom qu'on cherche, donc `existsSync`
+   répondait "non" sur une page qui existe et qui répond.
+   `servieParLeGroupe` descend segment par segment et accepte un
+   `[param]` à chaque niveau. Vérifié en rejouant la version fautive
+   (une page de fonctionnalité recréée dans `(site)`) : il rougit et il
+   la nomme.
+
+### `/a-propos` passe en anglais, et son récit ne bouge pas (8 septembre)
+
+C'est SA page auteur : deux ans de travail perdus, 30 000 € partis en
+fumée, 387 € de pension, 34 ans. **Une traduction qui déplace un de ces
+nombres écrit une autre vie que la sienne, et personne ne le verrait.**
+
+Le test compare donc les nombres des deux langues **après avoir
+normalisé le séparateur de milliers** : `30 000 €` et `€30,000` sont le
+MÊME fait, et ce qui doit rester identique est le nombre, jamais sa
+graphie. Mesuré, les deux langues portent le même jeu.
+
+**LE MODULE PORTE LA STRUCTURE UNE FOIS, chaque langue n'apporte que du
+texte** (`lib/site/aPropos.ts`), et `TRADUCTIONS` est un `Record` des
+langues préfixées : en oublier une ne compile pas. C'est le geste des
+8 pages de fonctionnalités, repris tel quel.
+
+**LA CITATION DE SON EX-ASSOCIÉ EST TRADUITE, ET C'EST UNE DÉCISION
+ÉCRITE.** La règle du 5 septembre interdit de traduire un TÉMOIGNAGE :
+c'est une preuve sociale, les mots de quelqu'un, et les réécrire en
+ferait un faux. Ici c'est du discours RAPPORTÉ à l'intérieur de son
+propre récit, et une lectrice anglophone ne lit pas le français : la
+laisser en français couperait la phrase qui explique tout le reste.
+C'est écrit dans l'en-tête du module pour que Béné puisse dire non.
+
+**La page a DÉMÉNAGÉ dans `app/(site-langues)/`** : c'est le seul groupe
+qui lit l'en-tête posé par le middleware, donc le seul où le chrome et
+les liens peuvent suivre `/en/`. Un groupe de routes n'ajoute aucun
+segment d'URL : `/a-propos` reste `/a-propos`.
+
+**Les liens passent par `hrefPourLangue`, jamais par un `/en/` écrit à
+la main** : `/newsletter`, `/support` et `/` n'ont pas de version
+anglaise, et le préfixe fabriquerait un 404 au bout des boutons de fin
+de page. Le lien des mentions légales garde son `target="_blank"`
+(règle du 24 août) et n'est jamais préfixé.
+
+**ET MON GARDE-FOU EST TOMBÉ SUR SON PROPRE ÉCHAFAUDAGE.** Il
+interdisait la sous-chaîne `"About"` dans la source de la page pour
+prouver qu'aucune phrase n'y est recopiée : il a rougi sur
+**`knowsAbout`**, la propriété schema.org du JSON-LD, c'est à dire sur
+un code parfaitement correct. **Dix-huitième fois qu'un contrôle ne
+distingue pas ce qu'il est censé distinguer.** Il cherche maintenant les
+VRAIES phrases du module (celles de plus de 20 caractères) : une phrase
+entière ne peut apparaître dans la page que si quelqu'un l'y a
+recopiée, alors qu'un mot choisi à la main tombe tôt ou tard sur un
+identifiant.
+
+**Trois tests existants ont rougi sur un code juste**, et pour la même
+cause : ils prenaient `/a-propos` comme fixture "page française
+seulement" (`chrome-en-anglais`, `site-en-anglais`) ou citaient son
+chemin de disque en dur (`branding-site`). Le premier a été sauvé par sa
+propre ligne de prémisse, qui VÉRIFIE que la fixture n'a pas de version
+anglaise : sans elle il serait passé au vert en ne mesurant plus rien.
+Les adresses passent désormais par `cheminPageDuSite`, et la fixture est
+`/integrations`.
+
+Test : `tests/logic/page-auteur.test.mts` (7 cas), vérifié en rejouant
+QUATRE versions fautives (un `alt` anglais remis en français, `€30,000`
+écrit `30 000 EUR`, la page revenue dans `app/(site)/`, une phrase du
+module recopiée dans la page) : les quatre rougissent.
+
+
+### Le hub intégrations passe en anglais, puis ses six pages filles (8 septembre)
+
+Suite du chantier. `/integrations` est servi en `fr` et en `en`, et il a
+déménagé dans `app/(site-langues)/` (c'est le seul groupe qui lit
+l'en-tête posé par le middleware, donc le seul où le chrome et les liens
+peuvent suivre `/en/`). **Un groupe de routes n'ajoute aucun segment
+d'URL** : l'adresse ne bouge pas d'un caractère, et c'est sa contrainte
+du jour ("je ne veux pas changer les URL actuelles").
+
+**MESURÉ après le déplacement, sur le serveur :**
+
+| | `<html lang>` | canonique | h1 | tableau |
+|---|---|---|---|---|
+| `/integrations` | `fr` | `.../integrations` | Connecter un formulaire... | "Zapier ou Make" |
+| `/en/integrations` | `en` | `.../en/integrations` | Connect a form or a quiz... | "Zapier or Make" |
+
+Les deux portent leurs trois `hreflang`, chacune sa canonique, et
+`?ref=jocelyne` pose toujours `tq_ref` sur l'adresse préfixée.
+
+#### CE QUI EST TRADUIT, ET CE QUI NE L'EST PAS
+
+🚨 **CE BLOC DISAIT "les SIX CARTES d'outil non". C'EST PÉRIMÉ depuis le
+8 septembre au soir** : les six pages d'outil sont servies en anglais
+(voir la section suivante), donc les cartes le sont aussi, et
+`outilsLangueDesPages` rend `null`. Je le corrige en place plutôt que
+d'empiler (règle du 31 août).
+
+**Ce qui reste vrai, et qui est la mécanique :** le tableau est de la
+donnée pure, `outilsPourLangue(langue)` garde le nom, le slug et le logo
+et ne change que les trois champs de texte. **Une carte ne se traduit
+QUE quand la page derrière l'est** : sinon son titre promet de l'anglais
+derrière le clic.
+
+**Le français rend `OUTILS` LUI MÊME**, pas une copie : deux tableaux
+pour la même langue finiraient par ne plus dire la même chose. Et
+`TEXTES_OUTILS_EN` est un `Record` typé sur les NOMS des outils, donc en
+oublier un ne compile pas : un outil manquant afficherait du FRANÇAIS
+dans une ligne anglaise, la page s'afficherait parfaitement, et personne
+ne le verrait.
+
+**ET UNE LIGNE LE DISAIT** (`outilsLangueDesPages`), au lieu de laisser
+la surprise au clic. C'est la règle du chrome, appliquée à une carte : un
+libellé resté français est une INFORMATION, pas un oubli. Elle rend
+`null` depuis que les six pages sont traduites, et **la fonction reste**
+: le jour où une septième page d'outil arrive sans son anglais, elle
+reparle toute seule.
+
+**LE GARDE-FOU S'AUTO-CORRIGE, et c'est le point.** Tant qu'aucune page
+fille ne déclare l'anglais, la ligne est OBLIGATOIRE ; le jour où les
+six l'ont, le même test exige qu'elle DISPARAISSE et refuse un état
+intermédiaire ("2 pages filles sur 6 sont traduites : finir, ou retirer
+la langue déclarée"). Un garde-fou qui fige l'état du jour aurait
+empêché de finir le travail.
+
+**Et le sitemap ne déclarait l'anglais QUE sur le hub**, tant que les
+six enfants n'avaient pas leur texte : le poser plus tôt aurait mis
+`/en/integrations/tally-systeme-io` dans le sitemap
+ET dans ses `hreflang`, et Google y aurait trouvé du français sous une
+adresse anglaise, donc jugerait l'anglais sur du contenu dupliqué.
+
+#### CE QUE `git checkout --` M'A COÛTÉ, ET C'EST NOUVEAU
+
+Pour rejouer la version fautive "la page revenue dans `(site)`", j'ai
+fait `rm -rf "app/(site)/integrations"`. **Ce dossier ne portait pas que
+la page : il porte les SIX pages filles.** Le `git checkout --` qui a
+suivi les a bien restaurées... **dans leur version d'AVANT le commit en
+cours**, donc sans le `langue={LANGUE_SANS_PREFIXE}` que ce chantier
+venait de leur poser.
+
+`tsc` l'a dit tout de suite (18 erreurs, `Property 'langue' is missing`),
+donc rien n'est parti. Mais la leçon vaut : **un `git checkout --` sur un
+travail non committé restaure l'état du DÉPÔT, pas l'état de la séance**,
+et un `rm -rf` de répertoire emporte des voisins qu'on n'avait pas en
+tête. Pour rejouer un déplacement de page, on déplace le FICHIER
+(`git mv` ou un `mv` du seul `page.tsx`), jamais son dossier.
+
+Test : `tests/logic/hub-en-anglais.test.mts` (8 cas), vérifié en rejouant
+SIX versions fautives (la ligne d'avertissement retirée alors que les
+pages filles sont en français, `at 0 €` à la française dans l'anglais,
+l'anglais qui rend `OUTILS` tel quel, le français qui rend une copie au
+lieu de `OUTILS` lui même, une phrase du module recopiée dans la page, la
+page revenue dans `(site)`) : les six rougissent.
+
+### Le CHROME parlait français sur les pages anglaises (8 septembre)
+
+Mesuré en servant les pages, une fois le blog anglais et les
+fonctionnalités en ligne :
+
+```
+/en/blog   ->  Fonctionnalités | Tarifs | Blog | L'Atelier du Quiz |
+               Affiliation | À propos | Aide | Se connecter |
+               Créer un compte gratuit
+               pied : Tiquiz / Gagner avec Tiquiz / Intégrations /
+                      Aide / Le cadre
+               « Fait en France, par une créatrice... »
+```
+
+Contenu anglais, chrome français, sur les pages exactes où atterrissent
+les lecteurs qu'on veut récupérer de `tipote.blog`. C'est le reproche du
+client anglophone du 7 septembre ("some parts of the quiz UI were in
+French"), transposé au site public.
+
+**LA RÈGLE, ET C'EST UN COMPROMIS ASSUMÉ : un libellé passe en anglais
+UNIQUEMENT quand la page derrière est vraiment lisible en anglais.**
+Traduire les huit entrées d'un coup promettrait de l'anglais derrière
+chaque clic, alors que `/a-propos`, `/integrations` et `/affiliation`
+n'ont aucune version anglaise. **Un libellé resté français est donc une
+INFORMATION, pas un oubli** : il dit que la page derrière est française.
+
+`libellePourLangue(lien, langue)` (`lib/site/nav.ts`) lit la
+disponibilité aux MÊMES sources que la destination (`PAGES_PUBLIQUES` +
+`languesDePage`, `CHEMINS_HORS_REECRITURE`, `ADRESSES_LEGALES_FR`) :
+une deuxième liste écrite ici annoncerait une langue que le sitemap ne
+déclare pas. **Le sens de l'erreur est sûr** : un `en` oublié laisse un
+libellé français, c'est à dire le comportement d'hier ; un `en` posé sur
+une page qui n'a pas la langue est REFUSÉ par la fonction, donc il ne
+peut pas mentir.
+
+**TROIS CHOSES NE SUIVENT PAS CETTE RÈGLE, et chacune a sa raison :**
+
+| | pourquoi |
+|---|---|
+| le TITRE d'une colonne du pied (`titrePourLangue`) | ce n'est pas un lien, il ne promet aucune destination |
+| `/login`, `/signup`, `/support` (`APP_MULTILANGUE`) | servis par l'APP, qui résout la langue au cookie, à `Accept-Language`, puis au domaine. Leur LIBELLÉ se traduit, leur ADRESSE ne se préfixe JAMAIS : il n'existe aucun `/en/signup`, et le lien ferait un 404 dans le menu |
+| les six adresses légales françaises | même mécanique, le document existe en 5 langues |
+
+**`/support` a été ajouté à cette liste par la MESURE, pas par analogie :**
+il rend son écran par `getTranslations("supportForm")`, et ce namespace
+porte ses 16 clés en français comme en anglais. Il n'a PAS pu être servi
+dans ce conteneur (il importe `supabaseAdmin`, qui LÈVE au chargement
+sans variables d'environnement, donc 500 : c'est le piège du 30 août,
+pas un défaut de cette page), et c'est écrit à côté.
+
+**ET LES LIBELLÉS D'ACCESSIBILITÉ EN FONT PARTIE** (`CHROME_SITE`) : un
+lecteur d'écran anglophone entendait « Navigation principale » et
+« Ouvrir le menu ». **Un texte qu'on n'affiche pas reste un texte que
+quelqu'un lit.** Le `LIEN_CONNEXION` a rejoint la table au passage : il
+était écrit en dur dans `SiteHeader`, donc il échappait à ce qui décide
+des libellés, et il serait resté français seul au milieu d'un menu
+anglais sans que rien ne le dise.
+
+**MESURÉ après correction, sur le serveur :**
+
+```
+/blog                     nav[Navigation principale]  Fonctionnalités | Tarifs | Blog | ...
+/en/blog                  nav[Main navigation]        Features | Pricing | Blog | L'Atelier du Quiz | Affiliation | À propos | Aide
+/en/tarifs                idem, pied : Tiquiz / Earn with Tiquiz / Integrations / Help / The legal bit
+/en/generateur-de-quiz    idem
+/en/fonctionnalites       idem
+```
+
+Les quatre entrées restées françaises sont exactement les quatre pages
+qui n'ont pas de version anglaise. **Le français ne bouge pas d'un
+caractère**, et le test l'exige dans ce sens là.
+
+Test : `tests/logic/chrome-en-anglais.test.mts` (10 cas), vérifié en
+rejouant TROIS versions fautives (un `en` posé sur `/a-propos`, le pied
+revenu à `l.libelle`, une adresse d'`APP_MULTILANGUE` préfixée en
+`/en/signup`) : les trois rougissent.
+
+### 🚨 ET LA MESURE A TROUVÉ DEUX PAGES QUI DÉCLARENT LA MAUVAISE LANGUE
+
+Relevé **EN PRODUCTION**, `<html lang>` de chaque page publique :
+
+| | ce que la page déclare | ce qu'elle contient |
+|---|---|---|
+| `/`, `/tarifs`, `/fonctionnalites`, `/integrations`, `/a-propos`, `/affiliation`, `/newsletter`, `/legal`, `/privacy` | `fr` | français, juste |
+| **`/blog` et TOUTES ses pages** | **`en`** | **français** |
+| **`/support`** | **`en`** sans en-tête de langue, `fr` avec `Accept-Language: fr` | français |
+
+**`lang` est l'attribut que lisent Google, les lecteurs d'écran et les
+outils de traduction pour savoir dans quelle langue une page est
+écrite.** Dix articles français plus leurs rubriques l'annoncent en
+anglais, et depuis ce chantier c'est pire : leur `hreflang` dit `fr` et
+leur `<html lang>` dit `en`, sur la même page. Deux signaux qui se
+contredisent, sur les pages que Béné veut faire ranker.
+
+**LA CAUSE DU BLOG EST ÉTABLIE.** Ces pages sont `force-static`, donc
+prérendues au BUILD : il n'y a aucune requête, donc `langueParDefaut()`
+ne voit pas l'hôte de vente et retombe sur `DEFAULT_LOCALE`, qui vaut
+`"en"`. Le blog ANGLAIS, lui, est juste PAR ACCIDENT : il tombe sur le
+même repli.
+
+**ET LA CORRECTION ÉVIDENTE NE MARCHE PAS, c'est mesuré.**
+`setRequestLocale` de next-intl (4.9.1) posé dans `app/blog/layout.tsx`,
+avec `requestLocale` lu dans `getRequestConfig` : `/blog` répond
+toujours `lang="en"`. **Le `<html lang>` vit dans le layout RACINE, qui
+rend AVANT le layout du blog** : la langue est déjà décidée quand le
+blog la pose. L'expérience a été RETIRÉE, pas laissée en place : une
+branche que rien n'exerce est un piège que le prochain passage
+rebranche en croyant réparer (leçon de `simuler()`, 31 août).
+
+**IL RESTE DONC DEUX CHEMINS, ET C'EST UNE DÉCISION DE BÉNÉ :**
+
+1. **rendre les pages du blog dynamiques** : `langueParDefaut()` voit
+   alors l'hôte et répond `fr`. Ça coûte le prérendu, que les
+   commentaires de ces fichiers défendent explicitement (vitesse, et la
+   lecture des commentaires qui deviendrait une requête par visite). Et
+   **on ne peut PAS compenser par un cache Cloudflare sur ce HTML** :
+   ces pages portent le `Set-Cookie` affilié, et mettre ça en cache
+   partagé est exactement le piège écrit le 7 septembre ;
+2. **donner au blog sa propre racine** (un groupe de routes de premier
+   niveau avec son propre `<html>`). Ça règle la langue proprement et
+   ça duplique tout ce que le layout racine porte, plus un rechargement
+   complet à chaque passage du blog au reste du site.
+
+**Sur `/support`, je ne sais pas.** Les autres pages dynamiques du même
+domaine répondent `fr` sans en-tête de langue, celle là répond `en`, et
+je n'ai pas établi pourquoi. Une cause plausible n'est pas une cause
+(règle du 2 septembre) : c'est mesuré, ce n'est pas expliqué.
+
+### Le flux anglais ne portait AUCUNE image (8 septembre)
+
+Mesuré sur le serveur, une fois le blog anglais servi :
+
+| | `<item>` | `<enclosure>` |
+|---|---|---|
+| `/blog/rss.xml` | 10 | **10** |
+| `/en/blog/rss.xml` | 4 | **0** |
+
+Le flux existe pour les automatisations de PARTAGE (règle du
+1er septembre : Zapier, Make, n8n vers Pinterest), et `<enclosure>` est
+le champ qu'elles lisent quand elles demandent "l'image de cet
+article". Un flux à quatre articles sans une seule image ne peut donc
+rien publier : le premier usage du chantier anglais était mort, et rien
+ne le disait.
+
+La cause est celle qui revient : **une seule épingle par slug, dans un
+seul dossier.** `epinglePour(slug)` cherchait `/blog/pin/<slug>.jpg`,
+donc les quatre slugs anglais ne trouvaient rien, et le bouton
+Pinterest de leurs pages disparaissait avec.
+
+**Règle : la langue est un PARAMÈTRE OBLIGATOIRE d'`epinglePour` et
+d'`attributsEpinglePour`, et chaque langue a SON dossier**
+(`/blog/pin/` et `/blog/pin/en/`), comme les couvertures. Le
+constructeur boucle sur les langues et écrit dans le dossier de
+chacune.
+
+**Un dossier COMMUN marcherait aujourd'hui, et c'est exactement le
+piège** : les quatre slugs anglais diffèrent tous des français
+(`17-reasons...` contre `17-raisons-lancer-quiz-business`). Le jour où
+un article anglais porterait le même slug qu'un français, sa
+construction **ÉCRASERAIT l'épingle de l'autre**, et le flux français
+publierait la couverture anglaise sans qu'une seule erreur ne
+s'écrive. C'est la règle du 1er août appliquée à un chemin de fichier :
+quand une erreur ne coûte rien à commettre et détruit du travail en
+silence, on rend l'erreur impossible.
+
+**LES ONZE ÉPINGLES FRANÇAISES SONT INCHANGÉES À L'OCTET PRÈS**,
+vérifié : `git status public/blog/pin` ne montre que le dossier `en/`
+en nouveau. Quatre épingles anglaises construites, 1000 x 1500, 73 à
+87 Ko, depuis les couvertures de ses articles.
+
+**MESURÉ après correction, sur le serveur :** `/en/blog/rss.xml` porte
+ses 4 `<enclosure>` vers `https://tiquiz.fr/blog/pin/en/*.jpg`, avec
+leur vraie taille en octets ; `/blog/rss.xml` reste à 10 items et 10
+enclosures.
+
+Les deux garde-fous BOUCLENT maintenant sur `LANGUES_PUBLIQUES` au lieu
+de ne regarder que le français (`epingles-pinterest.test.mts`,
+`flux-blog.test.mts`), avec un plancher sur le nombre total : sans lui,
+le jour où une langue perd ses épingles, la boucle passerait au vert sur
+zéro fichier. Un test l'exige aussi dans l'autre sens :
+`epinglePour(slug_anglais, "fr")` doit rendre `null`, sinon deux
+langues se partageraient un dossier sans que rien ne le dise.
+
+### LE `.fr` : ce que dit la documentation de Google, pas ma mémoire
+
+Sa question : "c'est très grave que mon domaine soit en .fr ou pas ?"
+
+**Vérifié à la source** (documentation Google sur les sites
+multirégionaux, pas de mémoire) : un domaine national comme `.fr`
+"provide[s] a strong signal to both users and search engines that your
+site is explicitly intended for a certain country". C'est donc un vrai
+handicap pour un lecteur anglophone hors de France, et **ce signal ne
+s'éteint pas** : il est porté par le nom de domaine.
+
+Ce n'est pas bloquant pour autant : `hreflang` dit à Google qu'une
+version anglaise existe, et une recherche en anglais peut la remonter.
+Ce qu'un `.fr` coûte, c'est la préférence par défaut sur un marché
+anglophone.
+
+**Et l'architecture garde la porte ouverte** : l'hôte est un PARAMÈTRE
+d'`alternatesDeLangue`, et les chemins se calculent dans un seul module.
+Déplacer l'anglais sur un `.com` un jour est un changement d'origine,
+pas une réécriture. La décision est la sienne, et elle n'a pas à être
+prise maintenant.
+
+### Le garde-fou
+
+`tests/logic/site-en-anglais.test.mts` (14 cas), vérifié en rejouant
+TROIS versions fautives (la canonique devinée sur la première langue, la
+réécriture `/en/` sans le cookie affilié, le cookie qui gagne sur
+l'adresse) : les trois rougissent.
+
+Il tient les quatre moitiés ensemble, et c'est le point : un test qui
+n'en tiendrait qu'une passerait au vert sur un site où l'anglais n'est
+pas indexé, ou sur un site où une affiliée n'est plus payée sur les
+pages anglaises.
+
+**Le sitemap de ce container répond 500, et ce n'est PAS ce chantier :**
+`app/sitemap.ts` importe `supabaseAdmin`, qui LÈVE au chargement quand
+les variables d'environnement manquent (le piège du 30 août). Vérifié en
+production le 8 septembre : `tiquiz.fr/sitemap.xml` répond **200 avec 46
+adresses**, dont `/tarifs`. Il gagnera `/en/tarifs` au déploiement.
+
+### Quatre captures de l'article qui recrute les affiliés étaient PÉRIMÉES (8 septembre 2026)
+
+Trouvées en REGARDANT les images une par une, pour leur écrire un texte
+alternatif anglais. Deux d'entre elles vivaient en production **en
+français depuis le 29 août** :
+
+| Le visuel | Ce qu'il montre |
+|---|---|
+| le tableau de bord affilié (fr + en) | la consigne de coller `?sa=...` sur une URL `tipote.fr`. **Depuis le 24 août, ce lien ne paie plus personne.** |
+| le simulateur de commissions (fr + en) | 9 EUR/mois et 90 EUR/an, le tarif d'avant le 6 août, projetant 7 430,40 EUR et $5 702,40 |
+
+Le corps de l'article annonce 17 EUR depuis le 31 août : **la page se
+contredisait elle même**, sur l'écran qui doit convaincre un gros
+affilié. C'est la famille des couvertures du 31 août : **un dessin ne se
+corrige pas en code, aucun remplacement de texte ne l'atteint.**
+
+**Règle : `lib/blog/visuelsPerimes.ts`, et le retrait est RÉVERSIBLE.**
+Chaque entrée porte sa RAISON écrite à côté et l'EMPREINTE du fichier.
+Retirer par le chemin seul masquerait POUR TOUJOURS une image que Béné
+redessine sous le même nom, en silence : le test recalcule l'empreinte
+et rougit dès que le fichier change, ce qui dit "retire son entrée pour
+le republier".
+
+**La comparaison au disque vit dans le TEST, jamais à l'exécution** : le
+module reste PUR (aucun `node:fs`), donc un composant serveur ne paie
+pas une lecture de fichier par image.
+
+**Et le test exige que le compte corresponde** : si plus aucun article ne
+portait ces blocs, c'est que le contenu a bougé et que la liste est à
+relire. Un test qui ne peut plus échouer ment.
+
+#### MON TEST D'ORDRE NE DISTINGUAIT RIEN, ET LE COMMENTAIRE NON PLUS
+
+Le retrait passe avant l'appariement et la déduplication. J'avais écrit
+DEUX raisons en commentaire, et **mesuré, une seule est vraie** :
+
+| Ce que j'affirmais | Ce que la mesure dit |
+|---|---|
+| "sinon un visuel écarté reviendrait dans un `<picture>`" | **pas atteignable** : aucune entrée ne porte de suffixe de variante |
+| "sinon retirer le premier de deux voisins identiques ferait remonter le second" | **faux** : les deux ordres rendent zéro image |
+
+Ce qui distingue vraiment est l'inverse de ce que j'avais écrit :
+`apparierVariantes` fusionne en `{ ...grand, mobile: petit.src }`, donc
+le bloc survivant ne porte plus que le `src` du GRAND. **Un retrait qui
+passerait après emporterait la variante téléphone VIVANTE avec lui**, et
+la page afficherait juste un schéma de moins.
+
+Mon premier test posait deux voisins identiques et écartés : il rendait
+`# pass 4 / # fail 0` sur la version fautive. **Quinzième fois qu'un
+contrôle ne distingue pas ce qu'il est censé distinguer**, et c'est en
+rejouant la version d'avant que ça s'est vu, jamais en le relisant.
+
+Test : `tests/logic/visuels-perimes.test.mts` (4 cas), vérifié en
+rejouant TROIS versions fautives (le filtre retiré, un visuel redessiné,
+le retrait après l'appariement) : les trois rougissent.
+
+## Qui entre par le générateur, et ce qu'il devient (Béné, 8 septembre 2026)
+
+"Dans admin, fais moi apparaitre qui entre par le générateur dans mes
+contacts et dans les stat comment le générateur convertit : visites /
+inscrits gratos / abonnés et le ROI."
+
+### CE QUI MANQUAIT, MESURÉ AVANT D'ÉCRIRE UNE LIGNE
+
+Les QUATRE marches de l'entonnoir étaient déjà toutes lisibles :
+
+| | d'où ça vient |
+|---|---|
+| les visites | `trafic_jour`, chemin `/generateur-de-quiz` |
+| les quiz générés | `embed_quiz_sessions.created_at` + `source` |
+| les inscrits | `claimed_by_user_id` (le quiz a été rattaché) |
+| les abonnés | le `plan` de ces comptes |
+
+**Seul le ROI n'avait AUCUNE entrée** : `/api/embed/quiz/generate`
+faisait `const json = await res.json()` et ne touchait jamais
+`json.usage`. Les jetons repartaient dans le vide à chaque génération,
+donc aucun coût ne pouvait être calculé, même rétroactivement.
+
+🚨 Migration : `supabase/migrations/20260908_generateur_usage.sql`
+(**Supabase de TIQUIZ**). Trois colonnes sur `embed_quiz_sessions`
+(`modele_ia`, `jetons_entree`, `jetons_sortie`) plus un index sur
+`created_at`.
+
+**TROIS COLONNES, PAS CINQ, ET C'EST MESURÉ :** l'appel de l'embed ne
+pose aucun `cache_control`, donc des colonnes de jetons de cache
+seraient une branche que rien n'exerce, c'est à dire le piège de
+`simuler()` (31 août).
+
+**L'usage est capturé AVANT la lecture du JSON.** Une réponse tronquée
+coûte exactement les mêmes jetons qu'une réponse complète : la ranger
+après le `JSON.parse` ferait perdre le coût des générations qui ratent,
+donc précisément celles qu'on veut chiffrer. Et l'écriture est
+best-effort et CRIE : un compteur qui tombe ne doit jamais coûter un
+quiz à un visiteur.
+
+### LE NUMÉRATEUR ET LE DÉNOMINATEUR PARLENT DE LA MÊME PAGE
+
+C'est la règle qui rend ce tableau honnête, et c'est le défaut du
+7 septembre sur l'entonnoir des ventes, à un jour d'écart.
+
+Le générateur est servi à DEUX endroits : sa page dédiée
+(`source: "page-generateur"`) et l'iframe de la page de vente
+(`source: "tiquiz-fr"`). **Personne ne compte les vues de l'iframe.**
+Diviser TOUS les quiz générés par les vues de la seule page dédiée
+gonflerait le taux, et rien ne le dirait.
+
+L'entonnoir ne compte donc que la page dédiée ; ce que l'iframe apporte
+se lit à côté, **en COMPTES, sans aucun pourcentage**. Inventer un
+dénominateur serait pire que se taire.
+
+**Et la pastille sur une fiche client, elle, compte TOUTES les portes**
+(`comptesDuGenerateur`) : quelqu'un arrivé par l'iframe est entré par le
+générateur tout autant. C'est l'entonnoir qui filtre, parce que lui
+DIVISE ; une pastille ne divise rien.
+
+**Le chemin se compare à l'IDENTIQUE, jamais en préfixe** : une future
+`/generateur-de-quiz-pro` serait une autre page, et les additionner
+rendrait le taux faux le jour où elle existe.
+
+### UN MODÈLE INCONNU RÉPOND `null`, JAMAIS UN PRIX APPROCHÉ
+
+`lib/generateur/tarifsIa.ts` porte la table des tarifs Anthropic **avec
+sa date de relevé** (`TARIFS_MAJ`), exactement comme `TAUX_UE` de la TVA
+européenne : un tarif faux ne se voit sur aucun écran, il se voit sur la
+facture.
+
+**La famille Opus est passée de 15 $ / 75 $ à 5 $ / 25 $ par million de
+jetons.** Appliquer le tarif du jour à un modèle plus ancien diviserait
+son coût par trois, en silence. On ne reconnaît donc que ce qui a été
+RELEVÉ, par PRÉFIXE (les identifiants portent une date), et **le préfixe
+le plus LONG gagne** : sinon `claude-opus-5` attraperait
+`claude-opus-5-1` le jour où leurs tarifs différeraient.
+
+**Une génération sans coût calculable est COMPTÉE (`coutInconnu`), pas
+mise à zéro.** Deux cas : la ligne est antérieure au 8 septembre (aucun
+jeton n'était écrit), ou son modèle n'est pas dans la table. Un zéro
+ferait lire le total comme le coût complet, et c'est exactement le
+chiffre qui fait dépenser (règle du 22 août).
+
+### ON CONVERTIT EN EUROS, ET LE TAUX EST DATÉ (corrigé le 8 septembre)
+
+🚨 **Cette section a dit le contraire pendant une demi-journée.** Elle
+écrivait "on ne convertit pas les devises, il n'y a donc aucun ratio de
+ROI", en s'appuyant sur la règle du 1er septembre. **Béné a tranché :**
+"je veux le ROI tu peux faire une conversion même si c'est imprécis à
+quelques euros prêt". Je corrige en place plutôt que d'empiler.
+
+**Mon refus répondait à côté.** La règle du 1er septembre interdit de
+convertir un PRIX AFFICHÉ à un lecteur (le tarif de Zapier sur le blog),
+parce qu'un tarif annoncé faux se vérifie en un clic. Ici c'est un COÛT
+INTERNE, sur son écran à elle, qu'elle doit comparer à un revenu en
+euros : ne pas convertir ne la protégeait de rien, ça lui laissait la
+division à faire de tête.
+
+`TAUX_USD_EUR = 0.86`, relevé le 8 septembre sur `open.er-api.com`
+(1 USD = 0,860364 EUR, horodaté du même jour), avec `TAUX_USD_EUR_MAJ`
+à côté : **la même mécanique que `TARIFS_MAJ` et que `TAUX_UE` de la
+TVA**. L'écran affiche le taux ET sa date, pour que le chiffre se lise
+pour ce qu'il est.
+
+### LE ROI COMPARE UN COÛT PAYÉ UNE FOIS À UN REVENU RÉCURRENT
+
+C'est l'asymétrie qu'il faut DIRE, et l'écran l'écrit : la génération se
+paie **une seule fois**, l'abonnement rentre **chaque mois** tant que la
+personne reste. Le ratio est donc généreux par construction ; le taire
+en ferait un multiple sur une même période, c'est à dire un chiffre
+gonflé affiché comme un fait.
+
+**Le revenu vient du CATALOGUE, et il est PASSÉ, jamais lu dedans.**
+`revenuMensuelParPlan(produits)` prend la liste en paramètre : c'est ce
+qui rend ses trois branches exerçables par un test, au lieu d'une
+branche que rien n'exerce (le piège de `simuler()`, 31 août). Et
+`construireEntonnoirGenerateur` exige `revenus` : le compilateur refuse
+un appelant qui se tait.
+
+Trois décisions dedans, et les trois comptent :
+
+- **une échéance ANNUELLE est LISSÉE sur douze mois**, exactement comme
+  le simulateur d'affiliation (31 août) : c'est la seule façon
+  d'additionner deux récurrences ;
+- **un produit SANS récurrence n'entre pas** : son montant n'est pas un
+  revenu mensuel. Son abonné ressort en `revenuInconnu`, donc AFFICHÉ,
+  jamais compté zéro ;
+- **quand deux produits ouvrent le même plan, le MOINS cher gagne** : on
+  ne surestime jamais un revenu qu'on n'a pas mesuré.
+
+**Le ratio se calcule sur le coût NON ARRONDI** : arrondir au centime
+avant de diviser ferait diviser par zéro dès qu'une période coûte moins
+d'un centime, c'est à dire aujourd'hui.
+
+### "JE N'AI PAS PU LIRE" N'EST PAS "PERSONNE N'ENTRE PAR LÀ"
+
+Trois états, et ils ne se confondent pas : champ absent (le serveur n'a
+pas la version), `lisible: false` (la migration n'est pas passée),
+`lisible: true`. Les deux premiers rendent une PHRASE qui nomme la
+cause, jamais un zéro.
+
+**Et la décision vit dans la fonction PURE**
+(`comptesDuGenerateurSiLisible`), pas dans la route :
+`buildPeople` reçoit `undefined` quand la lecture a raté, jamais un
+ensemble VIDE. Un ensemble vide se lirait "personne n'entre par le
+générateur", et enverrait chercher un trafic manquant au lieu d'une
+panne. Enfermée dans la route, cette moitié n'était pas testable, et
+c'est LITTÉRALEMENT là que mon garde-fou a d'abord menti (voir plus
+bas).
+
+**Le seuil aval est le dixième de celui des vues** (10 contre 100) : un
+quiz généré est bien plus rare qu'une vue, et une inscription plus rare
+encore. Exiger 100 rendrait ces deux taux invisibles pendant des mois.
+Les COMPTES, eux, s'affichent toujours : ils sont exacts dès la première
+ligne.
+
+### DANS SES CONTACTS : une pastille ET un filtre
+
+Sa phrase dit "dans mes contacts", donc les deux : une pastille
+`Générateur` sur la ligne (un mot, lisible sur un téléphone) et une puce
+`Entrés par le générateur N` à côté des filtres produit.
+
+**Ce n'est ni un statut ni un produit, donc c'est un filtre à part** :
+quelqu'un entré par le générateur peut être abonné, gratuit ou parti.
+`FiltreEntree` n'a que deux valeurs et **pas de "non"** : la question est
+"montre moi ceux là", jamais "montre moi les autres".
+
+### MA FAUTE, ET C'EST LA DIX-SEPTIÈME DE LA SEMAINE
+
+Mon contrôle du cas muet cherchait `/venusDuGenerateur:[^,]*lisible/`
+dans la route. **Il est resté VERT sur la version fautive**, celle qui
+fabrique un ensemble vide : le mot `lisible` apparaît dans les deux
+formes, à l'intérieur de l'argument.
+
+**Un contrôle qui ne distingue pas ce qu'il est censé distinguer est
+pire qu'un contrôle absent**, et cette fois c'était le contrôle censé
+protéger la seule moitié du chantier qui peut mentir à Béné. La
+correction n'a pas été de durcir la regex : la décision a DÉMÉNAGÉ dans
+un module pur, donc elle se teste par son COMPORTEMENT et plus par sa
+forme dans un fichier.
+
+### CE QUI N'EST PAS MESURÉ, ET QUI SE DIT
+
+- **aucun coût pour les générations d'AVANT le 8 septembre** : les
+  jetons n'étaient pas écrits, et ils ne peuvent pas être retrouvés.
+  L'écran les compte dans `coutInconnu` ;
+- **le coût affiché est une ESTIMATION** : il vient de la table de
+  tarifs, pas d'une facture Anthropic. Aucun montant réel n'a été
+  relevé sur son compte, et le taux de change est arrondi à deux
+  décimales ;
+- **Tipote n'a PAS de jumeau**, vérifié et pas supposé : aucune
+  migration ni aucun fichier n'y mentionne `embed_quiz_sessions`.
+
+Test : `tests/logic/entonnoir-generateur.test.mts` (24 cas), vérifié en
+rejouant DIX versions fautives (l'entonnoir qui compte toutes les
+sources, un tarif par défaut sur un modèle inconnu, un coût inconnu
+compté pour zéro, le chemin comparé en préfixe, la fonction pure qui
+rend un ensemble vide, la route qui refabrique l'ensemble à la main, un
+produit sans récurrence compté comme mensuel, un annuel non lissé, un
+plan inconnu compté zéro, le taux de change sans sa source) : les dix
+rougissent.
+
+### Les six pages d'outil passent en anglais (8 septembre 2026, le soir)
+
+Suite immédiate. Les six pages filles du hub (`zapier-`, `tally-`,
+`typeform-`, `jotform-`, `google-forms-`, `interact-systeme-io`) sont
+servies en `fr` et en `en`, elles ont déménagé dans
+`app/(site-langues)/`, et le sitemap déclare les deux langues sur
+chacune.
+
+**MESURÉ sur le serveur, les 14 adresses**, avec l'en-tête `Host` du
+domaine de vente (sans lui, le middleware ne voit pas un hôte de vente
+et la mesure ne dit rien de ce que le visiteur reçoit) :
+
+| | `<html lang>` | mots rendus | `hrefLang` |
+|---|---|---|---|
+| les 7 françaises | `fr` | 694 à 971 | fr + en + x-default |
+| les 7 anglaises | `en` | 688 à 949 | fr + en + x-default |
+
+Chacune porte SA canonique, et le français ne bouge pas d'un caractère.
+
+**LE TEXTE VIT DANS `lib/site/outils/<outil>.ts`, UN PAR OUTIL.** Le
+hub porte déjà 350 lignes de son côté ; y ajouter six pages entières
+aurait fait un fichier que personne ne relit. Chaque module suit le
+geste des 8 pages de fonctionnalités : la STRUCTURE une fois (le chemin,
+les captures, leurs dimensions), et `TRADUCTIONS` typé
+`Record<Exclude<LanguePublique, "fr">, T>`, donc **une langue déclarée
+sans son texte ne compile pas**.
+
+**Les phrases dont le milieu porte du code ou du gras passent par
+`<Phrase segments={...} />`** : une chaîne coupée en trois avec du JSX
+au milieu ne se traduit pas, et c'est exactement là qu'un traducteur
+recolle les morceaux dans le mauvais ordre.
+
+**Les liens passent par `hrefPourLangue`, jamais par un `/en/` écrit à
+la main** : leur CTA mène à `/signup`, servi par l'APP, qui n'a aucune
+version préfixée. Un préfixe posé à l'aveugle ferait un 404 au bout du
+seul bouton de la page (la leçon des pages de fonctionnalités, le matin
+même).
+
+**Les deux CITATIONS d'Interact ne bougent PAS** (`CITATIONS_INTERACT`),
+et elles sont en anglais dans les deux langues : c'est la parole d'un
+concurrent, relevée sur sa page d'aide en ligne le 1er septembre. Une
+citation traduite n'est plus une citation.
+
+### 🚨 LE MÊME DÉCOUPEUR DE COMMENTAIRES, RECOPIÉ 20 FOIS, ET L'ORDRE ÉTAIT FAUX PARTOUT
+
+C'est la trouvaille de la séance, et elle est plus grande que ce
+chantier.
+
+Un test est sorti rouge en annonçant **"la page n'appelle plus
+`contenuHub`"** sur une page qui l'appelle deux fois. La cause tient en
+deux lignes :
+
+```
+.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "")   // les blocs, EN PREMIER
+.replace(/^\s*\/\/.*$/gm, "")             // les lignes, ensuite
+```
+
+**Une ligne `//` peut contenir `/*`**, et c'est banal : tout commentaire
+qui cite un chemin en glob en porte un. Le motif de bloc s'ouvre alors
+DANS cette ligne et court jusqu'au premier `*/` du fichier, c'est à dire
+jusqu'à la fin du prochain vrai commentaire de bloc.
+
+**MESURÉ sur la page du hub** : la ligne 35 ouvre, la ligne 172 ferme,
+et **11126 octets tombent à 4168**. Tout ce qui vit entre les deux
+disparaît, `contenuHub(` compris.
+
+**L'ORDRE EST LA SEULE CHOSE QUI COMPTE ICI, ET IL ÉTAIT FAUX PARTOUT :**
+20 fichiers de tests portaient ce découpeur, recopié à la main, et
+**aucun** ne retirait les lignes en premier.
+
+| | |
+|---|---|
+| fichiers du dépôt qui portent le motif qui collisionne | **14** |
+| `QuizDetailClient.tsx` | **15757 octets** avalés |
+| `lib/site/pagesPubliques.ts` | 3157 |
+| `components/embed/EmbedPreviewClient.tsx` | 629 |
+
+**ET LE VRAI DANGER EST L'ASSERTION NÉGATIVE.** Ici le test a rougi,
+donc il a été vu. Un garde-fou qui INTERDIT quelque chose dans une zone
+avalée passe au vert pour toujours, sans que rien ne le dise.
+
+**Prouvé, pas supposé** : un `setSessionToken("")` (qui jetterait le
+quiz d'un visiteur) posé dans la fenêtre avalée d'`EmbedPreviewClient`
+fait rougir `generateur-page.test.mts` avec l'ordre sûr (`# fail 1`) et
+**passe au vert avec l'ordre naïf** (`# fail 0`).
+
+**Règle : `tests/logic/aide/sansCommentaires.mts`, et personne ne
+recopie ce découpage.** Les lignes `//` PUIS les blocs `/* */`, et le
+remplacement est une ESPACE : deux identifiants séparés par un
+commentaire ne doivent pas se coller. Les 20 fichiers ont été remis dans
+le bon ordre ; le partagé est celui qu'on appelle désormais.
+
+C'est la dix-neuvième fois qu'un contrôle ne distingue pas ce qu'il est
+censé distinguer, et la première où la faute vivait dans VINGT tests à
+la fois. **Une règle recopiée finit toujours par en oublier un ; une
+règle recopiée FAUSSE les casse tous en silence.**
+
+### ET `git checkout --` A DÉTRUIT DU TRAVAIL NON COMMITTÉ, DEUX FOIS
+
+Pour rejouer une version fautive, j'ai fait `git checkout --
+tests/logic/`. **Ça restaure l'état du DÉPÔT, pas celui de la séance :**
+le réordonnancement des 20 fichiers ET la réécriture entière de
+`hub-integrations.test.mts` (510 lignes, faite le même après-midi) sont
+parties d'un coup. Même geste, même perte, dix minutes plus tôt, sur
+`generateur-page.test.mts`.
+
+Le fichier a été récupéré **mot pour mot dans le transcript de la
+séance** (`/root/.claude/projects/.../<session>.jsonl`), pas réécrit de
+mémoire : une réécriture de mémoire aurait perdu les raisons écrites à
+côté de chaque garde.
+
+**Règle : on sauvegarde avec `cp`, on restaure avec `cp`.** Un
+`git checkout --` sur un travail non committé, et un `rm -rf` de
+répertoire (qui emporte des voisins qu'on n'avait pas en tête), ne sont
+pas des outils de rejeu.
+
+### DEUX GARDES QUI NE MESURAIENT RIEN, TROUVÉS EN LES REJOUANT
+
+Les deux étaient dans le fichier réécrit, et les deux sont passés au
+vert sur une version fautive :
+
+1. **le contrôle "aucune phrase du module n'est recopiée dans la page"**
+   a été rejoué avec une phrase tapée à la main. `etiquette` vaut
+   `"Intégrations"`, soit 12 caractères, donc SOUS le filtre de 20 que
+   le garde applique. **Une version fautive écrite avec une valeur
+   inventée ne mesure rien** : rejouée avec la vraie première phrase
+   longue du module, elle rougit ;
+2. **le contrôle "la page Interact cite sa source et la rend
+   cliquable"** cherchait `CITATIONS_INTERACT` dans la source. Une page
+   qui garde son `import` et affiche une AUTRE liste passait au vert :
+   **un garde qui cherche un NOM ne distingue pas RENDRE d'IMPORTER.**
+   Il vise maintenant le site de rendu (`CITATIONS_INTERACT.map`,
+   `href={DOC_INTERACT}`).
+
+Test : `tests/logic/hub-en-anglais.test.mts` (8 cas) et
+`tests/logic/hub-integrations.test.mts` (19 cas).
+
+### La newsletter passe en anglais, et c'était la DERNIÈRE (8 septembre 2026, le soir)
+
+Béné : "oui traduis la newsletter."
+
+`/newsletter` était la dernière page interne du site en français seul.
+Elle est servie en `fr` et en `en`, elle a déménagé dans
+`app/(site-langues)/` (le seul groupe qui lit l'en-tête posé par le
+middleware, donc le seul où le chrome et les liens peuvent suivre
+`/en/`), et le sitemap déclare les deux langues.
+
+**MESURÉ sur le serveur, avec l'en-tête `Host` du domaine de vente**
+(sans lui, le middleware ne voit pas un hôte de vente et la mesure ne
+dit rien de ce que le visiteur reçoit) :
+
+| | `/newsletter` | `/en/newsletter` |
+|---|---|---|
+| `<html lang>` | `fr` | `en` |
+| canonique | `.../newsletter` | `.../en/newsletter` |
+| `hreflang` | fr + en + x-default | fr + en + x-default |
+| h1 | "Une pépite le lundi, une action avant vendredi." | "One nugget on Monday, one action before Friday." |
+| mots rendus | 935 | 896 |
+| lien du formulaire | `/politique-de-confidentialite` | `/privacy` |
+
+`GET /en/newsletter?ref=jocelyne` pose toujours `tq_ref`.
+
+#### LE FORMULAIRE NE PORTE PLUS UNE SEULE PHRASE
+
+C'est la moitié du chantier qu'on ne voit pas. `FormulaireNewsletter` est
+le SEUL composant client du site public, et ses cinq raisons d'échec plus
+ses six libellés vivaient EN DUR dedans : un lecteur anglophone aurait lu
+un formulaire français au milieu d'une page anglaise, et il ne l'aurait
+découvert **qu'en se trompant d'adresse email**, c'est à dire au moment
+exact où il a besoin qu'on lui parle.
+
+Tout vit dans `lib/site/newsletter.ts`, avec le reste de la page : deux
+endroits qui portent le texte d'un même écran finissent toujours par ne
+plus dire la même chose.
+
+**Et ce module doit rester PUR.** Un `next/headers` ou une lecture de
+disque importés là casseraient le bundle **avec un `tsc` vert** : c'est
+la leçon du `node:fs` du 6 septembre, où la landing ne s'affichait plus
+du tout et où aucun test logique ne le disait.
+
+**La LANGUE est une prop, jamais devinée.** La page connaît déjà la
+langue de son adresse ; la deviner dans le composant (un cookie,
+`navigator.language`) donnerait un formulaire anglais sous un titre
+français, et l'inverse.
+
+**LES CINQ REFUS NE SONT PAS ADOUCIS EN ANGLAIS** ("Pas de vente", "Pas
+de faux compte à rebours", "Pas de secret ni de méthode magique", "Pas de
+recommandation que je n'ai pas testée", "Pas de remplissage"). C'est son
+interdit numéro un, et une traduction qui arrondit une promesse la
+transforme en argument commercial.
+
+**Le lien légal suit la langue du TEXTE, pas l'adresse :**
+`/politique-de-confidentialite` en français, `/privacy` en anglais.
+J'ai failli "corriger" le premier en le prenant pour un reste de
+Systeme.io ; mesuré avant d'y toucher, `lib/site/adressesLegales.ts` en
+fait une VRAIE redirection construite par `next.config.ts`. Rien n'était
+cassé, et c'est ma correction qui l'aurait été.
+
+#### HUIT LIBELLÉS DE MENU MENTAIENT ENCORE
+
+Trouvés en branchant le sien : `/support` dans le menu et les six pages
+d'outil du pied portaient un libellé français alors que leur page est
+traduite depuis le matin. Ils ont leur `en`, et `libellePourLangue`
+REFUSE un `en` sur une page qui n'a pas la langue : cet ajout ne peut
+donc pas mentir.
+
+Il ne reste en français que les deux liens EXTERNES (l'Atelier, l'espace
+affilié), et c'est la fonction elle même qui l'impose : leur adresse ne
+sert aucun segment de langue.
+
+#### LES 6 DERNIERS ARTICLES SONT TRADUITS À LA MAIN (Béné, 8 septembre)
+
+"Oui traduis les stp." Ces six là n'ont **aucune source anglaise** sur
+`tipote.blog` : `importer-blog-en.mjs` ne pouvait rien, chaque phrase
+est écrite. **15 446 mots**, et les 10 articles français ont désormais
+leur anglais, un pour un.
+
+| l'anglais | traduit de | blocs |
+|---|---|---|
+| `tiquiz-review` | `avis-tiquiz` | 35 |
+| `case-study-jocelyne-adhd-quiz` | `cas-client-jocelyne-tdah` | 52 |
+| `quiz-tools-comparison-systeme-io` | `comparatif-outils-quiz-systeme-io` | 37 |
+| `interactive-video-quiz-popquiz` | `quiz-video-popquiz` | 91 |
+| `viral-quiz-marketing-strategy` | `strategie-quiz-marketing-tiquiz` | 37 |
+| `sell-with-a-quiz` | `vendre-avec-un-quiz` | 28 |
+
+#### CE QUI EST TRADUIT, ET CE QUI NE L'EST PAS
+
+- **les prix se LISENT, ils ne se recopient pas** : €17 et €170 de
+  `faitsProgramme.ts`, $79 de `liensIntegrations.ts`, $29.99 de
+  `ZAPIER_PRO_USD`. Les devises ne se convertissent jamais ;
+- **les CITATIONS de personnes sont traduites**, celles de Jocelyne
+  comme celle de Sébastien : c'est du discours RAPPORTÉ à l'intérieur
+  du récit de Béné, pas une preuve sociale posée telle quelle. C'est
+  le précédent `/a-propos` du 8 septembre, pas la règle des
+  témoignages du 5 septembre ;
+- **`systeme.io/fr?sa=sa0007...` est gardé VERBATIM** : il la paie, et
+  l'interdit ne vise qu'un `?sa=` sur NOS hôtes ;
+- **les blocs image ÉCARTÉS sont retirés de l'anglais**, pas laissés
+  au filtre : `visuelPerime()` les cacherait, mais un bloc qui ne
+  s'affiche jamais est un bloc que le prochain passage croit vivant ;
+- **les couvertures restent FRANÇAISES** sur les six : elles n'ont pas
+  de version anglaise dessinée, et les quatre articles importés, eux,
+  ont la leur. Le mélange se voit.
+
+#### LES `alt` DES SIX VIVENT DANS LE BLOC IMAGE, PAS DANS LA TABLE
+
+Et c'est écrit dans l'en-tête d'`altImagesEn.ts` pour que le prochain
+passage ne "finisse pas le travail". `ALT_IMAGES_EN` existe pour
+réparer ce que l'IMPORT laisse derrière lui ; un article traduit à la
+main n'est jamais ré-importé. Comme `poserAltEn` fait GAGNER la table
+sur ce qu'elle nomme (règle du 1er septembre), une entrée ajoutée là
+ferait vivre la même phrase à deux endroits et rendrait la copie du
+bloc image morte, en silence.
+
+**Le garde-fou qui compte tient les deux cas** : `reparer-blog-en.mjs`
+REFUSE dès qu'une image sort sans texte alternatif, quelle que soit sa
+provenance. Mesuré : la passe est verte avec les 33 images des six.
+
+#### ET LES TROIS `alt` "tiquiz amazon" SONT ENFIN ÉCRITS
+
+Trois images de l'étude de cas de Jocelyne portaient le même texte
+hérité de l'import, qui ne décrit aucune des trois. **Regardées une
+par une**, en français comme en anglais : les détails Amazon du livre
+(9 juin 2026, 112 pages, 2e des ebooks sur la gestion de la colère),
+le tableau de bord Systeme.io (680 nouveaux contacts, 67900 % sur
+31 jours, plat jusqu'au 25 mai), le classement n°1 des titres gratuits
+Kindle. Le remède documenté le 1er septembre marche enfin : la table
+GAGNE sur ce qu'elle nomme.
+
+#### 🚨 L'INTERDIT `Tipote` FIRAIT SUR `quiz.tipote.com`
+
+Mesuré : la seule occurrence du corpus est
+`quiz.tipote.com/p/my-popquiz`, l'adresse PUBLIQUE d'un Popquiz, celle
+que la créatrice partage vraiment, et qui est en plus lisible dans la
+capture d'écran juste à côté. **Un contrôle qui crie pour rien finit
+désactivé.**
+
+Le motif est NARROWÉ (`/(?<![.\w])Tipote(?!\.(?:com|fr|blog))/i`),
+comme le `?sa=` l'a été le 8 septembre au matin, et la raison est
+écrite à côté. Vérifié dans les deux sens : il laisse passer
+`quiz.tipote.com`, `app.tipote.com` et `affiliate.tipote.com`, et il
+FIRE toujours sur "the Tipote ecosystem" et "When Tipote launches".
+
+#### DEUX GARDE-FOUS FIGEAIENT LE COMPTE DU JOUR
+
+`blog-en.test.mts` exigeait `tous.length === 4` et `en.length === 4`,
+c'est à dire le nombre d'articles le jour de l'import. Les deux sont
+sortis ROUGES sur un travail juste. **Un garde-fou qui fige l'état du
+jour empêche de finir le travail**, exactement comme ceux qui figeaient
+un chemin de disque ou une formulation.
+
+Ils mesurent maintenant le FAIT : chaque anglais s'apparie avec un
+français qui EXISTE, et **aucun français n'est réclamé par deux
+anglais** (ça donnerait deux `hreflang` contradictoires sur la même
+page, et Google en choisirait un). Un plancher les garde d'une autre
+panne : un dossier vide les rendrait muets.
+
+**Et la fixture "un article français sans version anglaise" est
+devenue SYNTHÉTIQUE.** Le test la prenait dans le contenu vivant, donc
+il s'est éteint le jour où les dix ont eu leur traduction : c'est la
+leçon de la fixture du chrome, à quelques heures d'écart. Un slug que
+rien ne déclare ne sera jamais traduit.
+
+Vérifié en rejouant deux versions fautives (deux anglais qui réclament
+le même français, une paire annoncée vers une page absente) : les deux
+rougissent.
+
+#### CE QUE LA TRADUCTION A TROUVÉ DANS LE FRANÇAIS, ET QUI RESTE OUVERT
+
+Cinq défauts d'IMPORT, tous côté français, tous invisibles à l'écran
+(le texte manquant ne manque à personne sauf à la lectrice) :
+
+| L'article | Ce qui manque |
+|---|---|
+| `cas-client-jocelyne-tdah` | un H2 "3 leçons à retenir et appliquer" **suivi de RIEN** |
+| `comparatif-outils-quiz-systeme-io` | **quatre tableaux** annoncés et absents |
+| `strategie-quiz-marketing-tiquiz` | **cinq listes** annoncées et absentes, plus **un paragraphe en DOUBLE** |
+| `quiz-video-popquiz` | un H2 **coupé en plein mot** : "qu'avec un outil U" |
+| `strategie-quiz-marketing-tiquiz` | sa FAQ annonce encore **Typeform 50 €, Tally 29 $, et Tiquiz bêta 57 € à vie** |
+
+**On n'invente pas ce qui manque** : les trois leçons, les quatre
+tableaux et les cinq listes sont son contenu, pas le mien. Ils sont
+simplement absents de l'anglais, avec la raison écrite. Les prix
+périmés, eux, ont été RÉÉCRITS en anglais depuis les sources vérifiées
+(le €57 à vie est terminé, le prix de Tally n'est vérifiable nulle
+part dans le dépôt, donc il ne se cite pas).
+
+**Et une affirmation reste invérifiée** dans la FAQ du comparatif :
+"support in French and English". Elle vient du français, elle n'est
+mesurée nulle part.
+
+### 🚨 LA FIXTURE DES DEUX GARDES DE LANGUE EST DÉSORMAIS INVENTÉE
+
+Le test "un `en` posé sur une page SANS version anglaise ne s'affiche
+jamais" pointait vers une VRAIE page française seule. **Il en a usé
+QUATRE** : `/a-propos`, `/integrations`, `/affiliation`, puis
+`/newsletter`, et les quatre ont fini traduites.
+
+Sa ligne de prémisse l'a sauvé à chaque fois (sans elle il serait passé
+au vert en ne mesurant plus rien), mais au 8 septembre au soir **la
+fixture n'avait plus où se poser**. Elle est donc SYNTHÉTIQUE
+(`/cette-page-n-existe-pas-tq`), et c'est ce qui la rend stable : un
+chemin que rien ne déclare ne peut pas être traduit un jour. Le test
+garde ses deux assertions de prémisse, donc il ne peut pas devenir muet.
+
+**La leçon : une fixture prise dans le contenu vivant se périme quand le
+contenu avance.** Quand ce qu'un test mesure est un COMPORTEMENT (ici :
+la fonction refuse un `en` que rien ne sert), la fixture doit être
+inventée, pas empruntée.
+
+#### ET UN GARDE-FOU A ROUGI SUR DU CODE JUSTE, POUR LA NEUVIÈME FOIS
+
+`newsletter.test.mts` lisait la SOURCE de `FormulaireNewsletter.tsx` pour
+y trouver les cinq clés de raison. Le jour où les phrases ont déménagé
+dans le module, il est sorti rouge sur une correction parfaitement bonne.
+
+**Un garde-fou qui fige un EMPLACEMENT empêche de déplacer le texte.**
+Il mesure maintenant le COMPORTEMENT, dans LES DEUX LANGUES : chaque
+raison rend une phrase non vide, aucune ne recopie une autre, aucune ne
+laisse un `{contact}` à trou, et une raison inconnue retombe sur
+`indisponible`. Vérifié en rejouant deux versions fautives (une phrase
+dupliquée, la substitution de `{contact}` retirée) : les deux rougissent.
+
+Fichier SUPPRIMÉ : `app/(site)/newsletter/page.tsx`.

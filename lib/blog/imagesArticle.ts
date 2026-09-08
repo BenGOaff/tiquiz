@@ -38,6 +38,7 @@
 // toujours par diverger de ce que fait l'autre écran.
 
 import type { Bloc, BlocImage } from "./articles";
+import { visuelPerime } from "./visuelsPerimes";
 
 /** Les suffixes que porte une variante téléphone, dans le corpus importé. */
 const SUFFIXES_MOBILE = ["-mobile-preview", "-mobile"];
@@ -106,7 +107,35 @@ export function retirerDoublonsVoisins(blocs: readonly Bloc[]): Bloc[] {
   return out;
 }
 
-/** Les deux passes, dans l'ordre : on déduplique AVANT d'apparier. */
+/**
+ * Les visuels ECARTES tombent AVANT l'appariement.
+ *
+ * CE QUE LA MESURE DIT, ET RIEN DE PLUS. `apparierVariantes` fusionne
+ * deux voisins en `{ ...grand, mobile: petit.src }` : le bloc qui
+ * survit ne porte plus que le `src` du GRAND. Un retrait qui passerait
+ * apres emporterait donc, avec un grand ecarte, la variante telephone
+ * VIVANTE qu'il vient d'absorber. C'est ce que
+ * `tests/logic/visuels-perimes.test.mts` rejoue.
+ *
+ * DEUX CHOSES QUE CET ORDRE NE FAIT PAS, et il faut le dire dans ce
+ * sens la plutot que de laisser croire :
+ *
+ *   - la deduplication ne change rien a l'affaire : deux voisins
+ *     identiques et ecartes disparaissent dans les deux ordres
+ *     (mesure, en rejouant les deux) ;
+ *   - le cas inverse (un visuel ecarte servant de variante MOBILE a un
+ *     visuel vivant) n'est pas atteignable aujourd'hui : aucune entree
+ *     de `VISUELS_PERIMES` ne porte un suffixe de variante. Le jour ou
+ *     il y en aura une, cet ordre la couvre aussi.
+ *
+ * La liste et la raison de chaque retrait vivent dans
+ * `lib/blog/visuelsPerimes.ts`.
+ */
+function retirerVisuelsPerimes(blocs: readonly Bloc[]): Bloc[] {
+  return blocs.filter((b) => !(b.type === "image" && visuelPerime((b as BlocImage).src)));
+}
+
+/** Les trois passes, dans l'ordre : on écarte, on déduplique, on apparie. */
 export function normaliserImages(blocs: readonly Bloc[]): Bloc[] {
-  return apparierVariantes(retirerDoublonsVoisins(blocs));
+  return apparierVariantes(retirerDoublonsVoisins(retirerVisuelsPerimes(blocs)));
 }

@@ -1687,7 +1687,8 @@
       "scores": "Punteggi",
       "tag": "Tag Systeme.io",
       "question": "D"
-    }
+    },
+    "embedBackToGenerator": "Torna al generatore"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nuova password",

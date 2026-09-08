@@ -25,10 +25,11 @@ import { resolvePublicUrl } from "@/lib/authLinks";
 import { hoteCanonique } from "@/lib/publicHost";
 import { SALES_HOSTS } from "@/lib/sales/salesHosts";
 import { listerArticles } from "@/lib/blog/articles";
+import { LANGUE_SANS_PREFIXE } from "@/lib/site/langues";
 import { PAGES_PUBLIQUES } from "@/lib/site/pagesPubliques";
 import { OWNER_CATALOG, OWNER_PRODUCT_ORDER } from "@/lib/checkout/catalog";
 import { ORIGINE_BLOG } from "@/lib/blog/seo";
-import { CHEMIN_FLUX } from "@/lib/blog/flux";
+import { cheminFlux } from "@/lib/blog/flux";
 import { echapperMotifLike } from "@/lib/db/motifLike";
 
 const CUSTOM_HOST_HEADER = "x-tiquiz-custom-host";
@@ -233,7 +234,7 @@ function construireLlmsTxtVente(): string {
   }
   lignes.push("");
 
-  const articles = listerArticles();
+  const articles = listerArticles(LANGUE_SANS_PREFIXE);
   if (articles.length > 0) {
     lignes.push("## Articles");
     lignes.push("");
@@ -247,7 +248,7 @@ function construireLlmsTxtVente(): string {
     // mois plus tard ne saura pas ce qui a été publié depuis. Le flux, lui,
     // dit toujours l'état du jour. Une ligne, et la page cesse de se périmer
     // en silence.
-    lignes.push(`Flux RSS (toujours à jour) : ${ORIGINE_BLOG}${CHEMIN_FLUX}`);
+    lignes.push(`Flux RSS (toujours à jour) : ${ORIGINE_BLOG}${cheminFlux(LANGUE_SANS_PREFIXE)}`);
     lignes.push("");
   }
 

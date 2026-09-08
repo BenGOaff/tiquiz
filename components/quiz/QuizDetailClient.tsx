@@ -292,8 +292,24 @@ type ProfileBrand = {
  *    "Publier" devient celui qui rend la main.
  */
 type QuizDetailClientProps =
-  | { quizId: string; embedSessionToken?: undefined; embedContexte?: undefined }
-  | { quizId: string; embedSessionToken: string; embedContexte: ContexteGenerateur };
+  | { quizId: string; embedSessionToken?: undefined; embedContexte?: undefined; onEmbedRetour?: undefined }
+  /**
+   * `onEmbedRetour` : le générateur reprend la main.
+   *
+   * Béné, 8 septembre : "il faut mettre le véritable éditeur en pleine
+   * page, en mettant un bouton pour revenir sur le générateur." Le
+   * retour vit DANS la barre du haut, à la place exacte où une
+   * créatrice connectée trouve sa flèche vers Mes projets : c'est le
+   * "on doit coller au mieux à l'intérieur de tiquiz". L'éditeur ne
+   * sait pas ce qu'il y a derrière lui, donc c'est le générateur qui
+   * dit quoi faire.
+   */
+  | {
+      quizId: string;
+      embedSessionToken: string;
+      embedContexte: ContexteGenerateur;
+      onEmbedRetour?: () => void;
+    };
 
 // Wrap a /api/quiz/* URL with the embed token when it's set so the
 // route handler picks the anonymous-quiz auth path.
@@ -627,7 +643,7 @@ function SortableSidebarResult({ id, index, label, onClick, onRemove, canDelete,
 }
 
 // Main component
-export default function QuizDetailClient({ quizId, embedSessionToken, embedContexte }: QuizDetailClientProps) {
+export default function QuizDetailClient({ quizId, embedSessionToken, embedContexte, onEmbedRetour }: QuizDetailClientProps) {
   // Single source of truth for "is this an anonymous embed render?".
   // Used to short-circuit profile fetches, hide SIO surfaces, and
   // repurpose the publish CTA into the paywall trigger.
@@ -3344,6 +3360,23 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
               aria-label={t("backToProjects")}
               onClick={() => router.push(projectBackHref("quizEditor"))}
             ><ArrowLeft className="w-5 h-5" /></Button>
+          )}
+          {/* Le générateur public reprend la main. Même place, même
+              geste que la flèche d'une créatrice connectée : c'est le
+              "on doit coller au mieux à l'intérieur de tiquiz" du
+              8 septembre. Le libellé est ÉCRIT à côté de la flèche :
+              une flèche seule, sur une page de vente, ne dit pas où
+              elle ramène. */}
+          {isEmbed && onEmbedRetour && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 px-2"
+              onClick={onEmbedRetour}
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline text-sm">{t("embedBackToGenerator")}</span>
+            </Button>
           )}
           {/* The title is stored as rich HTML (RichTextEdit on the
               preview canvas drives it). Plain-text rendering here

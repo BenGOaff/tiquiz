@@ -1,223 +1,27 @@
 // app/blog/page.tsx
 //
-// L'ACCUEIL DU BLOG.
+// L'ACCUEIL DU BLOG, DANS LA LANGUE SANS PREFIXE.
 //
-// La structure vient de Typeform, que Béné a montrée le 30 août : un
-// article MIS EN AVANT à gauche, la liste des derniers à droite, puis
-// une grille de cartes sous des pastilles de rubrique. Ce qui rend
-// cette mise en page utile, c'est qu'elle donne trois entrées
-// différentes au même contenu : celui qu'on veut faire lire, ce qui
-// vient de sortir, et ce qu'on cherche par sujet.
+// Cette route ne porte QUE ce qui lui est propre : sa langue. Le corps
+// (`components/site/SommaireBlog`) et les metadonnees
+// (`lib/blog/metaSommaire`) sont partages avec `/en/blog`.
+//
+// L'anglais a son PROPRE segment, et ce n'est pas un choix de confort :
+// la page est `force-static`, donc prerendue au BUILD, donc sans requete
+// et sans en-tete de langue a lire. Voir `CHEMINS_HORS_REECRITURE` dans
+// `lib/site/langues.ts`.
 
-import Link from "next/link";
 import type { Metadata } from "next";
 
-import { listerArticles } from "@/lib/blog/articles";
-import { ORIGINE_BLOG, jsonLdListe } from "@/lib/blog/seo";
-import { rubriqueDe } from "@/lib/blog/rubriques";
-import CarteArticle, { jourLisible } from "@/components/site/CarteArticle";
-import PastillesRubriques from "@/components/site/PastillesRubriques";
-import { attributsEpingle } from "@/lib/blog/partage";
-import { CHEMIN_FLUX } from "@/lib/blog/flux";
+import { metadonneesSommaire } from "@/lib/blog/metaSommaire";
+import { LANGUE_SANS_PREFIXE } from "@/lib/site/langues";
+import SommaireBlog from "@/components/site/SommaireBlog";
 
 export const dynamic = "force-static";
 export const revalidate = 3600;
 
-const TITRE = "Le blog Tiquiz : quiz, leads et Systeme.io";
-const DESCRIPTION =
-  "Comment un quiz capte des leads qualifiés, les tague par profil et les transforme en clients. Méthodes, cas concrets et outils, sans jargon.";
-
-// L'IMAGE DE LA PAGE EST CELLE DE L'ARTICLE EN UNE.
-//
-// Béné, 1er septembre 2026 : "le format des images ne me permet pas de
-// les partager sur pinterest (liste des articles, hub ...)".
-//
-// Mesuré sur la production avant de corriger : `/blog` ne déclarait
-// AUCUNE `og:image`. Ce n'était donc pas un problème de format, c'était
-// qu'il n'y avait rien à prendre : Pinterest, LinkedIn et Facebook
-// partageaient le sommaire du blog sans le moindre visuel.
-//
-// On ne DESSINE pas une image pour ça : on prend celle que la page
-// montre déjà en haut, la couverture de l'article en une. Elle est
-// vraie, elle change avec le blog, et personne n'a à la maintenir.
-const COUVERTURE_UNE = listerArticles()[0]?.couverture ?? null;
-
-export const metadata: Metadata = {
-  title: TITRE,
-  description: DESCRIPTION,
-  alternates: {
-    canonical: `${ORIGINE_BLOG}/blog`,
-    // LA BALISE DE DÉCOUVERTE DU FLUX.
-    //
-    // C'est par elle qu'un lecteur de flux, un navigateur ou une
-    // automatisation trouvent l'adresse sans qu'on ait à la leur donner.
-    // Un flux qui n'est annoncé nulle part n'existe que pour qui connaît
-    // déjà son adresse.
-    types: { "application/rss+xml": `${ORIGINE_BLOG}${CHEMIN_FLUX}` },
-  },
-  openGraph: {
-    type: "website",
-    title: TITRE,
-    description: DESCRIPTION,
-    url: `${ORIGINE_BLOG}/blog`,
-    siteName: "Tiquiz",
-    locale: "fr_FR",
-    ...(COUVERTURE_UNE
-      ? { images: [{ url: `${ORIGINE_BLOG}${COUVERTURE_UNE}`, width: 1200, height: 675 }] }
-      : {}),
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: TITRE,
-    description: DESCRIPTION,
-    ...(COUVERTURE_UNE ? { images: [`${ORIGINE_BLOG}${COUVERTURE_UNE}`] } : {}),
-  },
-};
+export const metadata: Metadata = metadonneesSommaire(LANGUE_SANS_PREFIXE);
 
 export default function BlogIndex() {
-  const articles = listerArticles();
-  const [une, ...reste] = articles;
-  const derniers = reste.slice(0, 4);
-  // LA GRILLE PORTE TOUT LE BLOG, PLUS SEULEMENT SIX ARTICLES.
-  //
-  // 1er septembre 2026 : `reste.slice(0, 6)` plafonnait l'accueil à sept
-  // articles (celui en une, plus six), alors que le sitemap en annonçait
-  // onze. Les quatre plus anciens n'étaient donc atteignables que par
-  // leur rubrique : Google les connaissait, un lecteur arrivé sur /blog
-  // ne pouvait pas les trouver, et aucun lien interne ne leur passait de
-  // poids depuis la page la plus visitée du blog.
-  //
-  // Pas de pagination : elle enfermerait à nouveau les anciens articles
-  // derrière un clic. Le jour où la grille devient trop longue, ce sera
-  // un vrai découpage par rubrique, pas un « page 2 ».
-  const grille = reste;
-  const rubriqueUne = une ? rubriqueDe(une.slug) : null;
-
-  return (
-    <main>
-      {/* LE JSON-LD DIT À GOOGLE CE QU'EST CETTE PAGE. Sans lui, une
-          liste d'articles n'est qu'une page de liens de plus. */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdListe(articles)) }}
-      />
-
-      <section className="tq-large pt-16 sm:pt-24">
-        <p className="tq-etiquette">Le blog</p>
-        <h1 className="mt-3 max-w-[16ch] text-[2.6rem] sm:text-[3.4rem]">
-          Des quiz qui <span className="tq-surb">rapportent</span>
-        </h1>
-        <p className="tq-doux mt-5 max-w-[62ch] text-[1.05rem] leading-relaxed">{DESCRIPTION}</p>
-      </section>
-
-      {articles.length === 0 ? (
-        <p className="tq-doux tq-large py-20">
-          Aucun article pour le moment.
-        </p>
-      ) : (
-        <>
-          {/* LE CHAPEAU À DEUX COLONNES. */}
-          <section className="tq-large mt-14 grid gap-14 lg:grid-cols-[1.55fr_1fr]">
-            <article className="tq-carte group">
-              <Link href={`/blog/${une.slug}`} className="block">
-                {une.couverture ? (
-                  <div className="tq-carte-media">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={une.couverture}
-                      alt=""
-                      width={1200}
-                      height={675}
-                      fetchPriority="high"
-                      {...attributsEpingle(une)}
-                    />
-                  </div>
-                ) : null}
-                <div className="mt-5">
-                  {rubriqueUne ? <p className="tq-etiquette">{rubriqueUne.libelle}</p> : null}
-                  <h2 className="mt-2 text-[1.75rem] leading-tight sm:text-[2.05rem]">
-                    {une.titre}
-                  </h2>
-                  <p className="tq-doux mt-3 max-w-[62ch] leading-relaxed">{une.description}</p>
-                  <p className="tq-doux mt-4 text-xs">
-                    Béné{" | "}
-                    <time dateTime={une.publieLe}>{jourLisible(une.publieLe)}</time>
-                  </p>
-                </div>
-              </Link>
-            </article>
-
-            <aside>
-              <h2 className="text-xl">Les derniers</h2>
-              <ul className="mt-5">
-                {derniers.map((a) => (
-                  <li key={a.slug} className="border-t border-[var(--tq-bord)] py-4 first:border-t-0 first:pt-0">
-                    <Link href={`/blog/${a.slug}`} className="group block">
-                      <h3 className="text-[0.98rem] font-semibold leading-snug transition-colors group-hover:text-[var(--tq-bleu)]">
-                        {a.titre}
-                      </h3>
-                      <p className="tq-doux mt-1.5 text-xs">
-                        Béné{" | "}
-                        <time dateTime={a.publieLe}>{jourLisible(a.publieLe)}</time>
-                      </p>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </aside>
-          </section>
-
-          {/* LA GRILLE, SOUS SES PASTILLES. */}
-          <section className="mt-24 bg-[var(--tq-panneau)] py-16">
-            <div className="tq-large">
-              <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-                <h2 className="text-[2rem]">Choisis un sujet</h2>
-                <PastillesRubriques />
-              </div>
-              <div className="mt-10 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
-                {grille.map((a, i) => (
-                  <CarteArticle key={a.slug} article={a} priorite={i < 3} />
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* CE QUE LE LECTEUR FAIT ENSUITE. */}
-          <section className="tq-large py-24">
-            {/* PAS D'APLAT SOUS DU TEXTE (Béné, 31 août 2026). Même
-                gabarit que la fin d'article : du blanc, un filet
-                HORIZONTAL, le texte à l'encre du site. */}
-            <div className="rounded-3xl border border-[var(--tq-bord)] bg-white px-8 py-12 text-center sm:px-14 sm:py-14">
-              <span
-                aria-hidden="true"
-                className="mx-auto block h-[3px] w-12 rounded-full bg-[var(--tq-bleu)]"
-              />
-              <h2 className="mx-auto mt-6 max-w-[20ch] text-[1.9rem] sm:text-[2.4rem]">
-                Ton premier quiz tourne <span className="tq-surb">ce soir</span>
-              </h2>
-              {/* Sur un telephone ce paragraphe rend QUATRE lignes (mesure du
-                  7 septembre a 390 px), donc il s aligne a gauche : sa regle
-                  dit "plus de deux lignes, texte a gauche". Sur grand ecran
-                  il tient en deux lignes et la carte reste centree. */}
-              <p className="tq-doux mx-auto mt-5 max-w-[52ch] leading-relaxed max-sm:text-left">
-                Tiquiz écrit le quiz, pose les tags par profil et te rend des leads déjà triés dans
-                Systeme.io. Sans Zapier, sans Make.
-              </p>
-              <div className="mt-8 flex flex-wrap justify-center gap-3">
-                <Link href="/signup" className="tq-bouton tq-bouton-plein">
-                  Créer mon quiz gratuitement
-                </Link>
-                <Link href="/" className="tq-bouton tq-bouton-fantome">
-                  Voir ce que fait Tiquiz
-                </Link>
-              </div>
-              <p className="tq-doux mt-5 text-xs">
-                Plan gratuit, sans carte bancaire et sans limite de durée.
-              </p>
-            </div>
-          </section>
-        </>
-      )}
-    </main>
-  );
+  return <SommaireBlog langue={LANGUE_SANS_PREFIXE} />;
 }

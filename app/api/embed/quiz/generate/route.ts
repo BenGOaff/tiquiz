@@ -18,7 +18,8 @@ import { sanitizeAiQuizPayload } from "@/lib/aiTextSanitizer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { corsHeaders, preflight } from "@/lib/embed/cors";
 import { checkRateLimit, clientIp, hashIp } from "@/lib/embed/rateLimit";
-import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { FENETRE_HEURES, LIMITE_PAR_EMAIL, LIMITE_PAR_IP } from "@/lib/embed/limites";
+import { modeleGenerationQuiz } from "@/lib/quiz/modeleGeneration";
 import { fetchAnthropic } from "@/lib/aiRetry";
 import { cleAnthropic } from "@/lib/ai/cleAnthropic";
 
@@ -36,11 +37,13 @@ const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
 
 function getClaudeModel(): string {
-  // The embed runs on the public marketing surface so we default to
-  // a fast/cheap model; the env var lets us promote to Sonnet if the
-  // qualitative bar drifts. Safety net via lib pour rattraper les
-  // IDs Haiku legacy au cas où.
-  return resolveAnthropicModel(process.env.ANTHROPIC_EMBED_MODEL, "haiku");
+  // LE MÊME DÉFAUT QUE L'ÉDITEUR DERRIÈRE CONNEXION, et c'est ce qui
+  // répare "JSON IA invalide" et "le résultat est pas ouf" : cette route
+  // tournait sur haiku pendant que /api/quiz/generate tournait sur opus,
+  // avec le même prompt et le même schéma JSON strict.
+  // `ANTHROPIC_EMBED_MODEL` reste la surcharge, pour redescendre d'un
+  // cran si la facture du gratuit monte, sans toucher aux clientes.
+  return modeleGenerationQuiz("public");
 }
 
 function isValidEmail(s: string): boolean {
@@ -88,16 +91,33 @@ export async function POST(req: NextRequest) {
   const topic = String(body.topic ?? "").trim();
   const audience = String(body.audience ?? "").trim();
   const objective = String(body.objective ?? "").trim();
+  // "Pourquoi tu crées ce quiz ?" : l'INTENTION BUSINESS du prompt.
+  // Avant, c'est le SUJET qui était poussé dans ce champ, donc le
+  // modèle lisait "INTENTION BUSINESS : la productivité pour
+  // entrepreneurs débordés" et devait faire servir chaque CTA à ça.
+  // Les deux sont maintenant à leur place, et le sujet a la sienne.
+  const intention = String(body.intention ?? "").trim().slice(0, 400);
   const locale = String(body.locale ?? "fr").trim();
   const source = String(body.source ?? "").trim().slice(0, 200) || null;
 
   // Generator knobs the embed now exposes in step-1 (matches the
   // authenticated /quiz/new form so the quiz the visitor sees is
   // representative of what they get post-checkout).
-  const questionCount = Math.min(10, Math.max(3, Number(body.questionCount) || 5));
   const resultCount = Math.min(5, Math.max(2, Number(body.resultCount) || 3));
   const format = body.format === "long" ? "long" : "short";
-  const segmentation = body.segmentation === "level" ? "level" : "profile";
+  // LE NOMBRE DE QUESTIONS SE DÉDUIT DU FORMAT, exactement comme dans
+  // `QuizFormClient` (court -> 4, long -> 8). Deux réglages pour une
+  // seule décision, c'est un des deux qui finit par mentir : le format
+  // porte le choix éditorial ("conversions rapides" contre "plus de
+  // valeur"), un compteur nu ne dit rien.
+  const questionCount = format === "long" ? 8 : 4;
+  // Le TYPE décide de la mécanique d'attribution du résultat, et il
+  // n'est jamais deviné (règle du 1er août). `segmentation` reste lue
+  // pour un appelant qui ne connaîtrait pas encore `quizType`.
+  const quizType = body.quizType === "scoring" || body.segmentation === "level"
+    ? "scoring"
+    : "profile";
+  const segmentation = quizType === "scoring" ? "level" : "profile";
   const askFirstName = Boolean(body.askFirstName);
   const askGender = Boolean(body.askGender);
   const ALLOWED_TONES = new Set(["inspirant", "fun", "professionnel", "coach", "expert", "bienveillant"]);
@@ -121,9 +141,13 @@ export async function POST(req: NextRequest) {
     return Response.json(
       {
         ok: false,
+        // La fenêtre est LUE, jamais recopiée : elle est passée de 1 h à
+        // 24 h le 8 septembre, et ces deux phrases annonçaient encore
+        // une heure. Un message qui dit un délai plus court que le vrai
+        // fait revenir quelqu'un pour rien.
         error: rate.reason === "email"
-          ? "Tu as déjà généré plusieurs quiz récemment. Reviens dans 1h ou commande Tiquiz pour des générations illimitées."
-          : "Trop de requêtes depuis ton réseau. Réessaie dans 1h.",
+          ? `Tu as déjà généré ${LIMITE_PAR_EMAIL} quiz avec cette adresse. Reviens dans ${FENETRE_HEURES} h, ou crée ton compte Tiquiz pour des quiz illimités.`
+          : `Tu as déjà généré ${LIMITE_PAR_IP} quiz depuis ce réseau. Reviens dans ${FENETRE_HEURES} h, ou crée ton compte Tiquiz pour des quiz illimités.`,
       },
       { status: 429, headers: { ...headers, "Retry-After": String(rate.retryAfterSec) } },
     );
@@ -136,7 +160,7 @@ export async function POST(req: NextRequest) {
     .from("embed_quiz_sessions")
     .insert({
       email,
-      inputs: { topic, audience, objective, locale },
+      inputs: { topic, audience, objective, intention, locale, format, quizType, resultCount, tone },
       source,
       ip_hash: ipHash,
     })
@@ -165,7 +189,9 @@ export async function POST(req: NextRequest) {
   const prompts = buildQuizGenerationPrompt({
     objective,
     target: audience,
-    intention: topic,
+    sujet: topic,
+    intention,
+    quizType,
     tone,
     questionCount,
     resultCount,
@@ -233,6 +259,26 @@ export async function POST(req: NextRequest) {
         }
 
         const json = await res.json() as Record<string, unknown>;
+
+        // CE QUE CETTE GÉNÉRATION A COÛTÉ, ÉCRIT AVANT TOUT LE RESTE.
+        //
+        // Béné, 8 septembre : "comment le générateur convertit : visites
+        // / inscrits gratos / abonnés et le ROI". Les quatre marches se
+        // lisaient déjà ; le ROI n'avait AUCUNE entrée, parce que
+        // `json.usage` était jeté ici même.
+        //
+        // C'EST ÉCRIT AVANT LA LECTURE DU JSON, ET C'EST VOULU : une
+        // réponse vide, tronquée ou illisible a coûté exactement les
+        // mêmes jetons qu'une réponse réussie. Ne compter que les
+        // succès ferait croire le générateur moins cher qu'il n'est,
+        // c'est à dire le chiffre qui fait dépenser (règle du 22 août).
+        //
+        // Et ça ne bloque RIEN : si la migration du 8 septembre n'est
+        // pas encore passée, PostgREST refuse l'update, on crie dans le
+        // journal, et le visiteur repart avec son quiz. On perd la
+        // mesure, jamais le livrable.
+        await enregistrerUsage(sessionToken, json);
+
         const parts = Array.isArray(json?.content) ? json.content : [];
         const raw = (parts as Record<string, unknown>[])
           .map((p) => (p?.type === "text" ? String(p?.text ?? "") : ""))
@@ -424,4 +470,38 @@ export async function POST(req: NextRequest) {
       "X-Accel-Buffering": "no",
     },
   });
+}
+
+/**
+ * Range `usage` de la réponse Anthropic sur la session.
+ *
+ * ON STOCKE DES FAITS (le modèle, les jetons), JAMAIS UN MONTANT. Le
+ * prix vit dans `lib/generateur/tarifsIa.ts` avec sa date de relevé :
+ * figer un montant dans la base rendrait l'historique impossible à
+ * corriger le jour où la table de tarifs est fausse.
+ *
+ * Ne lève jamais, ne rend rien : le seul appelant est un flux SSE en
+ * train de livrer un quiz.
+ */
+async function enregistrerUsage(sessionToken: string, json: Record<string, unknown>): Promise<void> {
+  const usage = (json?.usage ?? null) as Record<string, unknown> | null;
+  if (!usage) return;
+  const entier = (v: unknown): number | null => {
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 ? Math.round(n) : null;
+  };
+  const modele = typeof json?.model === "string" ? json.model.slice(0, 120) : null;
+  const { error } = await supabaseAdmin
+    .from("embed_quiz_sessions")
+    .update({
+      modele_ia: modele,
+      jetons_entree: entier(usage.input_tokens),
+      jetons_sortie: entier(usage.output_tokens),
+    })
+    .eq("id", sessionToken);
+  if (error) {
+    console.error(
+      `[embed/generate] usage non enregistre (migration 20260908_generateur_usage passee ?) : ${error.message}`,
+    );
+  }
 }

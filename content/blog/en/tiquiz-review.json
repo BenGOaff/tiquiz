@@ -1,0 +1,227 @@
+{
+  "slug": "tiquiz-review",
+  "langue": "en",
+  "traductionDe": "avis-tiquiz",
+  "titre": "Tiquiz review: a Systeme.io expert's verdict",
+  "description": "Does Tiquiz deliver on Systeme.io? A Systeme.io expert puts it through its paces on video, plus real customer results and the honest limits. Quizzes, leads and tags without Zapier.",
+  "motsCles": [
+    "tiquiz",
+    "tiquiz review",
+    "tiquiz reviews",
+    "tiquiz systeme io",
+    "quiz systeme io",
+    "create a quiz on systeme io",
+    "quiz tool for systeme io",
+    "quiz lead magnet",
+    "collect leads systeme io",
+    "quiz without zapier",
+    "survey systeme io",
+    "video pop quiz",
+    "segment your contacts systeme io",
+    "systeme io tags",
+    "generate leads"
+  ],
+  "publieLe": "2026-07-21",
+  "couverture": "/blog/img/avis-tiquiz.webp",
+  "blocs": [
+    {
+      "type": "html",
+      "html": "<p><strong><em>TL;DR</em></strong></p><p><strong>Tiquiz</strong> builds <strong>quizzes</strong>, <strong>surveys</strong> and <strong>video pop quizzes</strong> that plug straight into <strong>Systeme.io</strong>.</p><p>Your <strong>leads</strong> land there already tagged, <strong>without Zapier or Make</strong>.</p><p>The <strong>free plan</strong> (no card, no time limit) is enough to try everything, and a first quiz goes live in under an hour.</p><p>Where it falls short: visual customisation and conditional logic are still basic.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Tiquiz</strong> builds a <strong>quiz</strong>, collects the <strong>leads</strong> and files them in <strong>Systeme.io</strong> with the right <strong>tag</strong>, <strong>without Zapier or Make</strong>.</p><p>Which is exactly the bit Systeme.io does not do on its own.</p><p>I build Tiquiz. So feel free to take my opinion with a pinch of salt.</p><p>The people worth listening to are the ones who use it and have nothing to gain from selling it.</p><p>Let's start with Christelle.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Christelle's video review",
+      "id": "christelle-video-review"
+    },
+    {
+      "type": "html",
+      "html": "<p>Christelle works with coaches, therapists and course creators on <strong>Systeme.io</strong>.</p><p>She built her first <strong>quiz</strong> in under an hour, connection included, and she walks through the whole thing on screen: building it, the <strong>tags</strong>, the hand-off to Systeme.io, and the places where it gets fiddly.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><a href=\"https://youtu.be/9WcPdPtahUo?si=kFZS6HnfrklP2BSc\">Watch her video on YouTube (subscribe to her channel, it is excellent)</a></p>"
+    },
+    {
+      "type": "html",
+      "html": "<p>Her verdict: the tool does the job, and it saves a huge amount of time. It suits people who do not think of themselves as technical.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "What Tiquiz actually is",
+      "id": "what-tiquiz-is"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Tiquiz</strong> builds three formats: <strong>quizzes</strong>, <strong>surveys</strong> and <strong>video pop quizzes</strong> (a quiz that appears while a video plays).</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/tiquiz-3-formats-1.webp",
+      "alt": "The three Tiquiz formats: the quiz that qualifies and captures leads, the survey that collects opinions, and the pop quiz that appears during a video"
+    },
+    {
+      "type": "html",
+      "html": "<p>The point is not to entertain. It is to <strong>qualify your prospects</strong> and collect <strong>leads</strong> better than a form does.</p><p>The part that matters when you are on <strong>Systeme.io</strong>: the integration is native.</p><p>Someone answers, their email lands in Systeme.io with the <strong>tag</strong> you picked, and you follow up with the right email sequence.</p><p>No <strong>Zapier</strong>, no <strong>Make</strong>, no plumbing between ten different tools.</p><p>The full walkthrough is here: <a href=\"/en/blog/create-quiz-systeme-io\">how to create a quiz on Systeme.io</a>.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/tiquiz-fonctionnement-systeme-io-1.webp",
+      "alt": "From quiz to mailing list in four steps: someone answers, the profile becomes a tag, the contact lands tagged in Systeme.io, the right email goes out on its own. No Zapier, no code"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "What Tiquiz does well",
+      "id": "what-tiquiz-does-well"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>You get going fast.</strong></p><p>A first <strong>quiz</strong> live in under an hour, even if you are not comfortable with the technical side.</p><p><strong>The Systeme.io integration holds up.</strong></p><p>The <strong>tags</strong> arrive, no contact goes missing, no delay. That is the heart of the tool, and it is solid.</p><p><strong>The AI writes your quiz.</strong></p><p>You give it your goal and your audience, it drafts a first version, and you adjust by clicking. Hours of writing gone.</p><p><strong>Fewer tools in your chain.</strong></p><p>Fewer settings, fewer things that can break, and you publish straight away.</p><p>The format helps too: a <strong>quiz</strong> usually converts far better than a form, as <a href=\"https://www.tryinteract.com/blog/quiz-conversion-rate-report/\">Interact's conversion data</a> shows.</p><p>A quiz is a living <strong>lead magnet</strong>, unlike the PDF people download and forget (<a href=\"https://systeme.io/fr/blog/exemples-lead-magnets?sa=sa0007878317200141bbe3de2b6644176621db2c6580\">more lead magnet ideas</a>).</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/tiquiz-quiz-vs-formulaire-1.webp",
+      "alt": "Classic form: intrusive, rarely filled in, little engagement. Interactive quiz: engages from the first question, collects 2 to 3 times more emails and qualifies the contact"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "What the people using it say",
+      "id": "what-users-say"
+    },
+    {
+      "type": "html",
+      "html": "<p>Christelle is not the only one who has had a go with it.</p><p>A few pieces of feedback from people on <strong>Systeme.io</strong>:</p><p>Sebastien runs ads to a funnel built around a <strong>quiz</strong>: <strong>“I halved my cost per lead”</strong>.</p><p>Another customer, starting from a brand new account, collected <strong>680 new contacts in one month</strong>, from her quiz alone.</p><p>One participant spotted, thanks to the question-by-question tracking, that her question 2 was scaring people off. She swapped two questions around and <strong>her completion rate went up</strong>, without a single extra visitor.</p><p>What they have in common: the tool alone is not what produces the result. It is a quiz that is well built and properly wired in.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/avistiquiz.webp",
+      "alt": "The Trustpilot page for Tiquiz: 4.2 out of 5, rated by 6 reviews, with the breakdown from five stars down to one"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Where Tiquiz falls short",
+      "id": "where-tiquiz-falls-short"
+    },
+    {
+      "type": "html",
+      "html": "<p>Two things are missing today.</p><p><strong>Visual customisation.</strong></p><p>Colours, logo, font: those are yours to set.</p><p>A pixel-perfect design for a very precise brand guide: not yet.</p><p><strong>Advanced conditional logic.</strong></p><p>Multi-branch paths that change with every answer are not what Tiquiz is built for right now.</p><p>The tool moves fast, so both of these may well shift over the coming months.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/tiquiz-points-forts-limites-1.webp",
+      "alt": "What works: a first quiz in under an hour, a reliable Systeme.io integration, the AI does the writing. The limits: basic visual customisation, no advanced conditional logic"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Tiquiz free or paid",
+      "id": "tiquiz-free-or-paid"
+    },
+    {
+      "type": "html",
+      "html": "<p>Start with the <strong>free plan</strong>.</p><p>It lets you build your first <strong>quiz</strong>, connect it to <strong>Systeme.io</strong> and publish it. <strong>No card, no time limit.</strong></p><p>Paying lifts the ceilings: more responses, more projects, your own domain, and the Tiquiz mention disappears (which looks more professional).</p><p>The sensible order: test on the free plan, check that it actually brings you leads, then upgrade.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Who Tiquiz is for",
+      "id": "who-tiquiz-is-for"
+    },
+    {
+      "type": "html",
+      "html": "<p>For you if you are a coach, therapist, course creator or consultant on <strong>Systeme.io</strong>, and you want to capture and <strong>segment</strong> your contacts without spending your days on it.</p><p>Less so if your needs are very technical, if you have a brand guide to follow to the millimetre, or if you need complex conditional paths.</p><p>For the vast majority of solopreneurs on Systeme.io, it does the job.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "A quiz does not pay off on its own",
+      "id": "a-quiz-does-not-pay-off-on-its-own"
+    },
+    {
+      "type": "html",
+      "html": "<p>Tiquiz builds the <strong>quiz</strong>. That is already a lot.</p><p>But a quiz sitting online does not fill your list by magic.</p><p>Sending traffic to it, sorting your <strong>leads</strong>, following up, selling: that is a method, not a feature.</p><p>Which is why I built <a href=\"https://atelierduquiz.fr/\"><strong>the Atelier du Quiz</strong></a>: 7 days to put the whole system around your quiz in place.</p><p>The free traffic plan, email sequences ready to paste, a coach available day and night, and free Tiquiz access included.</p><p>Tiquiz gives you the tool. The Atelier gives you the system that makes it pay.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/atelierduquiz.webp",
+      "alt": "The Atelier du Quiz home page, in French: 7 days to launch your marketing quiz and collect thousands of emails"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "So what is Tiquiz worth",
+      "id": "what-tiquiz-is-worth"
+    },
+    {
+      "type": "html",
+      "html": "<p>If you are on <strong>Systeme.io</strong> and you want something simple that works, Tiquiz ticks the boxes.</p><p>It builds your <strong>quizzes</strong>, surveys and video pop quizzes, captures your <strong>leads</strong> and files them in Systeme.io with the right <strong>tag</strong>.</p><p>Its real strength is simplicity: few settings, quick to publish, and a <strong>free plan</strong> that lets you try everything before paying.</p><p>👉 <a href=\"https://tiquiz.fr/\">Try Tiquiz for free</a></p><p>For the whole system around it, not just the tool: 👉 <a href=\"https://atelierduquiz.fr/\">join the Atelier du Quiz</a>.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "FAQ: what Tiquiz is worth",
+      "id": "faq-what-tiquiz-is-worth"
+    },
+    {
+      "type": "faq",
+      "questions": [
+        {
+          "question": "Is Tiquiz really free, or is there a catch?",
+          "reponse": "<p>The free plan is genuinely free: you build your first quiz, connect it to Systeme.io and publish it, with no card and no time limit.</p><p>You only pay the day you want more volume, more projects or your own domain.</p><p>In other words, you can prove it brings you leads before spending a penny.</p>"
+        },
+        {
+          "question": "Do my contacts really land in Systeme.io, with the right tag?",
+          "reponse": "<p>Yes, that is the heart of the tool.</p><p>The integration is native: as soon as someone answers, their email goes to Systeme.io with the tag you set, without Zapier or Make.</p><p>You can then trigger the email sequence that matches their profile.</p><p>In testing, the tags arrive with no delay and no contact goes missing.</p>"
+        },
+        {
+          "question": "I am not technical at all, am I going to struggle?",
+          "reponse": "<p>No. There is nothing to code.</p><p>The AI drafts a first version of your quiz from your goal, you adjust by clicking, and the Systeme.io connection is guided step by step.</p><p>Most people have their first quiz live in under an hour.</p>"
+        },
+        {
+          "question": "Does a quiz really convert better than a plain form?",
+          "reponse": "<p>Generally yes, and by a long way.</p><p>A quiz engages the person, gets them answering, and gives them something useful in exchange for their email.</p><p>You end up with a better-qualified contact than a bare email field gives you, because you know who they are and what they want.</p><p>Conversion reports on interactive quizzes confirm it year after year.</p>"
+        },
+        {
+          "question": "Can I match my quiz to my brand colours?",
+          "reponse": "<p>Partly.</p><p>You set your colours, your logo and your font, and the result looks clean. That said, if you have a very precise brand guide and you want a pixel-perfect custom design, you will feel the limits today.</p><p>It is an area the tool keeps improving.</p>"
+        },
+        {
+          "question": "What is the difference between Tiquiz and the Atelier du Quiz?",
+          "reponse": "<p>Tiquiz is the tool that builds the quiz.</p><p>The Atelier du Quiz is the 7-day method for building the whole system around it: bringing traffic in, sorting the leads, following up and selling.</p><p>One does not replace the other.</p><p>The Atelier includes free Tiquiz access, so you can start without paying anything extra.</p>"
+        },
+        {
+          "question": "Does Tiquiz do surveys and quizzes on video too?",
+          "reponse": "<p>Yes.</p><p>Alongside quizzes, you can build surveys to gather opinions, and video pop quizzes, meaning a quiz that appears during your YouTube video to capture leads at the moment attention is highest.</p>"
+        }
+      ]
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Over to you",
+      "id": "over-to-you"
+    },
+    {
+      "type": "html",
+      "html": "<p>You can join Tiquiz, or go straight to the Atelier du Quiz if you think you need a hand.</p><p>Everything is here:</p>"
+    },
+    {
+      "type": "cta",
+      "texte": "Create my Tiquiz account",
+      "url": "https://tiquiz.fr/"
+    },
+    {
+      "type": "cta",
+      "texte": "Join the Atelier du Quiz",
+      "url": "https://atelierduquiz.fr/"
+    }
+  ]
+}

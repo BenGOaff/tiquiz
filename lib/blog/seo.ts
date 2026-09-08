@@ -28,6 +28,8 @@
 
 import type { Article, ResumeArticle } from "./articles";
 import { texteBrut } from "./rendu";
+import { baliseLangue, cheminArticle, cheminBlog, motsDuBlog } from "./motsDuBlog";
+import type { LanguePublique } from "@/lib/site/langues";
 
 /** Le domaine public du blog. Le blog vit avec la page de vente. */
 export const ORIGINE_BLOG = "https://tiquiz.fr";
@@ -50,8 +52,17 @@ const AUTEURE = {
   url: "https://blagardette.com",
 } as const;
 
-export function urlArticle(slug: string): string {
-  return `${ORIGINE_BLOG}/blog/${slug}`;
+/**
+ * L'adresse absolue d'un article, DANS SA LANGUE.
+ *
+ * LA LANGUE EST OBLIGATOIRE. Un defaut a "fr" annoncerait
+ * `tiquiz.fr/blog/<slug-anglais>` dans la canonique et dans le JSON-LD
+ * d'un article anglais : une adresse qui repond 404, declaree comme la
+ * version de reference de la page. Google la suivrait, et l'anglais ne
+ * serait jamais indexe. Rien ne s'afficherait de travers.
+ */
+export function urlArticle(slug: string, langue: LanguePublique): string {
+  return `${ORIGINE_BLOG}${cheminArticle(slug, langue)}`;
 }
 
 function urlAbsolue(chemin: string | null): string | null {
@@ -66,7 +77,7 @@ function urlAbsolue(chemin: string | null): string | null {
  * mise à jour pour paraître frais. Une date de modification fausse est
  * repérée, et elle coûte plus qu'elle ne rapporte.
  */
-export function jsonLdArticle(a: Article, nbCommentaires = 0): object {
+export function jsonLdArticle(a: Article, langue: LanguePublique, nbCommentaires = 0): object {
   const image = urlAbsolue(a.couverture);
   return {
     "@context": "https://schema.org",
@@ -75,11 +86,11 @@ export function jsonLdArticle(a: Article, nbCommentaires = 0): object {
     description: a.description,
     datePublished: a.publieLe,
     dateModified: a.publieLe,
-    inLanguage: "fr-FR",
+    inLanguage: baliseLangue(langue).inLanguage,
     author: AUTEURE,
     publisher: EDITEUR,
-    mainEntityOfPage: { "@type": "WebPage", "@id": urlArticle(a.slug) },
-    url: urlArticle(a.slug),
+    mainEntityOfPage: { "@type": "WebPage", "@id": urlArticle(a.slug, langue) },
+    url: urlArticle(a.slug, langue),
     ...(image ? { image: [image] } : {}),
     ...(a.motsCles.length ? { keywords: a.motsCles.join(", ") } : {}),
     // LE NOMBRE DE COMMENTAIRES, quand il y en a.
@@ -114,20 +125,20 @@ export function jsonLdFaq(a: Article): object | null {
 }
 
 /** Le JSON-LD de l'index : une liste ordonnée, la plus récente en tête. */
-export function jsonLdListe(articles: readonly ResumeArticle[]): object {
+export function jsonLdListe(articles: readonly ResumeArticle[], langue: LanguePublique): object {
   return {
     "@context": "https://schema.org",
     "@type": "Blog",
-    name: "Le blog Tiquiz",
-    url: `${ORIGINE_BLOG}/blog`,
-    inLanguage: "fr-FR",
+    name: motsDuBlog(langue).nomDuBlog,
+    url: `${ORIGINE_BLOG}${cheminBlog(langue)}`,
+    inLanguage: baliseLangue(langue).inLanguage,
     publisher: EDITEUR,
     blogPost: articles.map((a) => ({
       "@type": "BlogPosting",
       headline: a.titre,
       description: a.description,
       datePublished: a.publieLe,
-      url: urlArticle(a.slug),
+      url: urlArticle(a.slug, langue),
     })),
   };
 }
@@ -139,13 +150,18 @@ export function jsonLdListe(articles: readonly ResumeArticle[]): object {
  * résultat, à la place de l'URL nue. Ça se lit mieux, donc ça se clique
  * plus.
  */
-export function jsonLdFilDAriane(a: ResumeArticle): object {
+export function jsonLdFilDAriane(a: ResumeArticle, langue: LanguePublique): object {
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Blog", item: `${ORIGINE_BLOG}/blog` },
-      { "@type": "ListItem", position: 2, name: a.titre, item: urlArticle(a.slug) },
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: motsDuBlog(langue).blog,
+        item: `${ORIGINE_BLOG}${cheminBlog(langue)}`,
+      },
+      { "@type": "ListItem", position: 2, name: a.titre, item: urlArticle(a.slug, langue) },
     ],
   };
 }

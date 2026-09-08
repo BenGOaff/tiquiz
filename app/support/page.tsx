@@ -19,6 +19,7 @@ import { getTranslations } from "next-intl/server";
 
 import AppShell from "@/components/AppShell";
 import SiteShell from "@/components/site/SiteShell";
+import { LANGUE_SANS_PREFIXE } from "@/lib/site/langues";
 import SupportForm from "@/components/support/SupportForm";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -76,8 +77,15 @@ export default async function SupportPage() {
   //
   // Connecté, il garde `AppShell` : il est dans l'app, et la navigation
   // de l'app est celle qui lui sert.
+  // LA LANGUE DU CHROME EST LE FRANÇAIS, ET C'EST UNE DÉCISION.
+  //
+  // `/support` n'a pas de version anglaise (`lib/site/pagesPubliques.ts`
+  // ne lui déclare aucune langue), donc le middleware ne réécrit jamais
+  // `/en/support` : il n'y a rien à lire dans l'en-tête. Le jour où la
+  // page est traduite, elle déclare sa langue là bas et passe
+  // `await langueCanonique()` ici.
   if (!user) {
-    return <SiteShell>{enveloppe(true)}</SiteShell>;
+    return <SiteShell langue={LANGUE_SANS_PREFIXE}>{enveloppe(true)}</SiteShell>;
   }
 
   return (

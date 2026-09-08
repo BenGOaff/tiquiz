@@ -25,6 +25,21 @@
 // Mieux vaut une duplication qui crie qu'une page qui ment.
 
 import { OWNER_CATALOG, formatCents, type OwnerProductId } from "@/lib/checkout/catalog";
+import { LANGUE_SANS_PREFIXE, type LanguePublique } from "@/lib/site/langues";
+
+/**
+ * LA LANGUE DÉCIDE AUSSI DU FORMAT DES NOMBRES.
+ *
+ * `formatCents` prend un identifiant BCP-47, pas une langue publique :
+ * en français un prix s'écrit `5,67 €`, en anglais `€5.67`. Passer la
+ * langue et laisser cette table faire la traduction évite qu'un
+ * appelant écrive `"en"` là où `Intl` attend `"en-US"` et retombe sur
+ * un format qu'il n'a pas choisi.
+ */
+const LOCALE_DES_NOMBRES: Record<LanguePublique, string> = {
+  fr: "fr-FR",
+  en: "en-US",
+};
 
 /**
  * Les taux, tels que `lib/affiliate/commission.ts` (Tipote) les applique.
@@ -87,20 +102,42 @@ export interface LigneGain {
  * mensuel ne se comparent pas, et une colonne qui les mettrait côte à
  * côte sans le dire ferait croire que l'annuel rapporte dix fois plus.
  */
-export function tableauDesGains(locale = "fr-FR"): LigneGain[] {
-  const rythmes: Record<OwnerProductId, string> = {
-    mensuel: "chaque mois",
-    "mensuel-plus": "chaque mois",
-    annuel: "chaque année",
-    "annuel-plus": "chaque année",
-  };
+export function tableauDesGains(langue: LanguePublique = LANGUE_SANS_PREFIXE): LigneGain[] {
+  const locale = LOCALE_DES_NOMBRES[langue];
+  const rythmes = RYTHMES[langue];
   return (Object.keys(OWNER_CATALOG) as OwnerProductId[]).map((id) => ({
+    // LE NOM DU PALIER NE SE TRADUIT PAS : "Tiquiz mensuel PLUS" est le
+    // libellé du catalogue, celui du bon de commande et des factures.
+    // Le traduire ferait lire un nom de produit qui n'existe nulle part
+    // ailleurs, et il faudrait le chercher pour le reconnaître.
     palier: libellePublic(OWNER_CATALOG[id].label),
     prix: formatCents(OWNER_CATALOG[id].amountCents, OWNER_CATALOG[id].currency, locale),
     gain: formatCents(commissionCents(id), OWNER_CATALOG[id].currency, locale),
     rythme: rythmes[id],
   }));
 }
+
+/**
+ * "chaque mois" ou "chaque année", par langue.
+ *
+ * C'est la seule chaîne du tableau qui se traduit, et elle n'est pas
+ * décorative : 56,67 € par an et 5,67 € par mois ne se comparent pas.
+ * Un `Record` sur les quatre paliers, donc en oublier un ne compile pas.
+ */
+const RYTHMES: Record<LanguePublique, Record<OwnerProductId, string>> = {
+  fr: {
+    mensuel: "chaque mois",
+    "mensuel-plus": "chaque mois",
+    annuel: "chaque année",
+    "annuel-plus": "chaque année",
+  },
+  en: {
+    mensuel: "every month",
+    "mensuel-plus": "every month",
+    annuel: "every year",
+    "annuel-plus": "every year",
+  },
+};
 
 /**
  * Ce que rapporte une vente de l'Atelier du Quiz.
@@ -112,7 +149,10 @@ export function tableauDesGains(locale = "fr-FR"): LigneGain[] {
  * possible sur une page d'affiliation : l'affilié le découvre à son
  * premier virement.
  */
-export function gainAtelier(locale = "fr-FR"): { prix: string; gain: string } {
+export function gainAtelier(
+  langue: LanguePublique = LANGUE_SANS_PREFIXE,
+): { prix: string; gain: string } {
+  const locale = LOCALE_DES_NOMBRES[langue];
   return {
     prix: formatCents(PRIX_ATELIER_CENTS, "eur", locale),
     gain: formatCents(Math.round(horsTaxes(PRIX_ATELIER_CENTS) * TAUX.atelier), "eur", locale),
@@ -127,7 +167,12 @@ export function gainAtelier(locale = "fr-FR"): { prix: string; gain: string } {
  * Béné, 26 août : "je dois être sûre que tu as bien tout compris et
  * pris en compte avant d'envoyer le moindre code."
  */
-export const REGLES: readonly { titre: string; texte: string }[] = [
+export interface RegleProgramme {
+  titre: string;
+  texte: string;
+}
+
+export const REGLES: readonly RegleProgramme[] = [
   {
     titre: "Le cookie dure 1 an",
     texte:
@@ -169,3 +214,74 @@ export const REGLES: readonly { titre: string; texte: string }[] = [
       "Uniquement l'échéance remboursée. Les mois déjà encaissés sont gagnés et restent acquis.",
   },
 ] as const;
+
+/**
+ * LES MÊMES HUIT RÈGLES, EN ANGLAIS.
+ *
+ * Ce ne sont PAS des traductions mot pour mot : "tu es payé à chaque
+ * échéance" devient "you get paid on every renewal", et le nom des
+ * constantes du code (`REF_MAX_AGE_SECONDS`) ne bouge pas, puisque
+ * c'est le nom d'une chose et pas une phrase.
+ *
+ * LES MONTANTS RESTENT DANS LEUR DEVISE ET NE SE CONVERTISSENT PAS :
+ * le seuil de versement est de 20 €, celui de Systeme.io de 50 €, et
+ * un affilié anglophone est payé en euros comme les autres. Écrire un
+ * montant en dollars ici annoncerait un versement qui n'aura pas lieu.
+ *
+ * `Record<Exclude<LanguePublique, typeof LANGUE_SANS_PREFIXE>, ...>` :
+ * une langue publique ajoutée sans ses règles ne compile pas, donc elle
+ * ne peut pas servir du français sous une adresse anglaise.
+ */
+const REGLES_TRADUITES: Readonly<
+  Record<Exclude<LanguePublique, typeof LANGUE_SANS_PREFIXE>, readonly RegleProgramme[]>
+> = {
+  en: [
+    {
+      titre: "The cookie lasts a full year",
+      texte:
+        "Someone clicks your link in January and buys in June: the sale is yours. That is REF_MAX_AGE_SECONDS, and it is the same window Systeme.io gave you.",
+    },
+    {
+      titre: "A free signup ties them to you for life",
+      texte:
+        "If they open a free account through your link, they stay your referral even if they pay two years later, cookie expired or not. And the FIRST attribution wins, never the last: a contact belongs to whoever brought them in.",
+    },
+    {
+      titre: "You get paid on every renewal",
+      texte:
+        "Not once. Every month your referral stays subscribed, you earn your commission. The day they leave, it stops, and that is that.",
+    },
+    {
+      titre: "Payable 30 days after the payment",
+      texte:
+        "Long enough for the refund window to close. A transfer that has left cannot be taken back, so we wait until we are sure.",
+    },
+    {
+      titre: "Paid out between the 10th and the 13th",
+      texte:
+        "As soon as you have 20 € waiting (Systeme.io asked for 50 €). Below that, the money is still yours and rolls into the next payout: nothing is lost.",
+    },
+    {
+      titre: "We write your invoice for you",
+      texte:
+        "You fill in your details and your tax status once, and we issue the self-billed invoice every month for your accounts. You have nothing to send us.",
+    },
+    {
+      titre: "PayPal or bank transfer, your call",
+      texte:
+        "Your PayPal address or your IBAN, in your affiliate area. The IBAN is encrypted and never comes back out in the clear, not even for you: you see a mask, and you retype it to change it.",
+    },
+    {
+      titre: "A refund cancels that commission",
+      texte:
+        "Only the renewal that was refunded. The months already collected were earned, and they stay yours.",
+    },
+  ],
+};
+
+/** Les règles du programme, dans la langue demandée. */
+export function reglesPourLangue(
+  langue: LanguePublique = LANGUE_SANS_PREFIXE,
+): readonly RegleProgramme[] {
+  return langue === LANGUE_SANS_PREFIXE ? REGLES : REGLES_TRADUITES[langue];
+}

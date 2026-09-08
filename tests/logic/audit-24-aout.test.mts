@@ -67,8 +67,8 @@ test("la decision du verrou est PURE : aucun test ne pourrait l'importer sinon",
   // Les commentaires ont le droit d'EXPLIQUER pourquoi : ce qu'on
   // traque, c'est un `import`.
   const pur = lire("lib/webhooks/verrouRegles.ts")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
+    .replace(/^\s*\/\/.*$/gm, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
   assert.ok(!/\bimport\b/.test(pur), "le module pur importe quelque chose : il n'est plus pur");
   // Et l'heure est un PARAMETRE : un test qui depend de l'horloge
   // clignote (lecon du 1er aout).

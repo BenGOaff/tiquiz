@@ -16,8 +16,12 @@ import { notFound } from "next/navigation";
 
 import { ORIGINE_BLOG } from "@/lib/blog/seo";
 import { RUBRIQUES, articlesDeLaRubrique, trouverRubrique } from "@/lib/blog/rubriques";
-import { CHEMIN_FLUX } from "@/lib/blog/flux";
+import { cheminFlux } from "@/lib/blog/flux";
 import CarteArticle from "@/components/site/CarteArticle";
+// LES RUBRIQUES N'EXISTENT QU'EN FRANCAIS (`rubriquesDeLaLangue`) : leurs
+// libelles, leurs chapeaux et leur classement y sont ecrits, et il n'y a
+// donc aucune page `/en/blog/rubrique/...`.
+import { LANGUE_SANS_PREFIXE } from "@/lib/site/langues";
 import PastillesRubriques from "@/components/site/PastillesRubriques";
 
 export const dynamic = "force-static";
@@ -50,7 +54,7 @@ export async function generateMetadata({
     description: r.chapeau,
     alternates: {
       canonical: `${ORIGINE_BLOG}/blog/rubrique/${r.id}`,
-      types: { "application/rss+xml": `${ORIGINE_BLOG}${CHEMIN_FLUX}` },
+      types: { "application/rss+xml": `${ORIGINE_BLOG}${cheminFlux(LANGUE_SANS_PREFIXE)}` },
     },
     openGraph: {
       type: "website",
@@ -94,7 +98,7 @@ export default async function PageRubrique({
 
       <div className="mt-12 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
         {articles.map((a, i) => (
-          <CarteArticle key={a.slug} article={a} priorite={i < 3} />
+          <CarteArticle key={a.slug} article={a} langue={LANGUE_SANS_PREFIXE} priorite={i < 3} />
         ))}
       </div>
     </main>

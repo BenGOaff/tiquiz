@@ -38,7 +38,7 @@ function filesUnder(dir: string, exts: string[]): string[] {
 
 /** Retire les commentaires de ligne et de bloc. */
 function stripComments(src: string): string {
-  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  return src.replace(/^\s*\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
 }
 
 function offenders(path: string, text: string): string[] {

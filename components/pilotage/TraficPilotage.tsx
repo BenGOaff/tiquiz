@@ -24,6 +24,22 @@ import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 import { CARTE } from "@/components/pilotage/carte";
+import { OWNER_CATALOG } from "@/lib/checkout/catalog";
+import {
+  construireEntonnoirGenerateur,
+  repartitionParSource,
+  revenuMensuelParPlan,
+  MIN_POUR_UN_TAUX_AVAL,
+  type LigneGeneration,
+} from "@/lib/generateur/entonnoirGenerateur";
+import { SOURCE_GENERATEUR } from "@/lib/site/generateurQuiz";
+import {
+  TARIFS_MAJ,
+  TAUX_USD_EUR,
+  TAUX_USD_EUR_MAJ,
+  dollars,
+  enEuros,
+} from "@/lib/generateur/tarifsIa";
 import {
   construireEntonnoir,
   MIN_VUES_POUR_UN_TAUX,
@@ -40,6 +56,10 @@ type Trafic =
   | { lisible: true; lignes: LigneTrafic[]; tronquee: boolean }
   | { lisible: false; raison: string };
 
+type Generateur =
+  | { lisible: true; generations: LigneGeneration[]; tronquee: boolean }
+  | { lisible: false; raison: string };
+
 type Donnees = {
   periode: { libelle: string; debut: string | null };
   resume: { ventes: number; encaisseCents: number };
@@ -54,6 +74,14 @@ type Donnees = {
    * entonnoir prend SES ventes.
    */
   ventesParSite?: { tiquiz: number; atelier: number };
+  /**
+   * LE GÉNÉRATEUR PUBLIC : ce qu'il amène, et ce qu'il coûte.
+   *
+   * Absent = le serveur n'a pas encore la version qui le rend.
+   * `lisible: false` = la migration du 8 septembre n'est pas passée.
+   * Aucun des deux ne veut dire "aucun quiz généré".
+   */
+  generateur?: Generateur;
 };
 
 function nombre(n: number): string {
@@ -192,6 +220,8 @@ export function TraficPilotage() {
           <Courbe jours={vuesParJour(lignes)} />
 
           <AtelierBloc trafic={d.traficAtelier ?? undefined} e={entonnoirAtelier} lignes={lignesAtelier} />
+
+          <GenerateurBloc generateur={d.generateur} lignesTrafic={lignes} />
 
           <p className="text-xs text-muted-foreground">
             On compte des <strong>vues de page</strong>, jamais des visiteurs : aucun cookie
@@ -404,6 +434,278 @@ function AtelierBloc({
             />
           </div>
           <Courbe jours={vuesParJour(lignes)} />
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * CE QUE LE GÉNÉRATEUR PUBLIC AMÈNE (Béné, 8 septembre 2026).
+ *
+ * "Dans admin, fais moi apparaitre qui entre par le générateur dans mes
+ * contacts et dans les stat comment le générateur convertit : visites /
+ * inscrits gratos / abonnés et le ROI."
+ *
+ * ── LE DÉNOMINATEUR PARLE DE LA MÊME PAGE QUE LE NUMÉRATEUR ─────────
+ *
+ * L'entonnoir ne compte QUE les quiz générés depuis la page dédiée : le
+ * générateur est aussi servi dans une iframe sur la page de vente, et
+ * personne ne compte les vues de cette iframe. Diviser tous les quiz
+ * par les vues de la seule page dédiée gonflerait le taux sans que rien
+ * ne le dise (c'est le défaut corrigé le 7 septembre sur l'entonnoir
+ * des ventes). Ce que l'iframe apporte se lit en COMPTES, en dessous.
+ *
+ * ── LE COÛT EST EN DOLLARS, ET IL RESTE À CÔTÉ DES EUROS ────────────
+ *
+ * Anthropic facture en dollars, Tiquiz encaisse en euros, et on ne
+ * convertit pas : un taux de change inventé serait faux le lendemain
+ * (règle du 1er septembre). L'écran met donc les deux côte à côte et
+ * laisse la comparaison se faire, plutôt que d'afficher un ratio qui
+ * mélangerait deux monnaies.
+ */
+function GenerateurBloc({
+  generateur,
+  lignesTrafic,
+}: {
+  generateur?: Generateur;
+  lignesTrafic: LigneTrafic[];
+}) {
+  const lisible = Boolean(generateur && generateur.lisible);
+  const generations = generateur && generateur.lisible ? generateur.generations : [];
+  // Le revenu de chaque plan vient du CATALOGUE, jamais recopié : c'est
+  // ce que le bon de commande encaisse vraiment.
+  const revenus = revenuMensuelParPlan(Object.values(OWNER_CATALOG));
+  const e = construireEntonnoirGenerateur({ lignesTrafic, generations, revenus });
+  const parSource = repartitionParSource(generations);
+  const prixMensuel = OWNER_CATALOG.mensuel.amountCents;
+
+  const marches = [
+    {
+      titre: "Visites de la page",
+      valeur: nombre(e.vues),
+      note: "/generateur-de-quiz",
+    },
+    {
+      titre: "Quiz générés",
+      valeur: nombre(e.quiz),
+      note:
+        e.tauxVersQuiz === null
+          ? `pas encore ${MIN_VUES_POUR_UN_TAUX} visites, aucun taux affiché`
+          : `${e.tauxVersQuiz} % des visites`,
+    },
+    {
+      titre: "Inscrits gratuits",
+      valeur: nombre(e.inscrits),
+      note:
+        e.tauxVersInscription === null
+          ? `pas encore ${MIN_POUR_UN_TAUX_AVAL} quiz générés`
+          : `${e.tauxVersInscription} % des quiz gardés`,
+    },
+    {
+      titre: "Abonnés",
+      valeur: nombre(e.abonnes),
+      note:
+        e.tauxVersAbonnement === null
+          ? `pas encore ${MIN_POUR_UN_TAUX_AVAL} inscrits`
+          : `${e.tauxVersAbonnement} % des inscrits`,
+    },
+  ];
+
+  return (
+    <div className="space-y-4 border-t pt-6">
+      <h2 className="text-lg font-semibold">Le générateur de quiz public</h2>
+
+      {!generateur ? (
+        <div className={`${CARTE} p-5`}>
+          <p className="text-sm font-medium">Le générateur n&apos;est pas encore lisible.</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Ce n&apos;est pas un générateur sans visiteur : le serveur n&apos;a pas encore la
+            version qui rend ces chiffres.
+          </p>
+        </div>
+      ) : generateur.lisible === false ? (
+        <div className={`${CARTE} p-5`}>
+          <p className="text-sm font-medium">Les générations n&apos;ont pas pu être lues.</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Ce n&apos;est pas un générateur sans visiteur. Le plus probable est que la migration{" "}
+            <code>20260908_generateur_usage.sql</code> ne soit pas encore passée sur Supabase.
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">Raison : {generateur.raison}</p>
+        </div>
+      ) : (
+        <>
+          <div className={`${CARTE} p-5`}>
+            <h3 className="text-sm font-semibold">
+              De la visite à l&apos;abonnement, sur la page dédiée
+            </h3>
+            <div className="mt-4 grid gap-3 sm:grid-cols-4">
+              {marches.map((m) => (
+                <div key={m.titre} className="rounded-lg border border-border/60 p-4">
+                  <p className="text-xs text-muted-foreground">{m.titre}</p>
+                  <p className="mt-1 text-2xl font-semibold tabular-nums">{m.valeur}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{m.note}</p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Seuls les quiz générés depuis <code>/generateur-de-quiz</code> sont comptés ici. Le
+              générateur tourne aussi dans une iframe sur la page de vente, et personne ne compte
+              les vues de cette iframe : ce qu&apos;elle amène est en dessous, en nombres, sans
+              pourcentage.
+            </p>
+          </div>
+
+          <div className={`${CARTE} p-5`}>
+            <h3 className="text-sm font-semibold">Ce que ça coûte en IA</h3>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-lg border border-border/60 p-4">
+                <p className="text-xs text-muted-foreground">Total sur la période</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {enEuros(e.coutMillicents)}
+                </p>
+                <p className="text-xs text-muted-foreground">{dollars(e.coutMillicents)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">page dédiée seulement</p>
+              </div>
+              <div className="rounded-lg border border-border/60 p-4">
+                <p className="text-xs text-muted-foreground">Par inscrit gratuit</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {e.coutParInscritMillicents === null ? "-" : enEuros(e.coutParInscritMillicents)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {e.coutParInscritMillicents === null ? "personne ne s'est encore inscrit" : "coût d'acquisition d'un contact"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border/60 p-4">
+                <p className="text-xs text-muted-foreground">Par abonné</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {e.coutParAbonneMillicents === null ? "-" : enEuros(e.coutParAbonneMillicents)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {e.coutParAbonneMillicents === null
+                    ? "aucun abonné venu par là pour l'instant"
+                    : `à comparer aux ${euros(prixMensuel)} par mois du palier le moins cher`}
+                </p>
+              </div>
+            </div>
+            {e.coutInconnu > 0 ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                {nombre(e.coutInconnu)} génération{e.coutInconnu > 1 ? "s" : ""} sans coût
+                calculable : soit elle est antérieure au 8 septembre 2026 (les jetons
+                n&apos;étaient écrits nulle part), soit son modèle n&apos;est pas dans la table de
+                tarifs. Ce n&apos;est pas une génération gratuite : le total ci dessus est donc un
+                plancher.
+              </p>
+            ) : null}
+            <p className="mt-3 text-xs text-muted-foreground">
+              Le coût est une <strong>estimation</strong> : il se calcule à partir des jetons
+              réellement consommés et de la table de tarifs relevée le {TARIFS_MAJ}. Anthropic
+              facture en dollars, donc les euros passent par un taux de change relevé le{" "}
+              {TAUX_USD_EUR_MAJ} (1 $ = {TAUX_USD_EUR.toFixed(2).replace(".", ",")} €). À quelques
+              centimes près, pas au centime.
+            </p>
+          </div>
+
+          <div className={`${CARTE} p-5`}>
+            <h3 className="text-sm font-semibold">Ce que ça rapporte</h3>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-lg border border-border/60 p-4">
+                <p className="text-xs text-muted-foreground">Dépensé en IA</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {enEuros(e.coutMillicents)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">une fois, à la génération</p>
+              </div>
+              <div className="rounded-lg border border-border/60 p-4">
+                <p className="text-xs text-muted-foreground">Revenu mensuel des abonnés</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {euros(e.roi.revenuMensuelCents)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {e.roi.revenuMensuelCents === 0
+                    ? "aucun abonné venu par la page dédiée"
+                    : "chaque mois, tant qu'ils restent"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border/60 p-4">
+                <p className="text-xs text-muted-foreground">Par euro dépensé</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {e.roi.parEuroDepense === null ? "-" : `${e.roi.parEuroDepense} €`}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {e.roi.parEuroDepense === null
+                    ? "aucun coût calculable sur cette période"
+                    : "de revenu mensuel"}
+                </p>
+              </div>
+            </div>
+            {e.roi.revenuInconnu > 0 ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                {nombre(e.roi.revenuInconnu)} abonné{e.roi.revenuInconnu > 1 ? "s" : ""} sur un
+                plan sans prix mensuel connu (accès à vie, bêta) : leur revenu n&apos;est pas dans
+                le total ci dessus, donc c&apos;est un plancher.
+              </p>
+            ) : null}
+            <p className="mt-3 text-xs text-muted-foreground">
+              Les deux nombres ne parlent pas de la même durée, et c&apos;est ce qui rend le ratio
+              généreux : le coût est payé <strong>une seule fois</strong>, le revenu revient{" "}
+              <strong>chaque mois</strong> tant que la personne reste abonnée. Le revenu vient du
+              catalogue, un abonnement annuel étant lissé sur douze mois.
+              {e.coutInconnu > 0
+                ? " Et le coût est lui aussi un plancher, puisque des générations n'ont aucun coût calculable."
+                : null}
+            </p>
+          </div>
+
+          <div className={`${CARTE} p-5`}>
+            <h3 className="text-sm font-semibold">Par où le générateur a été ouvert</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              <code>{SOURCE_GENERATEUR}</code> est la page dédiée, <code>tiquiz-fr</code> l&apos;iframe
+              de la page de vente. Aucun pourcentage : on ne mesure les vues que de la page dédiée.
+            </p>
+            {parSource.length === 0 ? (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Aucun quiz généré sur cette période.
+              </p>
+            ) : (
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-muted-foreground">
+                      <th className="pb-2 font-medium">Source</th>
+                      <th className="pb-2 text-right font-medium">Quiz</th>
+                      <th className="pb-2 text-right font-medium">Inscrits</th>
+                      <th className="pb-2 text-right font-medium">Abonnés</th>
+                      <th className="pb-2 text-right font-medium">Coût IA</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {parSource.map((l) => (
+                      <tr key={l.source} className="border-t border-border/60">
+                        <td className="py-2">
+                          <code>{l.source}</code>
+                        </td>
+                        <td className="py-2 text-right tabular-nums">{nombre(l.quiz)}</td>
+                        <td className="py-2 text-right tabular-nums">{nombre(l.inscrits)}</td>
+                        <td className="py-2 text-right tabular-nums">{nombre(l.abonnes)}</td>
+                        <td className="py-2 text-right tabular-nums">
+                          {enEuros(l.coutMillicents)}
+                          {l.coutInconnu > 0 ? " +" : null}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {lisible && generateur.tronquee ? (
+            <p className="text-xs text-muted-foreground">
+              La lecture a été coupée au plafond : les chiffres ci dessus portent sur les
+              générations les plus récentes de la période, pas sur toutes.
+            </p>
+          ) : null}
         </>
       )}
     </div>

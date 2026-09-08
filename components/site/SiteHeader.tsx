@@ -13,11 +13,20 @@
 // qui s'ouvre est exactement ce que cette balise fait depuis toujours.
 
 import Link from "next/link";
-import { MENU, CTA_MENU, attributsLien } from "@/lib/site/nav";
+import {
+  MENU,
+  CTA_MENU,
+  LIEN_CONNEXION,
+  CHROME_SITE,
+  attributsLien,
+  hrefPourLangue,
+  libellePourLangue,
+} from "@/lib/site/nav";
+import type { LanguePublique } from "@/lib/site/langues";
 
-function Marque() {
+function Marque({ accueil }: { accueil: string }) {
   return (
-    <Link href="/" className="flex items-center gap-2" aria-label="Tiquiz, accueil">
+    <Link href="/" className="flex items-center gap-2" aria-label={accueil}>
       {/* SON VRAI LOGO, celui qu'on voit sur ses 10 vignettes. Avant le
           30 août on affichait le favicon carré à côté du mot "tiquiz"
           écrit en CSS : deux fois la marque, dont une inventée. */}
@@ -27,7 +36,19 @@ function Marque() {
   );
 }
 
-export default function SiteHeader() {
+export default function SiteHeader({ langue }: { langue: LanguePublique }) {
+  // LA DESTINATION ET LE LIBELLÉ SUIVENT LA MÊME SOURCE, et c'est ce
+  // qui les empêche de se contredire : un libellé anglais ne s'affiche
+  // que là où la page anglaise existe VRAIMENT (`libellePourLangue`).
+  //
+  // Un libellé resté français est donc une information, pas un oubli :
+  // il dit que la page derrière est française. Traduire les huit
+  // entrées d'un coup promettrait de l'anglais derrière chaque clic,
+  // alors que `/a-propos`, `/integrations` et `/affiliation` n'ont
+  // aucune version anglaise.
+  const lien = (href: string) => hrefPourLangue(href, langue);
+  const mot = (l: typeof CTA_MENU) => libellePourLangue(l, langue);
+  const t = CHROME_SITE[langue];
   return (
         // LE FOND EST OPAQUE, et ce n'est pas un detail de gout.
     //
@@ -39,30 +60,30 @@ export default function SiteHeader() {
     // lisible.
     <header className="sticky top-0 z-40 border-b border-[var(--tq-bord)] bg-[var(--tq-creme)]">
       <div className="tq-large flex items-center justify-between gap-5 py-4">
-        <Marque />
+        <Marque accueil={t.accueil} />
 
-        <nav aria-label="Navigation principale" className="hidden items-center gap-6 lg:flex">
+        <nav aria-label={t.navigation} className="hidden items-center gap-6 lg:flex">
           {MENU.map((l) => (
             <Link
               key={l.href}
-              href={l.href}
+              href={lien(l.href)}
               className="text-[0.95rem] font-medium text-[var(--tq-encre-douce)] transition-colors hover:text-[var(--tq-encre)]"
               {...attributsLien(l.href)}
             >
-              {l.libelle}
+              {mot(l)}
             </Link>
           ))}
         </nav>
 
         <div className="hidden items-center gap-4 lg:flex">
           <Link
-            href="/login"
+            href={LIEN_CONNEXION.href}
             className="text-[0.95rem] font-medium text-[var(--tq-encre-douce)] transition-colors hover:text-[var(--tq-encre)]"
           >
-            Se connecter
+            {mot(LIEN_CONNEXION)}
           </Link>
-          <Link href={CTA_MENU.href} className="tq-bouton !px-4 !py-2 !text-sm">
-            {CTA_MENU.libelle}
+          <Link href={lien(CTA_MENU.href)} className="tq-bouton !px-4 !py-2 !text-sm">
+            {mot(CTA_MENU)}
           </Link>
         </div>
 
@@ -70,7 +91,7 @@ export default function SiteHeader() {
         <details className="group relative lg:hidden">
           <summary
             className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-lg border border-[var(--tq-bord)]"
-            aria-label="Ouvrir le menu"
+            aria-label={t.ouvrirLeMenu}
           >
             <span aria-hidden className="text-lg leading-none">
               ≡
@@ -80,25 +101,25 @@ export default function SiteHeader() {
             {MENU.map((l) => (
               <Link
                 key={l.href}
-                href={l.href}
+                href={lien(l.href)}
                 className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-[var(--tq-panneau)]"
                 {...attributsLien(l.href)}
               >
-                {l.libelle}
+                {mot(l)}
               </Link>
             ))}
             <div className="my-1 border-t border-[var(--tq-bord)]" />
             <Link
-              href="/login"
+              href={LIEN_CONNEXION.href}
               className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-[var(--tq-panneau)]"
             >
-              Se connecter
+              {mot(LIEN_CONNEXION)}
             </Link>
             <Link
-              href={CTA_MENU.href}
+              href={lien(CTA_MENU.href)}
               className="mt-1 block rounded-lg bg-[var(--tq-bleu)] px-3 py-2 text-center text-sm font-semibold text-white"
             >
-              {CTA_MENU.libelle}
+              {mot(CTA_MENU)}
             </Link>
           </div>
         </details>

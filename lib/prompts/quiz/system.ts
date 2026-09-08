@@ -42,6 +42,21 @@ type QuizPromptParams = {
   cta?: string;
   bonus?: string;
   intention?: string;
+  /**
+   * LE SUJET DU QUIZ, ET IL N'AVAIT AUCUNE PLACE ICI.
+   *
+   * Le générateur public demande "Sujet de ton quiz" en premier champ,
+   * et il n'y avait pas de fente pour le recevoir : il était poussé
+   * dans `intention`, donc le modèle lisait "INTENTION BUSINESS : la
+   * productivité pour entrepreneurs débordés" et devait faire servir
+   * chaque CTA de résultat à ça. Un sujet lu comme une offre à vendre,
+   * c'est exactement le "je trouve le résultat pas ouf" de Béné
+   * (8 septembre 2026).
+   *
+   * Facultatif : le formulaire de l'app n'a pas ce champ, son sujet
+   * vit dans l'objectif, la cible et l'intention réunis.
+   */
+  sujet?: string;
   questionCount?: number;
   resultCount?: number;
   niche?: string;
@@ -113,6 +128,7 @@ export function buildQuizGenerationPrompt(params: QuizPromptParams): {
     cta = "",
     bonus = "",
     intention = "",
+    sujet = "",
     questionCount = 7,
     resultCount = 3,
     niche = "",
@@ -304,6 +320,7 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
 }`;
 
   const userParts: string[] = [
+    ...(sujet ? [`SUJET DU QUIZ : ${sujet}`] : []),
     `OBJECTIF DU QUIZ : ${objectiveLabel}`,
     `CIBLE PRÉCISE : ${target}`,
     `TON SOUHAITÉ : ${tone}`,

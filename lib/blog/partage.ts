@@ -31,6 +31,8 @@ import path from "node:path";
 
 import type { Article, ResumeArticle } from "./articles";
 import { ORIGINE_BLOG } from "./seo";
+import { cheminArticle } from "./motsDuBlog";
+import { prefixeDeLangue, type LanguePublique } from "@/lib/site/langues";
 
 /** Le dossier des épingles, servi depuis `public/`. */
 const DOSSIER_PIN = "/blog/pin";
@@ -44,9 +46,18 @@ const DOSSIER_PIN = "/blog/pin";
  *
  * Le test est fait sur le DISQUE et pas sur une liste écrite à la main :
  * une liste finirait par annoncer un fichier supprimé.
+ *
+ * LA LANGUE EST UN PARAMÈTRE OBLIGATOIRE, ET CE N'EST PAS DÉCORATIF.
+ * Chaque langue a son dossier (`/blog/pin/` et `/blog/pin/en/`), comme
+ * les couvertures (`/blog/img/` et `/blog/img/en/`). Les quatre slugs
+ * anglais d'aujourd'hui diffèrent tous des slugs français, donc un
+ * dossier commun marcherait... jusqu'au jour où un article anglais
+ * porterait le même slug qu'un français : sa construction ÉCRASERAIT
+ * l'épingle de l'autre, et le flux français publierait la couverture
+ * anglaise sans qu'une seule erreur ne s'écrive.
  */
-export function epinglePour(slug: string): string | null {
-  const relatif = `${DOSSIER_PIN}/${slug}.jpg`;
+export function epinglePour(slug: string, langue: LanguePublique): string | null {
+  const relatif = `${DOSSIER_PIN}${prefixeDeLangue(langue)}/${slug}.jpg`;
   try {
     if (!/^[a-z0-9-]{1,80}$/.test(String(slug ?? ""))) return null;
     if (!fs.existsSync(path.join(process.cwd(), "public", relatif))) return null;
@@ -98,8 +109,20 @@ export function textePartage(a: Article | ResumeArticle): string {
  */
 export function attributsEpingle(
   a: Article | ResumeArticle,
+  langue: LanguePublique,
 ): Record<string, string> {
-  return attributsEpinglePour(a.slug, `${ORIGINE_BLOG}/blog/${a.slug}`, textePartage(a));
+  // `data-pin-url` PORTE LA LANGUE DE L'ARTICLE.
+  //
+  // C'est le morceau qu'on ne peut pas oublier (regle du 1er septembre)
+  // : une epingle prise sur la carte d'un article anglais et qui
+  // pointerait vers `/blog/<slug-anglais>` ramenerait le lecteur sur un
+  // 404, et l'epingle ne ramenerait personne.
+  return attributsEpinglePour(
+    a.slug,
+    `${ORIGINE_BLOG}${cheminArticle(a.slug, langue)}`,
+    textePartage(a),
+    langue,
+  );
 }
 
 /**
@@ -115,8 +138,9 @@ export function attributsEpinglePour(
   slug: string,
   urlDeLaPage: string,
   description: string,
+  langue: LanguePublique,
 ): Record<string, string> {
-  const epingle = epinglePour(slug);
+  const epingle = epinglePour(slug, langue);
   if (!epingle) return {};
   return {
     "data-pin-media": epingle,

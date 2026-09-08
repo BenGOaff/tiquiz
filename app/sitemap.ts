@@ -28,7 +28,8 @@ import { hoteCanonique, HOTE_VENTE } from "@/lib/publicHost";
 import { SALES_HOSTS } from "@/lib/sales/salesHosts";
 import { listerArticles } from "@/lib/blog/articles";
 import { RUBRIQUES } from "@/lib/blog/rubriques";
-import { PAGES_PUBLIQUES } from "@/lib/site/pagesPubliques";
+import { PAGES_PUBLIQUES, languesDePage } from "@/lib/site/pagesPubliques";
+import { cheminPourLangue, LANGUES_PUBLIQUES, LANGUE_SANS_PREFIXE } from "@/lib/site/langues";
 import { ADRESSES_LEGALES_FR } from "@/lib/site/adressesLegales";
 import { echapperMotifLike } from "@/lib/db/motifLike";
 
@@ -86,26 +87,43 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: "weekly" as const,
         priority: 1,
       },
-      {
-        url: `${HOTE_VENTE}/blog`,
-        lastModified: new Date(),
-        changeFrequency: "weekly" as const,
-        priority: 0.8,
-      },
+      // LE BLOG, DANS CHAQUE LANGUE QUI A VRAIMENT DES ARTICLES.
+      //
+      // `/en/blog` est une adresse à part entière, et ses slugs ne sont
+      // PAS les slugs français ("create-quiz-systeme-io" contre
+      // "comment-creer-quiz-systeme-io") : les dériver du français
+      // annoncerait quatre adresses qui répondent 404. On lit donc le
+      // sommaire de chaque langue.
+      //
+      // Une langue sans un seul article n'émet RIEN : annoncer un
+      // sommaire vide ferait juger cette langue sur une page qui dit
+      // "rien pour le moment".
+      ...LANGUES_PUBLIQUES.filter((l) => listerArticles(l).length > 0).flatMap((langue) => [
+        {
+          url: `${HOTE_VENTE}${cheminPourLangue("/blog", langue)}`,
+          lastModified: new Date(),
+          changeFrequency: "weekly" as const,
+          priority: 0.8,
+        },
+        ...listerArticles(langue).map((a) => ({
+          url: `${HOTE_VENTE}${cheminPourLangue(`/blog/${a.slug}`, langue)}`,
+          lastModified: new Date(`${a.publieLe}T12:00:00Z`),
+          changeFrequency: "monthly" as const,
+          priority: 0.7,
+        })),
+      ]),
       // LES RUBRIQUES. Une rubrique est une PAGE (voir
       // lib/blog/rubriques.ts) : la déclarer ici est ce qui la rend
       // découvrable sur des requêtes de sujet.
+      //
+      // Elles n'existent QU'EN FRANÇAIS (`rubriquesDeLaLangue`) : leurs
+      // libellés, leurs chapeaux et leur classement y sont écrits, et il
+      // n'y a donc aucune page `/en/blog/rubrique/...` à annoncer.
       ...RUBRIQUES.map((r) => ({
-        url: `${HOTE_VENTE}/blog/rubrique/${r.id}`,
+        url: `${HOTE_VENTE}${cheminPourLangue(`/blog/rubrique/${r.id}`, LANGUE_SANS_PREFIXE)}`,
         lastModified: new Date(),
         changeFrequency: "weekly" as const,
         priority: 0.6,
-      })),
-      ...listerArticles().map((a) => ({
-        url: `${HOTE_VENTE}/blog/${a.slug}`,
-        lastModified: new Date(`${a.publieLe}T12:00:00Z`),
-        changeFrequency: "monthly" as const,
-        priority: 0.7,
       })),
       // LE RESTE DU SITE PUBLIC, rapatrié de Systeme.io le 30 août.
       //
@@ -113,12 +131,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       // dépend entièrement du fait qu'un robot suive un lien jusqu'à
       // elle. C'est justement pour faire remonter ce domaine qu'on l'a
       // construit : autant les annoncer.
-      ...PAGES_PUBLIQUES.map((p) => ({
-        url: `${HOTE_VENTE}${p.chemin}`,
-        lastModified: new Date(),
-        changeFrequency: "monthly" as const,
-        priority: p.priorite,
-      })),
+      //
+      // ET CHAQUE LANGUE QUE LA PAGE A VRAIMENT (8 septembre).
+      //
+      // `/en/tarifs` est une adresse à part entière : sans elle dans le
+      // sitemap, la version anglaise n'existe que pour qui suit un
+      // `hreflang`, et un robot n'a aucune raison de deviner le préfixe.
+      // La liste vient de la page elle même : une page sans texte
+      // anglais n'émet AUCUNE adresse anglaise, sinon on annoncerait du
+      // français sous une URL anglaise.
+      ...PAGES_PUBLIQUES.flatMap((p) =>
+        languesDePage(p).map((langue) => ({
+          url: `${HOTE_VENTE}${cheminPourLangue(p.chemin, langue)}`,
+          lastModified: new Date(),
+          changeFrequency: "monthly" as const,
+          priority: p.priorite,
+        })),
+      ),
       // LES PAGES LÉGALES, sur CE domaine.
       //
       // Ce sont les adresses que Google lit dans la configuration de

@@ -36,6 +36,7 @@ import {
   filtrerClients,
   compterParProduit,
   compterParStatut,
+  compterVenusDuGenerateur,
   CRITERES_PAR_DEFAUT,
   ORDRE_STATUTS,
   NOM_STATUT,
@@ -140,6 +141,12 @@ export function ClientsPilotage() {
   const [atelier, setAtelier] = useState<{ reachable: boolean; reason: string | null } | null>(
     null,
   );
+  // LE GÉNÉRATEUR PUBLIC : `false` ne veut pas dire "personne n'est
+  // entré par là", il veut dire "la lecture a échoué". Les deux se
+  // ressemblent à l'écran et n'appellent pas la même action, donc on
+  // garde le fait à part au lieu de le déduire d'un compte à zéro
+  // (règle du 23 août).
+  const [generateurLisible, setGenerateurLisible] = useState(true);
   const [c, setC] = useState<CritereClients>(CRITERES_PAR_DEFAUT);
   const [combien, setCombien] = useState(50);
 
@@ -160,6 +167,7 @@ export function ClientsPilotage() {
         | undefined;
       setTipote(t?.lisible ? t.comptes : null);
       setAtelier((j.atelier as { reachable: boolean; reason: string | null }) ?? null);
+      setGenerateurLisible(j.generateurLisible !== false);
       setPeople((j.people as Person[]) ?? []);
       setErreur(null);
     } catch {
@@ -185,6 +193,7 @@ export function ClientsPilotage() {
 
   const compte = useMemo(() => compterParStatut(gens), [gens]);
   const compteProduit = useMemo(() => compterParProduit(gens), [gens]);
+  const compteGenerateur = useMemo(() => compterVenusDuGenerateur(gens), [gens]);
   const vues = useMemo(() => filtrerClients(gens, c), [gens, c]);
 
   if (!people && !erreur) {
@@ -273,6 +282,30 @@ export function ClientsPilotage() {
             nombre={compteProduit[a] ?? 0}
           />
         ))}
+        {/* PAR OÙ ELLE EST ENTRÉE (Béné, 8 septembre 2026). Ce n'est
+            pas un produit, donc c'est une puce à part : quelqu'un
+            entré par le générateur peut être abonné, gratuit ou parti.
+            La puce ne s'affiche que s'il y a quelqu'un, comme les
+            filtres de statut. */}
+        {generateurLisible && compteGenerateur > 0 && (
+          <Puce
+            actif={c.entree === "generateur"}
+            onClick={() =>
+              setC({ ...c, entree: c.entree === "generateur" ? "tous" : "generateur" })
+            }
+            libelle="Entrés par le générateur"
+            nombre={compteGenerateur}
+          />
+        )}
+        {!generateurLisible && (
+          // MUET N'EST PAS ZÉRO. Sans cette phrase, l'absence de puce
+          // et de pastille se lirait "personne n'entre par là", ce qui
+          // enverrait chercher un trafic manquant au lieu d'une panne
+          // de lecture.
+          <span className="text-xs text-muted-foreground">
+            Les entrées par le générateur n&apos;ont pas pu être lues.
+          </span>
+        )}
         {tipote === null && (
           // MUET N'EST PAS VIDE. Sans cette phrase, l'absence totale de
           // pastille Tipote se lirait "aucun client Tipote".
@@ -356,6 +389,15 @@ export function ClientsPilotage() {
                     </span>
                   ))}
                 </span>
+                {/* ENTRÉE PAR LE GÉNÉRATEUR : la pastille répond à
+                    "qui entre par là" sans avoir à filtrer, et elle
+                    reste lisible sur un téléphone (un mot, pas une
+                    colonne de plus). */}
+                {p.venuDuGenerateur && (
+                  <span className="shrink-0 rounded-md border border-primary/40 px-1.5 py-0.5 text-[11px] font-medium text-primary">
+                    Générateur
+                  </span>
+                )}
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${TON_STATUT[p.status]}`}
                 >

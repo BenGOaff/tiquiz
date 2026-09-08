@@ -163,9 +163,25 @@ describe("Le palier se VOIT, et il se tire au curseur", () => {
   test("L'ÉCRAN AFFICHE LE TAUX, pas seulement un montant", () => {
     // Bene, 31 aout : "elle prend en compte l'augmentation de palier ?
     // Il faut !" Il ETAIT pris en compte, il n'etait pas montre.
+    //
+    // ET IL VISE LE FAIT, PAS LA FORMULATION. Ce test figeait la chaine
+    // francaise `Ton taux a {s.filleuls} filleuls` : il est sorti ROUGE
+    // le 8 septembre sur une correction JUSTE, quand l'ecran est passe
+    // en deux langues. Un garde-fou qui fige une FORMULATION empeche de
+    // corriger la formulation (neuvieme fois dans ces depots).
     assert.ok(SRC.includes("prochaineMarcheCommission"), "la marche suivante doit etre affichee");
-    assert.match(SRC, /Ton taux à \{s\.filleuls\} filleuls/);
-    assert.match(SRC, /\{s\.tauxPct\} %/);
+    assert.match(SRC, /\{s\.tauxPct\} %/, "le taux courant doit etre AFFICHE, pas seulement calcule");
+    assert.match(SRC, /labelTaux\(s\.filleuls\)/, "le taux doit etre annonce avec le nombre de filleuls");
+    // Et les DEUX langues portent le libelle, avec le nombre dedans :
+    // une table a laquelle il manque une langue ne compile pas, mais un
+    // libelle vide compilerait tres bien. Le composant est un module
+    // client (`"use client"`), donc on lit sa SOURCE : l'importer ici
+    // ferait charger du JSX dans le runner natif.
+    const libelles = SRC.match(/labelTaux: \(f\) => `[^`]*`/g) ?? [];
+    assert.equal(libelles.length, 2, "il faut un libelle de taux par langue publique");
+    for (const l of libelles) {
+      assert.ok(l.includes("${f}"), `un libelle de taux sans le nombre de filleuls : ${l}`);
+    }
   });
 
   test("des CURSEURS, plus de boutons plus/moins", () => {

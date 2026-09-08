@@ -94,9 +94,28 @@ function masqueArrondi(largeur, hauteur, rayon) {
   );
 }
 
-const articles = JSON.parse(
-  fs.readFileSync(path.join(process.cwd(), "content", "blog", "index.json"), "utf8"),
-);
+// ── LES ARTICLES, LANGUE PAR LANGUE ──────────────────────────────────
+//
+// Chaque langue a son DOSSIER de sortie (`public/blog/pin/` et
+// `public/blog/pin/en/`), comme elle a deja son dossier de couvertures
+// (`public/blog/img/` et `public/blog/img/en/`). Les quatre slugs
+// anglais d'aujourd'hui different tous des slugs francais, donc un
+// dossier commun marcherait... jusqu'au jour ou un article anglais
+// porterait le meme slug qu'un francais : sa construction ECRASERAIT
+// l'epingle de l'autre, et le flux francais publierait la couverture
+// anglaise sans qu'une seule erreur ne s'ecrive.
+//
+// `lib/blog/partage.ts` cherche au MEME endroit (`epinglePour(slug,
+// langue)`) : deux facons de composer ce chemin finiraient par ne plus
+// se retrouver, et le bouton Pinterest disparaitrait en silence.
+const sommaireDe = (dossier) => {
+  const p = path.join(process.cwd(), "content", "blog", dossier, "index.json");
+  return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, "utf8")) : [];
+};
+const PAR_LANGUE = [
+  { langue: "fr", prefixe: "", articles: sommaireDe(".") },
+  { langue: "en", prefixe: "/en", articles: sommaireDe("en") },
+];
 
 // ── LES PAGES QUI NE SONT PAS DES ARTICLES ───────────────────────────
 //
@@ -124,11 +143,24 @@ const PAGES = [
   },
 ];
 
-fs.mkdirSync(SORTIE, { recursive: true });
-
 let faites = 0;
 let sautees = 0;
-for (const a of [...articles, ...PAGES]) {
+
+// Les PAGES qui ne sont pas des articles n'existent qu'en francais :
+// elles rejoignent donc le premier lot, celui sans prefixe.
+const LOTS = PAR_LANGUE.map((l) =>
+  l.langue === "fr" ? { ...l, articles: [...l.articles, ...PAGES] } : l,
+);
+
+for (const lot of LOTS) {
+  const sortie = path.join(SORTIE, lot.prefixe.replace(/^\//, ""));
+  fs.mkdirSync(sortie, { recursive: true });
+  if (lot.articles.length === 0) {
+    console.log(`  (aucun article) ${lot.langue}`);
+    continue;
+  }
+
+for (const a of lot.articles) {
   if (!a.couverture) {
     // Sans couverture on ne fabrique RIEN. Une épingle au fond uni ne
     // dit rien de l'article et occupe une place dans un flux.
@@ -173,8 +205,9 @@ for (const a of [...articles, ...PAGES]) {
     // JPEG et pas WebP : Pinterest recompresse, et le JPEG est le format
     // qu'il accepte partout sans surprise.
     .jpeg({ quality: 86, mozjpeg: true })
-    .toFile(path.join(SORTIE, `${a.slug}.jpg`));
+    .toFile(path.join(sortie, `${a.slug}.jpg`));
   faites += 1;
+}
 }
 
 console.log(`Epingles construites : ${faites}, sautees : ${sautees}`);

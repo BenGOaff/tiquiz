@@ -41,7 +41,7 @@ import { OWNER_CATALOG, OWNER_PRODUCT_ORDER } from "@/lib/checkout/catalog";
 const lire = (p: string) => fs.readFileSync(path.join(process.cwd(), p), "utf8");
 
 const sansCommentaires = (src: string) =>
-  src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+  src.replace(/(^|[^:])\/\/.*$/gm, "$1").replace(/\/\*[\s\S]*?\*\//g, "");
 
 describe("le montant vient du catalogue, jamais d'ailleurs", () => {
   test("chaque palier vendu porte SON prix, en unités", () => {

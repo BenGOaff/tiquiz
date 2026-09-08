@@ -50,12 +50,23 @@ export type FiltreStatut = "tous" | PersonStatus;
  * tous ceux qui l'ont, quelles que soient les autres.
  */
 export type FiltreProduit = "tous" | Appartenance;
+/**
+ * ENTRÉE PAR LE GÉNÉRATEUR PUBLIC (Béné, 8 septembre 2026).
+ *
+ * "Fais moi apparaître qui entre par le générateur dans mes contacts."
+ *
+ * Ce n'est ni un statut ni un produit : c'est la PORTE par laquelle la
+ * personne est arrivée. Deux valeurs seulement, et pas de "non" : la
+ * question est "montre moi ceux là", jamais "montre moi les autres".
+ */
+export type FiltreEntree = "tous" | "generateur";
 export type TriClients = "recents" | "paye" | "activite" | "alpha";
 
 export interface CritereClients {
   recherche: string;
   statut: FiltreStatut;
   produit: FiltreProduit;
+  entree: FiltreEntree;
   tri: TriClients;
 }
 
@@ -63,6 +74,7 @@ export const CRITERES_PAR_DEFAUT: CritereClients = {
   recherche: "",
   statut: "tous",
   produit: "tous",
+  entree: "tous",
   // Les derniers arrivés d'abord : c'est ce qu'on vient voir en ouvrant
   // l'écran, et ça donne un signe de vie immédiat.
   tri: "recents",
@@ -136,6 +148,20 @@ export function compterParProduit(
   return par;
 }
 
+/**
+ * Combien de personnes sont entrées par le générateur public.
+ *
+ * `venuDuGenerateur` vaut `false` quand la lecture a ÉCHOUÉ (cf.
+ * `Person`), donc ce compte vaut zéro dans ce cas là. C'est à l'écran
+ * de dire "je n'ai pas pu regarder" : ici on ne sait pas distinguer,
+ * et inventer la distinction serait pire que de ne pas l'avoir.
+ */
+export function compterVenusDuGenerateur(people: readonly Person[]): number {
+  let n = 0;
+  for (const p of people) if (p.venuDuGenerateur) n += 1;
+  return n;
+}
+
 /** Filtre et range. */
 export function filtrerClients(
   people: readonly PersonneAvecTipote[],
@@ -146,6 +172,7 @@ export function filtrerClients(
   const gardees = people.filter((p) => {
     if (c.statut !== "tous" && p.status !== c.statut) return false;
     if (c.produit !== "tous" && !estDe(p, c.produit)) return false;
+    if (c.entree === "generateur" && !p.venuDuGenerateur) return false;
     return correspond(p, q);
   });
 

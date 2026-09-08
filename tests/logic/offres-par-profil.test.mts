@@ -205,7 +205,7 @@ describe("Ce qui part dans le prompt", () => {
 
 describe("L'écran du brief suit celui de l'Atelier", () => {
   const ecran = lire("app/generateurs/[generateur]/GenerateurClient.tsx");
-  const src = ecran.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const src = ecran.replace(/^\s*\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
 
   test("les deux choix existent, et en CARTES, pas en menu déroulant", () => {
     // "Plus lisible qu'un menu déroulant pour un choix qui change le
@@ -348,8 +348,8 @@ describe("Les mots et les gestes de son labo", () => {
   };
   const g = fr.generateurs;
   const ecran = lire("app/generateurs/[generateur]/GenerateurClient.tsx")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
+    .replace(/^\s*\/\/.*$/gm, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
 
   test("ses libellés, mot pour mot", () => {
     // Trois gestes que Tiquiz nommait autrement. Elle a dit "pareil" :

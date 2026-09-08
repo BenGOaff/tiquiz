@@ -44,9 +44,9 @@ import {
   PHRASE_REFUS,
 } from "../../lib/blog/commentaires.ts";
 
-const SLUGS = tousLesSlugs();
-const COMPLETS = SLUGS.map((s) => lireArticle(s)!);
-const RESUMES = listerArticles();
+const SLUGS = tousLesSlugs("fr");
+const COMPLETS = SLUGS.map((s) => lireArticle(s, "fr")!);
+const RESUMES = listerArticles("fr");
 
 // ── LE TL;DR EST UN CHAPEAU, PAS UN PARAGRAPHE ──
 
@@ -67,7 +67,7 @@ test("un article SANS TL;DR garde son corps intact", () => {
   // L'etude de cas de Jocelyne n'en a pas. Fabriquer un resume a partir
   // des premieres phrases donnerait un encadre qui repete mot pour mot
   // le paragraphe juste en dessous.
-  const a = lireArticle("cas-client-jocelyne-tdah")!;
+  const a = lireArticle("cas-client-jocelyne-tdah", "fr")!;
   const { resume, corps } = extraireResume(a.blocs);
   assert.equal(resume, null);
   assert.equal(corps.length, a.blocs.length);
@@ -112,10 +112,30 @@ test("les dimensions se lisent dans les trois formes de WebP du corpus", () => {
   // VP8, VP8L et VP8X existent toutes les trois dans public/blog/img.
   // N'en traiter qu'une aurait laisse les deux autres sans garde-fou,
   // en silence, c'est a dire exactement la ou les bugs s'installent.
-  const dossier = path.join(process.cwd(), "public", "blog", "img");
-  const fichiers = fs.readdirSync(dossier).filter((f) => !f.endsWith(".svg"));
-  const illisibles = fichiers.filter((f) => !dimensionsImage(fs.readFileSync(path.join(dossier, f))));
+  // ON DESCEND DANS LES SOUS-DOSSIERS, et ce n'est pas un detail : les
+  // images des articles ANGLAIS vivent dans `img/en/` depuis le
+  // 8 septembre. Un `readdirSync` a plat y lisait le DOSSIER comme un
+  // fichier (EISDIR) ; le corriger en ignorant les dossiers aurait
+  // laisse 29 images sans garde-fou, en silence, c'est a dire
+  // exactement ce que ce test existe pour empecher.
+  const racine = path.join(process.cwd(), "public", "blog", "img");
+  const toutes: string[] = [];
+  const descendre = (d: string) => {
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      const p = path.join(d, e.name);
+      if (e.isDirectory()) descendre(p);
+      else if (!e.name.endsWith(".svg")) toutes.push(p);
+    }
+  };
+  descendre(racine);
+  const illisibles = toutes
+    .filter((f) => !dimensionsImage(fs.readFileSync(f)))
+    .map((f) => path.relative(racine, f));
   assert.deepEqual(illisibles, [], "images dont on ne sait pas lire la taille");
+  assert.ok(
+    toutes.some((f) => f.includes(`${path.sep}en${path.sep}`)),
+    "les images anglaises sont bien couvertes : sans ca le test passerait au vert sur un dossier qu'il ne lit pas",
+  );
 });
 
 test("les schemas SVG portent leur taille dans leur viewBox", () => {
@@ -220,7 +240,7 @@ test("le schema duplique de l'etude de cas ne s'affiche plus deux fois", () => {
   // `svg-gwenn-3-axes.svg` apparait deux fois d'affilee : l'import a
   // duplique le bloc, et le lecteur se demandait ce qu'il avait rate
   // entre les deux.
-  const a = lireArticle("cas-client-jocelyne-tdah")!;
+  const a = lireArticle("cas-client-jocelyne-tdah", "fr")!;
   const avant = a.blocs.filter((b) => b.type === "image" && b.src.includes("gwenn-3-axes")).length;
   assert.equal(avant, 2, "le doublon est bien dans le contenu importe");
   const apres = normaliserImages(a.blocs).filter(

@@ -50,13 +50,14 @@ import {
 } from "@/lib/checkout/avantages";
 import { OWNER_CATALOG, formatOwnerPrice } from "@/lib/checkout/catalog";
 import { OUTILS } from "@/lib/site/integrations";
-import { FONCTIONNALITES, fonctionnaliteParSlug } from "@/lib/site/fonctionnalites";
+import { fonctionnalites, fonctionnaliteParSlug } from "@/lib/site/fonctionnalites";
 import { BLOCS_ANIMES, BLOCS_EN_ATTENTE } from "@/lib/site/blocsAnimes";
 import { FREE_LIMITS } from "@/lib/planLimits";
 
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { gagne, reglesDeCouleur, specificite, viseTousLesLiens } from "./aide/specificiteCss.mts";
+import { cheminPageDuSite } from "./aide/pageDuSite.mts";
 
 const racine = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 
@@ -77,7 +78,7 @@ function texteDuBloc(nom: string): string {
 
 const SOURCE = racine("lib/site/landing.ts");
 /** Le module SANS ses commentaires : sinon un contrôle tombe sur sa propre explication. */
-const CODE = SOURCE.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, " ");
+const CODE = SOURCE.replace(/^\s*\/\/.*$/gm, " ").replace(/\/\*[\s\S]*?\*\//g, " ");
 
 // LA LANDING EST TROIS FICHIERS DEPUIS LE 6 SEPTEMBRE, et ce filet les
 // lit tous les trois. Bene : "/ = la landing courte, /tarifs = la vraie
@@ -89,9 +90,10 @@ const CODE = SOURCE.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, "
 // la presence ou l'ORDRE de quelque chose dans un fichier tombe sinon
 // sur sa propre explication (leçon du 3 septembre, trois fois).
 const sansCommentaires = (t: string) =>
-  t.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, " ").replace(/^\s*\/\/.*$/gm, " ");
+  t.replace(/^\s*\/\/.*$/gm, " ").replace(/\{?\/\*[\s\S]*?\*\/\}?/g, " ");
 const PAGE_ACCUEIL = sansCommentaires(racine("app/(site)/apercu-landing-8f2c9d41/page.tsx"));
-const PAGE_TARIFS = sansCommentaires(racine("app/(site)/tarifs/page.tsx"));
+const CHEMIN_TARIFS = cheminPageDuSite("/tarifs");
+const PAGE_TARIFS = sansCommentaires(racine(CHEMIN_TARIFS));
 const MORCEAUX = sansCommentaires(racine("components/landing/morceaux.tsx"));
 const PAGE_CODE = `${PAGE_ACCUEIL}\n${PAGE_TARIFS}\n${MORCEAUX}`;
 const CSS = racine("components/landing/styles.ts");
@@ -665,7 +667,7 @@ describe("le coût de ne rien faire est dit, et les trois formats aussi", () => 
     // /fonctionnalites/sondages-et-popquiz". La landing courte ne peut
     // pas porter les huit fonctionnalités, mais un produit facturé qui
     // n'est montré NULLE PART reste le défaut qu'on ferme ici.
-    const page = fonctionnaliteParSlug("sondages-et-popquiz");
+    const page = fonctionnaliteParSlug("sondages-et-popquiz", "fr");
     assert.ok(page, "la page qui vend les sondages et les Popquiz n'existe pas");
     // ON LIT LA PAGE ENTIÈRE, son nom et son détail compris : c'est le
     // titre qui nomme les deux produits, et le corps qui dit ce qu'ils
@@ -863,7 +865,7 @@ describe("la règle qui héberge ses îles vit à UN endroit", () => {
   test("les deux feuilles du site public interpolent la même constante", () => {
     const feuilles = {
       "components/landing/styles.ts": racine("components/landing/styles.ts"),
-      "app/(site)/fonctionnalites/styles.ts": racine("app/(site)/fonctionnalites/styles.ts"),
+      "components/fonctionnalites/styles.ts": racine("components/fonctionnalites/styles.ts"),
     };
     for (const [nom, code] of Object.entries(feuilles)) {
       assert.ok(
@@ -894,7 +896,7 @@ describe("la règle qui héberge ses îles vit à UN endroit", () => {
     // servie dans le HTML, lisible, et morte.
     for (const f of [
       "components/landing/styles.ts",
-      "app/(site)/fonctionnalites/styles.ts",
+      "components/fonctionnalites/styles.ts",
       "components/landing/cssIles.ts",
     ]) {
       const gabarit = racine(f).replace(/\/\*[\s\S]*?\*\//g, " ");
@@ -1053,7 +1055,7 @@ describe("le corps de texte est aligné à gauche, sans exception à tenir", () 
     );
     for (const p of [
       "app/(site)/apercu-landing-8f2c9d41/page.tsx",
-      "app/(site)/tarifs/page.tsx",
+      CHEMIN_TARIFS,
     ]) {
       assert.ok(!/blocLong/.test(racine(p)), `${p} appelle encore blocLong`);
     }
@@ -1073,7 +1075,7 @@ describe("le corps de texte est aligné à gauche, sans exception à tenir", () 
     assert.ok(/\.tql-intro\{/.test(css), "la boîte .tql-intro a disparu de la feuille");
     for (const p of [
       "app/(site)/apercu-landing-8f2c9d41/page.tsx",
-      "app/(site)/tarifs/page.tsx",
+      CHEMIN_TARIFS,
     ]) {
       assert.ok(
         /className="tql-intro"/.test(racine(p)),
@@ -1187,9 +1189,10 @@ describe("chaque animation levée porte son contexte", () => {
     // n'a pas encore de page doit être DÉCLARÉ en attente, avec sa
     // raison. Une exemption sans raison écrite est une exemption que le
     // prochain passage prend pour un oubli.
-    const servisParLesFonctionnalites: string[] = FONCTIONNALITES.map((f) => f.visuel).filter(
-      (v) => v !== null,
-    );
+    const servisParLesFonctionnalites: string[] = fonctionnalites("fr")
+      .map((f) => f.visuel)
+      .filter((v) => v !== null)
+      .map((v) => String(v));
     for (const bloc of Object.keys(BLOCS_ANIMES)) {
       if (bloc.endsWith("-mobile")) continue; // servi par la media query de son île
       const servi =

@@ -197,7 +197,7 @@ test("chaque article publie est classe", () => {
   // Un article non classe reste visible dans "tous les articles", donc
   // ce n'est pas une erreur. Mais aujourd'hui ils le sont tous, et on
   // veut le savoir si un nouvel article arrive sans rubrique.
-  const orphelins = listerArticles().filter((a) => rubriqueDe(a.slug) === null);
+  const orphelins = listerArticles("fr").filter((a) => rubriqueDe(a.slug) === null);
   assert.deepEqual(
     orphelins.map((a) => a.slug),
     [],
@@ -218,7 +218,7 @@ test("une rubrique inconnue ne fabrique pas une page vide", () => {
 
 test("chaque article a une couverture, et le fichier existe", () => {
   const racine = process.cwd();
-  for (const a of listerArticles()) {
+  for (const a of listerArticles("fr")) {
     assert.ok(a.couverture, `${a.slug} n'a pas de couverture`);
     const fichier = path.join(racine, "public", a.couverture!.replace(/^\//, ""));
     assert.ok(fs.existsSync(fichier), `${a.slug} pointe sur ${a.couverture}, absent du disque`);
@@ -230,7 +230,7 @@ test("deux articles ne partagent pas la meme couverture", () => {
   // correspondance decalee d'un rang, et deux articles portent la meme
   // image sans que rien ne le dise.
   const vues = new Map<string, string>();
-  for (const a of listerArticles()) {
+  for (const a of listerArticles("fr")) {
     const deja = vues.get(a.couverture!);
     assert.equal(deja, undefined, `${a.slug} et ${deja} partagent ${a.couverture}`);
     vues.set(a.couverture!, a.slug);
@@ -263,8 +263,8 @@ describe("les pages légales sont déclarées sur le domaine de vente", () => {
     "utf8",
   );
   const sansCommentaires = src
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
+    .replace(/^\s*\/\/.*$/gm, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
 
   test("les chemins légaux sont DÉRIVÉS, jamais recopiés à la main", () => {
     // La source est `ADRESSES_LEGALES_FR`, qui porte la page canonique

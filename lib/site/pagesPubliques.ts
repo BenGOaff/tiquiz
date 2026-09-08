@@ -16,7 +16,12 @@
 // Un test EXIGE que toute page déclarée ici soit atteignable depuis le
 // pied de page : une page que Google connaît et qu'aucun humain ne peut
 // trouver depuis le site est une page qui ne sert à rien.
-import { FONCTIONNALITES } from "@/lib/site/fonctionnalites";
+import { fonctionnalites } from "@/lib/site/fonctionnalites";
+import {
+  LANGUE_SANS_PREFIXE,
+  LANGUES_PUBLIQUES,
+  type LanguePublique,
+} from "@/lib/site/langues";
 
 export interface PagePublique {
   chemin: string;
@@ -26,6 +31,25 @@ export interface PagePublique {
   resume: string;
   /** La priorité du sitemap. */
   priorite: number;
+  /**
+   * LES LANGUES DANS LESQUELLES CETTE PAGE EXISTE VRAIMENT.
+   *
+   * Absent = la seule langue sans préfixe, donc le français. Ce n'est
+   * pas un défaut de confort : déclarer une langue qu'une page n'a pas
+   * mettrait `https://tiquiz.fr/en/<chemin>` dans le sitemap et dans
+   * ses `hreflang`, et Google y trouverait du FRANÇAIS sous une adresse
+   * anglaise. La page s'afficherait parfaitement, et l'anglais serait
+   * jugé sur du contenu dupliqué.
+   *
+   * Une page entre ici le jour où son texte anglais existe, jamais le
+   * jour où on prévoit de l'écrire.
+   */
+  langues?: readonly LanguePublique[];
+}
+
+/** Les langues d'une page, avec son repli. */
+export function languesDePage(p: PagePublique): readonly LanguePublique[] {
+  return p.langues && p.langues.length > 0 ? p.langues : [LANGUE_SANS_PREFIXE];
 }
 
 const PAGES_ECRITES: readonly PagePublique[] = [
@@ -46,6 +70,10 @@ const PAGES_ECRITES: readonly PagePublique[] = [
     resume:
       "Décris ton sujet et à qui tu parles : l'IA écrit les questions, leurs réponses et les profils de résultat. Sans compte et sans carte bancaire, et le quiz se retrouve dans un compte gratuit.",
     priorite: 0.9,
+    // Traduite le 8 septembre : son texte vit dans
+    // `lib/site/generateurQuiz.ts`, structure d'un côté, texte par
+    // langue de l'autre. L'OUTIL suit la langue de la page.
+    langues: ["fr", "en"],
   },
   {
     chemin: "/tarifs",
@@ -53,9 +81,18 @@ const PAGES_ECRITES: readonly PagePublique[] = [
     resume:
       "Trois paliers, le premier ne coûte rien et ne demande pas de carte bancaire. Le détail ligne par ligne, ce que ça remplace, et les questions d'argent.",
     priorite: 0.9,
+    // Son texte anglais vit dans `contenuLanding("en")`
+    // (`lib/site/landing.ts`). Une page ne déclare une langue que
+    // lorsque son texte existe VRAIMENT : sinon le sitemap et les
+    // `hreflang` annonceraient une adresse anglaise qui sert du
+    // français, et Google jugerait l'anglais sur du contenu dupliqué.
+    langues: ["fr", "en"],
   },
   {
     chemin: "/affiliation",
+    // Traduite le 8 septembre : `lib/site/pageAffiliation.ts` porte les
+    // deux pages du programme dans les deux langues.
+    langues: LANGUES_PUBLIQUES,
     titre: "Programme d'affiliation Tiquiz",
     resume:
       "40 % de commission récurrente sur chaque abonnement Tiquiz, tant que le filleul reste client. Cookie d'un an, versement dès 20 €, facture éditée par nous.",
@@ -63,6 +100,7 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   },
   {
     chemin: "/affiliation-atelier",
+    langues: LANGUES_PUBLIQUES,
     titre: "Affiliation de l'Atelier du Quiz",
     resume:
       "70 % de commission sur chaque vente de l'Atelier du Quiz, la formation de 7 jours à 47 €.",
@@ -70,6 +108,9 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   },
   {
     chemin: "/a-propos",
+    // Traduite le 8 septembre : `lib/site/aPropos.ts` porte le récit
+    // entier dans les deux langues.
+    langues: LANGUES_PUBLIQUES,
     titre: "Bénédicte Lagardette, fondatrice de Tiquiz",
     resume:
       "Ex-infirmière (urgences en Corse, ambulance en Suisse), handicapée à 34 ans après trois opérations du dos, elle a repris depuis son lit et code aujourd'hui ses propres logiciels avec l'IA. L'histoire derrière Tiquiz et l'Atelier du Quiz, y compris l'échec d'iziquiz.",
@@ -77,6 +118,16 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   },
   {
     chemin: "/integrations",
+    // LE HUB ET SES SIX PAGES FILLES SONT BILINGUES (8 septembre).
+    //
+    // Cette note disait "ses six pages filles NON", et c'était vrai le
+    // matin : leur texte vit maintenant dans `lib/site/outils/*.ts`, une
+    // entrée par langue. On ne déclare que les langues qu'une page a
+    // VRAIMENT, et c'est la règle qui compte : déclarer une langue
+    // absente mettrait l'adresse anglaise dans le sitemap ET dans ses
+    // `hreflang`, et Google y trouverait du français, donc jugerait
+    // l'anglais sur du contenu dupliqué.
+    langues: LANGUES_PUBLIQUES,
     titre: "Connecter ses outils à Systeme.io",
     resume:
       "Ce que chaque outil de formulaire ou de quiz demande pour envoyer ses réponses dans Systeme.io : Zapier, un webhook, ou rien du tout. Tally, Typeform, Google Forms, Jotform, Interact et Tiquiz comparés.",
@@ -84,6 +135,7 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   },
   {
     chemin: "/integrations/zapier-systeme-io",
+    langues: LANGUES_PUBLIQUES,
     titre: "Zapier et Systeme.io",
     resume:
       "L'application Systeme.io est accessible dès le plan gratuit de Zapier. Les actions disponibles, les limites chiffrées, et le moment où le plan gratuit ne suffit plus.",
@@ -91,6 +143,7 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   },
   {
     chemin: "/integrations/tally-systeme-io",
+    langues: LANGUES_PUBLIQUES,
     titre: "Connecter Tally à Systeme.io",
     resume:
       "Tally n'a pas d'intégration Systeme.io. Les trois méthodes (webhook et code, Zapier, Make), ce que chacune coûte, et le piège de l'identifiant de tag.",
@@ -98,6 +151,7 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   },
   {
     chemin: "/integrations/typeform-systeme-io",
+    langues: LANGUES_PUBLIQUES,
     titre: "Connecter Typeform à Systeme.io",
     resume:
       "Typeform n'a pas d'intégration Systeme.io native. La méthode avec Zapier, les deux pièges de configuration, et le coût réel des deux abonnements.",
@@ -105,6 +159,7 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   },
   {
     chemin: "/integrations/google-forms-systeme-io",
+    langues: LANGUES_PUBLIQUES,
     titre: "Connecter Google Forms à Systeme.io",
     resume:
       "Afficher un Google Forms dans une page Systeme.io est possible, mais il n'envoie rien dans les contacts. Zapier lit la feuille de calcul liée, pas le formulaire.",
@@ -112,6 +167,7 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   },
   {
     chemin: "/integrations/interact-systeme-io",
+    langues: LANGUES_PUBLIQUES,
     titre: "Connecter Interact à Systeme.io",
     resume:
       "La documentation d'Interact demande un compte Zapier Pro, un tag créé à la main dans Systeme.io par résultat de quiz, et un Zap par résultat. Les citations et leur source.",
@@ -119,6 +175,7 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   },
   {
     chemin: "/integrations/jotform-systeme-io",
+    langues: LANGUES_PUBLIQUES,
     titre: "Connecter Jotform à Systeme.io",
     resume:
       "Jotform annonce une intégration Systeme.io, mais son bouton ouvre Zapier : l'adresse porte integration=Zapier et aucune clé API Systeme.io n'est demandée.",
@@ -130,6 +187,7 @@ const PAGES_ECRITES: readonly PagePublique[] = [
     resume:
       "La connexion Systeme.io, les quiz par profil ou scorés, les sondages, les Popquiz, les tags automatiques, les générateurs : chaque fonctionnalité expliquée en détail.",
     priorite: 0.7,
+    langues: LANGUES_PUBLIQUES,
   },
   {
     chemin: "/newsletter",
@@ -137,6 +195,7 @@ const PAGES_ECRITES: readonly PagePublique[] = [
     resume:
       "Ce qu'elle teste dans ses propres quiz, les chiffres réels, et ce qui rate aussi. Désinscription en un clic.",
     priorite: 0.6,
+    langues: LANGUES_PUBLIQUES,
   },
   {
     chemin: "/support",
@@ -161,10 +220,15 @@ const PAGES_ECRITES: readonly PagePublique[] = [
  */
 export const PAGES_PUBLIQUES: readonly PagePublique[] = [
   ...PAGES_ECRITES,
-  ...FONCTIONNALITES.map((f) => ({
+  // LE TITRE ET LE RÉSUMÉ SONT PRIS EN FRANÇAIS, et c'est délibéré :
+  // ce sont eux qui partent dans `llms.txt`, qui n'a qu'une version.
+  // Les langues, elles, sont DÉCLARÉES, donc le sitemap et les
+  // `hreflang` savent que `/en/fonctionnalites/<slug>` existe.
+  ...fonctionnalites(LANGUE_SANS_PREFIXE).map((f) => ({
     chemin: `/fonctionnalites/${f.slug}`,
     titre: f.nom,
     resume: f.resume,
     priorite: 0.6,
+    langues: LANGUES_PUBLIQUES,
   })),
 ];

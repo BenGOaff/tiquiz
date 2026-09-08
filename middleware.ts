@@ -19,6 +19,7 @@ const APP_URL_CANONIQUE = "https://quiz.tipote.com";
 import { customDomainsEnabled, isOwnHost, normaliseHost } from "@/lib/customDomains";
 import { routeTenantPath, TENANT_SLUG_PREFIX } from "@/lib/publicSlug";
 import { salesSlugForHost } from "@/lib/sales/salesHosts";
+import { ENTETE_LANGUE, langueDuChemin, serviParUneRouteDeLangue } from "@/lib/site/langues";
 import { readSa, SA_COOKIE, SA_MAX_AGE_SECONDS, SA_PARAM } from "@/lib/affiliate/sa";
 import { readRef, REF_COOKIE, REF_MAX_AGE_SECONDS, REF_PARAM } from "@/lib/affiliate/refLien";
 import { canalDeLUrl, clicASignaler, signalerClic } from "@/lib/affiliate/signalerClic";
@@ -225,6 +226,58 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
   // sur ce domaine.
   // -------------------------------------------------------------------
   const slugDeVente = salesSlugForHost(req.headers.get("host"));
+
+  // -------------------------------------------------------------------
+  // L'ANGLAIS VIT SOUS `/en/`, LE FRANCAIS RESTE OU IL EST.
+  //
+  // Bene, 8 septembre 2026 : "je ne veux pas changer les URL actuelles
+  // parce qu'elles commencent a ranker doucement." La langue par defaut
+  // ne porte donc AUCUN prefixe, et c'est ce qui rend la bascule
+  // gratuite cote referencement : `/tarifs` reste `/tarifs`.
+  //
+  // ON REECRIT, ON NE REDIRIGE PAS : l'adresse vue par le visiteur reste
+  // `/en/tarifs`, donc c'est elle que Google indexe et elle que
+  // `hreflang` apparie. Une redirection vers `/tarifs` ferait
+  // disparaitre l'URL anglaise, c'est a dire tout l'interet du chantier.
+  //
+  // LA LANGUE VOYAGE DANS UN EN-TETE, et `i18n/request.ts` la lit AVANT
+  // le cookie. Sans ca, `/en/tarifs` servirait du francais a quelqu'un
+  // dont le cookie dit "fr" : la page s'afficherait tres bien, et
+  // Google indexerait du francais sous une adresse anglaise.
+  //
+  // LA RACINE `/en/` EST EXCLUE, et c'est deliberé : sur un hote de
+  // vente elle rewrite vers la page de vente CAPTUREE, qui est en
+  // francais. La servir sous `/en/` serait exactement la panne que la
+  // ligne du dessus existe pour empecher. Elle repondra le jour ou une
+  // racine anglaise existe.
+  //
+  // ET LE BLOG A SES PROPRES SEGMENTS `/en/blog/...`, donc il est EXCLU
+  // de la reecriture (`serviParUneRouteDeLangue`). Deux raisons, les
+  // deux mesurees : ces pages sont `force-static`, donc prerendues au
+  // BUILD, donc sans requete ni en-tete a lire ; et les slugs anglais
+  // ne sont pas les francais, donc `dynamicParams = false` repondrait
+  // 404 sur chacun. Sans cette exclusion, `/en/blog` servirait le blog
+  // FRANCAIS, parfaitement affiche, et Google indexerait du francais
+  // sous une adresse anglaise.
+  //
+  // On pose quand meme l'en-tete, avec `next()` au lieu de `rewrite()` :
+  // la page connait deja sa langue (elle est ecrite dans le segment),
+  // mais `langueCanonique()` lit cet en-tete pour construire la
+  // canonique, et deux sources de langue qui se contredisent finissent
+  // toujours par annoncer deux canoniques differentes pour la meme URL.
+  if (slugDeVente) {
+    const decoupe = langueDuChemin(pathname);
+    if (decoupe.ditDansLUrl && decoupe.cheminNu !== "/") {
+      const entetes = new Headers(req.headers);
+      entetes.set(ENTETE_LANGUE, decoupe.langue);
+      if (serviParUneRouteDeLangue(decoupe.cheminNu)) {
+        return poseSa(NextResponse.next({ request: { headers: entetes } }));
+      }
+      const url = req.nextUrl.clone();
+      url.pathname = decoupe.cheminNu;
+      return poseSa(NextResponse.rewrite(url, { request: { headers: entetes } }));
+    }
+  }
   if (slugDeVente && pathname === "/") {
     const url = req.nextUrl.clone();
     // LA RACINE SERT ENCORE SA PAGE DE VENTE, ET C'EST SA DECISION.

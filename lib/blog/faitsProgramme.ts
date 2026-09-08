@@ -47,10 +47,19 @@
 // règle finiraient par ne plus être d'accord (leçon de la
 // reponctuation, 30 août).
 
-/** Le prix mensuel TTC, tel que le catalogue le vend. */
-const PRIX_MENSUEL_TTC = 17;
+import { ZAPIER } from "@/lib/site/integrations";
+
+/**
+ * Le prix mensuel TTC, tel que le catalogue le vend.
+ *
+ * EXPORTE depuis le 8 septembre : la table anglaise (`faitsEn.ts`) les
+ * RELIT ici au lieu de les recopier. Deux copies d'un prix finissent
+ * toujours par diverger, et c'est le blog qui annoncerait alors deux
+ * tarifs pour le meme abonnement selon la langue lue.
+ */
+export const PRIX_MENSUEL_TTC = 17;
 /** Le prix annuel TTC. */
-const PRIX_ANNUEL_TTC = 170;
+export const PRIX_ANNUEL_TTC = 170;
 /** Le taux de BASE annoncé publiquement. */
 const TAUX_BASE = 0.4;
 
@@ -478,6 +487,51 @@ export const FAITS: readonly {
       "dans les deux cas, tu dois recruter en permanence juste pour rester au même niveau. Pose ces deux questions en premier.</p>",
     pourquoi:
       "\"le haut du marche\" et les \"60 %\" de Systeme io ne sont verifiables nulle part, et \"aucun seuil\" est faux chez nous.",
+  },
+  // ── LE PRIX DE ZAPIER, ET IL VIENT DE `lib/site/integrations.ts` ──
+  //
+  // Ces trois phrases annonçaient `19,99 $`. La capture de leur page de
+  // tarifs française, relevée le 1er septembre, dit **29,99 $** : la
+  // page qui COMPARE Tiquiz à ses concurrents contredisait donc notre
+  // propre hub `/integrations`, sur le même domaine, à l'endroit exact
+  // où un lecteur va vérifier. C'est le drame du 1er septembre
+  // ("217 €/mois contredisait notre propre page Zapier"), dans un autre
+  // article.
+  //
+  // Le montant se LIT (`ZAPIER.professionnelParMois`), il ne se recopie
+  // pas : deux copies d'un prix finissent toujours par diverger, et
+  // c'est le blog qui mentirait le premier. Et les devises ne se
+  // convertissent PAS (règle du 1er septembre) : Zapier facture en
+  // dollars.
+  //
+  // Deux motifs par phrase quand l'ancien montant y est arithmétique :
+  // ici il ne l'est pas, donc un seul suffit.
+  {
+    de: "Typeform, Tally, Interact, Outgrow et involve.me passent tous par Zapier : gratuit sous 100 tâches par mois avec un seul tag, puis 19,99 $ par mois dès que tu veux un tag différent par profil.",
+    vers: `Typeform, Tally, Interact, Outgrow et involve.me passent tous par Zapier : gratuit sous 100 tâches par mois avec un seul tag, puis ${ZAPIER.professionnelParMois} par mois dès que tu veux un tag différent par profil.`,
+    pourquoi: "19,99 $ est l'ancien tarif Zapier Professional : la capture du 1er septembre dit 29,99 $.",
+  },
+  {
+    de: "Dès que tu veux un tag différent par profil, il te faut un filtre, donc trois étapes, donc Zapier payant à 19,99 $.",
+    vers: `Dès que tu veux un tag différent par profil, il te faut un filtre, donc trois étapes, donc Zapier payant à ${ZAPIER.professionnelParMois}.`,
+    pourquoi: "meme montant perime, dans la section qui compare les plans gratuits.",
+  },
+  {
+    de: "Avec les autres outils, cette connexion passe par Zapier, gratuit jusqu'à 100 tâches par mois et un seul tag, 19,99 $ ensuite.",
+    vers: `Avec les autres outils, cette connexion passe par Zapier, gratuit jusqu'à 100 tâches par mois et un seul tag, ${ZAPIER.professionnelParMois} ensuite.`,
+    pourquoi: "meme montant perime, dans la FAQ, c'est a dire la reponse qu'un lecteur cite.",
+  },
+  // ── UNE ADRESSE QUI N'A JAMAIS EXISTÉ ──
+  //
+  // `tipote.fr/p/mon-popquiz` est donné en exemple du lien qu'on reçoit
+  // après avoir publié un Popquiz. Un Popquiz est servi par l'APP
+  // (`CANONICAL_APP_URL`, `lib/authLinks.ts`), jamais par le domaine de
+  // vente : quelqu'un qui recopie ce gabarit fabrique un lien mort, et
+  // il ne le découvre qu'après l'avoir partagé.
+  {
+    de: "à partager : tipote.fr/p/mon-popquiz",
+    vers: "à partager : quiz.tipote.com/p/mon-popquiz",
+    pourquoi: "un Popquiz vit sur le domaine de l'app, pas sur tipote.fr, qui part chez Systeme.io.",
   },
 ];
 

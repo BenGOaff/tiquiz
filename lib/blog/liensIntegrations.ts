@@ -48,15 +48,21 @@
 
 import { motif } from "@/lib/blog/faitsProgramme";
 import { OWNER_CATALOG } from "@/lib/checkout/catalog";
-import { ZAPIER } from "@/lib/site/integrations";
+import { ZAPIER, ZAPIER_PRO_USD } from "@/lib/site/integrations";
 
 /** Typeform Plus, en paiement mensuel. Relevé le 1er septembre 2026. */
 export const TYPEFORM_PLUS_PAR_MOIS_USD = 79;
 
-/** Zapier Professional, en paiement mensuel, lu dans la source unique. */
-export const ZAPIER_PRO_PAR_MOIS_USD = Number(
-  ZAPIER.professionnelParMois.replace(/[^\d,]/g, "").replace(",", "."),
-);
+/**
+ * Zapier Professional, en paiement mensuel, lu dans la source unique.
+ *
+ * On lit le NOMBRE, plus la chaîne affichée. Cette ligne le rendait
+ * en retirant les caractères non chiffrés de `29,99 $` : ça marchait,
+ * et ça tombait au premier tarif écrit autrement (un prix rond, une
+ * espace insécable, un autre symbole). Depuis le 8 septembre le nombre
+ * existe pour lui même, parce que le prix s'affiche aussi en anglais.
+ */
+export const ZAPIER_PRO_PAR_MOIS_USD = ZAPIER_PRO_USD;
 
 /** Le prix Tiquiz vient du CATALOGUE, jamais recopié. */
 const TIQUIZ_MENSUEL_EUR = OWNER_CATALOG.mensuel.amountCents / 100;

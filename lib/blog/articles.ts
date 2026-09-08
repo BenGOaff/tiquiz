@@ -33,6 +33,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { LANGUE_SANS_PREFIXE, type LanguePublique } from "@/lib/site/langues";
+
 export interface BlocTitre {
   type: "titre";
   niveau: 2 | 3;
@@ -70,6 +72,26 @@ export type Bloc = BlocTitre | BlocHtml | BlocImage | BlocFaq | BlocCta;
 
 export interface Article {
   slug: string;
+  /**
+   * La langue de l'article.
+   *
+   * Absente sur les 10 articles francais, qui sont anterieurs : la
+   * lecture retombe sur la langue sans prefixe. Les remplir tous les
+   * dix pour le plaisir de la symetrie ferait bouger dix fichiers pour
+   * une valeur que la fonction connait deja.
+   */
+  langue?: LanguePublique;
+  /**
+   * Le slug de l'article dont celui ci est la VERSION, dans la langue
+   * sans prefixe.
+   *
+   * L'APPARIEMENT EST ECRIT, JAMAIS DEVINE. "create-quiz-systeme-io" et
+   * "comment-creer-quiz-systeme-io" ne se ressemblent pas assez pour
+   * qu'un algorithme les rapproche, et deux articles mal apparies
+   * donnent un `hreflang` que Google croit : il servirait alors un
+   * article a la place d'un autre, sans que rien ne le dise.
+   */
+  traductionDe?: string;
   titre: string;
   description: string;
   motsCles: string[];
@@ -83,10 +105,32 @@ export type ResumeArticle = Omit<Article, "blocs" | "motsCles">;
 
 const DOSSIER = path.join(process.cwd(), "content", "blog");
 
-/** Les articles, du plus récent au plus ancien. */
-export function listerArticles(): ResumeArticle[] {
+/**
+ * LA LANGUE EST UN PARAMETRE OBLIGATOIRE, ET CE N'EST PAS DU CONFORT.
+ *
+ * Bene, 8 septembre 2026 : "on doit les recuperer sur le blog tiquiz.fr
+ * avec les articles et pages en anglais."
+ *
+ * Un defaut a "fr" marcherait aujourd'hui et casserait au premier
+ * lecteur ecrit sans y penser : il servirait du FRANCAIS sous une
+ * adresse anglaise, la page s'afficherait parfaitement, et Google
+ * indexerait ca. C'est exactement la forme de panne que tout ce
+ * chantier existe pour empecher, et c'est la regle du 1er aout : quand
+ * un cas a deux mecaniques, la mecanique est un PARAMETRE OBLIGATOIRE,
+ * jamais devinee. Le compilateur refuse alors un appelant qui se tait.
+ *
+ * Le francais vit a la racine et l'anglais dans `en/` : la langue sans
+ * prefixe ne DEPLACE aucun fichier, donc aucune adresse deja indexee ne
+ * bouge.
+ */
+function dossierDe(langue: LanguePublique): string {
+  return langue === LANGUE_SANS_PREFIXE ? DOSSIER : path.join(DOSSIER, langue);
+}
+
+/** Les articles d'une langue, du plus récent au plus ancien. */
+export function listerArticles(langue: LanguePublique): ResumeArticle[] {
   try {
-    const brut = fs.readFileSync(path.join(DOSSIER, "index.json"), "utf8");
+    const brut = fs.readFileSync(path.join(dossierDe(langue), "index.json"), "utf8");
     return JSON.parse(brut) as ResumeArticle[];
   } catch {
     // Un blog vide vaut mieux qu'une page en erreur : le reste du site
@@ -95,21 +139,54 @@ export function listerArticles(): ResumeArticle[] {
   }
 }
 
-/** Un article, ou `null` si le slug n'existe pas. */
-export function lireArticle(slug: string): Article | null {
+/** Un article, ou `null` si le slug n'existe pas dans cette langue. */
+export function lireArticle(slug: string, langue: LanguePublique): Article | null {
   // On ne concatène JAMAIS un slug reçu dans un chemin sans le
   // valider : `../../.env` est un nom de fichier parfaitement valide
   // pour `path.join`.
   if (!/^[a-z0-9-]{1,80}$/.test(String(slug ?? ""))) return null;
   try {
-    const brut = fs.readFileSync(path.join(DOSSIER, `${slug}.json`), "utf8");
+    const brut = fs.readFileSync(path.join(dossierDe(langue), `${slug}.json`), "utf8");
     return JSON.parse(brut) as Article;
   } catch {
     return null;
   }
 }
 
-/** Tous les slugs, pour le sitemap et la génération statique. */
-export function tousLesSlugs(): string[] {
-  return listerArticles().map((a) => a.slug);
+/** Tous les slugs d'une langue, pour le sitemap et la génération statique. */
+export function tousLesSlugs(langue: LanguePublique): string[] {
+  return listerArticles(langue).map((a) => a.slug);
+}
+
+/**
+ * L'adresse d'un article dans chaque langue ou il existe.
+ *
+ * Les slugs DIFFERENT d'une langue a l'autre, donc `alternatesDeLangue`
+ * (qui suppose un chemin nu commun) ne peut pas servir ici : il
+ * annoncerait `/en/comment-creer-quiz-systeme-io`, une adresse qui
+ * n'existe pas. Une paire `hreflang` vers une page absente est pire que
+ * pas de paire du tout.
+ */
+export function adressesDeLArticle(slug: string, langue: LanguePublique): Record<string, string> {
+  const fr =
+    langue === LANGUE_SANS_PREFIXE
+      ? slug
+      : (lireArticle(slug, langue)?.traductionDe ?? null);
+  if (!fr) return {};
+  const adresses: Record<string, string> = {};
+  // ON N'ANNONCE QUE CE QUI EXISTE VRAIMENT SUR LE DISQUE.
+  //
+  // Une paire `hreflang` vers une page absente est pire que pas de
+  // paire du tout : Google la suit, tombe sur un 404, et c'est le
+  // signal qu'on cherchait a donner qui devient un signal de site
+  // casse.
+  if (lireArticle(fr, LANGUE_SANS_PREFIXE)) adresses[LANGUE_SANS_PREFIXE] = `/blog/${fr}`;
+  // La version anglaise est celle qui DECLARE `traductionDe: fr`. On ne
+  // devine pas son slug : c'est le sommaire qui dit de qui chaque
+  // article est la version, et lui seul. Il est ECRIT par la reparation
+  // depuis le contenu corrige, donc il ne peut pas porter un titre que
+  // le contenu ne porte plus.
+  const en = listerArticles("en").find((a) => a.traductionDe === fr);
+  if (en) adresses.en = `/en/blog/${en.slug}`;
+  return adresses;
 }

@@ -36,7 +36,7 @@ const LOCALES = ["fr", "en", "es", "it", "ar", "pt", "pt-BR"];
 
 /** La source sans ses commentaires : un test d'ORDRE tombe sinon sur sa propre explication. */
 const sansCommentaires = (s: string) =>
-  s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  s.replace(/^\s*\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
 
 const projetPlein: ProjetEnregistre = {
   brief: {

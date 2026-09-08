@@ -1,0 +1,240 @@
+{
+  "slug": "quiz-tools-comparison-systeme-io",
+  "langue": "en",
+  "traductionDe": "comparatif-outils-quiz-systeme-io",
+  "titre": "Which quiz tool works with Systeme.io? 2026 comparison",
+  "description": "8 quiz tools compared: real prices, what each free plan quietly holds back, and the only one that tags your leads inside Systeme.io without Zapier.",
+  "motsCles": [
+    "quiz tool comparison",
+    "Typeform alternative",
+    "Tiquiz vs Typeform",
+    "free quiz tool",
+    "best quiz lead magnet tool",
+    "quiz lead magnet Systeme.io",
+    "connect a quiz to Systeme.io",
+    "Typeform Systeme io",
+    "Tally Systeme io",
+    "Interact Systeme io",
+    "quiz without Zapier",
+    "build a quiz to capture leads",
+    "Typeform or Tally",
+    "quiz software",
+    "automatic tag Systeme.io"
+  ],
+  "publieLe": "2026-08-22",
+  "couverture": "/blog/img/comparatif-outils-quiz-systeme-io.webp",
+  "blocs": [
+    {
+      "type": "html",
+      "html": "<p><strong><em>TL;DR</em></strong></p><p><strong>All eight tools compared here have a permanent free plan</strong>, and all eight put their own logo on your page. So \"it's free\" settles nothing. What settles it is what that free plan lets you do, and above all what it can connect to afterwards.</p><p><strong>In August 2026, Tiquiz is the only quiz tool that creates the contact and applies the tags inside <a href=\"/en/blog/create-quiz-systeme-io\">Systeme.io</a> with nothing but an API key</strong>, and it does it on the free plan.</p><p>Typeform, Tally, Interact, Outgrow and involve.me all go through Zapier: free under 100 tasks a month with a single tag, then $29.99 a month the moment you want a different tag per result. Genially does not connect at all.</p><p><strong>First paid tier:</strong> Genially &euro;10, Outgrow $14, Tiquiz &euro;17, Tally $24, Interact $27, Typeform and involve.me $29, Google Forms included with Workspace.</p><p><strong>In one line:</strong> Tiquiz if you are on Systeme.io, Tally if you just want a clean free form, Typeform if design is your selling point, Outgrow if your lead magnet is a calculator, Genially if you make teaching material rather than capture leads.</p><p><em>Prices taken from the official pricing pages on 21 August 2026. Every figure in this article has a source.</em></p>"
+    },
+    {
+      "type": "html",
+      "html": "<p>You are looking for a tool to build a quiz that captures leads. You type \"best quiz tool\", you land on fifteen articles that compare Typeform to Google Forms as if they were the same thing, and you come away with a feature list and <strong>no decision</strong>.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p>The trouble is that these tools do not do the same job.</p><p>Typeform makes beautiful forms. Genially makes pretty interactive content. Interact makes personality quizzes.</p><p>Google Forms runs internal surveys. Putting them in the same table without saying so is like comparing a bike, a scooter and a lorry because all three have wheels.</p><p>So I am doing the opposite. I give you the question that decides, then the table, then the tools with \"take it if\" and \"avoid it if\".</p><p>And I will tell you straight when Tiquiz is not the right choice, because I have had enough of comparisons where the author wins every round.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Full disclosure.</strong> Tiquiz is my tool, I built it. So you can safely assume I am biased (I would assume it in your place). That is exactly why I give you the exact prices, the date I checked them and a link to every pricing page: you can check all of it without taking my word for anything.</p><p><strong>Method.</strong> I have used Typeform and Tally myself, enough to build something and publish it. For the others I rely on their official pages and their documentation, and I tell you where each figure comes from. Prices checked on 21 August 2026.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Does your tool connect to Systeme.io on its own?",
+      "id": "est-ce-que-ton-outil-se-connecte-a-systeme-io-tout-seul"
+    },
+    {
+      "type": "html",
+      "html": "<p>That is the only question that really changes your decision, and it is the one comparisons forget (the tool-by-tool detail is here: <a href=\"/en/integrations\">connecting a form or a quiz to Systeme.io</a>), because they are written by people who use Mailchimp, Clickfunnels or Podia.</p><p>A quick step back: this is exactly the wall I walked into.</p><p>I was on Systeme.io, I wanted a quiz, and I found out that every tool on the market went through Zapier.</p><p>So: three subscriptions to send one email to someone who had just answered six questions.</p><p><a href=\"https://tiquiz.fr/signup\"><strong>That is why Tiquiz exists</strong></a>, and you can treat that as my bias as much as my argument.</p><p>Anyway, there are two routes, and they do not cost the same.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p>And here you have to be precise, because this is the point where you get told stories.</p><p>Interact publishes a page called \"Systeme io integration\". The detail of what their documentation requires is here: <a href=\"/en/integrations/interact-systeme-io\">connecting Interact to Systeme.io</a>.</p><p>Go and read <a href=\"https://help.tryinteract.com/en/articles/8676075-how-to-connect-interact-to-systeme-io\">their own help centre</a>: the connection goes through <strong>Zapier Pro</strong>, you need <strong>a separate Zap for every result</strong> (four results, four Zaps to build and maintain), and their documentation says in black and white that <strong>quiz answers do not travel through Zapier</strong>.</p><p>You get the email, the first name and the result tag. The answers themselves stay with them.</p><p>That is a technical constraint worth knowing, because it can cost you hours of workarounds that are not always reliable.</p><p>It also changes your budget, since you have to pay for another tool just to <strong>connect your quiz to Systeme.io</strong>, and it changes what you can automate afterwards.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "The 8 tools compared: price, limits and Systeme.io connection",
+      "id": "le-comparatif-des-8-outils-prix-limites-et-connexion-a-syste"
+    },
+    {
+      "type": "html",
+      "html": "<p>Here are the 8 main tools you can use to build quizzes, more or less connected to Systeme.io.</p><p>Careful: most of them bill in dollars, and the exchange rate moves.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p>Look closely at the middle column, that is the one that keeps you from getting fleeced.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>The trap in the word \"free\"</strong></p><p><strong>All eight have a free plan.</strong> So \"it's free\" settles nothing at all, it is everyone's entry price. And all eight free plans put someone else's logo on your page, mine included. The real question is: <strong>what does your free plan let you do?</strong></p><p>And here I have to tell you something, even though it happens to suit me: with Tiquiz, <strong>the Systeme.io connection is already in the free plan</strong>.</p><p>With everyone else, it goes through Zapier. So if your goal is \"a quiz that tags my leads in Systeme.io\", the cheapest route is not free Tally: it is free Tiquiz.</p><p>To be completely straight with you: free Tally plus free Zapier can work, if you stay under 100 leads a month <em>and</em> you are happy with one single tag for everybody. The moment you want a different tag per result, you need a filter, so three steps, so paid Zapier at $29.99.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p>Two other rows deserve a second read.</p><p><strong>Typeform at $29 a month gives you 100 monthly responses, exactly like its free plan</strong>: to actually scale, it is $59.</p><p>And <strong>free Tally includes conditional logic and calculations</strong>, which others charge for.</p><p>Worth knowing.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "The 4 tools worth keeping when you use quizzes in your marketing",
+      "id": "les-4-outils-a-retenir-quand-tu-utilises-des-quiz-en-marketi"
+    },
+    {
+      "type": "html",
+      "html": "<p>If I were starting from scratch, here are the 4 tools I would be tempted to use to build quizzes on Systeme.io and collect leads with them:</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p>This comparison is written with as much common sense as I can manage. It should let you work out which tool fits what you need.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "4 quiz tools that are less useful with Systeme.io",
+      "id": "4-outils-de-quiz-moins-interessants-avec-systemeio"
+    },
+    {
+      "type": "html",
+      "html": "<p>These quiz tools exist and deserve a mention, but a shorter one, because they fit less well (in my view).</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p>You can obviously try them. I used <a href=\"https://involv.me\">involv.me</a> for a while, but honestly, these are complicated tools.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/quizsystemeio.webp",
+      "alt": "Out of 100 people who start a quiz, 59 reach the last question and 45 leave their email; that 45% is counted on the people who clicked start"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "How is your quiz visitors' data handled?",
+      "id": "comment-sont-traitees-les-donnees-des-visiteurs-de-ton-quiz"
+    },
+    {
+      "type": "html",
+      "html": "<p>Nobody ever brings this up in a comparison, and yet you are the data controller the moment someone leaves their email on your quiz.</p><p>If your respondents are in Europe, it matters.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "What do these quiz tools really cost you?",
+      "id": "combien-te-coutent-reellement-ces-outils-de-quiz"
+    },
+    {
+      "type": "html",
+      "html": "<p>Take a concrete case.</p><p>You are on Systeme.io, your quiz captures 400 leads a month, you do not want somebody else's logo on your page, and you want your results to trigger different sequences.</p><p>Here is the bill you should expect:</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p>I am not putting these numbers in front of you to scare you.</p><p>I am putting them there because nobody ever adds these three lines up for you, and that total is the only one that matters when you are the one paying.</p>"
+    },
+    {
+      "type": "cta",
+      "texte": "Try Tiquiz",
+      "url": "https://tiquiz.fr/signup"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "How to connect your quiz to Systeme.io, step by step",
+      "id": "comment-connecter-ton-quiz-a-systeme-io-etape-par-etape"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "With an API key (10 minutes)",
+      "id": "avec-une-cle-api-10-minutes"
+    },
+    {
+      "type": "html",
+      "html": "<p>In Systeme.io, go to your settings, API section, and generate your key.</p><p>Paste it into your quiz tool.</p><p>Then create your tags in Systeme.io: one per result, plus one capture tag.</p><p><a href=\"https://tiquiz.fr/signup\">Attach each tag to its result in the quiz editor</a>.</p><p>Finally, in Systeme.io, create an automation rule triggered by the tag that starts your sequence.</p><p>One test with your own email, and you are done.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "With Zapier (allow a good hour)",
+      "id": "avec-zapier-compte-une-bonne-heure"
+    },
+    {
+      "type": "html",
+      "html": "<p>Create a Zapier account, add your quiz tool as the trigger, add a <em>filter</em> on the result tag, then the Systeme.io action \"create or update a contact\".</p><p>Repeat for every result.</p><p>Because there is a filter, you are already on three steps, so outside Zapier's free plan.</p><p>And every lead burns one task.</p><p>Either way, the rule that matters: <strong>never build an automation on anything other than a tag</strong>. A tag is stable, it survives a change to your form, and you can see it right there on the contact record when you are trying to work out why a sequence did not go out.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "When Tiquiz is NOT the right choice",
+      "id": "dans-quels-cas-tiquiz-n-est-pas-le-bon-choix"
+    },
+    {
+      "type": "html",
+      "html": "<p>I would rather tell you here than have you find out after paying ^^</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "So, which quiz tool are you picking?",
+      "id": "alors-tu-choisis-quel-outil-de-quiz"
+    },
+    {
+      "type": "html",
+      "html": "<p>If you are on <a href=\"/en/blog/tiquiz-review\">Systeme.io</a> and you want a quiz that fills your list without you touching anything, you know where to find me.</p><p>You can <a href=\"https://tiquiz.fr/signup\">build your first quiz for free</a>, no card, and see what it gives with your own questions rather than with my arguments.</p><p>And if after reading all this you decide another tool suits you better, take the other tool.</p><p>Honestly.</p><p>I would rather you left with the right tool and came back in six months than paid &euro;17 for something you do not need.</p>"
+    },
+    {
+      "type": "cta",
+      "texte": "Try Tiquiz",
+      "url": "https://tiquiz.fr/signup"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "FAQ: which tool should you use to build a quiz with Systeme.io?",
+      "id": "faq-quel-outil-choisir-pour-creer-un-quiz-avec-systeme-io"
+    },
+    {
+      "type": "faq",
+      "questions": [
+        {
+          "question": "What is the best free quiz tool?",
+          "reponse": "<p>It depends what you want to do with it, because <strong>all eight tools in this article have a free plan</strong>, and all eight put someone else's logo on your page.</p><p>For a <strong>form</strong>: Tally, unlimited responses, with conditional logic.</p><p>For a <strong>quiz that sends your leads into Systeme.io</strong>: Tiquiz, because the connection is included from the free plan (1 quiz, 1 survey and 1 popquiz active, 10 leads visible per month, the rest are kept and hidden).</p><p>With the other tools, that connection goes through Zapier: free up to 100 tasks a month and a single tag, $29.99 after that.</p>"
+        },
+        {
+          "question": "Is a free quiz tool really free, or is it just a trial?",
+          "reponse": "<p>It is really free.</p><p>Of the eight tools compared here, none is a simple time-limited trial: they are all permanent free plans, most of them without a card.</p><p>What changes from one tool to the next is the trade-off: the number of responses (100 a month with Typeform, Interact and Outgrow, 50 with <a href=\"https://involve.me\">involve.me</a>, unlimited with Tally), the logo forced onto your page, and above all what you can connect afterwards.</p>"
+        },
+        {
+          "question": "Tiquiz or Typeform, which one?",
+          "reponse": "<p>Typeform if you want the best looking form on the market and full conditional logic, and if 100 responses a month at $29 is enough for you.</p><p>Tiquiz if you are on Systeme.io, if you want unlimited leads at &euro;17 and tags applied automatically per result.</p><p>They are two different jobs, not two versions of the same tool.</p>"
+        },
+        {
+          "question": "Is there a European alternative to Typeform?",
+          "reponse": "<p>Yes, Tiquiz, built in France, with support in French and English and data hosted in the European Union.</p><p>The interface exists in 7 languages, and the quiz you publish can be in a different language from your interface.</p><p>One caveat: Tiquiz is a quiz lead magnet tool, not a builder for complex forms, so it is not a feature-for-feature replacement.</p>"
+        },
+        {
+          "question": "Does Typeform connect to Systeme.io?",
+          "reponse": "<p>Not directly. You have to go through Zapier, Make or an equivalent, which means one more subscription and a delay between the answer and the contact turning up.</p>"
+        },
+        {
+          "question": "Does Systeme.io have a built-in quiz tool?",
+          "reponse": "<p>No. Systeme.io does funnels, emails, courses, affiliation and simple capture forms. For a real quiz with results, you need an external tool, and that is precisely why Tiquiz exists.</p><p>There are quizzes built into the course module: you can test what your students have learned, and that is all.</p>"
+        },
+        {
+          "question": "How many leads does a quiz actually capture?",
+          "reponse": "<p>According to Interact's Quiz Conversion Rate Report, in the coaching and training category, 44.9% of the people who start a quiz leave their email, and 59.1% go all the way through the questions. That is a percentage of the people who start, not of your visitors: your own result depends first on your traffic and on the promise on your landing screen.</p>"
+        },
+        {
+          "question": "What is the difference between a form and a quiz?",
+          "reponse": "<p>A form collects.</p><p><a href=\"/en/blog/sell-with-a-quiz\">A quiz gives something back</a>: a result, a profile, a diagnosis. That trade is what makes the completion rate different, and it is also what tells you who the person in front of you is, which a form will never do.</p>"
+        },
+        {
+          "question": "And if I stop paying, do I lose my leads?",
+          "reponse": "<p>With Tiquiz, no: your contacts stay, and they are already inside your Systeme.io anyway since they are pushed there in real time, so you have your own copy. For the other tools, go and read their retention policy before you commit. It is the question everyone forgets to ask at the start.</p>"
+        }
+      ]
+    }
+  ]
+}

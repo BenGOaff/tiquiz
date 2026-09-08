@@ -1,0 +1,240 @@
+{
+  "slug": "create-quiz-systeme-io",
+  "langue": "en",
+  "traductionDe": "comment-creer-quiz-systeme-io",
+  "titre": "How to Create a Quiz with Systeme.io: 5 Strategies to Capture Leads in 2026",
+  "description": "Systeme.io has no native quiz builder. Here are 5 strategies to add a quiz that captures qualified leads, auto-tags contacts, and skips Zapier entirely.",
+  "motsCles": [],
+  "publieLe": "2026-04-24",
+  "couverture": "/blog/img/en/create-quiz-systeme-io.webp",
+  "couvertureSource": "https://d1yei2z3i6k35z.cloudfront.net/473100/69eb97be975c74.99252736_how-to-create-a-quiz-with-systemeio-5-strategies-to-capture-leads-in-2026_1.43_1.png",
+  "blocs": [
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgba(47, 56, 111, 0.6)\"><strong>TL;DR:</strong></span></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Systeme.io</strong></span><span style=\"color: rgb(47, 56, 111)\"> doesn't have a native <strong>quiz</strong> builder.&nbsp;</span></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">To add one that actually captures <strong>qualified leads</strong>, you need:</span></p><ul dir=\"ltr\"><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">a theme aligned with the offers you already sell in </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\">,&nbsp;</span></p></li><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">language that matches your audience,&nbsp;</span></p></li><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">a headline that stops the scroll,&nbsp;</span></p></li><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">questions that automatically segment your </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\"> contacts,&nbsp;</span></p></li><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">a share mechanic that triggers virality.&nbsp;</span></p></li></ul><p dir=\"ltr\"><a href=\"https://tiquiz.fr\" target=\"_blank\" style=\"cursor: pointer \"><span style=\"color: rgb(47, 56, 111)\"><strong><u>Tiquiz</u></strong></span></a><span style=\"color: rgb(47, 56, 111)\"> is currently the only SaaS that connects <strong>natively</strong> to </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\">, no Zapier, no API keys to configure. You launch a quiz in 10 minutes, leads arrive pre-tagged, auto-enrolled in the right course, and dropped into the matching community.</span></p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Your Real Systeme.io Problem: You're Capturing Emails, but Your List Doesn't Sell",
+      "id": "your-real-systeme-io-problem-you-re-capturing-emails-but-your-list-doesn-t-sell"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">You've been running <strong>Systeme.io</strong> for months. You've got your funnels, your opt-in page, your free ebook as the lead magnet, your automated email sequences. Technically, it runs.</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Except your list is asleep.</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">You open your dashboard Monday morning and see the same scene: 14% open rate, 1.8% click rate, zero to one sale all week. You're starting to wonder if it's your offer, your positioning, your niche, or just you.</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Nine times out of ten, it's none of those. The real problem is that <strong>you're sending the same message to your entire list</strong> when your subscribers have wildly different needs, budgets, and maturity levels.</span></p><p dir=\"ltr\"><br><span style=\"color: rgb(47, 56, 111)\">There's a fix, and it's called <strong>quiz marketing</strong>.</span></p><p dir=\"ltr\"><br><span style=\"color: rgb(47, 56, 111)\">A well-built <strong>quiz</strong> qualifies your prospects at the top of your </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\"> funnel. Instead of 480 subscribers tossed into one generic bucket, you end up with 4 clean segments (beginner, motivated, pragmatic, advanced), each one auto-tagged in <strong>Systeme.io</strong>, with their own email sequence and their own adapted offer.</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Real-world results for the solopreneurs who've made the switch: <strong>open rates × 2.7, conversion × 7, and a list that finally starts selling on its own</strong>.</span></p><p dir=\"ltr\"><br><span style=\"color: rgb(47, 56, 111)\">One small problem: </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\"> <strong>has no native quiz feature</strong>. Solopreneurs who want to add one have to either duct-tape Typeform + Zapier (expensive and fragile), or hack together basic forms that kill the experience.</span></p><p dir=\"ltr\"><br><span style=\"color: rgb(47, 56, 111)\">In this guide, I'm walking you through the <strong>5 strategies</strong> to <strong>build a quiz that integrates cleanly with </strong></span><span style=\"color: rgb(47, 56, 111)\"><strong>Systeme.io</strong></span><span style=\"color: rgb(47, 56, 111)\">, the kind that turns a dormant list into a selling machine.</span></p><p dir=\"ltr\"><br><span style=\"color: rgb(47, 56, 111)\">And I'll show you why </span><a href=\"https://tiquiz.fr\" target=\"_blank\" style=\"cursor: pointer \"><span style=\"color: rgb(47, 56, 111)\"><strong><u>Tiquiz</u></strong></span></a><span style=\"color: rgb(47, 56, 111)\"> is the only tool in 2026 with a <strong>native Systeme.io integration</strong>, no Zapier, no Make, no API key to configure.</span></p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Why Systeme.io Doesn't Have a Native Quiz (And What That Means for You)",
+      "id": "why-systeme-io-doesn-t-have-a-native-quiz-and-what-that-means-for-you"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Systeme.io</strong> is a powerful all-in-one platform: funnels, email marketing, online courses, communities, affiliate management, membership sites, it's all there. Just no quiz.</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Why? </span></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Because Systeme.io's core is <strong>online sales</strong> and <strong>email automation</strong>. </span></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Quizzes are a different beast, conditional display logic, segmentation engines, viral share mechanics, personalized result pages. Building that natively would require a full platform rewrite.</span><br><br></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">What it means concretely for you: if you want a quiz in your </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\"> funnel, you have three options: </span></p>"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">It's this third path I'm walking you through in this guide. The 5 strategies below work regardless of which option you pick, they'll just be ten times easier with a native tool.</span></p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/en/create-quiz-systeme-io-4bea33374d.webp",
+      "alt": "A generic quiz asks which Marvel hero you are and sells nothing, where a qualifying quiz sends each profile to the offer that fits, from $47 to $1,497"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Strategy 1: Align Your Quiz with Your Existing Systeme.io Offers",
+      "id": "strategy-1-align-your-quiz-with-your-existing-systeme-io-offers"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">The classic mistake: building a quiz \"because it's trendy\" without thinking about what you'll sell after. You capture 300 leads, end up with 300 contacts and no clear offer to push, and three weeks later your list is back to silence.</span></p><p dir=\"ltr\"><br><span style=\"color: rgb(47, 56, 111)\">Your <strong>Systeme.io quiz</strong> should be designed as <strong>the entry point to the funnels you already run</strong>. Every result profile maps to an offer you already have in Systeme.io, or to a maturity tier that leads toward it.</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>The 3-step method:</strong></span></p>"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgba(47, 56, 111, 0.6)\"><strong>Concrete example</strong></span><br><br></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Let's say you sell, through </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\">:</span></p><ul dir=\"ltr\"><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">A $47 course (beginners)</span></p></li><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">A $297 group program (intermediates)</span></p></li><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">A $1,497 one-on-one coaching package (advanced)</span></p></li></ul><p dir=\"ltr\"><br><span style=\"color: rgb(47, 56, 111)\">Your quiz \"What kind of entrepreneur are you?\" auto-segments into 3 profiles. The beginner lands on a result page that pre-sells the $47 course. The intermediate sees the one pre-selling the $297 program. The advanced sees the 1-to-1. Each tag dropped into </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\"> kicks off the matching email sequence.</span></p>"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Tiquiz + Systeme.io tip:</strong> Inside </span><a href=\"https://tiquiz.fr\" target=\"_blank\" style=\"cursor: pointer \"><span style=\"color: rgb(47, 56, 111)\"><strong><u>Tiquiz</u></strong></span></a><span style=\"color: rgb(47, 56, 111)\">, each quiz result has a sio_tag_name, a sio_course_id, and a sio_community_id. When a lead submits, all three actions fire in your </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\"> automatically. </span></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">No manual work. No Zapier.</span></p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Strategy 2: Speak Your Audience's Language (The One Already in Your Tags)",
+      "id": "strategy-2-speak-your-audience-s-language-the-one-already-in-your-tags"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">There's a goldmine in your <strong>Systeme.io</strong> account you're probably not using: the tags you've been dropping on contacts for months. They tell you exactly how your audience describes itself.</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Look at your dashboard, tag by tag. The tag names you've created (\"beginner\", \"solo parent\", \"burnout\", \"career shift\"…) reflect the emotional vocabulary of your prospects. Pull those exact words back into your quiz: title, questions, answers, result pages.</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>The 4 intelligence sources inside Systeme.io:</strong></span></p>"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Once you've extracted that vocabulary, drop it into your quiz. Your prospect recognizes themselves instantly. They think, \"Finally, someone who talks like me\", and they stick around until the end of the quiz.</span></p>"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Tiquiz + Systeme.io tip:</strong> In the AI brief inside </span><a href=\"https://tiquiz.fr\" target=\"_blank\" style=\"cursor: pointer \"><span style=\"color: rgb(47, 56, 111)\"><strong><u>Tiquiz</u></strong></span></a><span style=\"color: rgb(47, 56, 111)\">, describe your audience with high precision: \"Dog training coaches, moms aged 35-45 struggling with rescue dogs, casual tone, warm and direct voice.\" The AI generates a quiz that matches your audience 10× better than a generic brief</span></p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/en/create-quiz-systeme-io-4c8915dc27.webp",
+      "alt": "Four quiz headlines on four phones, positioning, diagnostic, maturity and quick audit, each with its promise and its duration"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Strategy 3: Write a Headline That Stops the Scroll",
+      "id": "strategy-3-write-a-headline-that-stops-the-scroll"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">The <strong>quiz headline</strong> is your storefront. Get it wrong, and nothing else matters, your prospect won't even click.</span></p><p dir=\"ltr\"><br><span style=\"color: rgb(47, 56, 111)\">A solid <strong>Systeme.io quiz headline</strong> checks three boxes:</span></p>"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgba(47, 56, 111, 0.6)\"><strong>7 headline patterns that convert in 2026</strong></span><br><br></p><ol dir=\"ltr\"><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>\"What kind of [profile] are you?\"</strong> → classic, universal</span></p></li><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>\"Are you ready for [outcome]?\"</strong> → direct challenge</span></p></li><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>\"What's really blocking your [goal]?\"</strong> → puts a finger on the pain</span></p></li><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>\"In X months, where will your [area] be?\"</strong> → projection, curiosity</span></p></li><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>\"The 2-minute test that tells you if [benefit]\"</strong> → time-saver + benefit</span></p></li><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>\"Is your [area] (really) ready to [outcome]?\"</strong> → honest doubt</span></p></li><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>\"Which offer should you launch first to [outcome]?\"</strong> → decision helper</span></p></li></ol>"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">You can test 2-3 headlines in parallel using </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\">'s <strong>A/B split pages</strong>, or just duplicate your quiz. Whichever one wins on click-through rate, keep it.</span></p>"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Tiquiz + Systeme.io tip:</strong> Inside </span><a href=\"https://tiquiz.fr\" target=\"_blank\" style=\"cursor: pointer \"><span style=\"color: rgb(47, 56, 111)\"><strong><u>Tiquiz</u></strong></span></a><span style=\"color: rgb(47, 56, 111)\">, you duplicate a quiz in one click to test multiple headlines without rewriting the content. Completion stats per quiz show up directly in your Tiquiz dashboard. Meanwhile, leads keep flowing into your </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\">.</span></p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Strategy 4: Ask Questions That Segment Your Systeme.io Contacts",
+      "id": "strategy-4-ask-questions-that-segment-your-systeme-io-contacts"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">A quiz that segments is a quiz where <strong>every question applies a filter</strong>. By the end, each lead is classified into a specific profile, and each profile fires a specific tag in your </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\">.</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>The 5 rules for segmenting questions:</strong></span></p>"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgba(47, 56, 111, 0.6)\"><strong>The direct link to your </strong></span><span style=\"color: rgba(47, 56, 111, 0.6)\"><strong>Systeme.io</strong></span><span style=\"color: rgba(47, 56, 111, 0.6)\"><strong> automations</strong></span><br><br></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Each result profile should trigger inside your </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\">:</span></p><ul dir=\"ltr\"><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>A specific tag</strong> (profile-beginner, profile-motivated, etc.)</span></p></li><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Automatic enrollment in the matching course</strong> (sio_course_id)</span></p></li><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Addition to the profile's community</strong> (sio_community_id)</span></p></li><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>A dedicated email sequence</strong> (fired by the tag)</span></p></li></ul>"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Which means your entire </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\"> funnel starts running AUTOMATICALLY based on the profile detected by the quiz. Never another generic email blasted to the whole list.</span></p>"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Tiquiz + Systeme.io tip:</strong> The AI inside </span><a href=\"https://tiquiz.fr\" target=\"_blank\" style=\"cursor: pointer \"><span style=\"color: rgb(47, 56, 111)\"><strong><u>Tiquiz</u></strong></span></a><span style=\"color: rgb(47, 56, 111)\"> generates your questions AND their answer options automatically, with the mapping to your profiles already thought through. You review, tweak, approve. 5 minutes instead of 3 hours.</span></p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/en/create-quiz-systeme-io-e73a700c3d.webp",
+      "alt": "The share bonus in three steps: the lead takes the quiz, shares it to unlock the full result, and brings back four to six new leads tagged in Systeme.io"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Strategy 5: Activate Virality and Let Systeme.io Handle the Rest",
+      "id": "strategy-5-activate-virality-and-let-systeme-io-handle-the-rest"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">You've got a quiz that segments, natively connected to Systeme.io. Now you need traffic. </span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">The best 2026 strategy for that is called the <strong>share bonus</strong>: your prospect doesn't see their full result until they share the quiz on their own socials. </span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Once they share, they unlock a bonus, a richer result page, a promo code, access to a resource.</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Observed share rate with this mechanic: 40-60%</strong> when the bonus is well-designed.</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>3 bonuses that work especially well with Systeme.io:</strong></span></p>"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgba(47, 56, 111, 0.6)\"><strong>The \"shared\" tag that changes everything</strong></span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">When a lead shares your quiz, you can automatically drop a shared-quiz tag on their Systeme.io profile. </span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Result: </strong>you identify your active ambassadors, you send them dedicated email sequences (affiliate invite, VIP offer, premium community invite), and you build a different relationship with them than with passive leads.</span></p>"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgba(47, 56, 111, 0.6)\"><strong>Channels to push your quiz</strong></span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Don't rely on virality alone. Actively push your quiz on:</span></p><ul dir=\"ltr\"><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Instagram:</strong> story with link sticker, bio, tutorial carousel</span></p></li><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>LinkedIn:</strong> opinionated post linking to the quiz, LinkedIn newsletter</span></p></li><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>TikTok:</strong> reel asking one of the quiz questions</span></p></li><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Your </strong></span><span style=\"color: rgb(47, 56, 111)\"><strong>Systeme.io</strong></span><span style=\"color: rgb(47, 56, 111)\"><strong> list:</strong> dedicated broadcast with one CTA</span></p></li><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Your blog:</strong> exit-intent popup or embedded quiz</span></p></li><li dir=\"ltr\"><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Partners:</strong> 5 creators in your niche running cross-promotion</span></p></li></ul>"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Tiquiz + Systeme.io tip:</strong> Inside </span><a href=\"https://tiquiz.fr\" target=\"_blank\" style=\"cursor: pointer \"><span style=\"color: rgb(47, 56, 111)\"><strong><u>Tiquiz</u></strong></span></a><span style=\"color: rgb(47, 56, 111)\">, you activate the <strong>share bonus with one toggle</strong> in the quiz editor, define the bonus (tag, course, Systeme.io community), and Tiquiz automatically drops a shared tag on the lead's profile. Your ambassadors arrive pre-segmented in your </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\">.</span></p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "The 5 Mistakes That Kill a Systeme.io Quiz Before It Takes Off",
+      "id": "the-5-mistakes-that-kill-a-systeme-io-quiz-before-it-takes-off"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Bonus round. The 5 things I see killing 80% of </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\">-connected quizzes. Don't do these.</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Mistake 1: Building a quiz disconnected from your existing offers.</strong> You capture leads who don't match any of your </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\"> offers. Impossible to monetize.</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Mistake 2: More than 8 questions.</strong> Completion rate collapses. Leads who aren't qualified by question 5 won't magically become qualified by question 10.</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Mistake 3: Empty result pages.</strong> \"You're Type A. Congrats!\" and that's it. Zero value, zero share, zero sale. A solid result page needs a title, a profile description, a specific insight, a future projection, and a personalized CTA toward the matching </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\"> offer.</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Mistake 4: Duct-taping the connection with Zapier instead of using a native tool.</strong> Zapier Professional at $29.99/month + Typeform Plus at $79/month = $108.99/month for life, just to capture leads. Tiquiz: €17/month, and a free plan to test before you pay anything. You do the math.</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Mistake 5: Launching one quiz and waiting.</strong> Big results come from <strong>quiz volume</strong>: you release a new quiz every 3-4 weeks on different angles, each bringing its own tagged leads into your </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\">. Your feed refreshes, your segmentation tightens, your revenue climbs.</span></p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Systeme.io Quiz: What You Absolutely Must Automate",
+      "id": "systeme-io-quiz-what-you-absolutely-must-automate"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Those are the 5 strategies that separate a quiz sitting in a corner of your funnel from a quiz that brings you 200 to 500 <strong>qualified leads</strong> every month into your <strong>Systeme.io</strong>.</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">The real pivot isn't technical. It's architectural.</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Either you keep blasting the same newsletter to your whole list and crossing your fingers, or you install a <strong>Systeme.io quiz</strong> that segments prospects at the front door, auto-tags, enrolls in courses, adds to communities, and lets your </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\"> handle the rest.</span></p><p dir=\"ltr\"><br><span style=\"color: rgb(47, 56, 111)\">The </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\"> solopreneurs who made the switch in 2026 aren't going back. Their competitors are still writing generic email sequences that speak to nobody.</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Your call which side you want to be on.</span></p><p dir=\"ltr\"><br><span style=\"color: rgb(47, 56, 111)\">And if you want to shortcut the 6 months of learning it took me to build the method AND the native </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\"> integration, </span><a href=\"https://tiquiz.fr\" target=\"_blank\" style=\"cursor: pointer \"><span style=\"color: rgb(47, 56, 111)\"><strong><u>Tiquiz</u></strong></span></a><span style=\"color: rgb(47, 56, 111)\"> is built for that. The AI generates your quizzes, the native </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\"> connection drops the tags, enrolls in courses, adds to communities. You publish and listen to what your audience tells you.</span></p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "FAQ: Creating a Quiz with Systeme.io",
+      "id": "faq-creating-a-quiz-with-systeme-io"
+    },
+    {
+      "type": "faq",
+      "questions": [
+        {
+          "question": "Can I build a quiz directly inside Systeme.io?",
+          "reponse": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">No. </span><span style=\"color: rgb(47, 56, 111)\"><strong>Systeme.io</strong></span><span style=\"color: rgb(47, 56, 111)\"> has no native <strong>quiz</strong> builder in 2026. </span></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">To add a quiz to your </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\"> funnel, you have to go through an external tool. </span></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">The three main options are: </span></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">(1) Typeform + Zapier (expensive, around $108.99/month), </span></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">(2) Google Forms + manual CSV import (free but not automatable), </span></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">or (3) a native tool like </span><a href=\"https://tiquiz.fr\" target=\"_blank\" style=\"cursor: pointer \"><span style=\"color: rgb(47, 56, 111)\"><strong><u>Tiquiz</u></strong></span></a><span style=\"color: rgb(47, 56, 111)\"> that connects directly to </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\"> via API key, with no middleware.</span></p>"
+        },
+        {
+          "question": "How do I connect a quiz to Systeme.io without Zapier?",
+          "reponse": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">The cleanest method in 2026 is to use a quiz tool with a <strong>native </strong></span><span style=\"color: rgb(47, 56, 111)\"><strong>Systeme.io</strong></span><span style=\"color: rgb(47, 56, 111)\"><strong> integration</strong>. With </span><a href=\"https://tiquiz.fr\" target=\"_blank\" style=\"cursor: pointer \"><span style=\"color: rgb(47, 56, 111)\"><strong><u>Tiquiz</u></strong></span></a><span style=\"color: rgb(47, 56, 111)\">, you paste your </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\"> API key into the settings once, and everything syncs automatically: contact created, tag applied based on detected profile, custom field updated, enrollment in a course, addition to a community. </span></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Zero Zapier, zero Make, zero API to code.</span></p>"
+        },
+        {
+          "question": "How much does a quiz tool connected to Systeme.io cost?",
+          "reponse": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Prices vary widely. </span></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Typeform Plus (no native Systeme.io integration, requires Zapier): $79/month + $29.99/month for Zapier = <strong>$108.99/month</strong>. </span></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Tally Pro: $29/month + Zapier. </span></p><p dir=\"ltr\"><a href=\"https://tiquiz.fr\" target=\"_blank\" style=\"cursor: pointer \"><span style=\"color: rgb(47, 56, 111)\"><strong><u>Tiquiz</u></strong></span></a><span style=\"color: rgb(47, 56, 111)\"> at <strong>€17/month or €170/year</strong>, with a free plan to test before you pay anything. It's currently the most competitive price-to-value ratio on the market for a Systeme.io-connected quiz tool.</span></p>"
+        },
+        {
+          "question": "Does Tiquiz work with the free Systeme.io plan?",
+          "reponse": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Yes. <strong>Tiquiz</strong> works with any Systeme.io plan, <strong>including the free one</strong>. You drop in your personal API key (available on every </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\"> plan), and tag, contact, and course enrollment syncs happen automatically. The only limits come from your Systeme.io plan (contact count, tag count, etc.), not from Tiquiz.</span></p>"
+        },
+        {
+          "question": "How do I automatically tag my Systeme.io contacts based on quiz answers?",
+          "reponse": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">With </span><a href=\"https://tiquiz.fr\" target=\"_blank\" style=\"cursor: pointer \"><span style=\"color: rgb(47, 56, 111)\"><strong><u>Tiquiz</u></strong></span></a><span style=\"color: rgb(47, 56, 111)\">, each quiz result profile has a configurable sio_tag_name. When a lead submits the quiz, Tiquiz finds or creates the tag in your Systeme.io, finds or creates the contact by email, applies the tag, and updates the tiquiz_result custom field. All in 200 milliseconds, no manual work. Your tag then triggers the Systeme.io automations you've already set up (email sequence, workflow...).</span></p>"
+        },
+        {
+          "question": "Can I enroll a lead in a Systeme.io course from a quiz?",
+          "reponse": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Yes, and it's one of the most powerful integrations. In </span><a href=\"https://tiquiz.fr\" target=\"_blank\" style=\"cursor: pointer \"><span style=\"color: rgb(47, 56, 111)\"><strong><u>Tiquiz</u></strong></span></a><span style=\"color: rgb(47, 56, 111)\">, you set a sio_course_id per result profile. When a lead is classified into that profile at the end of the quiz, they're automatically enrolled in the matching Systeme.io course. Ideal for segmenting your audience by maturity level and pushing the right training at the right moment.</span></p>"
+        },
+        {
+          "question": "Do I need technical skills to use a quiz with Systeme.io?",
+          "reponse": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">No. With a no-code tool like </span><a href=\"https://tiquiz.fr\" target=\"_blank\" style=\"cursor: pointer \"><span style=\"color: rgb(47, 56, 111)\"><strong><u>Tiquiz</u></strong></span></a><span style=\"color: rgb(47, 56, 111)\">, you don't write a single line of code. You copy your API key from your Systeme.io profile (available in account settings), paste it into Tiquiz once, configure your result profiles with the Systeme.io tag names you want, and publish. A 7-step guided tutorial launches on your first login to walk you through it.</span></p>"
+        },
+        {
+          "question": "Can I use a quiz to pre-sell a Systeme.io offer?",
+          "reponse": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">That's its primary use case. Each quiz result profile has a <strong>personalized result page</strong> (title, description, insight, future projection, CTA). The CTA can link directly to your Systeme.io checkout page, or to the sales page for the offer matching the detected profile. Your prospect leaves the quiz already warmed up for the offer that fits them. Typical conversion lift: 3-7× compared to a generic funnel.</span></p>"
+        },
+        {
+          "question": "What's the difference between a Systeme.io quiz with Tiquiz and a Typeform form?",
+          "reponse": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Typeform is a <strong>form builder</strong>. It collects answers and exports to CSV. For those answers to land in Systeme.io, you have to configure Zapier or Make (an extra $29.99/month). Segmentation stays basic, every lead gets the same tag. </span></p><p dir=\"ltr\"><a href=\"https://tiquiz.fr\" target=\"_blank\" style=\"cursor: pointer \"><span style=\"color: rgb(47, 56, 111)\"><strong><u>Tiquiz</u></strong></span></a><span style=\"color: rgb(47, 56, 111)\"> is a <strong>full qualification system</strong>: AI-generated quiz, auto-segmentation into multiple profiles, personalized result pages with profile-specific CTAs, native </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\"> integration (tags + courses + communities), built-in virality via share bonus. All for €17/month instead of $108.99/month for life.</span></p>"
+        }
+      ]
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Tiquiz: The Only Native Systeme.io Quiz Tool",
+      "id": "tiquiz-the-only-native-systeme-io-quiz-tool"
+    },
+    {
+      "type": "html",
+      "html": "<p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Everything I just walked you through, you can duct-tape with Typeform + Zapier + three weekends of configuration. Or you can get it done in one afternoon with </span><a href=\"https://tiquiz.fr\" target=\"_blank\" style=\"cursor: pointer \"><span style=\"color: rgb(47, 56, 111)\"><strong><u>Tiquiz</u></strong></span></a><span style=\"color: rgb(47, 56, 111)\">.</span></p><p><br><br></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>What Tiquiz automates inside your Systeme.io:</strong></span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">🚀 <strong>Viral traffic</strong> through the built-in share bonus (every lead brings more, already tagged)</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">👥 <strong>Qualified lead capture</strong> segmented by result profile, directly in Systeme.io</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">💎 <strong>Continuous offer feedback</strong> (every quiz = free market research on your </span><span style=\"color: rgb(47, 56, 111)\">Systeme.io</span><span style=\"color: rgb(47, 56, 111)\"> audience)</span></p><p></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">👀 <strong>Quiz volume</strong> that sets you apart from everyone still pushing the same ebook from 2 years ago</span><br><br></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">💰 <strong>Personalized offers</strong> pushed to the right profile via Systeme.io automations</span><br><br></p><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">🤩 <strong>Fun</strong> in your marketing, the antidote to sleepy ebooks nobody reads</span></p><p></p>"
+    },
+    {
+      "type": "cta",
+      "texte": "👉 Grab your spot on Tiquiz →",
+      "url": "https://tiquiz.fr"
+    }
+  ]
+}

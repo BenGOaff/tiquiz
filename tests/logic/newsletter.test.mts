@@ -23,6 +23,8 @@ import {
   normaliserEmail,
   normaliserPrenom,
 } from "../../lib/newsletter/inscription.ts";
+import { contenuNewsletter, phraseEchecNewsletter } from "@/lib/site/newsletter";
+import { LANGUES_PUBLIQUES } from "@/lib/site/langues";
 
 test("le tag est celui qui existe deja dans son compte", () => {
   assert.equal(TAG_NEWSLETTER, "newsletter");
@@ -71,23 +73,65 @@ test("une inscription complete est acceptee", () => {
   assert.deepEqual(v, { ok: true, email: "Gwenn@exemple.fr", prenom: "Gwenn" });
 });
 
-test("chaque raison de refus a une phrase a l'ecran", () => {
+test("chaque raison de refus a une phrase a l'ecran, dans les deux langues", () => {
   // Un `ok: false` muet envoie la personne reessayer dix fois (regle du
   // 3 aout). Le serveur rend la RAISON, l'ecran rend la phrase : encore
   // faut-il que l'ecran les connaisse toutes.
-  const src = fs.readFileSync(
-    path.join(process.cwd(), "components/site/FormulaireNewsletter.tsx"),
-    "utf8",
-  );
-  for (const raison of [
+  //
+  // -- CE GARDE-FOU A SUIVI LE TEXTE (8 septembre 2026) ---------------
+  //
+  // Il lisait la SOURCE de `FormulaireNewsletter.tsx` et y cherchait
+  // les cinq cles. Le jour ou la page est passee en anglais, les
+  // phrases ont demenage dans `lib/site/newsletter.ts` et le composant
+  // n'a plus porte une seule phrase : le test a rougi sur du code
+  // parfaitement juste. Un garde-fou qui fige un EMPLACEMENT empeche de
+  // deplacer le texte ; celui-ci mesure le COMPORTEMENT, donc il suit.
+  const RAISONS = [
     "email_manquant",
     "email_invalide",
     "consentement_manquant",
     "trop_de_demandes",
     "indisponible",
-  ]) {
-    assert.ok(src.includes(raison), `la raison ${raison} n'a aucune phrase`);
+  ] as const;
+
+  for (const langue of LANGUES_PUBLIQUES) {
+    const t = contenuNewsletter(langue).formulaire;
+    const vues = new Set<string>();
+    for (const raison of RAISONS) {
+      const phrase = phraseEchecNewsletter(t, raison, "hello@tiquiz.fr");
+      assert.ok(phrase.trim().length > 0, `${langue} : la raison ${raison} n'a aucune phrase`);
+      assert.ok(
+        !phrase.includes("{contact}"),
+        `${langue} : la raison ${raison} laisse un {contact} a trou`,
+      );
+      // DEUX RAISONS QUI RENDENT LA MEME PHRASE, c'est une raison
+      // oubliee qui retombe sur `indisponible` sans que rien ne le
+      // dise : la personne lit "ce n'est pas de ta faute" alors qu'il
+      // lui manque juste une case a cocher.
+      assert.ok(!vues.has(phrase), `${langue} : la raison ${raison} recopie une autre phrase`);
+      vues.add(phrase);
+    }
+
+    // Et une raison INCONNUE retombe sur `indisponible`, jamais sur sa
+    // propre cle affichee telle quelle.
+    assert.equal(
+      phraseEchecNewsletter(t, "une_raison_qui_n_existe_pas", "hello@tiquiz.fr"),
+      phraseEchecNewsletter(t, "indisponible", "hello@tiquiz.fr"),
+    );
+    assert.ok(t.reseau.trim().length > 0, `${langue} : la panne reseau n'a aucune phrase`);
   }
+
+  // ET LE COMPOSANT NE PORTE PLUS UNE SEULE PHRASE : deux endroits qui
+  // portent le texte d'un meme ecran finissent toujours par ne plus
+  // dire la meme chose.
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "components/site/FormulaireNewsletter.tsx"),
+    "utf8",
+  );
+  assert.ok(
+    src.includes("phraseEchecNewsletter"),
+    "le formulaire ne delegue plus la traduction des raisons",
+  );
 });
 
 test("le tag n'est jamais CREE s'il a disparu", () => {

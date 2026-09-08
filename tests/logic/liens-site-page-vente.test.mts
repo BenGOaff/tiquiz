@@ -17,6 +17,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 
+import { cheminPageDuSite } from "./aide/pageDuSite.mts";
+
 import {
   SALES_CHECKOUT_TARGETS,
   SALES_LINKS_LEFT_ALONE,
@@ -70,8 +72,7 @@ test("les liens legaux menent a NOS routes, pas a celles de Systeme.io", () => {
   for (const chemin of NOS_PAGES) {
     assert.ok(tous.includes(chemin), `le pied de page doit mener à ${chemin}`);
     assert.ok(
-      fs.existsSync(path.join(process.cwd(), "app", chemin.slice(1))) ||
-        fs.existsSync(path.join(process.cwd(), "app", "(site)", chemin.slice(1))),
+      cheminPageDuSite(chemin) !== null,
       `${chemin} n'existe pas dans app/ : le pied de page mène à un 404`,
     );
   }

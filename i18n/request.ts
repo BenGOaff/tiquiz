@@ -6,6 +6,7 @@ import { getRequestConfig } from "next-intl/server";
 import { cookies, headers } from "next/headers";
 import { SUPPORTED_LOCALES, DEFAULT_LOCALE, type SupportedLocale } from "./config";
 import { isPublicSalesHost } from "@/lib/sales/salesHosts";
+import { ENTETE_LANGUE } from "@/lib/site/langues";
 
 export type { SupportedLocale };
 export { SUPPORTED_LOCALES, DEFAULT_LOCALE } from "./config";
@@ -44,10 +45,39 @@ async function langueParDefaut(): Promise<SupportedLocale> {
   return DEFAULT_LOCALE;
 }
 
+/**
+ * LA LANGUE DITE PAR L'URL GAGNE SUR LE COOKIE (8 septembre 2026).
+ *
+ * `/en/tarifs` est servi par une réécriture du middleware, qui pose la
+ * langue dans un en-tête de requête. Sans cette lecture, la page
+ * prendrait le cookie : elle servirait donc du FRANÇAIS sous une
+ * adresse anglaise à quelqu'un dont le cookie dit "fr", et Google
+ * indexerait cette page là.
+ *
+ * Rien ne s'affiche de travers dans ce cas : c'est exactement la forme
+ * de panne que ce dépôt paie le plus cher, et c'est pour ça que l'ordre
+ * de ces trois lignes est une règle et pas un détail.
+ *
+ * Le cookie garde tout son rôle : il décide partout où l'URL ne se
+ * prononce pas, c'est à dire l'app derrière connexion et le français,
+ * qui n'a pas de préfixe.
+ */
+async function langueDeLUrl(): Promise<SupportedLocale | null> {
+  try {
+    const h = await headers();
+    const dite = h.get(ENTETE_LANGUE) ?? "";
+    return isSupportedLocale(dite) ? dite : null;
+  } catch {
+    return null;
+  }
+}
+
 export default getRequestConfig(async () => {
+  const dite = await langueDeLUrl();
   const cookieStore = await cookies();
   const raw = cookieStore.get("ui_locale")?.value ?? "";
-  const locale: SupportedLocale = isSupportedLocale(raw) ? raw : await langueParDefaut();
+  const locale: SupportedLocale =
+    dite ?? (isSupportedLocale(raw) ? raw : await langueParDefaut());
 
   return {
     locale,

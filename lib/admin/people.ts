@@ -144,6 +144,22 @@ export interface Person {
   /** Peut-il gérer sa carte lui même ? (abonnement pris chez nous) */
   selfServe: boolean;
 
+  /**
+   * EST-IL ENTRÉ PAR LE GÉNÉRATEUR PUBLIC ?
+   *
+   * Béné, 8 septembre 2026 : "fais moi apparaitre qui entre par le
+   * générateur dans mes contacts".
+   *
+   * Vrai = son quiz anonyme a été rattaché à ce compte, donc il a
+   * découvert Tiquiz en générant un quiz avant d'avoir un compte.
+   *
+   * FAUX NE VEUT PAS DIRE "NON" QUAND LA LECTURE A ÉCHOUÉ : la route
+   * ne passe l'ensemble que si elle a pu lire les sessions. Une lecture
+   * impossible laisse donc tout le monde à faux, et l'écran le DIT au
+   * lieu de faire disparaître la pastille de gens qui l'ont méritée.
+   */
+  venuDuGenerateur: boolean;
+
   /** Ce qu'il a payé EN TOUT chez nous, remboursements déduits. */
   paidCents: number;
   /** Ses ventes, la plus récente d'abord. Porte le bouton rembourser. */
@@ -434,6 +450,15 @@ export function buildPeople(input: {
    */
   atelier?: AtelierPerson[];
   /**
+   * Les comptes entrés par le générateur public, par identifiant.
+   *
+   * Absent = on n'a pas pu lire les sessions. Ce n'est PAS "personne
+   * n'est venu par là" : l'écran doit dire la différence, et il ne peut
+   * la dire que si l'appelant se tait au lieu de passer un ensemble
+   * vide (règle du 23 août).
+   */
+  venusDuGenerateur?: ReadonlySet<string>;
+  /**
    * L'horloge, pour savoir si un essai court encore.
    *
    * Paramètre et pas `new Date()` interne : un test qui dépend de
@@ -462,6 +487,9 @@ export function buildPeople(input: {
       leadCount: Number(p.lead_count) || 0,
       resellerName: String(p.reseller_name ?? "").trim() || null,
       selfServe: Boolean(String(p.stripe_customer_id ?? "").trim()),
+      venuDuGenerateur: Boolean(
+        input.venusDuGenerateur && p.user_id && input.venusDuGenerateur.has(String(p.user_id)),
+      ),
       moisOffert: lireMoisOffert(p),
       paidCents: 0,
       sales: [],
@@ -508,6 +536,9 @@ export function buildPeople(input: {
       leadCount: 0,
       resellerName: null,
       selfServe: false,
+      // Pas de compte Tiquiz, donc aucun quiz anonyme n'a pu lui être
+      // rattaché : ce n'est pas une inconnue, c'est un non.
+      venuDuGenerateur: false,
       // Pas de compte Tiquiz, donc pas de ligne `profiles`, donc rien à
       // lire : `null` dit "on ne sait pas", jamais "elle n'en a pas eu".
       moisOffert: null,

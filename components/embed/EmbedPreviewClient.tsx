@@ -46,9 +46,14 @@ type Props = {
 
 const STORAGE_KEY = "tiquiz_embed_session";
 
+// Les mêmes défauts que le vrai formulaire "Générer avec l'IA"
+// (`components/quiz/QuizFormClient.tsx`) : format court, quiz par
+// profil, trois résultats. Un visiteur qui ne touche à rien obtient
+// donc exactement ce qu'une créatrice connectée obtient.
 const DEFAULT_INPUTS: EmbedInputs = {
   topic: "", audience: "", objective: "qualifier",
-  questionCount: 5, tone: "inspirant",
+  intention: "", tone: "inspirant",
+  format: "short", quizType: "profile", resultCount: 3,
   askFirstName: false, askGender: false,
 };
 
@@ -75,6 +80,20 @@ export default function EmbedPreviewClient({
       try { localStorage.setItem("tiquiz_embed_session", sessionToken); } catch { /* private mode */ }
     }
   }, [sessionToken]);
+
+  // L'ÉDITEUR EN SURCOUCHE VERROUILLE LA PAGE DERRIÈRE LUI.
+  // Sans ça, la molette traverse la surcouche et fait défiler la page
+  // marketing sous l'éditeur : on montre un outil qui a l'air de
+  // flotter, sur la page exacte qui doit donner envie. Le style est
+  // RESTAURÉ à la sortie (et pas mis à "auto") : la page pourrait en
+  // porter un à elle, et on ne le lui vole pas.
+  const editeurEnSurcouche = phase === "edit" && cadre.verrouillerLeDefilement;
+  useEffect(() => {
+    if (!editeurEnSurcouche) return;
+    const avant = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = avant; };
+  }, [editeurEnSurcouche]);
 
   // QuizDetailClient calls window.parent.postMessage directly when
   // the visitor clicks 'Débloquer Tiquiz', which lands on the host
@@ -137,8 +156,15 @@ export default function EmbedPreviewClient({
           topic: inputs.topic.trim(),
           audience: inputs.audience.trim(),
           objective: inputs.objective,
-          questionCount: inputs.questionCount,
+          intention: inputs.intention.trim(),
           tone: inputs.tone,
+          // Le FORMAT décide du nombre de questions, exactement comme
+          // dans le vrai formulaire : c'est lui qui porte le choix
+          // éditorial ("court = conversions rapides"), et un compteur
+          // à côté ferait deux réglages pour une seule décision.
+          format: inputs.format,
+          quizType: inputs.quizType,
+          resultCount: inputs.resultCount,
           askFirstName: inputs.askFirstName,
           askGender: inputs.askGender,
           locale,
@@ -217,10 +243,20 @@ export default function EmbedPreviewClient({
   // whole iframe viewport (it uses h-screen + its own internal
   // grid). The earlier phases sit inside a centered, padded wrapper.
   if (phase === "edit" && quizId) {
+    // `retourAuFormulaire` ne JETTE rien : le quiz existe en base, son
+    // jeton est gardé, et revenir dessus est un clic sur "Générer".
+    // On ne remet donc pas `sessionToken` à vide, sinon une deuxième
+    // génération repartirait sans le quiz déjà écrit.
+    const retour = () => { setPhase("form"); setError(""); };
     return cadre.editeur
       ? (
         <div className={cadre.editeur}>
-          <QuizDetailClient quizId={quizId} embedSessionToken={sessionToken} embedContexte={contexte} />
+          <QuizDetailClient
+            quizId={quizId}
+            embedSessionToken={sessionToken}
+            embedContexte={contexte}
+            onEmbedRetour={retour}
+          />
         </div>
       )
       : <QuizDetailClient quizId={quizId} embedSessionToken={sessionToken} embedContexte={contexte} />;

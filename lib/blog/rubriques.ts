@@ -27,6 +27,7 @@
 // le ranger serait la pire des réponses.
 
 import { listerArticles, type ResumeArticle } from "@/lib/blog/articles";
+import { LANGUE_SANS_PREFIXE, type LanguePublique } from "@/lib/site/langues";
 
 export interface Rubrique {
   /** Le segment d'URL : `/blog/rubrique/<id>`. */
@@ -94,7 +95,9 @@ export function trouverRubrique(id: string | null | undefined): Rubrique | null 
 
 /** Les articles d'une rubrique, du plus récent au plus ancien. */
 export function articlesDeLaRubrique(id: string): ResumeArticle[] {
-  return listerArticles().filter((a) => CLASSEMENT[a.slug] === id);
+  // `CLASSEMENT` est indexe par des slugs FRANCAIS : cette fonction ne
+  // peut donc parler que de cette langue la, et elle le dit.
+  return listerArticles(LANGUE_SANS_PREFIXE).filter((a) => CLASSEMENT[a.slug] === id);
 }
 
 /**
@@ -105,4 +108,21 @@ export function articlesDeLaRubrique(id: string): ResumeArticle[] {
  */
 export function rubriquesNonVides(): Rubrique[] {
   return RUBRIQUES.filter((r) => articlesDeLaRubrique(r.id).length > 0);
+}
+
+/**
+ * Les rubriques d'une LANGUE.
+ *
+ * `CLASSEMENT` est indexe par des slugs FRANCAIS, et les libelles comme
+ * les chapeaux sont ecrits en francais : il n'existe donc aucune
+ * rubrique anglaise, et cette fonction rend une liste VIDE plutot que
+ * d'afficher des pastilles francaises au dessus d'articles anglais.
+ *
+ * C'est une DECISION, pas un oubli : inventer ici des libelles anglais
+ * fabriquerait des adresses `/en/blog/rubrique/<id>` que rien ne sert.
+ * Les rubriques anglaises entreront le jour ou son blog anglais aura de
+ * quoi les remplir.
+ */
+export function rubriquesDeLaLangue(langue: LanguePublique): Rubrique[] {
+  return langue === LANGUE_SANS_PREFIXE ? rubriquesNonVides() : [];
 }
