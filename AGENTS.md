@@ -11127,3 +11127,59 @@ pages anglaises.
 les variables d'environnement manquent (le piège du 30 août). Vérifié en
 production le 8 septembre : `tiquiz.fr/sitemap.xml` répond **200 avec 46
 adresses**, dont `/tarifs`. Il gagnera `/en/tarifs` au déploiement.
+
+### Quatre captures de l'article qui recrute les affiliés étaient PÉRIMÉES (8 septembre 2026)
+
+Trouvées en REGARDANT les images une par une, pour leur écrire un texte
+alternatif anglais. Deux d'entre elles vivaient en production **en
+français depuis le 29 août** :
+
+| Le visuel | Ce qu'il montre |
+|---|---|
+| le tableau de bord affilié (fr + en) | la consigne de coller `?sa=...` sur une URL `tipote.fr`. **Depuis le 24 août, ce lien ne paie plus personne.** |
+| le simulateur de commissions (fr + en) | 9 EUR/mois et 90 EUR/an, le tarif d'avant le 6 août, projetant 7 430,40 EUR et $5 702,40 |
+
+Le corps de l'article annonce 17 EUR depuis le 31 août : **la page se
+contredisait elle même**, sur l'écran qui doit convaincre un gros
+affilié. C'est la famille des couvertures du 31 août : **un dessin ne se
+corrige pas en code, aucun remplacement de texte ne l'atteint.**
+
+**Règle : `lib/blog/visuelsPerimes.ts`, et le retrait est RÉVERSIBLE.**
+Chaque entrée porte sa RAISON écrite à côté et l'EMPREINTE du fichier.
+Retirer par le chemin seul masquerait POUR TOUJOURS une image que Béné
+redessine sous le même nom, en silence : le test recalcule l'empreinte
+et rougit dès que le fichier change, ce qui dit "retire son entrée pour
+le republier".
+
+**La comparaison au disque vit dans le TEST, jamais à l'exécution** : le
+module reste PUR (aucun `node:fs`), donc un composant serveur ne paie
+pas une lecture de fichier par image.
+
+**Et le test exige que le compte corresponde** : si plus aucun article ne
+portait ces blocs, c'est que le contenu a bougé et que la liste est à
+relire. Un test qui ne peut plus échouer ment.
+
+#### MON TEST D'ORDRE NE DISTINGUAIT RIEN, ET LE COMMENTAIRE NON PLUS
+
+Le retrait passe avant l'appariement et la déduplication. J'avais écrit
+DEUX raisons en commentaire, et **mesuré, une seule est vraie** :
+
+| Ce que j'affirmais | Ce que la mesure dit |
+|---|---|
+| "sinon un visuel écarté reviendrait dans un `<picture>`" | **pas atteignable** : aucune entrée ne porte de suffixe de variante |
+| "sinon retirer le premier de deux voisins identiques ferait remonter le second" | **faux** : les deux ordres rendent zéro image |
+
+Ce qui distingue vraiment est l'inverse de ce que j'avais écrit :
+`apparierVariantes` fusionne en `{ ...grand, mobile: petit.src }`, donc
+le bloc survivant ne porte plus que le `src` du GRAND. **Un retrait qui
+passerait après emporterait la variante téléphone VIVANTE avec lui**, et
+la page afficherait juste un schéma de moins.
+
+Mon premier test posait deux voisins identiques et écartés : il rendait
+`# pass 4 / # fail 0` sur la version fautive. **Quinzième fois qu'un
+contrôle ne distingue pas ce qu'il est censé distinguer**, et c'est en
+rejouant la version d'avant que ça s'est vu, jamais en le relisant.
+
+Test : `tests/logic/visuels-perimes.test.mts` (4 cas), vérifié en
+rejouant TROIS versions fautives (le filtre retiré, un visuel redessiné,
+le retrait après l'appariement) : les trois rougissent.
