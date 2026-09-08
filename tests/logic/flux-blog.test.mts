@@ -101,24 +101,36 @@ test("L'IMAGE DU FLUX EST L'ÉPINGLE, jamais la couverture paysage", () => {
   // les automatisations quand elles demandent l'image d'un article, et
   // le premier usage de ce flux est de publier sur Pinterest, où une
   // image en 16/9 ne circule pas.
-  const flux = FLUX.get("fr")!;
-  for (const a of listerArticles("fr")) {
-    const epingle = epinglePour(a.slug);
-    if (!epingle) continue;
-    assert.ok(
-      flux.includes(`<enclosure url="${epingle}"`),
-      `${a.slug} : l'enclosure doit porter l'épingle verticale`,
-    );
-    assert.ok(
-      !flux.includes(`<enclosure url="https://tiquiz.fr${a.couverture}"`),
-      `${a.slug} : la couverture n'a rien à faire dans l'enclosure`,
-    );
+  // ET DANS CHAQUE LANGUE, jamais dans la seule qui a servi de modele.
+  // Mesure du 8 septembre, avant correction : le flux anglais portait
+  // ZERO `<enclosure>`, parce qu'aucune epingle n'avait ete construite
+  // pour ses quatre articles. Un flux valide, un canal qui publie, et
+  // rien qui circule : c'est exactement le genre de trou qui ne se voit
+  // sur aucun ecran.
+  let avecEpingle = 0;
+  for (const langue of LANGUES_PUBLIQUES) {
+    const flux = FLUX.get(langue)!;
+    for (const a of listerArticles(langue)) {
+      const epingle = epinglePour(a.slug, langue);
+      if (!epingle) continue;
+      avecEpingle += 1;
+      assert.ok(
+        flux.includes(`<enclosure url="${epingle}"`),
+        `${langue} / ${a.slug} : l'enclosure doit porter l'épingle verticale`,
+      );
+      assert.ok(
+        !flux.includes(`<enclosure url="https://tiquiz.fr${a.couverture}"`),
+        `${langue} / ${a.slug} : la couverture n'a rien à faire dans l'enclosure`,
+      );
+    }
+
+    // Et la couverture n'est pas perdue : elle vit dans la description.
+    const premier = listerArticles(langue)[0];
+    if (premier?.couverture) {
+      assert.ok(flux.includes(`<img src="https://tiquiz.fr${premier.couverture}"`));
+    }
   }
-  // Et la couverture n'est pas perdue : elle vit dans la description.
-  const premier = listerArticles("fr")[0];
-  if (premier?.couverture) {
-    assert.ok(flux.includes(`<img src="https://tiquiz.fr${premier.couverture}"`));
-  }
+  assert.ok(avecEpingle >= 14, `seulement ${avecEpingle} articles epingles : ce test serait muet`);
 });
 
 test("la longueur de l'enclosure est LUE, pas inventée", () => {

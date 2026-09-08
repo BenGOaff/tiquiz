@@ -34,6 +34,7 @@ import {
   filDArianeJsonLd,
   type QuestionFaq,
 } from "@/lib/site/integrations";
+import { LANGUE_SANS_PREFIXE } from "@/lib/site/langues";
 
 // 45 caractères : Google coupe autour de 60, et le suffixe " · Tiquiz"
 // posé par le gabarit du site compte dedans. Le <h1> de la page, lui,
@@ -138,6 +139,9 @@ export default function HubIntegrations() {
             "hub-integrations",
             `${HOTE_VENTE}/integrations`,
             `${TITRE} - ${DESCRIPTION}`,
+            // Le hub n'existe qu'en francais : son epingle vit donc dans
+            // le dossier sans prefixe, comme sa page.
+            LANGUE_SANS_PREFIXE,
           )}
         />
       </section>

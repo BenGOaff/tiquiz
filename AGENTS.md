@@ -11275,6 +11275,61 @@ disparu), ou trouvée DEUX fois (deux groupes serviraient la même URL, ce
 que Next refuse au build, et le dire ici le dit plus tôt). Vérifié en
 rejouant les deux : ils rougissent.
 
+### Le flux anglais ne portait AUCUNE image (8 septembre)
+
+Mesuré sur le serveur, une fois le blog anglais servi :
+
+| | `<item>` | `<enclosure>` |
+|---|---|---|
+| `/blog/rss.xml` | 10 | **10** |
+| `/en/blog/rss.xml` | 4 | **0** |
+
+Le flux existe pour les automatisations de PARTAGE (règle du
+1er septembre : Zapier, Make, n8n vers Pinterest), et `<enclosure>` est
+le champ qu'elles lisent quand elles demandent "l'image de cet
+article". Un flux à quatre articles sans une seule image ne peut donc
+rien publier : le premier usage du chantier anglais était mort, et rien
+ne le disait.
+
+La cause est celle qui revient : **une seule épingle par slug, dans un
+seul dossier.** `epinglePour(slug)` cherchait `/blog/pin/<slug>.jpg`,
+donc les quatre slugs anglais ne trouvaient rien, et le bouton
+Pinterest de leurs pages disparaissait avec.
+
+**Règle : la langue est un PARAMÈTRE OBLIGATOIRE d'`epinglePour` et
+d'`attributsEpinglePour`, et chaque langue a SON dossier**
+(`/blog/pin/` et `/blog/pin/en/`), comme les couvertures. Le
+constructeur boucle sur les langues et écrit dans le dossier de
+chacune.
+
+**Un dossier COMMUN marcherait aujourd'hui, et c'est exactement le
+piège** : les quatre slugs anglais diffèrent tous des français
+(`17-reasons...` contre `17-raisons-lancer-quiz-business`). Le jour où
+un article anglais porterait le même slug qu'un français, sa
+construction **ÉCRASERAIT l'épingle de l'autre**, et le flux français
+publierait la couverture anglaise sans qu'une seule erreur ne
+s'écrive. C'est la règle du 1er août appliquée à un chemin de fichier :
+quand une erreur ne coûte rien à commettre et détruit du travail en
+silence, on rend l'erreur impossible.
+
+**LES ONZE ÉPINGLES FRANÇAISES SONT INCHANGÉES À L'OCTET PRÈS**,
+vérifié : `git status public/blog/pin` ne montre que le dossier `en/`
+en nouveau. Quatre épingles anglaises construites, 1000 x 1500, 73 à
+87 Ko, depuis les couvertures de ses articles.
+
+**MESURÉ après correction, sur le serveur :** `/en/blog/rss.xml` porte
+ses 4 `<enclosure>` vers `https://tiquiz.fr/blog/pin/en/*.jpg`, avec
+leur vraie taille en octets ; `/blog/rss.xml` reste à 10 items et 10
+enclosures.
+
+Les deux garde-fous BOUCLENT maintenant sur `LANGUES_PUBLIQUES` au lieu
+de ne regarder que le français (`epingles-pinterest.test.mts`,
+`flux-blog.test.mts`), avec un plancher sur le nombre total : sans lui,
+le jour où une langue perd ses épingles, la boucle passerait au vert sur
+zéro fichier. Un test l'exige aussi dans l'autre sens :
+`epinglePour(slug_anglais, "fr")` doit rendre `null`, sinon deux
+langues se partageraient un dossier sans que rien ne le dise.
+
 ### LE `.fr` : ce que dit la documentation de Google, pas ma mémoire
 
 Sa question : "c'est très grave que mon domaine soit en .fr ou pas ?"

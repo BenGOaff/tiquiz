@@ -74,7 +74,7 @@ export default async function ArticleBlog({
   const voisins = articlesVoisins(a, listerArticles(langue), 3);
 
   const url = urlArticle(a.slug, langue);
-  const epingle = epinglePour(a.slug);
+  const epingle = epinglePour(a.slug, langue);
   const partage = textePartage(a);
 
   const commentaires = await lireCommentairesPublies(a.slug);

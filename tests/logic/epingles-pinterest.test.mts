@@ -17,12 +17,41 @@ import { attributsEpingle, attributsEpinglePour, epinglePour } from "@/lib/blog/
 import { listerArticles } from "@/lib/blog/articles";
 import { metadonneesSommaire } from "@/lib/blog/metaSommaire";
 import { codeVerificationPinterest, diagnosticVerificationPinterest } from "@/lib/site/pinterest";
+import { LANGUES_PUBLIQUES } from "@/lib/site/langues";
 
 test("chaque article publié a son épingle verticale sur le disque", () => {
-  for (const a of listerArticles("fr")) {
-    if (!a.couverture) continue;
-    assert.ok(epinglePour(a.slug), `épingle manquante pour ${a.slug}`);
+  // TOUTES LES LANGUES, jamais la seule qui a servi de modele. Mesure du
+  // 8 septembre : les quatre articles anglais n'avaient AUCUNE epingle,
+  // donc leur flux sortait sans `<enclosure>` et le bouton Pinterest
+  // disparaissait de leurs pages. Rien ne le disait.
+  let comptees = 0;
+  for (const langue of LANGUES_PUBLIQUES) {
+    for (const a of listerArticles(langue)) {
+      if (!a.couverture) continue;
+      assert.ok(epinglePour(a.slug, langue), `épingle manquante pour ${langue} / ${a.slug}`);
+      comptees += 1;
+    }
   }
+  assert.ok(comptees >= 14, `seulement ${comptees} articles couverts : ce test serait muet`);
+});
+
+test("chaque langue a son DOSSIER d'épingles", () => {
+  // Les quatre slugs anglais different tous des slugs francais
+  // aujourd'hui, donc un dossier commun marcherait. Il casserait le jour
+  // ou un article anglais porterait le meme slug qu'un francais : sa
+  // construction ECRASERAIT l'epingle de l'autre, et le flux francais
+  // publierait la couverture anglaise sans qu'une erreur ne s'ecrive.
+  const [en] = listerArticles("en");
+  assert.ok(en, "aucun article anglais : ce test serait muet");
+  assert.match(
+    epinglePour(en.slug, "en") ?? "",
+    /^https:\/\/tiquiz\.fr\/blog\/pin\/en\/.+\.jpg$/,
+    "l'épingle anglaise doit vivre dans son propre dossier",
+  );
+
+  // Et la langue DECIDE : demander l'epingle anglaise en francais ne
+  // doit pas retomber sur un fichier francais du meme nom.
+  assert.equal(epinglePour(en.slug, "fr"), null);
 });
 
 test("une épingle désigne l'ARTICLE, jamais le sommaire du blog", () => {
@@ -39,7 +68,7 @@ test("une épingle désigne l'ARTICLE, jamais le sommaire du blog", () => {
 test("sans épingle construite, on ne désigne RIEN", () => {
   // Mieux vaut laisser Pinterest se débrouiller avec la page que lui
   // donner l'adresse d'un fichier qui n'existe pas.
-  assert.deepEqual(attributsEpinglePour("slug-qui-nexiste-pas", "https://x.fr", "texte"), {});
+  assert.deepEqual(attributsEpinglePour("slug-qui-nexiste-pas", "https://x.fr", "texte", "fr"), {});
 });
 
 test("la LISTE des articles porte les attributs, pas seulement l'article", () => {

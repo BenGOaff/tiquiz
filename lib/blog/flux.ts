@@ -132,7 +132,7 @@ export function construireFlux(
   const items = articles
     .map((a) => {
       const lien = `${ORIGINE_BLOG}${cheminArticle(a.slug, langue)}`;
-      const epingle = epinglePour(a.slug);
+      const epingle = epinglePour(a.slug, langue);
       const rubrique = rubriqueDe(a.slug);
       const couverture = a.couverture ? `${ORIGINE_BLOG}${a.couverture}` : null;
       // La couverture vit DANS la description : c'est ce qu'un lecteur
