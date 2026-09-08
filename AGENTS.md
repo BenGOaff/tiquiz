@@ -11031,6 +11031,80 @@ introuvable** (on n'écrit rien plutôt que de manger la fin de
 l'article). Ce qui remplace parle de l'Atelier du Quiz, qui est vendu, à
 70 %, avec son montant calculé.
 
+### ET LES 27 IMAGES ANGLAISES N'AVAIENT AUCUN TEXTE ALTERNATIF
+
+Mesuré avant d'écrire une ligne, en les regardant une par une :
+**27 images sur 27**, dans les quatre articles. C'est 100 %, là où le
+français était à 43 % le 31 août.
+
+Un `alt` vide coûte trois choses d'un coup, et **aucune ne se voit à
+l'écran** : une lectrice aveugle n'entend rien (ou s'entend épeler
+`17-reasons-to-launch-business-quiz-4ce3c7f955`), Google ne sait pas ce
+que le schéma montre, et un modèle de langue non plus. Or ces schémas
+portent l'essentiel de l'argumentaire (l'email contre les réseaux, les
+chiffres de segmentation, le tunnel). C'est exactement ce qu'elle vise
+en parlant de GEO.
+
+**UNE DEUXIÈME TABLE, ET C'EST LA MESURE QUI L'IMPOSE.**
+`lib/blog/altImagesEn.ts` vit à côté de `altImages.ts` parce que la clé
+est le CHEMIN de l'image, et que **deux visuels sont PARTAGÉS avec les
+articles français** (`/blog/img/quiz-buzzfeed.webp` et
+`/blog/img/quiz-kerastase.webp`). Une seule table poserait donc du
+FRANÇAIS dans une page anglaise, sur la seule ligne qu'une lectrice
+aveugle anglophone entend : c'est le reproche du client du 7 septembre,
+transposé au blog.
+
+**Et `poserAltEn` existe à côté de `poserAlt` au lieu de prendre une
+langue en paramètre** : une fonction qui accepte les deux tables finit
+par recevoir la mauvaise, et rien ne le dirait.
+
+**LES 27 ONT ÉTÉ REGARDÉES, JAMAIS DEVINÉES.** Leurs noms sont des
+empreintes (`...-4ce3c7f955.webp`) : ils ne disent rien du tout. Deux
+visuels portent une marque que la capture ne permet pas d'identifier
+avec certitude (la bannière à 82M+ quiz takers, l'écran "First, choose
+an intention") : **leur texte dit ce qui est à l'écran et s'arrête là.**
+Nommer au jugé mettrait une marque fausse dans la seule ligne que lisent
+Google, un modèle de langue et une lectrice aveugle.
+
+**Les deux visuels ÉCARTÉS sont dans la table, et sans chiffre.** Ils ne
+s'affichent nulle part depuis `visuelsPerimes.ts`, mais leur texte est
+écrit pour le jour où Béné les redessine, sans le tarif ni la
+projection : ce sont exactement les chiffres qui les ont fait écarter,
+et un texte qui les recopierait serait faux le jour du redessin.
+
+**LE SCRIPT REFUSE MAINTENANT DANS UN QUATRIÈME CAS : une image qui
+sort sans texte alternatif.** La table couvre les 27 ; une image qui
+ressort nue veut donc dire une seule chose, son chemin a changé et la
+table ne le NOMME plus. Ça ne casse rien et ça ne s'affiche pas : c'est
+le genre de trou qui vit des mois.
+
+**Et le contrôle lit le contenu CORRIGÉ, jamais le disque** : en
+`--verifie` rien n'est écrit, donc le disque dirait "27 images nues" sur
+une réparation parfaitement bonne.
+
+### ET MON PROPRE DISCRIMINANT S'EST CASSÉ EN AJOUTANT UNE 4e FAMILLE
+
+`dejaCorrige` valait `compteur.size === 0`, et c'était juste tant que le
+compteur ne portait que les trois familles de règles de texte. Le jour
+où une QUATRIÈME chose s'y est ajoutée (la pose des `alt`), une
+réparation parfaitement bonne sur un contenu déjà corrigé comptait
+27 poses, donc `dejaCorrige` tombait à faux, donc **les 54 règles de
+texte étaient dénoncées comme fausses et le script refusait de finir.**
+
+Il se mesure maintenant sur les SEULES familles que `muettes`
+surveille. **Seizième fois qu'un contrôle ne distingue pas ce qu'il est
+censé distinguer**, et cette fois dans le contrôle même que ce script
+existe pour porter.
+
+**Et la phrase finale ne s'appuie plus dessus** : elle disait "rien à
+corriger" pendant que 27 textes venaient d'être posés.
+
+Test : les 4 cas ajoutés à `tests/logic/blog-en.test.mts`, vérifiés en
+rejouant QUATRE versions fautives (les `alt` retirés du disque, un texte
+français dans la table, `poserAltEn` qui n'écrase plus un `alt` hérité
+de l'import, le même texte dans les deux tables) : les quatre
+rougissent.
+
 ### ET LA TYPOGRAPHIE ÉTAIT FRANÇAISE DANS UN TEXTE ANGLAIS
 
 Béné, le même jour : "il faut à chaque fois utiliser le champ sémantique,

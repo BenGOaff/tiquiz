@@ -311,3 +311,104 @@ test("la langue est un PARAMETRE de la lecture, jamais un defaut devine", async 
     );
   }
 });
+
+test("CHAQUE IMAGE ANGLAISE PORTE UN TEXTE ALTERNATIF, EN ANGLAIS", () => {
+  // MESURE DU 8 SEPTEMBRE, avant d'ecrire une ligne : **27 images sur
+  // 27** arrivaient de `tipote.blog` avec un `alt` VIDE. C'est 100 %,
+  // la ou le francais etait a 43 % le 31 aout.
+  //
+  // Un `alt` vide coute trois choses d'un coup, et aucune ne se voit a
+  // l'ecran : une lectrice aveugle n'entend rien (ou s'entend epeler
+  // "17-reasons-to-launch-business-quiz-4ce3c7f955"), Google ne sait
+  // pas ce que le schema montre, et un modele de langue non plus. Ces
+  // schemas portent l'essentiel de l'argumentaire.
+  const dossier = path.join(process.cwd(), "content", "blog", "en");
+  const sans: string[] = [];
+  let vues = 0;
+  for (const f of fs.readdirSync(dossier).filter((n) => n.endsWith(".json") && n !== "index.json")) {
+    for (const b of JSON.parse(fs.readFileSync(path.join(dossier, f), "utf8")).blocs ?? []) {
+      if (b?.type !== "image") continue;
+      vues += 1;
+      if (!String(b.alt ?? "").trim()) sans.push(`${f} ${b.src}`);
+    }
+  }
+  // Sans ce compte, le test passerait au vert le jour ou plus aucune
+  // image n'est servie : un test qui ne peut plus echouer ment.
+  assert.ok(vues >= 20, `${vues} images seulement : le contenu a bouge, relis la table`);
+  assert.deepEqual(sans, [], "images sans texte alternatif : relance npm run blog:reparer-en");
+});
+
+test("un `alt` anglais decrit ce qu'on voit, et il est ECRIT en anglais", async () => {
+  const { ALT_IMAGES_EN } = await import("@/lib/blog/altImagesEn");
+  const valeurs = Object.values(ALT_IMAGES_EN);
+  assert.ok(valeurs.length >= 25, "la table s'est videe");
+
+  for (const [src, alt] of Object.entries(ALT_IMAGES_EN)) {
+    // Un lecteur d'ecran annonce DEJA que c'est une image.
+    assert.ok(
+      !/^(image|photo|screenshot|illustration) (of|showing)/i.test(alt),
+      `${src} : commence par "image of"`,
+    );
+    assert.ok(alt.length >= 20, `${src} : trop court pour dire quelque chose`);
+    // Au dela, un lecteur d'ecran coupe et Google tronque.
+    assert.ok(alt.length <= 200, `${src} : ${alt.length} caracteres, c'est trop long`);
+    assert.ok(!/[—–]/.test(alt), `${src} : tiret cadratin`);
+
+    // ET IL EST EN ANGLAIS. C'est la raison d'etre de cette table :
+    // deux chemins sont PARTAGES avec les articles francais, donc une
+    // seule table poserait du francais dans une page anglaise, sur la
+    // seule ligne qu'une lectrice aveugle anglophone entend. C'est le
+    // reproche du client du 7 septembre, transpose au blog.
+    assert.ok(
+      !/\b(le|la|les|des|une|dans|avec|pour|sur|qui|sont|leur)\b/i.test(alt),
+      `${src} : ce texte a l'air ecrit en francais`,
+    );
+    // La typographie anglaise ne pose pas d'espace devant une
+    // ponctuation, et un pourcentage s'y colle (regle du 8 septembre).
+    assert.ok(!/\s[?!:;%]/.test(alt), `${src} : espace devant une ponctuation`);
+  }
+});
+
+test("les deux chemins PARTAGES avec le francais rendent deux textes differents", async () => {
+  // LE CAS QUI JUSTIFIE LA DEUXIEME TABLE, et il est mesure :
+  // `/blog/img/quiz-buzzfeed.webp` et `/blog/img/quiz-kerastase.webp`
+  // vivent dans les DEUX corpus. Une table unique servirait le meme
+  // texte aux deux langues, donc du francais dans une page anglaise.
+  const { ALT_IMAGES } = await import("@/lib/blog/altImages");
+  const { ALT_IMAGES_EN } = await import("@/lib/blog/altImagesEn");
+  const partages = Object.keys(ALT_IMAGES_EN).filter((c) => c in ALT_IMAGES);
+  assert.ok(partages.length > 0, "aucun chemin partage : ce test ne prouve plus rien");
+  for (const c of partages) {
+    assert.notEqual(ALT_IMAGES_EN[c], ALT_IMAGES[c], `${c} : les deux tables disent la meme chose`);
+  }
+});
+
+test("`poserAltEn` GAGNE sur ce qu'elle nomme, et se tait sur le reste", async () => {
+  const { poserAltEn, ALT_IMAGES_EN } = await import("@/lib/blog/altImagesEn");
+  const [connu] = Object.keys(ALT_IMAGES_EN);
+
+  const vide: { src: string; alt: string } = { src: connu, alt: "" };
+  assert.equal(poserAltEn(vide), true);
+  assert.equal(vide.alt, ALT_IMAGES_EN[connu]);
+
+  // La table gagne sur un `alt` deja pose : c'est la correction du
+  // 1er septembre cote francais, un texte herite de l'import ne doit
+  // pas bloquer la correction.
+  const mauvais: { src: string; alt: string } = { src: connu, alt: "tiquiz quiz" };
+  assert.equal(poserAltEn(mauvais), true);
+  assert.equal(mauvais.alt, ALT_IMAGES_EN[connu]);
+
+  // Mais une image ABSENTE de la table garde le sien : on ne perd aucun
+  // texte correct venu d'ailleurs.
+  const inconnue: { src: string; alt: string } = {
+    src: "/blog/img/en/pas-dans-la-table.webp",
+    alt: "a text to keep",
+  };
+  assert.equal(poserAltEn(inconnue), false);
+  assert.equal(inconnue.alt, "a text to keep");
+
+  // Et une pose qui ne change rien rend `false` : sinon le script
+  // compterait une correction a chaque passage, et son compteur ne
+  // distinguerait plus "j'ai pose 27 alt" de "je n'ai rien fait".
+  assert.equal(poserAltEn({ src: connu, alt: ALT_IMAGES_EN[connu] }), false);
+});

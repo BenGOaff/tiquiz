@@ -11,11 +11,12 @@
 // `tests/logic/blog-en.test.mts` appelle LA MEME source : le contenu
 // est propre quand la reparation ne change plus rien.
 //
-// IL REFUSE dans trois cas, et c'est tout son interet :
+// IL REFUSE dans quatre cas, et c'est tout son interet :
 //   - une correction qui ne trouve AUCUNE cible (une correction qu'on
 //     croit appliquee, leçon du 4 septembre) ;
 //   - la section Tipote introuvable ou mal bornee ;
-//   - un interdit qui survit a la reparation.
+//   - un interdit qui survit a la reparation ;
+//   - une image qui sort SANS texte alternatif.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -38,6 +39,7 @@ import {
   retirerTirets,
   ponctuationAnglaise,
 } from "../lib/blog/faitsEn.ts";
+import { poserAltEn } from "../lib/blog/altImagesEn.ts";
 
 /** Compte les remplacements, sans expression reguliere : les motifs sont du HTML. */
 function remplacer(texte, de, vers, compteur, cle) {
@@ -81,7 +83,22 @@ function corrigerBloc(b, compteur) {
   if (b.type === "titre") return { ...b, texte: corrigerChaine(b.texte, compteur) };
   if (b.type === "cta")
     return { ...b, texte: corrigerChaine(b.texte, compteur), url: corrigerChaine(b.url, compteur) };
-  if (b.type === "image") return { ...b, alt: corrigerChaine(b.alt, compteur) };
+  if (b.type === "image") {
+    // LE TEXTE ALTERNATIF EST POSE AVANT D'ETRE CORRIGE.
+    //
+    // Mesure du 8 septembre : 27 images sur 27 arrivaient de
+    // `tipote.blog` SANS aucun `alt`. `poserAltEn` lit la table
+    // ANGLAISE (`lib/blog/altImagesEn.ts`) ; une image absente de la
+    // table garde le sien, exactement comme la regle francaise du
+    // 31 aout.
+    //
+    // L'ORDRE COMPTE : la ponctuation anglaise doit passer sur le texte
+    // POSE, pas seulement sur celui qui venait de l'import. Sans ca, un
+    // `alt` ecrit avec une espace devant un `?` sortirait tel quel.
+    const img = { ...b };
+    if (poserAltEn(img)) compteur.set("alt", (compteur.get("alt") ?? 0) + 1);
+    return { ...img, alt: corrigerChaine(img.alt, compteur) };
+  }
   if (b.type === "faq") {
     const gardees = b.questions.filter(
       (q) => !QUESTIONS_RETIREES_EN.some((r) => r.question === q.question),
@@ -159,6 +176,28 @@ for (const [nom, txt] of corriges) {
   }
 }
 
+// ── LES IMAGES QUI SORTENT SANS TEXTE ALTERNATIF ──
+//
+// Mesure du 8 septembre : les 27 images des quatre articles arrivaient
+// de `tipote.blog` avec un `alt` VIDE, et `ALT_IMAGES_EN` les couvre
+// toutes les 27. Une image qui ressort nue veut donc dire une seule
+// chose : son chemin a change et la table ne le NOMME plus.
+//
+// Ca ne casse rien et ca ne se voit sur aucun ecran : la page s'affiche
+// exactement pareil, et seuls une lectrice aveugle, Google et un modele
+// de langue perdent quelque chose. C'est le genre de trou qui vit des
+// mois, donc il fait REFUSER.
+//
+// On lit le contenu CORRIGE, jamais le disque : en `--verifie` rien
+// n'est ecrit, donc le disque dirait "27 images nues" sur une
+// reparation parfaitement bonne.
+const sansAlt = [];
+for (const [nom, txt] of corriges) {
+  for (const b of JSON.parse(txt).blocs ?? []) {
+    if (b.type === "image" && !String(b.alt ?? "").trim()) sansAlt.push(`${nom} : ${b.src}`);
+  }
+}
+
 console.log(`${ecrits.length} article(s) ${VERIFIE ? "a corriger" : "corriges"} : ${ecrits.join(", ") || "aucun"}`);
 const total = [...compteur.values()].reduce((s, n) => s + n, 0);
 console.log(`${total} correction(s) appliquee(s), ${compteur.size} regle(s) ont mordu.`);
@@ -181,7 +220,19 @@ console.log(`${total} correction(s) appliquee(s), ${compteur.size} regle(s) ont 
 // sont fausses ; zero morsure sur toute la table dit que le travail est
 // deja fait. Un controle qui ne distingue pas les deux est pire qu'un
 // controle absent.
-const dejaCorrige = compteur.size === 0;
+// ET IL SE MESURE SUR LES SEULES REGLES QUE `muettes` SURVEILLE.
+//
+// `compteur.size === 0` a marche tant que le compteur ne portait que
+// ces trois familles. Le jour ou une QUATRIEME chose s'y est ajoutee
+// (la pose des `alt`, 8 septembre), une reparation parfaitement bonne
+// sur un contenu deja corrige comptait 27 poses, donc `dejaCorrige`
+// tombait a faux, donc les 54 regles de texte etaient denoncees comme
+// fausses. Un controle qui ne distingue pas ce qu'il est cense
+// distinguer est pire qu'un controle absent : on compare donc ce qui
+// se compare.
+const dejaCorrige = ![...compteur.keys()].some(
+  (c) => c.startsWith("lien ") || c.startsWith("texte ") || c.startsWith("fait "),
+);
 if (muettes.length && !dejaCorrige) {
   console.error(`\n${muettes.length} regle(s) n'ont trouve AUCUNE cible :`);
   for (const m of muettes) console.error("   " + m);
@@ -190,16 +241,24 @@ if (restants.length) {
   console.error(`\n${restants.length} interdit(s) survivent :`);
   for (const r of restants) console.error("   " + r);
 }
-if ((muettes.length && !dejaCorrige) || restants.length) {
+if (sansAlt.length) {
+  console.error(`\n${sansAlt.length} image(s) sortent SANS texte alternatif :`);
+  for (const i of sansAlt) console.error("   " + i);
+  console.error("   -> ajoute leur chemin a ALT_IMAGES_EN apres avoir REGARDE l'image.");
+}
+if ((muettes.length && !dejaCorrige) || restants.length || sansAlt.length) {
   console.error(
     "\nUne correction qui ne mord pas est une correction qu'on croit appliquee : on ne finit pas en silence.",
   );
   process.exit(1);
 }
+// LA PHRASE FINALE DIT CE QUI S'EST PASSE, pas ce que `dejaCorrige`
+// raconte : celui la ne parle QUE des regles de texte, et il resterait
+// vrai un jour ou 27 `alt` viennent d'etre poses.
 console.log(
-  dejaCorrige
+  total === 0
     ? "Rien a corriger : l'anglais est deja d'aplomb, et rien d'interdit n'y survit."
-    : "Rien ne survit de ce qui est interdit.",
+    : "Rien ne survit de ce qui est interdit, et aucune image ne sort sans texte alternatif.",
 );
 
 // ── LE SOMMAIRE, ECRIT DEPUIS LE CONTENU CORRIGE ──
