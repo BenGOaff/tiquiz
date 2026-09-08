@@ -1,4 +1,4 @@
-// app/(site)/generateur-de-quiz/page.tsx
+// app/(site-langues)/generateur-de-quiz/page.tsx
 //
 // LE GÉNÉRATEUR DE QUIZ, SUR SA PAGE.
 //
@@ -31,9 +31,18 @@
 // message que le bouton envoyait ne serait entendu par personne et le
 // bouton serait MORT. Le paramètre est obligatoire, le compilateur le
 // refuse quand on se tait. Voir `lib/embed/remise.ts`.
+//
+// -- LA PAGE VIT DANS `(site-langues)`, ET CE N'EST PAS UN RANGEMENT --
+//
+// Elle est servie en `fr` ET en `en` (8 septembre), donc elle lit
+// `langueCanonique()`, donc elle est DYNAMIQUE. Le groupe `(site)`
+// reste statique pour les 8 pages qui n'ont pas de version anglaise :
+// un `headers()` dans leur layout commun paierait un rendu par requête
+// sur des pages qui commencent justement à ranker.
 
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getLocale } from "next-intl/server";
 
 import EmbedPreviewClient from "@/components/embed/EmbedPreviewClient";
 import { CSS } from "@/components/landing/styles";
@@ -41,58 +50,85 @@ import { BandeFinale } from "@/components/landing/morceaux";
 import { Chevron, Croix, Fleche } from "@/components/landing/pieces";
 import { HOTE_VENTE } from "@/lib/publicHost";
 import { contenuLanding } from "@/lib/site/landing";
+import { alternatesDeLangue, languePubliqueDuTexte } from "@/lib/site/langues";
+import { langueCanonique } from "@/lib/site/langueRequete";
+import { hrefPourLangue } from "@/lib/site/nav";
+import { SUPPORTED_LOCALES } from "@/i18n/config";
 import {
-  CE_QUE_LIA_ECRIT,
-  CE_QUIL_NE_FAIT_PAS,
   CHEMIN_GENERATEUR,
-  ETAPES,
-  FAQ,
+  CHROME_GENERATEUR,
   SOURCE_GENERATEUR,
   applicationJsonLd,
+  ceQueLIaEcrit,
+  ceQuilNeFaitPas,
+  etapes,
+  faq,
   faqJsonLd,
+  urlGenerateur,
 } from "@/lib/site/generateurQuiz";
 
-const TITRE = "Générateur de quiz gratuit par IA";
-const DESCRIPTION =
-  "Décris ton sujet, l'IA écrit les questions, les réponses et les profils de résultat. Sans compte, sans carte bancaire, et tu gardes ton quiz.";
-
-export const metadata: Metadata = {
-  title: TITRE,
-  description: DESCRIPTION,
-  alternates: { canonical: `${HOTE_VENTE}${CHEMIN_GENERATEUR}` },
-  openGraph: {
-    type: "website",
-    title: TITRE,
-    description: DESCRIPTION,
-    url: `${HOTE_VENTE}${CHEMIN_GENERATEUR}`,
-    siteName: "Tiquiz",
-    locale: "fr_FR",
-  },
+type PageProps = {
+  searchParams?: Promise<{ session?: string; source?: string; lang?: string }>;
 };
 
-type PageProps = { searchParams?: Promise<{ session?: string; source?: string }> };
+// LA LANGUE DU TEXTE ET CELLE DE L'ADRESSE SONT DEUX QUESTIONS.
+//
+// Le texte suit la langue résolue (l'URL, sinon un `?lang=` d'aperçu,
+// sinon le cookie) ; la canonique suit l'ADRESSE seule. Les confondre
+// ferait annoncer deux canoniques pour la même URL selon le visiteur,
+// et c'est celle du robot qui compterait (règle du 8 septembre).
+async function resoudreLangue(searchParams?: PageProps["searchParams"]) {
+  const brut = (await searchParams)?.lang;
+  if (brut && (SUPPORTED_LOCALES as readonly string[]).includes(brut)) {
+    return languePubliqueDuTexte(brut);
+  }
+  return languePubliqueDuTexte(await getLocale());
+}
+
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const langue = await resoudreLangue(searchParams);
+  const t = CHROME_GENERATEUR[langue];
+  const canonique = await langueCanonique();
+  const alternates = alternatesDeLangue(HOTE_VENTE, CHEMIN_GENERATEUR, canonique);
+  return {
+    title: t.metaTitre,
+    description: t.metaDescription,
+    ...(alternates ? { alternates } : {}),
+    openGraph: {
+      type: "website",
+      title: t.metaTitre,
+      description: t.metaDescription,
+      url: urlGenerateur(canonique),
+      siteName: "Tiquiz",
+      locale: t.ogLocale,
+    },
+  };
+}
 
 export default async function Page({ searchParams }: PageProps) {
   const sp = await searchParams;
-  // LA PAGE EST EN FRANÇAIS, donc le bandeau de fin aussi. Le module de
-  // contenu l'est déjà (même choix assumé que `fonctionnalites.ts` et
-  // `avantages.ts`) : lui donner la langue de l'interface ferait une
-  // page à moitié traduite, ce qui est pire qu'une page monolingue.
-  const t = contenuLanding("fr");
+  const langue = await resoudreLangue(searchParams);
+  const t = CHROME_GENERATEUR[langue];
+  const landing = contenuLanding(langue);
+  // LES LIENS INTERNES PASSENT PAR `hrefPourLangue`, jamais par un
+  // préfixe posé à la main : il ne préfixe que les chemins dont la
+  // version anglaise est DÉCLARÉE. Sans lui, un `/en/` collé à
+  // l'aveugle fabriquerait un 404 au bout d'un lien.
+  const lien = (chemin: string) => hrefPourLangue(chemin, langue);
 
   return (
-    <main className="tql" lang="fr">
+    <main className="tql" lang={langue}>
       <style>{CSS}</style>
       <script
         type="application/ld+json"
         // Les deux blocs sont construits depuis les MÊMES données que
         // l'écran : écrire une deuxième liste donnerait Google à qui on
         // raconte autre chose qu'à la lectrice (piège du 2 septembre).
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(applicationJsonLd()) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(applicationJsonLd(langue)) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd()) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd(langue)) }}
       />
 
       {/* ── 1. LE TITRE, ET L'OUTIL JUSTE DESSOUS ──────────────── */}
@@ -105,19 +141,19 @@ export default async function Page({ searchParams }: PageProps) {
         <div className="tql-large">
           <div className="tql-intro">
             <h1 className="tql-h1 tql-centre">
-              Génère ton quiz <span className="tql-surb">en deux minutes</span>
+              {t.h1} <span className="tql-surb">{t.h1Surb}</span>
             </h1>
-            <p className="tql-p">
-              Tu décris ton sujet et à qui tu parles. L&apos;IA écrit les questions,
-              leurs réponses et les profils de résultat, dans ta langue. Tu relis, tu
-              corriges, et tu gardes ton quiz. Sans compte, sans carte bancaire.
-            </p>
+            <p className="tql-p">{t.chapo}</p>
           </div>
 
           <div className="tql-outil">
             <EmbedPreviewClient
               initialSessionToken={sp?.session ?? ""}
-              locale="fr"
+              // L'OUTIL SUIT LA LANGUE DE LA PAGE : un générateur en
+              // français sous une adresse anglaise est exactement la
+              // panne que ce chantier existe pour fermer, et elle ne se
+              // verrait sur aucun écran français.
+              locale={langue}
               source={sp?.source ?? SOURCE_GENERATEUR}
               // Le repli du bon de commande n'est jamais lu ici : c'est
               // la page hôte d'une iframe qui s'en sert, et il n'y a pas
@@ -136,16 +172,16 @@ export default async function Page({ searchParams }: PageProps) {
         <div className="tql-large">
           <div className="tql-intro">
             <h2 className="tql-h2">
-              Comment ça <span className="tql-surb">marche</span>
+              {t.titreEtapes} <span className="tql-surb">{t.titreEtapesSurb}</span>
             </h2>
-            <p className="tql-p">
-              Suis ces 3 étapes pour créer ton premier quiz interactif.
-            </p>
+            <p className="tql-p">{t.chapoEtapes}</p>
           </div>
           <div className="tql-grille-3">
-            {ETAPES.map((e, i) => (
-              <div className="tql-carte" key={e.titre}>
-                <span className="tql-pastille-etape">Étape {i + 1}</span>
+            {etapes(langue).map((e, i) => (
+              <div className="tql-carte" key={e.id}>
+                <span className="tql-pastille-etape">
+                  {t.etapeMot} {i + 1}
+                </span>
                 <h3 className="tql-h3">{e.titre}</h3>
                 <p className="tql-p-g">{e.corps}</p>
               </div>
@@ -159,17 +195,13 @@ export default async function Page({ searchParams }: PageProps) {
         <div className="tql-large">
           <div className="tql-intro">
             <h2 className="tql-h2">
-              Ce que l&apos;IA écrit <span className="tql-surb">à ta place</span>
+              {t.titreIa} <span className="tql-surb">{t.titreIaSurb}</span>
             </h2>
-            <p className="tql-p">
-              Tiquiz te donne un quiz déjà optimisé pour attirer tes futurs clients
-              et les amener à te confier leur email. Mais tu gardes la main sur
-              tout : édite-le à l&apos;infini.
-            </p>
+            <p className="tql-p">{t.chapoIa}</p>
           </div>
           <div className="tql-grille-2">
-            {CE_QUE_LIA_ECRIT.map((b) => (
-              <div className="tql-carte" key={b.titre}>
+            {ceQueLIaEcrit(langue).map((b) => (
+              <div className="tql-carte" key={b.id}>
                 <h3 className="tql-h3">{b.titre}</h3>
                 {b.corps.map((p) => (
                   <p className="tql-p-g" key={p}>
@@ -190,11 +222,11 @@ export default async function Page({ searchParams }: PageProps) {
       <section className="tql-sec tql-blanc">
         <div className="tql-large tql-lire-bloc">
           <h2 className="tql-h2">
-            Ce que le générateur <span className="tql-surb">ne fait pas</span>
+            {t.titreRefus} <span className="tql-surb">{t.titreRefusSurb}</span>
           </h2>
           <ul className="tql-non-liste">
-            {CE_QUIL_NE_FAIT_PAS.map((r) => (
-              <li key={r.refus}>
+            {ceQuilNeFaitPas(langue).map((r) => (
+              <li key={r.id}>
                 <Croix />
                 <span>
                   <span className="tql-val">{r.refus}.</span> {r.alaplace}
@@ -202,10 +234,7 @@ export default async function Page({ searchParams }: PageProps) {
               </li>
             ))}
           </ul>
-          <p className="tql-p">
-            Si l&apos;un des trois est indispensable chez toi, ne prends pas Tiquiz :
-            tu perdrais ton temps, et nous aussi.
-          </p>
+          <p className="tql-p">{t.refusFin}</p>
         </div>
       </section>
 
@@ -213,14 +242,11 @@ export default async function Page({ searchParams }: PageProps) {
       <section className="tql-sec">
         <div className="tql-large tql-lire-bloc">
           <div className="tql-intro">
-            <h2 className="tql-h2">Les questions qu&apos;on nous pose</h2>
-            <p className="tql-p">
-              Sur le générateur, sur ce qu&apos;il coûte, et sur ce que ton quiz
-              devient après.
-            </p>
+            <h2 className="tql-h2">{t.titreFaq}</h2>
+            <p className="tql-p">{t.chapoFaq}</p>
           </div>
-          {FAQ.map((f) => (
-            <details className="tql-faq" key={f.q}>
+          {faq(langue).map((f) => (
+            <details className="tql-faq" key={f.id}>
               <summary>
                 {f.q}
                 <Chevron />
@@ -230,15 +256,15 @@ export default async function Page({ searchParams }: PageProps) {
           ))}
           {/* LE MAILLAGE : d'ici on va voir le détail, ou le prix. */}
           <p className="tql-legende">
-            <Link href="/fonctionnalites">
-              Tout ce que Tiquiz sait faire
+            <Link href={lien("/fonctionnalites")}>
+              {t.versFonctionnalites}
               <Fleche />
             </Link>
           </p>
         </div>
       </section>
 
-      <BandeFinale t={t} />
+      <BandeFinale t={landing} />
     </main>
   );
 }

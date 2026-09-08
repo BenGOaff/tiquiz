@@ -70,6 +70,10 @@ const PAGES_ECRITES: readonly PagePublique[] = [
     resume:
       "Décris ton sujet et à qui tu parles : l'IA écrit les questions, leurs réponses et les profils de résultat. Sans compte et sans carte bancaire, et le quiz se retrouve dans un compte gratuit.",
     priorite: 0.9,
+    // Traduite le 8 septembre : son texte vit dans
+    // `lib/site/generateurQuiz.ts`, structure d'un côté, texte par
+    // langue de l'autre. L'OUTIL suit la langue de la page.
+    langues: ["fr", "en"],
   },
   {
     chemin: "/tarifs",
@@ -77,9 +81,11 @@ const PAGES_ECRITES: readonly PagePublique[] = [
     resume:
       "Trois paliers, le premier ne coûte rien et ne demande pas de carte bancaire. Le détail ligne par ligne, ce que ça remplace, et les questions d'argent.",
     priorite: 0.9,
-    // La SEULE page du site qui a un texte anglais complet aujourd'hui
-    // (`contenuLanding("en")`, dans `lib/site/landing.ts`). Les autres
-    // restent en français tant que leur texte n'est pas écrit.
+    // Son texte anglais vit dans `contenuLanding("en")`
+    // (`lib/site/landing.ts`). Une page ne déclare une langue que
+    // lorsque son texte existe VRAIMENT : sinon le sitemap et les
+    // `hreflang` annonceraient une adresse anglaise qui sert du
+    // français, et Google jugerait l'anglais sur du contenu dupliqué.
     langues: ["fr", "en"],
   },
   {

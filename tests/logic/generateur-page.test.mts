@@ -8,33 +8,41 @@
 // Ce fichier fige des FAITS, jamais des formulations : le texte de la
 // page se réécrit librement, les chiffres et les mécaniques non.
 
-import { test } from "node:test";
+import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
 import { FREE_LIMITS } from "@/lib/planLimits";
 import { QUIZ_LANGUAGES } from "@/lib/quizLanguages";
-import { PAGES_PUBLIQUES } from "@/lib/site/pagesPubliques";
+import { PAGES_PUBLIQUES, languesDePage } from "@/lib/site/pagesPubliques";
 import { clicASignaler } from "@/lib/affiliate/signalerClic";
 import { PIED } from "@/lib/site/nav";
 import { cadreDuGenerateur, remisePourLeBouton } from "@/lib/embed/remise";
 import { buildQuizGenerationPrompt } from "@/lib/prompts/quiz/system";
+import { LANGUES_PUBLIQUES, cheminPourLangue } from "@/lib/site/langues";
 import {
-  CE_QUE_LIA_ECRIT,
-  CE_QUIL_NE_FAIT_PAS,
   CHEMIN_GENERATEUR,
-  ETAPES,
-  FAQ,
+  CHROME_GENERATEUR,
   FENETRE_HEURES,
   LIMITE_PAR_IP,
   LANGUES_ET_VARIANTES,
   applicationJsonLd,
+  ceQueLIaEcrit,
+  ceQuilNeFaitPas,
+  etapes,
+  faq,
   faqJsonLd,
+  urlGenerateur,
 } from "@/lib/site/generateurQuiz";
+import { cheminPageDuSite } from "./aide/pageDuSite.mts";
 
 const RACINE = process.cwd();
-const PAGE = join(RACINE, "app/(site)/generateur-de-quiz/page.tsx");
+// UN GROUPE DE ROUTES N'AJOUTE AUCUN SEGMENT D'URL : ecrire
+// `app/(site)/generateur-de-quiz/page.tsx` en dur figerait un RANGEMENT,
+// pas une adresse, et rougirait au premier deplacement de groupe (ce qui
+// est arrive a deux tests le 8 septembre).
+const PAGE = join(RACINE, cheminPageDuSite(CHEMIN_GENERATEUR));
 
 /** Le fichier, sans ses commentaires : un test qui mesure la présence
  *  de quelque chose dans une source tombe sinon sur sa propre
@@ -56,7 +64,7 @@ test("le nombre de quiz annoncé est celui que le compteur applique", () => {
   // Sans la deuxième, la page pourrait annoncer 2 pendant que le
   // limiteur en applique 10, et personne ne le verrait avant qu'une
   // visiteuse ne se fasse couper.
-  const reponse = FAQ.find((q) => q.r.includes("La seule borne est technique"));
+  const reponse = faq("fr").find((q) => q.r.includes("La seule borne est technique"));
   assert.ok(reponse, "la FAQ ne dit plus quelle est la borne");
   assert.match(
     reponse!.r,
@@ -95,7 +103,7 @@ test("le nombre de langues annoncé est celui du catalogue", () => {
 test("chaque bloc nomme le fichier qui le rend vrai, et ce fichier existe", () => {
   // Même geste que `lib/site/fonctionnalites.ts` : une fonctionnalité
   // retirée du produit fait rougir la page qui la vend.
-  for (const b of CE_QUE_LIA_ECRIT) {
+  for (const b of ceQueLIaEcrit("fr")) {
     assert.ok(b.source, `${b.titre} ne nomme aucune source`);
     assert.ok(
       existsSync(join(RACINE, b.source)),
@@ -107,8 +115,9 @@ test("chaque bloc nomme le fichier qui le rend vrai, et ce fichier existe", () =
 test("un refus dit toujours ce qui se passe à la place", () => {
   // Béné, 5 septembre : un refus qui ne dit pas ce qui se passe à la
   // place n'est pas un refus, c'est une excuse.
-  assert.ok(CE_QUIL_NE_FAIT_PAS.length >= 3);
-  for (const r of CE_QUIL_NE_FAIT_PAS) {
+  const refus = ceQuilNeFaitPas("fr");
+  assert.ok(refus.length >= 3);
+  for (const r of refus) {
     assert.ok(r.refus.trim().length > 0);
     assert.ok(
       r.alaplace.trim().length > 40,
@@ -118,7 +127,7 @@ test("un refus dit toujours ce qui se passe à la place", () => {
 });
 
 test("les limites du gratuit viennent de FREE_LIMITS, jamais recopiées", () => {
-  const question = FAQ.find((f) => f.r.includes("floutées"));
+  const question = faq("fr").find((f) => f.r.includes("floutées"));
   assert.ok(question, "la FAQ ne parle plus de ce que le plan gratuit borne");
   assert.ok(
     question!.r.includes(String(FREE_LIMITS.visibleLeadsPerMonth)),
@@ -134,16 +143,19 @@ test("les limites du gratuit viennent de FREE_LIMITS, jamais recopiées", () => 
 });
 
 test("le JSON-LD dit exactement ce que l'écran affiche", () => {
-  const ld = faqJsonLd() as { mainEntity: { name: string; acceptedAnswer: { text: string } }[] };
-  assert.equal(ld.mainEntity.length, FAQ.length);
+  const questions = faq("fr");
+  const ld = faqJsonLd("fr") as {
+    mainEntity: { name: string; acceptedAnswer: { text: string } }[];
+  };
+  assert.equal(ld.mainEntity.length, questions.length);
   ld.mainEntity.forEach((e, i) => {
-    assert.equal(e.name, FAQ[i].q);
-    assert.equal(e.acceptedAnswer.text, FAQ[i].r);
+    assert.equal(e.name, questions[i].q);
+    assert.equal(e.acceptedAnswer.text, questions[i].r);
   });
   // `price: "0"` n'est pas une formule : la route de generation ne
   // demande ni compte ni paiement. Si ca changeait, cette ligne
   // deviendrait un mensonge servi a Google.
-  const app = applicationJsonLd() as { offers: { price: string }; url: string };
+  const app = applicationJsonLd("fr") as { offers: { price: string }; url: string };
   assert.equal(app.offers.price, "0");
   assert.ok(app.url.endsWith(CHEMIN_GENERATEUR));
   const routeGeneration = readFileSync(
@@ -267,14 +279,19 @@ test("la page est déclarée au sitemap ET atteignable depuis le pied de page", 
 });
 
 test("aucun tiret cadratin dans ce que la visiteuse lit", () => {
-  const visible = [
-    ...ETAPES.flatMap((e) => [e.titre, e.corps]),
-    ...CE_QUE_LIA_ECRIT.flatMap((b) => [b.titre, ...b.corps]),
-    ...CE_QUIL_NE_FAIT_PAS.flatMap((r) => [r.refus, r.alaplace]),
-    ...FAQ.flatMap((f) => [f.q, f.r]),
-  ];
-  for (const texte of visible) {
-    assert.ok(!/[—–]/.test(texte), `tiret cadratin dans : ${texte.slice(0, 60)}`);
+  // TOUTES LES LANGUES, pas seulement le francais : la regle du 7 juin
+  // porte sur ce qu'une visiteuse LIT, quelle que soit la page servie.
+  for (const langue of LANGUES_PUBLIQUES) {
+    const visible = [
+      ...etapes(langue).flatMap((e) => [e.titre, e.corps]),
+      ...ceQueLIaEcrit(langue).flatMap((b) => [b.titre, ...b.corps]),
+      ...ceQuilNeFaitPas(langue).flatMap((r) => [r.refus, r.alaplace]),
+      ...faq(langue).flatMap((f) => [f.q, f.r]),
+      ...Object.values(CHROME_GENERATEUR[langue]),
+    ];
+    for (const texte of visible) {
+      assert.ok(!/[—–]/.test(texte), `${langue} : tiret cadratin dans ${texte.slice(0, 60)}`);
+    }
   }
 });
 
@@ -421,4 +438,149 @@ test("le rattachement lit le cookie posé à l'arrivée, il ne le redemande pas"
     /req\.cookies\.get\(REF_COOKIE\)/,
     "le lien vient du COOKIE posé par le middleware, jamais du corps de la requête",
   );
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// LES DEUX LANGUES : une structure, un texte par langue
+// ─────────────────────────────────────────────────────────────────────
+//
+// Béné, 8 septembre 2026 : "toutes les pages et mêmes les articles
+// doivent être multilangues, j'espère que tu as anticipé."
+//
+// LE COMPILATEUR REFUSE DÉJÀ une langue incomplète : `TEXTES_EN` est un
+// `Record` sur les identifiants, donc en oublier un ne compile pas. Ce
+// qu'il ne peut PAS voir, c'est un texte laissé en français dans l'objet
+// anglais, ni une ponctuation française dans une phrase anglaise : ça
+// s'affiche parfaitement, et Google indexe alors du français sous une
+// adresse anglaise.
+
+describe("chaque langue declaree porte vraiment le texte", () => {
+  test("la page declare exactement les langues qu'elle sert", () => {
+    // Déclarer une langue qu'une page n'a pas met son adresse dans le
+    // sitemap ET dans ses `hreflang`, et Google y trouve du français :
+    // l'anglais est alors jugé sur du contenu dupliqué.
+    const page = PAGES_PUBLIQUES.find((p) => p.chemin === CHEMIN_GENERATEUR);
+    assert.ok(page, "la page du generateur n'est plus declaree");
+    for (const langue of languesDePage(page!)) {
+      assert.ok(
+        CHROME_GENERATEUR[langue],
+        `${langue} est declaree au sitemap et n'a aucun texte`,
+      );
+    }
+  });
+
+  test("la structure est la MEME dans toutes les langues", () => {
+    // Le `source`, l'ordre et les identifiants vivent UNE fois, en
+    // français : une langue n'apporte que du texte. Sans ça, deux
+    // adresses appariées par `hreflang` désigneraient deux pages
+    // différentes.
+    const fr = {
+      blocs: ceQueLIaEcrit("fr"),
+      etapes: etapes("fr"),
+      refus: ceQuilNeFaitPas("fr"),
+      faq: faq("fr"),
+    };
+    for (const langue of LANGUES_PUBLIQUES) {
+      const blocs = ceQueLIaEcrit(langue);
+      assert.equal(blocs.length, fr.blocs.length, `${langue} : pas le meme nombre de blocs`);
+      blocs.forEach((b, i) => {
+        assert.equal(b.id, fr.blocs[i].id, `${langue} : bloc ${i} n'a pas le meme id`);
+        assert.equal(b.source, fr.blocs[i].source, `${langue} : bloc ${b.id} change de source`);
+      });
+      assert.deepEqual(
+        etapes(langue).map((e) => e.id),
+        fr.etapes.map((e) => e.id),
+        `${langue} : les etapes ne sont plus les memes`,
+      );
+      assert.deepEqual(
+        ceQuilNeFaitPas(langue).map((r) => r.id),
+        fr.refus.map((r) => r.id),
+        `${langue} : les refus ne sont plus les memes`,
+      );
+      assert.deepEqual(
+        faq(langue).map((q) => q.id),
+        fr.faq.map((q) => q.id),
+        `${langue} : la FAQ ne pose plus les memes questions`,
+      );
+    }
+  });
+
+  test("aucune langue ne rend le texte d'une autre", () => {
+    // Le piège exact : un identifiant recopié du français compile très
+    // bien, et la page anglaise affiche alors une carte française au
+    // milieu des autres.
+    const frBlocs = ceQueLIaEcrit("fr");
+    const frFaq = faq("fr");
+    for (const langue of LANGUES_PUBLIQUES) {
+      if (langue === "fr") continue;
+      ceQueLIaEcrit(langue).forEach((b, i) => {
+        assert.notEqual(b.titre, frBlocs[i].titre, `${langue} : ${b.id} garde le titre francais`);
+      });
+      faq(langue).forEach((q, i) => {
+        assert.notEqual(q.q, frFaq[i].q, `${langue} : ${q.id} garde la question francaise`);
+      });
+    }
+  });
+
+  test("un refus dit ce qui se passe a la place, dans toutes les langues", () => {
+    for (const langue of LANGUES_PUBLIQUES) {
+      for (const r of ceQuilNeFaitPas(langue)) {
+        assert.ok(r.refus.trim().length > 0, `${langue} : ${r.id} n'a pas de refus`);
+        assert.ok(
+          r.alaplace.trim().length > 40,
+          `${langue} : "${r.refus}" ne dit pas ce que Tiquiz fait a la place`,
+        );
+      }
+    }
+  });
+
+  test("le chrome existe en entier dans chaque langue", () => {
+    for (const langue of LANGUES_PUBLIQUES) {
+      const t = CHROME_GENERATEUR[langue];
+      assert.ok(t, `${langue} : aucun chrome`);
+      for (const [cle, valeur] of Object.entries(t)) {
+        assert.ok(String(valeur).trim().length > 0, `${langue} : ${cle} est vide`);
+      }
+    }
+  });
+
+  test("la typographie anglaise est anglaise", () => {
+    // Même faute que le blog anglais du 8 septembre, et elle était
+    // MIENNE : `40 %` avec une espace et `17 EUR` au lieu de `$29.99`.
+    // Une règle écrite pour une langue, appliquée telle quelle à une
+    // autre : c'est la faute du 1er août.
+    const tout = [
+      ...etapes("en").flatMap((e) => [e.titre, e.corps]),
+      ...ceQueLIaEcrit("en").flatMap((b) => [b.titre, ...b.corps]),
+      ...ceQuilNeFaitPas("en").flatMap((r) => [r.refus, r.alaplace]),
+      ...faq("en").flatMap((f) => [f.q, f.r]),
+      ...Object.values(CHROME_GENERATEUR.en),
+    ].join("\n");
+    assert.ok(!/\d\s%/.test(tout), "un pourcentage decolle : a l'anglaise il se colle");
+    assert.ok(!/\s[?!;](\s|$)/.test(tout), "une espace devant une ponctuation");
+    assert.ok(!/\w\s:(\s|$)/.test(tout), "une espace devant un deux-points");
+  });
+
+  test("le JSON-LD annonce l'adresse de SA langue", () => {
+    // Une page anglaise qui annoncerait l'adresse francaise dirait a
+    // Google que la version de reference est ailleurs : l'anglais ne
+    // serait jamais indexe, et rien a l'ecran ne le dirait.
+    for (const langue of LANGUES_PUBLIQUES) {
+      const attendu = cheminPourLangue(CHEMIN_GENERATEUR, langue);
+      const app = applicationJsonLd(langue) as {
+        url: string;
+        inLanguage: string;
+        offers: { price: string };
+      };
+      assert.equal(app.url, urlGenerateur(langue), `${langue} : l'URL du JSON-LD n'est pas la sienne`);
+      assert.ok(app.url.endsWith(attendu), `${langue} : le JSON-LD annonce ${app.url}`);
+      assert.equal(app.inLanguage, langue, `${langue} : inLanguage ne suit pas l'adresse`);
+      assert.equal(app.offers.price, "0", `${langue} : le prix annonce n'est plus zero`);
+
+      const questions = faq(langue);
+      const ld = faqJsonLd(langue) as { mainEntity: { name: string }[] };
+      assert.equal(ld.mainEntity.length, questions.length, `${langue} : la FAQ structuree diverge`);
+      assert.equal(ld.mainEntity[0].name, questions[0].q, `${langue} : la FAQ structuree ment`);
+    }
+  });
 });
