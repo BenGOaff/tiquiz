@@ -21,7 +21,7 @@
 //   francaise.
 //
 // Traduire les huit entrees d'un coup promettrait de l'anglais derriere
-// chaque clic, alors que `/a-propos`, `/integrations` et `/affiliation`
+// chaque clic, alors que `/integrations` et `/affiliation`
 // n'ont aucune version anglaise. C'est un mensonge, pas une commodite,
 // et c'est l'interdit numero un de Bene.
 //
@@ -97,14 +97,19 @@ describe("le chrome du site suit la langue de la page", () => {
 
   test("un `en` pose sur une page SANS version anglaise ne s'affiche jamais", () => {
     // Le sens de l'erreur : on ne peut pas mentir par inadvertance.
-    // `/a-propos` existe, il est dans le sitemap, et il n'a pas de
+    // `/integrations` existe, il est dans le sitemap, et il n'a pas de
     // texte anglais (mesure du 8 septembre).
+    //
+    // Le test VERIFIE d'abord sa propre premisse, et c'est ce qui l'a
+    // sauve : sa fixture etait `/a-propos`, qui a recu sa version
+    // anglaise le 8 septembre. Sans cette ligne il serait passe au vert
+    // en ne mesurant plus rien du tout.
     assert.ok(
-      !languesDeclarees("/a-propos").includes("en"),
-      "ce test repose sur le fait que /a-propos n'a pas de version anglaise",
+      !languesDeclarees("/integrations").includes("en"),
+      "ce test repose sur le fait que /integrations n'a pas de version anglaise",
     );
-    const menteur: LienSite = { href: "/a-propos", libelle: "À propos", en: "About" };
-    assert.equal(libellePourLangue(menteur, "en"), "À propos");
+    const menteur: LienSite = { href: "/integrations", libelle: "Intégrations", en: "Integrations" };
+    assert.equal(libellePourLangue(menteur, "en"), "Intégrations");
   });
 
   test("une adresse servie par l'APP se traduit sans jamais etre prefixee", () => {

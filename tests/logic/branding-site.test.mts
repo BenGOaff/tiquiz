@@ -38,26 +38,42 @@ import fs from "node:fs";
 import path from "node:path";
 import test, { describe } from "node:test";
 
+import { cheminPageDuSite } from "./aide/pageDuSite.mts";
+
 const RACINE = process.cwd();
 
-/** Les écrans du site public, ceux que Béné regarde. */
-const ECRANS = [
-  "app/(site)/affiliation/page.tsx",
-  "app/(site)/affiliation-atelier/page.tsx",
-  "app/(site)/a-propos/page.tsx",
-  "app/(site)/newsletter/page.tsx",
-  "app/blog/page.tsx",
-  "app/(site)/integrations/page.tsx",
-  "app/(site)/integrations/zapier-systeme-io/page.tsx",
-  "app/(site)/integrations/tally-systeme-io/page.tsx",
-  "app/(site)/integrations/typeform-systeme-io/page.tsx",
-  "app/(site)/integrations/google-forms-systeme-io/page.tsx",
-  "app/(site)/integrations/interact-systeme-io/page.tsx",
-  "app/(site)/integrations/jotform-systeme-io/page.tsx",
+/**
+ * LES ADRESSES DU SITE PUBLIC, ceux que Béné regarde.
+ *
+ * On nomme l'ADRESSE, jamais le chemin sur disque : un groupe de routes
+ * de Next n'ajoute aucun segment d'URL, donc `/a-propos` peut passer de
+ * `app/(site)/` à `app/(site-langues)/` sans que l'adresse bouge. Un
+ * chemin écrit en dur fige un rangement, et il a fait rougir ce fichier
+ * le 8 septembre sur un code parfaitement correct.
+ */
+const ADRESSES = [
+  "/affiliation",
+  "/affiliation-atelier",
+  "/a-propos",
+  "/newsletter",
+  "/blog",
+  "/integrations",
+  "/integrations/zapier-systeme-io",
+  "/integrations/tally-systeme-io",
+  "/integrations/typeform-systeme-io",
+  "/integrations/google-forms-systeme-io",
+  "/integrations/interact-systeme-io",
+  "/integrations/jotform-systeme-io",
+];
+
+/** Et les composants partagés par ces écrans, qui n'ont pas d'adresse. */
+const COMPOSANTS = [
   "components/site/Integrations.tsx",
   "components/site/EncartCta.tsx",
   "components/site/SimulateurAffiliation.tsx",
 ];
+
+const ECRANS = [...ADRESSES.map(cheminPageDuSite), ...COMPOSANTS];
 
 function lire(relatif: string): string {
   return fs.readFileSync(path.join(RACINE, relatif), "utf8");

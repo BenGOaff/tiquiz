@@ -404,10 +404,13 @@ test("le menu et le pied de page suivent la langue, mais SEULEMENT ou l'anglais 
   assert.equal(hrefPourLangue("/tarifs", "en"), "/en/tarifs");
   assert.equal(hrefPourLangue("/blog", "en"), "/en/blog");
 
-  // ET ON NE PREFIXE QUE CE QUI EXISTE. Prefixer tout donnerait huit
-  // 404 dans le menu, sur toutes les pages a la fois.
-  assert.equal(hrefPourLangue("/a-propos", "en"), "/a-propos");
+  assert.equal(hrefPourLangue("/a-propos", "en"), "/en/a-propos");
+
+  // ET ON NE PREFIXE QUE CE QUI EXISTE. Prefixer tout donnerait des
+  // 404 dans le menu, sur toutes les pages a la fois : `/integrations`
+  // et `/affiliation` n'ont aucune version anglaise.
   assert.equal(hrefPourLangue("/integrations", "en"), "/integrations");
+  assert.equal(hrefPourLangue("/affiliation", "en"), "/affiliation");
 
   // UN SLUG D'ARTICLE NE SE TRADUIT PAS PAR UN PREFIXE : l'anglais de
   // `17-raisons-lancer-quiz-business` s'appelle `17-reasons-...`, donc

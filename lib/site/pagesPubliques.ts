@@ -104,6 +104,9 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   },
   {
     chemin: "/a-propos",
+    // Traduite le 8 septembre : `lib/site/aPropos.ts` porte le récit
+    // entier dans les deux langues.
+    langues: LANGUES_PUBLIQUES,
     titre: "Bénédicte Lagardette, fondatrice de Tiquiz",
     resume:
       "Ex-infirmière (urgences en Corse, ambulance en Suisse), handicapée à 34 ans après trois opérations du dos, elle a repris depuis son lit et code aujourd'hui ses propres logiciels avec l'IA. L'histoire derrière Tiquiz et l'Atelier du Quiz, y compris l'échec d'iziquiz.",

@@ -102,7 +102,7 @@ export const MENU: readonly LienSite[] = [
   // savoir qu'elle vit sur un autre domaine.
   { href: ATELIER_SALES_URL, libelle: "L'Atelier du Quiz" },
   { href: "/affiliation", libelle: "Affiliation" },
-  { href: "/a-propos", libelle: "À propos" },
+  { href: "/a-propos", libelle: "À propos", en: "About" },
   { href: "/support", libelle: "Aide" },
 ] as const;
 

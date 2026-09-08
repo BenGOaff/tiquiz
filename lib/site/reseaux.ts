@@ -16,6 +16,23 @@
 export interface Reseau {
   nom: string;
   url: string;
+  /**
+   * LE LIBELLÉ ANGLAIS, QUAND LE NOM N'EST PAS UN NOM PROPRE.
+   *
+   * "YouTube" et "LinkedIn" se disent pareil partout : leur traduire un
+   * nom serait inventer une marque. "Le blog" et "Avis <domaine>", eux,
+   * sont des mots à nous, et ils restaient français sur une page
+   * anglaise.
+   *
+   * Absent = le nom ne se traduit pas, et c'est la réponse la plus
+   * fréquente : `nomPourLangue` rend alors `nom` tel quel.
+   */
+  en?: string;
+}
+
+/** Le nom d'un profil dans la langue demandée, avec son repli. */
+export function nomPourLangue(x: { nom: string; en?: string }, langue: string): string {
+  return langue === "fr" || !x.en ? x.nom : x.en;
 }
 
 export const RESEAUX: readonly Reseau[] = [
@@ -24,7 +41,7 @@ export const RESEAUX: readonly Reseau[] = [
   { nom: "Instagram", url: "https://www.instagram.com/blagardette_com/" },
   { nom: "Facebook", url: "https://www.facebook.com/benebottet/" },
   { nom: "Pinterest", url: "https://fr.pinterest.com/blagardette_com/" },
-  { nom: "Le blog", url: "https://www.blagardette.com/" },
+  { nom: "Le blog", en: "Her blog", url: "https://www.blagardette.com/" },
 ] as const;
 
 /**
@@ -35,8 +52,16 @@ export const RESEAUX: readonly Reseau[] = [
  * croire que l'autre n'existe pas.
  */
 export const AVIS = [
-  { nom: "Avis blagardette.com", url: "https://fr.trustpilot.com/review/blagardette.com" },
-  { nom: "Avis tipote.com", url: "https://fr.trustpilot.com/review/tipote.com" },
+  {
+    nom: "Avis blagardette.com",
+    en: "Reviews for blagardette.com",
+    url: "https://fr.trustpilot.com/review/blagardette.com",
+  },
+  {
+    nom: "Avis tipote.com",
+    en: "Reviews for tipote.com",
+    url: "https://fr.trustpilot.com/review/tipote.com",
+  },
 ] as const;
 
 /** L'autre adresse de sa page auteur, celle du blog. */

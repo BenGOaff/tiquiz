@@ -10781,7 +10781,7 @@ Mesuré le 8 septembre, pas déduit :
 | l'APPLICATION (l'éditeur, le viewer, les écrans) | **7** (`SUPPORTED_LOCALES`) |
 | la landing et `/tarifs` | **2** (`langue: "fr"` et `"en"` dans `lib/site/landing.ts`) |
 | les 8 pages de fonctionnalités | 🚨 **2 depuis le 8 septembre** (le hub et les 8 pages, voir plus bas) |
-| `/generateur-de-quiz` | **1** |
+| `/generateur-de-quiz` | 🚨 **2 depuis le 8 septembre** (son texte anglais vit dans `TEXTES_EN`, `lib/site/generateurQuiz.ts`) |
 | le blog | **10 articles fr, 4 en** (servis depuis le 8 septembre) |
 
 Traduire le générateur, le hub intégrations, `/a-propos` et
@@ -10972,7 +10972,9 @@ dans ce sens là.
 |---|---|
 | `/tarifs` | **fr + en** |
 | **le hub et les 8 pages de fonctionnalités** | **fr + en** |
-| `/generateur-de-quiz`, `/integrations`, `/a-propos`, `/affiliation` | fr |
+| **`/generateur-de-quiz`** | **fr + en** |
+| **`/a-propos`** | **fr + en** |
+| `/integrations`, `/affiliation` | fr |
 | les 10 articles du blog | fr |
 | ses 4 articles anglais | **SERVIS** sur `/en/blog/<slug>` |
 
@@ -11330,6 +11332,67 @@ même cause :
    `[param]` à chaque niveau. Vérifié en rejouant la version fautive
    (une page de fonctionnalité recréée dans `(site)`) : il rougit et il
    la nomme.
+
+### `/a-propos` passe en anglais, et son récit ne bouge pas (8 septembre)
+
+C'est SA page auteur : deux ans de travail perdus, 30 000 € partis en
+fumée, 387 € de pension, 34 ans. **Une traduction qui déplace un de ces
+nombres écrit une autre vie que la sienne, et personne ne le verrait.**
+
+Le test compare donc les nombres des deux langues **après avoir
+normalisé le séparateur de milliers** : `30 000 €` et `€30,000` sont le
+MÊME fait, et ce qui doit rester identique est le nombre, jamais sa
+graphie. Mesuré, les deux langues portent le même jeu.
+
+**LE MODULE PORTE LA STRUCTURE UNE FOIS, chaque langue n'apporte que du
+texte** (`lib/site/aPropos.ts`), et `TRADUCTIONS` est un `Record` des
+langues préfixées : en oublier une ne compile pas. C'est le geste des
+8 pages de fonctionnalités, repris tel quel.
+
+**LA CITATION DE SON EX-ASSOCIÉ EST TRADUITE, ET C'EST UNE DÉCISION
+ÉCRITE.** La règle du 5 septembre interdit de traduire un TÉMOIGNAGE :
+c'est une preuve sociale, les mots de quelqu'un, et les réécrire en
+ferait un faux. Ici c'est du discours RAPPORTÉ à l'intérieur de son
+propre récit, et une lectrice anglophone ne lit pas le français : la
+laisser en français couperait la phrase qui explique tout le reste.
+C'est écrit dans l'en-tête du module pour que Béné puisse dire non.
+
+**La page a DÉMÉNAGÉ dans `app/(site-langues)/`** : c'est le seul groupe
+qui lit l'en-tête posé par le middleware, donc le seul où le chrome et
+les liens peuvent suivre `/en/`. Un groupe de routes n'ajoute aucun
+segment d'URL : `/a-propos` reste `/a-propos`.
+
+**Les liens passent par `hrefPourLangue`, jamais par un `/en/` écrit à
+la main** : `/newsletter`, `/support` et `/` n'ont pas de version
+anglaise, et le préfixe fabriquerait un 404 au bout des boutons de fin
+de page. Le lien des mentions légales garde son `target="_blank"`
+(règle du 24 août) et n'est jamais préfixé.
+
+**ET MON GARDE-FOU EST TOMBÉ SUR SON PROPRE ÉCHAFAUDAGE.** Il
+interdisait la sous-chaîne `"About"` dans la source de la page pour
+prouver qu'aucune phrase n'y est recopiée : il a rougi sur
+**`knowsAbout`**, la propriété schema.org du JSON-LD, c'est à dire sur
+un code parfaitement correct. **Dix-huitième fois qu'un contrôle ne
+distingue pas ce qu'il est censé distinguer.** Il cherche maintenant les
+VRAIES phrases du module (celles de plus de 20 caractères) : une phrase
+entière ne peut apparaître dans la page que si quelqu'un l'y a
+recopiée, alors qu'un mot choisi à la main tombe tôt ou tard sur un
+identifiant.
+
+**Trois tests existants ont rougi sur un code juste**, et pour la même
+cause : ils prenaient `/a-propos` comme fixture "page française
+seulement" (`chrome-en-anglais`, `site-en-anglais`) ou citaient son
+chemin de disque en dur (`branding-site`). Le premier a été sauvé par sa
+propre ligne de prémisse, qui VÉRIFIE que la fixture n'a pas de version
+anglaise : sans elle il serait passé au vert en ne mesurant plus rien.
+Les adresses passent désormais par `cheminPageDuSite`, et la fixture est
+`/integrations`.
+
+Test : `tests/logic/page-auteur.test.mts` (7 cas), vérifié en rejouant
+QUATRE versions fautives (un `alt` anglais remis en français, `€30,000`
+écrit `30 000 EUR`, la page revenue dans `app/(site)/`, une phrase du
+module recopiée dans la page) : les quatre rougissent.
+
 
 ### Le CHROME parlait français sur les pages anglaises (8 septembre)
 
