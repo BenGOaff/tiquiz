@@ -10972,7 +10972,24 @@ dans ce sens là.
 | `/tarifs` | **fr + en** |
 | les 8 pages de fonctionnalités, `/generateur-de-quiz`, `/integrations`, `/a-propos`, `/affiliation` | fr |
 | les 10 articles du blog | fr |
-| ses 4 articles anglais | **importés et corrigés sur le disque, PAS ENCORE SERVIS** |
+| ses 4 articles anglais | **SERVIS** sur `/en/blog/<slug>` |
+
+🚨 **CETTE LIGNE DISAIT "importés et corrigés sur le disque, PAS ENCORE
+SERVIS". C'EST PÉRIMÉ, et je la corrige en place** (règle du 31 août :
+une note d'état des lieux se relit quand on corrige ce qu'elle décrit).
+
+MESURÉ le 8 septembre sur le serveur, pas déduit : `/en/blog`,
+`/en/blog/<slug>` et `/en/blog/rss.xml` répondent **200**, la page porte
+`lang="en"`, sa canonique est `https://tiquiz.fr/en/blog/<slug>`, et ses
+trois `hreflang` apparient le bon slug FRANÇAIS (`fr`, `en`,
+`x-default`).
+
+**Et l'anglais est à PARITÉ avec le français, au chiffre près** : 19
+`alt` renseignés et 4 vides des deux côtés. Les quatre vides sont les
+COUVERTURES (celle de l'article, plus les trois cartes d'articles liés),
+et c'est le comportement historique du français : une couverture posée
+juste à côté de son propre titre est décorative, et répéter le titre
+ferait perdre du temps à celle qui écoute.
 
 **Ses 4 articles anglais sont mesurés, et ils s'apparient 1 pour 1 avec
 4 des 10 français** (relevé sur `tipote.blog/posts`, en lisant
