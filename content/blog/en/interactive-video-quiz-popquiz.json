@@ -1,0 +1,490 @@
+{
+  "slug": "interactive-video-quiz-popquiz",
+  "langue": "en",
+  "traductionDe": "quiz-video-popquiz",
+  "titre": "Interactive video quiz: turn any video into a lead machine",
+  "description": "A video quiz captures four times more contacts than a plain video. The full method for slipping a quiz into any YouTube or Vimeo video, and sending the contacts straight to Systeme.io.",
+  "motsCles": [
+    "video quiz",
+    "interactive video quiz",
+    "popquiz",
+    "YouTube quiz",
+    "quiz inside a video",
+    "embed quiz in video",
+    "interactive video marketing",
+    "video quiz lead magnet",
+    "video quiz Systeme.io",
+    "EdPuzzle alternative",
+    "H5P alternative for solopreneurs",
+    "turn a YouTube video into a quiz",
+    "video course quiz",
+    "video quiz embed",
+    "tiquiz popquiz",
+    "video that captures leads"
+  ],
+  "publieLe": "2026-05-06",
+  "couverture": "/blog/img/quiz-video-popquiz.webp",
+  "blocs": [
+    {
+      "type": "html",
+      "html": "<p><strong><em>TL;DR</em></strong></p><p>A video quiz (or Popquiz) is a quiz that pops up in the middle of a video, at a moment you choose. Your visitor watches, your quiz appears over the picture, they answer, the video picks up where it left off.</p><p>Five numbers that make the case for the format:</p><ul><li><p>87% of marketers say video directly increased their sales,</p></li><li><p>a visitor spends 2.6 times longer on a page that contains a video,</p></li><li><p>interactive content converts twice as well as passive content,</p></li><li><p>the average capture rate of a lead-magnet quiz is 33.6%, against 2 to 3% for a plain opt-in with an ebook,</p></li><li><p>interactive video multiplies engagement by 5 compared with linear video.</p></li></ul><p>You take your video (or a video that is already doing well in your field, without stealing anything from anyone, like a bookmark slipped into a borrowed book), you drop your quiz into it, and you paste the result onto your blog or your Systeme.io page.</p><p>With Tiquiz you build a Popquiz in under 10 minutes, and your contacts land straight in your Systeme.io account, with no Zapier and no Make in between.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p>Watch this Popquiz video to see exactly how it works:</p>"
+    },
+    {
+      "type": "cta",
+      "url": "https://tiquiz.fr/signup",
+      "texte": "I want to do that too →"
+    },
+    {
+      "type": "html",
+      "html": "<p>55% of visitors spend less than 15 seconds on a web page (<a href=\"https://chartbeat.com/blog/how-much-do-people-actually-read-online/\">Chartbeat</a>).</p><p>On your last YouTube video, the average viewer sticks around for 32 seconds.</p><p>And how many of them leave you their email? Probably none. Passive video barely captures anyone any more in 2026.</p><p>Yet video is the format that pays best in 2026.</p><p><strong>87% of marketers say video directly increased their sales</strong> (<a href=\"https://www.wyzowl.com/video-marketing-statistics/\">Wyzowl State of Video Marketing 2024</a>).</p><p><strong>Companies that use video grow their revenue 49% faster</strong> than those that don't (Aberdeen Group). The catch is that video is passive. Your visitor watches, scrolls on, forgets. Unless you ask them to click.</p><p>The video quiz (or Popquiz) settles that contradiction.</p><p>You take a video that already speaks to your audience, you drop 2 or 3 quizzes into it at the key moments, and every viewer turns into a contact sorted by what they answered.</p><p>Here are the numbers that back it up, why it is perfectly legal, and 7 use cases that will make you want to try it this week.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "1. How a video quiz works, in 30 seconds",
+      "id": "1-how-a-video-quiz-works-in-30-seconds"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "What a Popquiz actually is",
+      "id": "what-a-popquiz-actually-is"
+    },
+    {
+      "type": "html",
+      "html": "<p>A video quiz is a quiz that appears on top of a video while it plays, at the exact moment you picked.</p><p>Your visitor starts the video, at 0:45 your quiz shows up over the picture, they answer, the video resumes.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/popquiz.webp",
+      "alt": "The Popquiz editor in Tiquiz: a video preview above a timeline running from 0:00 to 19:27, with the note click the bar to add a marker"
+    },
+    {
+      "type": "html",
+      "html": "<p>One quiz, two quizzes, ten quizzes.</p><p>Your call.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "The process in 5 steps",
+      "id": "the-process-in-5-steps"
+    },
+    {
+      "type": "html",
+      "html": "<p>Adding a quiz to a video in Tiquiz takes about as long as cracking eggs for an omelette 🍳</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p>→ You pick a video (YouTube, Vimeo, or your own video file)</p><p>→ You choose the moments where your quiz should appear (say at 0:30, 2:15 and 4:00)</p><p>→ At each of those moments, the quiz shows up over the video</p><p>→ Your visitor answers, their email is captured, their profile is filed in your Systeme.io</p><p>→ The video starts again on its own</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "You don't have to film anything, use the videos that already work",
+      "id": "you-dont-have-to-film-anything"
+    },
+    {
+      "type": "html",
+      "html": "<p>The difference in one line: you don't shoot one more video. You turn the one that already exists into a qualified-contact machine.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p>It is exactly the same mechanic as a plain lead-magnet quiz, except it rides inside a format your audience already consumes without effort.</p><p>You are not asking them to click on an ebook they will never read.</p><p>You are slipping a quiz into the middle of something they are already watching.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/schema-popquiz-vs-classique.webp",
+      "alt": "100 views on a plain video give zero contacts; with a Popquiz, the same 100 views give 30 to 40 contacts sorted by profile"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "2. Five underrated reasons to start this week",
+      "id": "2-five-underrated-reasons-to-start-this-week"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Video is what sells best right now, and it isn't close",
+      "id": "video-is-what-sells-best-right-now"
+    },
+    {
+      "type": "html",
+      "html": "<p>87% of marketers say video directly increased their sales.</p><p>90% say it helped them generate leads.</p><p>96% say it helped their prospects understand their product or service.</p><p>Three numbers from the annual <a href=\"https://www.wyzowl.com/video-marketing-statistics/\">Wyzowl State of Video Marketing 2024</a> report, based on 600 marketers surveyed.</p><p>Companies that use video grow their revenue 49% faster than those that don't (Aberdeen Group, quoted by <a href=\"https://www.vidyard.com/blog/video-marketing-statistics/\">Vidyard</a>).</p><p>Forrester Research worked out that <strong>1 minute of video is worth 1.8 million written words</strong> in terms of impact (Dr James McQuivey, Forrester). You will not get that from a blog post, however good it is.</p><p>If you have been telling yourself video is \"not for you\", those numbers say otherwise.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Where does that figure come from?</strong></p><p>Let's pull the thread and look at what Dr James McQuivey actually did. He started from the old saying \"a picture is worth a thousand words\". He took the number of frames in one second of video, 30 of them (29.97 for the purists), multiplied by 60 (the seconds in a minute), then by 1,000, and 30 x 60 x 1,000 = 1,800,000. Ta-daa 🥳 One minute of video is as powerful as 1.8 million words.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Readers drop off your blog page in 15 seconds. With a video, they stay twice as long.",
+      "id": "readers-drop-off-in-15-seconds"
+    },
+    {
+      "type": "html",
+      "html": "<p>55% of visitors spend less than 15 seconds on a web page (<a href=\"https://chartbeat.com/blog/how-much-do-people-actually-read-online/\">Chartbeat</a>).</p><p>Text-only content, however good, loses half your audience before the end of the first paragraph.</p><p>You write 2,000 words, they read 30.</p><p>With a video embedded, visitors spend <strong>2.6 times longer on the page</strong> (<a href=\"https://wistia.com/learn/marketing/state-of-video-report-2024\">Wistia State of Video Report 2024</a>).</p><p>And the conversion rate of a page with a video is on average <strong>80% higher</strong> than the same page without (Eyeview Digital, quoted by <a href=\"https://blog.hubspot.com/marketing/video-marketing-statistics\">HubSpot</a>).</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p>Simply adding a video holds your reader in place.</p><p>The video quiz goes one step further: it turns that time spent into a qualified contact.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Passive viewer versus active visitor: twice the revenue on the same traffic",
+      "id": "passive-viewer-versus-active-visitor"
+    },
+    {
+      "type": "html",
+      "html": "<p>Interactive content (quiz, calculator, poll) converts twice as well as passive content (video alone, ebook, article).</p><p>Sources: <a href=\"https://outgrow.co/blog/interactive-content-statistics\">Outgrow Interactive Content Statistics</a> and <a href=\"https://www.demandmetric.com/content/content-marketing-infographic\">Demand Metric</a>.</p><p>70% of marketers say interactive content converts well.</p><p>88% say it sets them apart from their competitors.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Why those numbers?</strong></p><p>Because your visitor stops being a spectator. They become an actor. They click, they choose, they invest something. And a visitor who has invested something becomes a qualified contact twice as often as a passive viewer.</p><p><em>On the same traffic. Without spending a penny more.</em></p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "A quiz captures 33% of visitors on average. A plain opt-in captures 2 to 3%.",
+      "id": "a-quiz-captures-33-percent-of-visitors"
+    },
+    {
+      "type": "html",
+      "html": "<p>The average capture rate of a lead-magnet quiz is <strong>33.6%</strong> (<a href=\"https://www.tryinteract.com/blog/quiz-marketing-statistics/\">Interact Quiz Marketing Statistics</a>, based on hundreds of quizzes published on their platform).</p><p>For comparison: the average conversion rate of a plain opt-in with a free ebook is <strong>2 to 3%</strong> (<a href=\"https://sumo.com/\">Sumo</a> and <a href=\"https://www.getresponse.com/resources/reports/email-marketing-benchmarks\">GetResponse Email Marketing Benchmarks</a>).</p><p>On the same traffic, <strong>a quiz captures 10 to 15 times more contacts</strong> than a free ebook.</p><p>That is not a marginal gain, it is a different category.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>And with a video quiz you play both hands at once:</strong> the retention of the video plus the conversion of the quiz. The result beats either of them on its own.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Interactive video multiplies engagement by 5",
+      "id": "interactive-video-multiplies-engagement-by-5"
+    },
+    {
+      "type": "html",
+      "html": "<p>An interactive video generates <strong>5 times more engagement</strong> than a linear one (<a href=\"https://www.demandgenreport.com/\">Demand Gen Report</a>).</p><p>Interactive videos have a completion rate <strong>50% higher</strong> than non-interactive ones (<a href=\"https://www.wibbitz.com/\">Wibbitz</a>).</p><p>89% of consumers say they want to see more video from brands in 2024 (Wyzowl).</p><p>And the more interactive it is, the more it gets shared.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>The video quiz ticks all three boxes:</strong> engagement multiplied, completion up, sharing made easy. You are not adding a marketing effort, you are turning what you already have into something far more profitable.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Dropping a quiz onto any YouTube video (without stealing from anyone)",
+      "id": "dropping-a-quiz-onto-any-youtube-video"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "The video belongs to its author. The quiz belongs to you.",
+      "id": "the-video-belongs-to-its-author"
+    },
+    {
+      "type": "html",
+      "html": "<p>You take a video that already exists (yours, a partner's, a video that is doing well in your niche, a TED Talk, a public conference) and you drop your quizzes on top.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>It is legal for a simple reason:</strong></p><p>You are not taking anything. The video stays on YouTube or Vimeo, its author keeps every viewer and everything those viewers earn them. You are only slipping your quiz on top, like a bookmark in a borrowed book.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>The book belongs to its author. The bookmark belongs to you.</strong></p><p>Nobody loses, everybody wins.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/schema-marque-page-livre.webp",
+      "alt": "The Popquiz compared to a bookmark slipped into someone else's book: the video stays theirs, the quiz is yours"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "The 6 kinds of video you can put a Popquiz on",
+      "id": "the-6-kinds-of-video-you-can-put-a-popquiz-on"
+    },
+    {
+      "type": "html",
+      "html": "<p>→ <strong>Your own YouTube or Vimeo videos.</strong></p><p>The obvious one. Your latest video about your method can now sort its viewers into 4 different profiles, and send each of them into the email sequence that fits.</p><p>→ <strong>The expert videos you keep quoting.</strong></p><p>An email to the author to let them know is more polite, though not required. You are doing a standard embed, exactly like any blog post that includes a YouTube video.</p><p>→ <strong>The videos that are doing well and match your topic.</strong></p><p>A viral TED Talk, an interview doing the rounds on LinkedIn, a Q&amp;A from a recognised expert in your field.</p><p>→ <strong>Free webinar replays.</strong></p><p>Yours above all. If you ran an hour-long webinar six months ago and the replay is sitting on YouTube with 800 views, you put a Popquiz at the 25-minute mark (right in the heart of it) and you wake that sleeping traffic up.</p><p>→ <strong>Videos from public institutions.</strong></p><p>TED Talks, university lectures, videos from public bodies, royalty-free conferences.</p><p>→ <strong>Videos under a free licence (Creative Commons).</strong></p><p>YouTube has thousands of them, filtered through advanced search.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "4 red lines you don't cross",
+      "id": "4-red-lines-you-dont-cross"
+    },
+    {
+      "type": "html",
+      "html": "<p>→ Re-uploading somebody else's video to your own YouTube channel</p><p>→ Downloading the video and hosting it on your own server (unless you have their agreement)</p><p>→ Editing the video itself (cutting passages, changing the sound)</p><p>→ Hiding the original source to the point of misleading the viewer</p><p>You use the video as it is, and you add your quiz on top. That's all.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p>Those lines matter. They are what keeps this on the right side of the ethics, and what stops you from taking credit for someone else's work.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "7 ways to turn a video into a contact machine",
+      "id": "7-ways-to-turn-a-video-into-a-contact-machine"
+    },
+    {
+      "type": "html",
+      "html": "<p>Here are 7 real cases of people who put a Popquiz in the middle of a video, and what it changed for their business. I made the first names up, but the mechanics are exact.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Marie has 200 YouTube videos and 0 contacts. Here is what she changed.",
+      "id": "marie-has-200-youtube-videos-and-0-contacts"
+    },
+    {
+      "type": "html",
+      "html": "<p>Marie is a business coach for beginner solopreneurs.</p><p>She has posted 200 videos on her YouTube channel over four years. 8,000 views a month all told. 0 contacts captured.</p><p>On her 10 most-watched videos, she adds a Popquiz called \"What kind of entrepreneur are you?\" 30 seconds in.</p><p>Four result profiles: Getting started, Struggling, Plateaued, Levelling up. Each profile has its own email sequence.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Result:</strong></p><p>200 qualified contacts captured every month, on videos she published years ago.</p><p>Not one new video to film.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Sophie tripled the sales behind her webinar replay",
+      "id": "sophie-tripled-the-sales-behind-her-webinar-replay"
+    },
+    {
+      "type": "html",
+      "html": "<p>Sophie runs free 60-minute webinars.</p><p>The replay on YouTube gets 1,500 views, but 90% of viewers never sign up for the paid offer behind it.</p><p>She puts a Popquiz at the 25-minute mark (right in the heart of the replay) asking where the viewer stands: \"You're starting out / you're struggling / you've plateaued\".</p><p>Each answer fires a different email sequence, matched to that stage.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Result:</strong></p><p>30% of viewers answer the quiz and land in the email sequence that fits their profile.</p><p>Conversion on the main offer x3.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Thomas puts a quiz on a viral TED Talk with 3 million views. He captures on other people's traffic.",
+      "id": "thomas-puts-a-quiz-on-a-viral-ted-talk"
+    },
+    {
+      "type": "html",
+      "html": "<p>Thomas is a productivity consultant.</p><p>A viral TED Talk covers exactly his subject (burnout at work), with 3 million views.</p><p>He publishes a blog post called \"My take on [speaker]'s TED Talk\", embeds the TED video in his article, and adds a Popquiz at 5:00 (\"What is your biggest time sink right now?\").</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Result:</strong></p><p>Google traffic landing on his article (thanks to the SEO on the speaker's name) plus a quiz that collects contacts on that free traffic. Not one video filmed, not one euro of ads.</p><p>He is borrowing the reach of a speaker far better known than he is.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "The affiliate who warms her prospects up on a video that isn't hers",
+      "id": "the-affiliate-who-warms-her-prospects-up"
+    },
+    {
+      "type": "html",
+      "html": "<p>Béné runs Systeme.io affiliate offers. The Systeme.io sales page carries an official 3-minute demo video, made by Systeme.io.</p><p>On her own affiliate page, she embeds that demo video plus a Popquiz called \"Which Systeme.io plan is right for you?\" at 2:30.</p><p>The quiz sorts the visitor into 3 profiles: light use, professional, advanced business.</p><p>Each profile gets the argument that matches their need before the click through to the sales page.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Result:</strong></p><p>the visitor reaches the Systeme.io affiliate page already warm and already pointed at the right plan.</p><p>Conversion x2 on her commissions.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Léa takes her completion rate from 40% to 75% with 4 quizzes inside one video",
+      "id": "lea-takes-her-completion-rate-from-40-to-75"
+    },
+    {
+      "type": "html",
+      "html": "<p>Léa sells a pastry course.</p><p>Module 3 is a 12-minute video on choux pastry.</p><p>Before: 40% of students finish that module. Most of them drop out halfway.</p><p>She places 4 quizzes inside the video: at 2 min, 5 min, 8 min and 11 min.</p><p>Each quiz checks that the student has followed. If they get it wrong, the passage replays automatically.</p><p>If they get it right, the video carries on.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Result:</strong></p><p>completion goes from 40% to 75%. Students actually learn, and the 5-star reviews follow.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Pierre halves the discovery calls that go nowhere",
+      "id": "pierre-halves-the-discovery-calls-that-go-nowhere"
+    },
+    {
+      "type": "html",
+      "html": "<p>Pierre runs free 30-minute discovery calls.</p><p>40% of those calls are dead ends that will never become clients. That is time gone.</p><p>Before booking a call, the visitor watches a 5-minute video (Pierre introducing himself) with a Popquiz at 4:00: \"Are you ready to invest €2,000 in coaching this year?\"</p><p>If yes, they get the booking calendar. If no, they are pointed to a free resource.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Result:</strong></p><p>discovery calls twice as qualified. Pierre closes 1 in 3 instead of 1 in 8. And he gets his time back to work on his content.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Camille tests her €297 offer with a video quiz, before she builds it",
+      "id": "camille-tests-her-297-euro-offer-before-she-builds-it"
+    },
+    {
+      "type": "html",
+      "html": "<p>Camille wants to launch a new course at €297. Before building it, she wants to check her audience is interested.</p><p>She films a 3-minute video presenting the concept.</p><p>Halfway through, a Popquiz at 2:00: \"What would you be willing to pay for this course?\"</p><p>Four possible answers: under €100, €100 to €200, €200 to €400, over €400.</p><p>If 60% answer \"€297 and up\", the course gets built. If 60% answer \"under €100\", she changes the price or the angle.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Result:</strong></p><p>no product built into thin air. Camille knows in advance what her audience is willing to pay.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Your first Popquiz in 10 minutes, step by step",
+      "id": "your-first-popquiz-in-10-minutes"
+    },
+    {
+      "type": "html",
+      "html": "<p>Here is the exact procedure to build your first Popquiz in Tiquiz. Allow 20 minutes for the whole thing. If you already have a quiz ready in your account, it drops to 10 minutes.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Step 1: you get your quiz (or quizzes) ready",
+      "id": "step-1-you-get-your-quiz-ready"
+    },
+    {
+      "type": "html",
+      "html": "<p>Before creating your Popquiz, you need at least 1 quiz in your Tiquiz account.</p><p>If you don't have one yet: go to /quiz/new, pick the AI mode, brief it in one sentence (\"a quiz to qualify my beginner entrepreneur visitors\"), and you get your quiz in 30 seconds.</p><p>You tweak 2 or 3 questions, you name 4 result profiles.</p><p>Done.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/quiz-tiquiz.webp",
+      "alt": "The My projects screen in Tiquiz: each quiz with its views, starts, completions, leads and conversion rate"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Step 2: you create your Popquiz",
+      "id": "step-2-you-create-your-popquiz"
+    },
+    {
+      "type": "html",
+      "html": "<p>Go to Popquiz and choose your video. Three ways to do it:</p><p>→ <strong>A YouTube link</strong>: you paste the link (the plain video link, the one you copy from YouTube's \"Share\" button). Tiquiz pulls the thumbnail and the duration automatically.</p><p>→ <strong>A Vimeo link</strong>: same as YouTube.</p><p>→ <strong>Your own video file</strong>: you upload your video (up to 20 GB, in mp4, mov or webm).</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/creerpopquiz.webp",
+      "alt": "Creating a Popquiz in Tiquiz: a title field, a video source that takes a YouTube, Vimeo or mp4 link, and an optional custom link under /p/"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Step 3: you place your quiz moments inside the video",
+      "id": "step-3-you-place-your-quiz-moments"
+    },
+    {
+      "type": "html",
+      "html": "<p>On the video bar, you click at the exact moment where you want your quiz to appear.</p><p>You pick the quiz from your list.</p><p>You pick the mode:</p><p>→ <strong>Blocking</strong>: the visitor HAS to answer before the video carries on</p><p>→ <strong>Optional</strong>: the visitor can skip the quiz if they want</p><p>You place as many quiz moments as you like. For a 5-minute video, 2 or 3 work well.</p><p>Past that, it gets intrusive.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/popquiztiquiz.webp",
+      "alt": "The markers list of a Popquiz: four quizzes placed at 45, 108, 265 and 506 seconds, each set to blocking or optional"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Step 4: you publish your Popquiz",
+      "id": "step-4-you-publish-your-popquiz"
+    },
+    {
+      "type": "html",
+      "html": "<p>You click Publish.</p><p>Tiquiz hands you two things:</p><p>→ <strong>A direct link</strong> to share: quiz.tipote.com/p/my-popquiz</p><p>→ <strong>A short embed code</strong> to paste into any page (a blog post, a Systeme.io page, a WordPress site)</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/partagepopquiz.webp",
+      "alt": "The share panel of a published Popquiz: a direct link, and an iframe embed code to paste into any page"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Step 5: you watch the contacts come in",
+      "id": "step-5-you-watch-the-contacts-come-in"
+    },
+    {
+      "type": "html",
+      "html": "<p>Every answer to a video quiz captures the contact, files them by the profile they landed on, and syncs them automatically into your Systeme.io.</p><p>Allow 24 to 48 hours before your first contacts if your traffic is steady.</p><p>Longer if you publish the Popquiz without sharing it anywhere.</p><p>To speed things up: put the link in your Instagram bio, in your email signature, in a story, in a newsletter.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/leadstiquiz.webp",
+      "alt": "The My leads screen in Tiquiz: 24 captured leads, 23 of them synced to Systeme.io, each row showing the quiz taken and the profile obtained"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Why Tiquiz costs a fraction of the American tools",
+      "id": "why-tiquiz-costs-a-fraction-of-the-american-tools"
+    },
+    {
+      "type": "html",
+      "html": "<p>When a French tool comes in well under its American competitors, the first question is where the catch is.</p><p>I took the time to compare plan by plan.</p><p>Here is what came out of it.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p>The difference comes from the fact that Tiquiz is built with AI, without leaning on an expensive outside developer, by a French founder who wanted the simple tool that didn't exist.</p><p>What that saves on the structure goes into the price. It really is that simple.</p><p>And Tiquiz is the only tool on that list wired straight into Systeme.io. With the others you pay for Zapier or Make on top to bridge the gap, and Zapier's Professional plan alone starts at $29.99 a month.</p><p>If you want the full comparison, tool by tool, it is on our <a href=\"/en/integrations\">integrations hub</a>.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "FAQ: how do you put a quiz inside a video and connect it to Systeme.io?",
+      "id": "faq-how-do-you-put-a-quiz-inside-a-video"
+    },
+    {
+      "type": "faq",
+      "questions": [
+        {
+          "question": "Is it really legal to slip a quiz into a YouTube video?",
+          "reponse": "<p>Yes. You are not taking anything. The video stays on YouTube, its author keeps every viewer and everything those viewers earn them. You are only slipping your quiz on top, like a bookmark in a borrowed book. The book belongs to its author. The bookmark belongs to you. Nobody loses, everybody wins.</p>"
+        },
+        {
+          "question": "Does the video's creator lose anything?",
+          "reponse": "<p>No. Their views are counted as normal, so is what the video earns them, so is their ranking on YouTube and Google. All you are doing is collecting your own contacts alongside their audience.</p>"
+        },
+        {
+          "question": "How many quizzes can I put on one video?",
+          "reponse": "<p>As many as you like. For a 5-minute video, 2 or 3 work well. For a 30-minute video (a webinar replay, say), 4 to 6 placed strategically. Past that it gets intrusive and your viewers leave.</p>"
+        },
+        {
+          "question": "Can I make the quizzes compulsory or optional?",
+          "reponse": "<p>Both. At each quiz moment you pick blocking mode (the visitor HAS to answer before carrying on) or optional mode (they can skip). Blocking converts better but frustrates some people. Worth testing on your own audience.</p>"
+        },
+        {
+          "question": "Is Popquiz included in the Tiquiz free plan?",
+          "reponse": "<p>Yes. The free plan includes 1 Popquiz, with 10 visible leads per rolling 30 days: the captures keep happening either way, the rest are simply blurred until you upgrade. Enough to test the idea on one video and see whether the mechanic works on your audience. Unlimited comes with the €17 a month plan, once you are convinced.</p>"
+        },
+        {
+          "question": "Does the quiz match my site's branding?",
+          "reponse": "<p>Yes. Your Tiquiz account branding (logo, colours, Google font) applies automatically to the quiz on top of the video. It sits visually with your site without you touching a line of CSS.</p>"
+        }
+      ]
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Over to you",
+      "id": "over-to-you"
+    },
+    {
+      "type": "html",
+      "html": "<p>You now have what you need to turn a passive video (yours or somebody else's) into a machine that sorts contacts for you.</p><p>What's left to do:</p><p>→ Find a video that speaks to your audience (5 minutes maximum to start with)</p><p>→ Think of 1 or 2 questions you want to ask your viewer</p><p>→ Create your Tiquiz account (free, 1 Popquiz included to test)</p><p>→ Generate your quiz with the AI in 30 seconds</p><p>→ Place the quiz moment on the video</p><p>→ Publish, and paste the code onto your blog or your Systeme.io page</p><p>→ Watch the contacts come in</p><p>Allow 20 minutes for your first Popquiz.</p><p>20 minutes to go from \"I have a video sitting there doing nothing\" to \"I have a contact machine running without me\".</p>"
+    },
+    {
+      "type": "cta",
+      "url": "https://tiquiz.fr/signup",
+      "texte": "Build my first Popquiz on Tiquiz"
+    }
+  ]
+}

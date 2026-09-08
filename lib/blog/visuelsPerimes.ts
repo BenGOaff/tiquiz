@@ -3,8 +3,15 @@
 // LES VISUELS QU'ON NE PUBLIE PAS, ET LA RAISON DE CHACUN.
 //
 // Trouvés le 8 septembre, en REGARDANT les images des articles une par
-// une pour leur écrire un texte alternatif. Les quatre vivaient en
-// production, deux en français depuis le 29 août.
+// une pour leur écrire un texte alternatif. Les NEUF vivaient en
+// production, la plupart depuis le 29 août.
+//
+// La liste s'est allongée dans la journée : quatre en écrivant les
+// textes alternatifs ANGLAIS de l'article qui recrute les affiliés,
+// cinq en préparant la traduction des six articles restés en français.
+// Le motif est toujours le même, et c'est pour ça qu'ils sont ensemble
+// ici : un CHIFFRE périmé dessiné dans une image, que le corps de
+// l'article contredit depuis qu'il a été corrigé, lui, en code.
 //
 // -- CE QU'ILS MONTRENT, ET POURQUOI ÇA COÛTE -------------------------
 //
@@ -81,6 +88,41 @@ export const VISUELS_PERIMES: readonly VisuelPerime[] = [
     chemin: "/blog/img/en/monthly-recurring-income-tiquiz-affiliate-f07444fceb.webp",
     empreinte: "f07444fcebfa2d28",
     raison: "la même capture en anglais, à $9/month et $90/year, projetant $5 702,40",
+  },
+  // ── TROUVÉS LE 8 SEPTEMBRE, en regardant les images des 6 articles
+  // restés en français pour leur écrire un texte alternatif anglais.
+  //
+  // Les cinq portent un CHIFFRE PÉRIMÉ, et trois d'entre eux vivent sur
+  // la page qui COMPARE Tiquiz à ses concurrents, c'est à dire à
+  // l'endroit exact où un lecteur va vérifier.
+  {
+    chemin: "/blog/img/tiquiztarifs.webp",
+    empreinte: "5ab73aa427b7caa4",
+    raison:
+      "la grille de tarifs y affiche 9 €/mois, le tarif d'avant le 6 août : le corps de l'article annonce 17 €",
+  },
+  {
+    chemin: "/blog/img/schema-connexion-systemeio-large.webp",
+    empreinte: "02a4a0fb23514c83",
+    raison:
+      "la pastille Zapier y annonce + 19,99 $ / mois, alors que la capture de leur page de tarifs (lib/site/integrations.ts) dit 29,99 $",
+  },
+  {
+    chemin: "/blog/img/schema-connexion-systemeio-mobile.webp",
+    empreinte: "b52b56b6b775aeaf",
+    raison: "la variante téléphone du même schéma, avec le même + 19,99 $ / mois",
+  },
+  {
+    chemin: "/blog/img/tableaucomparatifdoutilshorizontal.webp",
+    empreinte: "3ab128e2206fefd1",
+    raison:
+      "Tiquiz y est à 9 €/mois ou 90 €/an, ET sa colonne Note est décalée d'une ligne (il y est noté Vimeo Interactive)",
+  },
+  {
+    chemin: "/blog/img/svg-12-comparatif-outils-popquiz-fr.svg",
+    empreinte: "21078f90a4652355",
+    raison:
+      "Tiquiz Annuel y est à 90 €/an avec une projection à 450 € sur cinq ans, et son pied porte tipote.fr/tiquiz, une adresse qui ne commissionne plus",
   },
 ];
 

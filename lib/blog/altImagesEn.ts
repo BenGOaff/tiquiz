@@ -22,6 +22,23 @@
 // cote de `poserAlt` au lieu de prendre une langue en parametre : une
 // fonction qui accepte les deux tables finit par recevoir la mauvaise.
 //
+// -- CETTE TABLE NE COUVRE QUE LES ARTICLES IMPORTES ------------------
+//
+// Elle existe pour reparer ce que l'import de `tipote.blog` laisse
+// derriere lui : des `alt` vides ou herites du francais. Un article
+// TRADUIT A LA MAIN (les six du 8 septembre : l'etude de cas Jocelyne,
+// l'avis, vendre avec un quiz, le comparatif, la strategie virale, le
+// quiz video) n'est jamais re-importe : son `alt` anglais est ecrit
+// dans le bloc image, une seule fois, et il y reste.
+//
+// **NE PAS l'y recopier.** `poserAltEn` fait GAGNER la table sur ce
+// qu'elle nomme (regle du 1er septembre) : une entree ajoutee ici pour
+// un article traduit ferait vivre la meme phrase a deux endroits, et
+// la copie du bloc image deviendrait morte sans que rien ne le dise.
+// Le garde-fou qui compte vraiment est ailleurs et il tient les deux
+// cas : `reparer-blog-en.mjs` REFUSE des qu'une image sort sans texte
+// alternatif, quelle que soit sa provenance.
+//
 // -- LES 27 ONT ETE REGARDEES UNE PAR UNE -----------------------------
 //
 // Regle du 31 aout, et elle n'a pas d'autre methode : un `alt` se

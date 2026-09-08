@@ -10780,7 +10780,7 @@ Mesuré le 8 septembre, pas déduit :
 |---|---|
 | l'APPLICATION (l'éditeur, le viewer, les écrans) | **7** (`SUPPORTED_LOCALES`) |
 | **TOUTES les pages du site public** | **2** (fr + en), au 8 septembre au soir |
-| le blog | **10 articles fr, 4 en** (servis depuis le 8 septembre) |
+| le blog | **10 articles fr, 10 en** (les 4 importés le 8 septembre, les 6 traduits à la main le soir même) |
 
 🚨 **CE BLOC DISAIT "il reste un vrai chantier" SUR QUATRE PAGES. C'EST
 PÉRIMÉ**, et je le corrige en place plutôt que d'empiler (règle du
@@ -10790,12 +10790,17 @@ ont été traduits le 8 septembre : **il ne reste AUCUNE page interne du
 site en français seul.** Le détail de chaque passage vit dans les
 sections ci dessous.
 
-**Traduire le BLOG est autre chose**, et c'est sa décision, pas la
-mienne : 10 articles fois 7 langues font 70 pages à tenir à jour, et
+🚨 **CE PARAGRAPHE DISAIT "traduire le BLOG est autre chose, et c'est
+sa décision". PÉRIMÉ pour l'anglais** (Béné, 8 septembre : "oui traduis
+les stp"), corrigé en place. Les 10 articles ont leur version anglaise.
+
+**Ce qui reste vrai, et qui reste sa décision : les CINQ AUTRES
+langues.** 10 articles fois 7 langues font 70 pages à tenir à jour, et
 chaque correction de chiffre (le prix, le taux d'affiliation, un lien
 mort) se paierait alors sept fois. Le pipeline `blog:reparer` ne sait
 corriger qu'une langue à la fois, et il en existe déjà DEUX
-(`faitsProgramme.ts` et `faitsEn.ts`).
+(`faitsProgramme.ts` et `faitsEn.ts`) : une troisième table serait une
+troisième occasion de diverger.
 
 ### MES DEUX FAUTES DE CE PASSAGE
 
@@ -10982,7 +10987,7 @@ il ne reste AUCUNE page interne du site en français seul.**
 | **`/affiliation`** et **`/affiliation-atelier`** | **fr + en** |
 | **`/newsletter`** | **fr + en** |
 | les 10 articles du blog | fr |
-| ses 4 articles anglais | **SERVIS** sur `/en/blog/<slug>` |
+| **les 10 articles** | **SERVIS** sur `/en/blog/<slug>`, un pour un avec les 10 français |
 
 🚨 **CETTE TABLE DISAIT "le CONTENU sur deux pages" ET "`/affiliation` |
 fr". LES DEUX SONT PÉRIMÉES**, corrigées en place le 8 septembre au soir
@@ -12179,7 +12184,129 @@ Il ne reste en français que les deux liens EXTERNES (l'Atelier, l'espace
 affilié), et c'est la fonction elle même qui l'impose : leur adresse ne
 sert aucun segment de langue.
 
-#### 🚨 LA FIXTURE DES DEUX GARDES DE LANGUE EST DÉSORMAIS INVENTÉE
+#### LES 6 DERNIERS ARTICLES SONT TRADUITS À LA MAIN (Béné, 8 septembre)
+
+"Oui traduis les stp." Ces six là n'ont **aucune source anglaise** sur
+`tipote.blog` : `importer-blog-en.mjs` ne pouvait rien, chaque phrase
+est écrite. **15 446 mots**, et les 10 articles français ont désormais
+leur anglais, un pour un.
+
+| l'anglais | traduit de | blocs |
+|---|---|---|
+| `tiquiz-review` | `avis-tiquiz` | 35 |
+| `case-study-jocelyne-adhd-quiz` | `cas-client-jocelyne-tdah` | 52 |
+| `quiz-tools-comparison-systeme-io` | `comparatif-outils-quiz-systeme-io` | 37 |
+| `interactive-video-quiz-popquiz` | `quiz-video-popquiz` | 91 |
+| `viral-quiz-marketing-strategy` | `strategie-quiz-marketing-tiquiz` | 37 |
+| `sell-with-a-quiz` | `vendre-avec-un-quiz` | 28 |
+
+#### CE QUI EST TRADUIT, ET CE QUI NE L'EST PAS
+
+- **les prix se LISENT, ils ne se recopient pas** : €17 et €170 de
+  `faitsProgramme.ts`, $79 de `liensIntegrations.ts`, $29.99 de
+  `ZAPIER_PRO_USD`. Les devises ne se convertissent jamais ;
+- **les CITATIONS de personnes sont traduites**, celles de Jocelyne
+  comme celle de Sébastien : c'est du discours RAPPORTÉ à l'intérieur
+  du récit de Béné, pas une preuve sociale posée telle quelle. C'est
+  le précédent `/a-propos` du 8 septembre, pas la règle des
+  témoignages du 5 septembre ;
+- **`systeme.io/fr?sa=sa0007...` est gardé VERBATIM** : il la paie, et
+  l'interdit ne vise qu'un `?sa=` sur NOS hôtes ;
+- **les blocs image ÉCARTÉS sont retirés de l'anglais**, pas laissés
+  au filtre : `visuelPerime()` les cacherait, mais un bloc qui ne
+  s'affiche jamais est un bloc que le prochain passage croit vivant ;
+- **les couvertures restent FRANÇAISES** sur les six : elles n'ont pas
+  de version anglaise dessinée, et les quatre articles importés, eux,
+  ont la leur. Le mélange se voit.
+
+#### LES `alt` DES SIX VIVENT DANS LE BLOC IMAGE, PAS DANS LA TABLE
+
+Et c'est écrit dans l'en-tête d'`altImagesEn.ts` pour que le prochain
+passage ne "finisse pas le travail". `ALT_IMAGES_EN` existe pour
+réparer ce que l'IMPORT laisse derrière lui ; un article traduit à la
+main n'est jamais ré-importé. Comme `poserAltEn` fait GAGNER la table
+sur ce qu'elle nomme (règle du 1er septembre), une entrée ajoutée là
+ferait vivre la même phrase à deux endroits et rendrait la copie du
+bloc image morte, en silence.
+
+**Le garde-fou qui compte tient les deux cas** : `reparer-blog-en.mjs`
+REFUSE dès qu'une image sort sans texte alternatif, quelle que soit sa
+provenance. Mesuré : la passe est verte avec les 33 images des six.
+
+#### ET LES TROIS `alt` "tiquiz amazon" SONT ENFIN ÉCRITS
+
+Trois images de l'étude de cas de Jocelyne portaient le même texte
+hérité de l'import, qui ne décrit aucune des trois. **Regardées une
+par une**, en français comme en anglais : les détails Amazon du livre
+(9 juin 2026, 112 pages, 2e des ebooks sur la gestion de la colère),
+le tableau de bord Systeme.io (680 nouveaux contacts, 67900 % sur
+31 jours, plat jusqu'au 25 mai), le classement n°1 des titres gratuits
+Kindle. Le remède documenté le 1er septembre marche enfin : la table
+GAGNE sur ce qu'elle nomme.
+
+#### 🚨 L'INTERDIT `Tipote` FIRAIT SUR `quiz.tipote.com`
+
+Mesuré : la seule occurrence du corpus est
+`quiz.tipote.com/p/my-popquiz`, l'adresse PUBLIQUE d'un Popquiz, celle
+que la créatrice partage vraiment, et qui est en plus lisible dans la
+capture d'écran juste à côté. **Un contrôle qui crie pour rien finit
+désactivé.**
+
+Le motif est NARROWÉ (`/(?<![.\w])Tipote(?!\.(?:com|fr|blog))/i`),
+comme le `?sa=` l'a été le 8 septembre au matin, et la raison est
+écrite à côté. Vérifié dans les deux sens : il laisse passer
+`quiz.tipote.com`, `app.tipote.com` et `affiliate.tipote.com`, et il
+FIRE toujours sur "the Tipote ecosystem" et "When Tipote launches".
+
+#### DEUX GARDE-FOUS FIGEAIENT LE COMPTE DU JOUR
+
+`blog-en.test.mts` exigeait `tous.length === 4` et `en.length === 4`,
+c'est à dire le nombre d'articles le jour de l'import. Les deux sont
+sortis ROUGES sur un travail juste. **Un garde-fou qui fige l'état du
+jour empêche de finir le travail**, exactement comme ceux qui figeaient
+un chemin de disque ou une formulation.
+
+Ils mesurent maintenant le FAIT : chaque anglais s'apparie avec un
+français qui EXISTE, et **aucun français n'est réclamé par deux
+anglais** (ça donnerait deux `hreflang` contradictoires sur la même
+page, et Google en choisirait un). Un plancher les garde d'une autre
+panne : un dossier vide les rendrait muets.
+
+**Et la fixture "un article français sans version anglaise" est
+devenue SYNTHÉTIQUE.** Le test la prenait dans le contenu vivant, donc
+il s'est éteint le jour où les dix ont eu leur traduction : c'est la
+leçon de la fixture du chrome, à quelques heures d'écart. Un slug que
+rien ne déclare ne sera jamais traduit.
+
+Vérifié en rejouant deux versions fautives (deux anglais qui réclament
+le même français, une paire annoncée vers une page absente) : les deux
+rougissent.
+
+#### CE QUE LA TRADUCTION A TROUVÉ DANS LE FRANÇAIS, ET QUI RESTE OUVERT
+
+Cinq défauts d'IMPORT, tous côté français, tous invisibles à l'écran
+(le texte manquant ne manque à personne sauf à la lectrice) :
+
+| L'article | Ce qui manque |
+|---|---|
+| `cas-client-jocelyne-tdah` | un H2 "3 leçons à retenir et appliquer" **suivi de RIEN** |
+| `comparatif-outils-quiz-systeme-io` | **quatre tableaux** annoncés et absents |
+| `strategie-quiz-marketing-tiquiz` | **cinq listes** annoncées et absentes, plus **un paragraphe en DOUBLE** |
+| `quiz-video-popquiz` | un H2 **coupé en plein mot** : "qu'avec un outil U" |
+| `strategie-quiz-marketing-tiquiz` | sa FAQ annonce encore **Typeform 50 €, Tally 29 $, et Tiquiz bêta 57 € à vie** |
+
+**On n'invente pas ce qui manque** : les trois leçons, les quatre
+tableaux et les cinq listes sont son contenu, pas le mien. Ils sont
+simplement absents de l'anglais, avec la raison écrite. Les prix
+périmés, eux, ont été RÉÉCRITS en anglais depuis les sources vérifiées
+(le €57 à vie est terminé, le prix de Tally n'est vérifiable nulle
+part dans le dépôt, donc il ne se cite pas).
+
+**Et une affirmation reste invérifiée** dans la FAQ du comparatif :
+"support in French and English". Elle vient du français, elle n'est
+mesurée nulle part.
+
+### 🚨 LA FIXTURE DES DEUX GARDES DE LANGUE EST DÉSORMAIS INVENTÉE
 
 Le test "un `en` posé sur une page SANS version anglaise ne s'affiche
 jamais" pointait vers une VRAIE page française seule. **Il en a usé

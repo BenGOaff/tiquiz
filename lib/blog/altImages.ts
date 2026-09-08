@@ -156,6 +156,17 @@ export const ALT_IMAGES: Readonly<Record<string, string>> = {
     "La méthode CAPTO en cinq maillons : Capter, Attirer et Profiler, dont le quiz se charge, puis Transformer et Optimiser, à monter soi-même",
   "/blog/img/transformer-3-gestes.webp":
     "Trois gestes pour vendre après le quiz : le premier email dans la minute, le profil dans l'objet, puis la séquence connaître, apprécier, confiance, achat",
+  // LES TROIS `alt` "tiquiz amazon" DE L'ÉTUDE DE CAS DE JOCELYNE.
+  //
+  // Relevés le 8 septembre 2026 : trois images du même article
+  // portaient le même texte hérité de l'import Systeme.io, qui ne
+  // décrit aucune des trois. Écrits en les REGARDANT, une par une.
+  "/blog/img/quiz-livre-tiquiz.webp":
+    "Détails du livre de Jocelyne sur Amazon : publié le 9 juin 2026, 112 pages, 2e des ebooks sur la gestion de la colère et 7e des guides de santé et bien-être",
+  "/blog/img/capturesj.webp":
+    "Le tableau de bord Systeme.io de Jocelyne : 680 nouveaux contacts et 67900 % sur 31 jours, une courbe plate jusqu'au 25 mai puis qui grimpe à partir du jour où le quiz est en ligne",
+  "/blog/img/image-2026-06-12-13-11-48.webp":
+    "Le classement Amazon du livre de Jocelyne : n°1 des titres gratuits de la Boutique Kindle, premier dans ses trois catégories, et 5,0 sur 5 avec 5 avis",
 };
 
 /** Le texte alternatif d'une image, ou `null` si on n'en a pas écrit. */

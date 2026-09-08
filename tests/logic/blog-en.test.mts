@@ -53,9 +53,24 @@ function articles(): { nom: string; brut: string; objet: any }[] {
     });
 }
 
-test("les quatre articles anglais sont la, et ils s'apparient avec un article francais", () => {
+// LE TEST NE FIGE PAS LE NOMBRE D'ARTICLES, ET C'EST UNE CORRECTION
+// DU 8 SEPTEMBRE AU SOIR.
+//
+// Il exigeait `tous.length === 4`, le compte du jour ou les quatre
+// articles avaient ete importes. Le jour ou les six traductions
+// ecrites a la main sont arrivees, il est sorti ROUGE sur un travail
+// juste : **un garde-fou qui fige l'etat du jour empeche de finir le
+// travail** (la meme faute que les tests qui figeaient un chemin de
+// disque ou une formulation).
+//
+// Ce qui compte n'est pas COMBIEN il y en a, c'est que chacun
+// s'apparie avec un article francais qui existe, et qu'aucun francais
+// ne soit reclame par deux anglais. Le plancher garde le test d'une
+// autre panne : un dossier vide le rendrait muet.
+test("chaque article anglais s'apparie avec un article francais qui existe", () => {
   const tous = articles();
-  assert.equal(tous.length, 4, "quatre articles anglais sont importes");
+  assert.ok(tous.length >= 4, "le dossier anglais n'est pas vide");
+  const reclames = new Map<string, string>();
   for (const { nom, objet } of tous) {
     assert.equal(objet.langue, "en", `${nom} declare sa langue`);
     // L'APPARIEMENT EST ECRIT, JAMAIS DEVINE. Les slugs anglais ne
@@ -68,6 +83,12 @@ test("les quatre articles anglais sont la, et ils s'apparient avec un article fr
       fs.existsSync(path.join(process.cwd(), "content", "blog", `${objet.traductionDe}.json`)),
       `${nom} : l'article francais ${objet.traductionDe} existe`,
     );
+    // DEUX ANGLAIS QUI RECLAMENT LE MEME FRANCAIS DONNERAIENT DEUX
+    // `hreflang` CONTRADICTOIRES sur la meme page francaise, et Google
+    // en choisirait un.
+    const deja = reclames.get(objet.traductionDe);
+    assert.equal(deja, undefined, `${objet.traductionDe} est deja la source de ${deja}`);
+    reclames.set(objet.traductionDe, nom);
   }
 });
 
@@ -271,7 +292,9 @@ test("la langue est un PARAMETRE de la lecture, jamais un defaut devine", async 
   const fr = listerArticles("fr");
   const en = listerArticles("en");
   assert.ok(fr.length >= 10, "le blog francais repond");
-  assert.equal(en.length, 4, "le blog anglais repond");
+  // ON NE FIGE PAS LE COMPTE : voir le premier test de ce fichier. Ce
+  // qui se mesure, c'est que chaque anglais existe et s'apparie.
+  assert.ok(en.length >= 4, "le blog anglais repond");
   const slugsFr = new Set(tousLesSlugs("fr"));
   for (const a of en) {
     assert.ok(!slugsFr.has(a.slug), `${a.slug} n'existe que du cote anglais`);
@@ -295,15 +318,28 @@ test("la langue est un PARAMETRE de la lecture, jamais un defaut devine", async 
 
   // ET UN ARTICLE FRANCAIS SANS VERSION ANGLAISE N'EN ANNONCE AUCUNE.
   //
-  // Six des dix articles francais n'ont pas de version anglaise.
-  // Declarer une paire vers une page absente est pire que n'en declarer
-  // aucune : Google la suit et tombe sur un 404.
+  // Declarer une paire vers une page absente est pire que n'en
+  // declarer aucune : Google la suit et tombe sur un 404.
+  //
+  // LA FIXTURE EST SYNTHETIQUE, ET C'EST UNE CORRECTION DU 8 SEPTEMBRE
+  // AU SOIR. Le test exigeait `orphelins.length > 0`, c'est a dire
+  // qu'il PRENAIT SA FIXTURE DANS LE CONTENU VIVANT : les six articles
+  // francais qui n'avaient pas encore de traduction. Le jour ou les
+  // dix ont eu la leur, il est sorti rouge sur un travail juste.
+  // C'est la lecon de la fixture du chrome (8 septembre) : quand un
+  // test mesure un COMPORTEMENT, la fixture doit etre inventee, pas
+  // empruntee. Un slug que rien ne declare ne sera jamais traduit.
+  assert.equal(
+    adressesDeLArticle("cet-article-n-existe-pas-tq", "fr").en,
+    undefined,
+    "un article sans version anglaise n'en annonce aucune",
+  );
+  // Et sur les vrais orphelins tant qu'il en reste. Zero est
+  // aujourd'hui le bon compte : les dix francais ont leur anglais.
   const traduits = new Set(
     en.map((a) => lireArticle(a.slug, "en")!.traductionDe),
   );
-  const orphelins = fr.filter((a) => !traduits.has(a.slug));
-  assert.ok(orphelins.length > 0, "des articles francais n'ont pas de version anglaise");
-  for (const a of orphelins) {
+  for (const a of fr.filter((x) => !traduits.has(x.slug))) {
     assert.equal(
       adressesDeLArticle(a.slug, "fr").en,
       undefined,

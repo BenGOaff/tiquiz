@@ -1,0 +1,171 @@
+{
+  "slug": "sell-with-a-quiz",
+  "langue": "en",
+  "traductionDe": "vendre-avec-un-quiz",
+  "titre": "Selling with a quiz: the CAPTO® method in 5 steps",
+  "description": "Your quiz collects leads but nothing sells? The CAPTO® method, five links in a chain, to sell with a quiz from the first email to the follow-up.",
+  "motsCles": [
+    "sell with a quiz",
+    "CAPTO method",
+    "turn a quiz into customers",
+    "quiz that does not sell",
+    "segmentation by profile",
+    "quiz marketing"
+  ],
+  "publieLe": "2026-07-24",
+  "couverture": "/blog/img/vendre-avec-un-quiz.webp",
+  "blocs": [
+    {
+      "type": "html",
+      "html": "<p><strong><em>TL;DR</em></strong></p><p>Your quiz does a great job on the first three links of the <strong>CAPTO method</strong>: it captures, it attracts, it profiles.</p><p>But collecting emails has never filled a bank account.</p><p>What you are missing are the last two links, <strong>Transform</strong> and <strong>Optimise</strong>, meaning the right emails sent to the right profile, then the adjustments your real numbers point you to.</p><p>Here is the full chain, from the first click to the sale.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Your prospects leave their email in your quiz but they never buy?</strong></p><p>You are not alone, and more to the point, your quiz is not the culprit.</p><p>It runs, the leads come in, and at the end of it all, nothing. No sale, or one here and there, purely by luck.</p><p>The real problem is that you were taught to capture emails and everyone stopped right there, as if collecting an address were enough to trigger a purchase.</p><p>The numbers say otherwise, and they are brutal: roughly <strong>79% of leads never become customers</strong> when they are left to fend for themselves after the capture (<a href=\"https://blog.hubspot.com/blog/tabid/6307/bid/30901/30-thought-provoking-lead-nurturing-stats-you-can-t-ignore.aspx\"><em>MarketingSherpa</em></a>).</p><p>In other words, your method is not bad 👉 you are just missing a few essential steps.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Why your quiz captures emails but does not sell",
+      "id": "why-your-quiz-does-not-sell"
+    },
+    {
+      "type": "html",
+      "html": "<p>Because capturing is only the first link in a chain, never the finish line.</p><p>I built a method for <strong>selling with a quiz</strong> and it has a name: <strong>CAPTO®.</strong></p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>It describes the five steps a stranger goes through to become a customer:</strong></p><ul><li><p>Capture,</p></li><li><p>Attract,</p></li><li><p>Profile,</p></li><li><p>Transform,</p></li><li><p>Optimise.</p></li></ul>"
+    },
+    {
+      "type": "html",
+      "html": "<p>Your quiz handles the first three almost on its own, and that is already a strength most people will never have.</p><p>But nobody buys simply because they handed over their address.</p><p>The sale is won on the last two steps, and that is exactly where everyone comes unstuck, for lack of knowing how to go about it.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "The CAPTO® method, from quiz to sale",
+      "id": "capto-method-quiz-to-sale"
+    },
+    {
+      "type": "html",
+      "html": "<p>CAPTO is the five steps a stranger goes through to become your customer, and your quiz is the engine that pulls them from one end to the other.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/methode-capto-5-maillons.webp",
+      "alt": "The CAPTO method as five links: Capture, Attract and Profile, which the quiz takes care of, then Transform and Optimise, which you build yourself"
+    },
+    {
+      "type": "html",
+      "html": "<p>Here are the 5 steps to follow, in this order:</p><p><strong>CAPTURE</strong>: your quiz picks up the email by offering an experience instead of shoving a form at people, so they fill it in happily.</p><p><strong>ATTRACT</strong>: because a quiz makes people want to share it, it brings you free, qualified traffic while you sleep.</p><p><strong>PROFILE</strong>, the clever link: with every answer, your quiz files the person into a precise profile and tags them, so you know exactly who you are talking to before you write a single word.</p><p>Then come the two links where everything is decided:</p><p><strong>TRANSFORM</strong>, first: you follow up with the right emails and the right offer, cut for each profile, all the way to the sale.</p><p><strong>OPTIMISE</strong>, last: you read your real numbers and adjust as you go, so your chain tightens with every new batch of visitors.</p><p>Your quiz forges the first three links almost on its own.</p><p>The last two are yours to build, and that is precisely where all your revenue is sleeping.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "The first three steps come with your quiz",
+      "id": "first-three-steps-come-with-your-quiz"
+    },
+    {
+      "type": "html",
+      "html": "<p>No need to dwell here, and that is good news.</p><p>Your quiz captures because it offers an experience rather than demanding an address, which is why <strong>44.9% of the people who start a quiz</strong> leave their email in coaching and training (<a href=\"https://www.tryinteract.com/blog/quiz-conversion-rate-report/\"><em>Interact report</em></a>), when a classic opt-in tops out at 1 to 3% from what I see going past.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/schema-quiz-vs-formulaire.webp",
+      "alt": "A classic form captures once; an interactive quiz captures 2 to 3 times more, with the email, the profile and the need"
+    },
+    {
+      "type": "html",
+      "html": "<p>It attracts because a quiz makes people want to share it, which brings you free traffic.</p><p>And it profiles because with every answer it files the person into a box and tags them, which tells you who you are talking to before you have written a single word.</p><p>If you want to dig into those three, I have covered them already: <a href=\"/en/blog/create-quiz-systeme-io\">how to create your quiz in Systeme.io</a>, <a href=\"/en/blog/capturing-emails-quiz-strategy\">how it collects your emails</a>, and <a href=\"/en/blog/17-reasons-to-launch-business-quiz\">why it far outperforms the classic PDF</a>.</p><p>What we are interested in today is what comes next.</p><p>The part nobody takes the time to show you.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Transform: the step where everyone comes unstuck",
+      "id": "transform-step"
+    },
+    {
+      "type": "html",
+      "html": "<p>Your quiz has captured, attracted, profiled.</p><p>Now comes the decisive moment: turning those contacts into customers.</p><p>In practice, you send them the right emails and the right offer, cut for each profile, because a message written for everyone reaches nobody.</p><p>And this is not a nice-to-have: targeted campaigns can bring in up to <strong>+760% more revenue</strong> than generic sends (<a href=\"https://www.campaignmonitor.com/resources/guides/guide-to-segmentation-for-the-evolving-marketer/\"><em>DMA data, via Campaign Monitor</em></a>).</p><p><strong>And here is what makes a quiz so formidable at exactly this moment: with one, you are not selling, you are prescribing.</strong></p><p>Remember, your quiz made a diagnosis, and the person recognised their own problem while answering.</p><p>So when you put your solution forward, you are not pushing an offer at a wary stranger, you are handing the right remedy to someone who has just admitted they are unwell.</p><p>The difference is enormous 🤯</p><p>On one side \"buy my thing\", on the other \"here is exactly what you need, you specifically\".</p><p>The second one meets almost no resistance.</p><p>Three simple moves multiply this step.</p><p>Your first <strong>email goes out within the minute after the quiz</strong>, while your name is still fresh and the person still has their result in front of them, because attention drops away at a terrifying speed.</p><p>Its subject line picks up <strong>the profile they have just been given</strong>, something like “<em>Marc, the number one trap for Perfectionists</em>”, which gets opened far more than a one-size-fits-all subject because it is literally about them.</p><p>And behind it, you roll out <strong>a short sequence built for their profile</strong>, which gently brings them to know you, like you, trust you, and then take the step.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/transformer-3-gestes.webp",
+      "alt": "Three moves for selling after the quiz: the first email within the minute, the profile in the subject line, then the sequence know, like, trust, buy"
+    },
+    {
+      "type": "html",
+      "html": "<p>Nothing clever here, just the right message at the right moment.</p><p>(Want to see it on a real case? <a href=\"/en/blog/case-study-jocelyne-adhd-quiz\">Take a look at this case study</a>.)</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Optimise: the step we all want to skip... and yet!",
+      "id": "optimise-step"
+    },
+    {
+      "type": "html",
+      "html": "<p>This last link separates the quiz that stalls from the quiz that grows on its own.</p><p>Optimising means refusing to fly blind: you look at your <strong>real numbers</strong>, how many visitors start, where they drop off, which emails get opened, which offer converts, and you correct from what you see, not from what you imagine.</p><p>The rule is simple: <strong>one observation 👉 one action</strong>.</p><p>Plenty of people start your quiz but few leave their email?</p><p>Your request for an address comes too late, move it up before the result.</p><p>Your sequence gets opened but nobody buys?</p><p>It is your offer or your timing that needs a rethink.</p><p>Every leak has a cause, every cause has a fix, and it is that watchmaker's work that makes a quiz sharpen with each new wave of visitors, instead of going round in circles.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>What to take away about selling with a quiz:</strong></p><ul><li><p>The CAPTO® method turns a stranger into a customer in five steps: Capture, Attract, Profile, Transform, Optimise.</p></li><li><p>Your quiz forges the first three almost alone. Your sale is decided on the last two.</p></li><li><p>Transform: the right email and the right offer, per profile. And with a quiz, you are not selling, you are prescribing.</p></li><li><p>Optimise: one observation, one action. That is what makes a quiz grow instead of leaving it to stall.</p></li><li><p>Capturing is never the end: without what follows, roughly 79% of leads never buy (MarketingSherpa)</p></li></ul>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "So where do I actually start?",
+      "id": "where-do-i-start"
+    },
+    {
+      "type": "html",
+      "html": "<p>If you already have a quiz, you hold the first three links.</p><p>Tackle the fourth tonight: one single welcome email, for one single profile, set to go out within the minute.</p><p>It is short, it is doable, and it is enough to stop the bleeding of leads going cold in silence.</p><p>The rest of the sequence can come tomorrow, and the optimising once you have enough numbers to read something.</p><p>If you do not have a quiz yet, start there, it is the engine of the whole chain, and I explain <a href=\"/en/blog/create-quiz-systeme-io\">how to build one in Systeme.io</a>.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/atelierduquiz.webp",
+      "alt": "The Atelier du Quiz home page, in French: 7 days to launch your marketing quiz and collect thousands of emails"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>The Atelier du Quiz: we put the system in place together</strong></p><p>You can do it all on your own, of course.</p><p>But if you want to move fast and never sit stuck in front of a blank page, that is why I created the <a href=\"https://atelierduquiz.fr/\">Atelier du Quiz</a>.</p><p>It is a 7-day path, one step a day.</p><p>You are not listening to a course, you are moving forward on your own project.</p><p>At the end, you do not have notes in a corner: you have a published quiz, connected to your emailing, capturing your contacts and filing them by profile.</p><p>And we do not stop at the capture, which is where almost everyone drops you.</p><p>We put the selling part in place together: your email campaigns, written for each profile in your own words, ready to import into Systeme.io.</p><p>You also learn to read your numbers, so you know what to adjust.</p><p>The hardest part, knowing what to write and in what order, we do that with you.</p><p>You are never on your own, and you finish with a complete system that runs, not just one more course.</p><p>So if your quiz is already capturing leads, you have done the hard part.</p><p>Come and lay down what comes next, the part that turns them into customers.</p><p>Stop letting people who trusted you walk away in silence. They deserve better. So do you.</p>"
+    },
+    {
+      "type": "cta",
+      "texte": "Join the Atelier du Quiz",
+      "url": "https://atelierduquiz.fr/"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "FAQ: selling with a quiz and the CAPTO® method",
+      "id": "faq-selling-with-a-quiz"
+    },
+    {
+      "type": "faq",
+      "questions": [
+        {
+          "question": "What is the CAPTO® method?",
+          "reponse": "<p>It describes the five steps that turn a stranger into a customer using a quiz: Capture the email, Attract traffic through sharing, Profile by segmenting on the answers, Transform with the right emails and the right offer, and Optimise by adjusting on your real numbers.</p><p>Your quiz handles the first three, you build the last two.</p>"
+        },
+        {
+          "question": "I already have a quiz, do I have to start over?",
+          "reponse": "<p>No, and above all do not break anything.</p><p>Your quiz already covers Capture, Attract and Profile.</p><p>You are only adding Transform and Optimise, meaning the email sequence per profile and the reading of your numbers.</p><p>You are completing it, not starting again.</p><p>Unless your quiz attracts nobody today, obviously...</p>"
+        },
+        {
+          "question": "How long does it take, and is it complicated?",
+          "reponse": "<p>If you can send an email and copy-paste, you can do this.</p><p>The longest part is not the technical side, it is working out what to write for each profile.</p><p>That is exactly the part we go through together in <a href=\"https://atelierduquiz.fr/\">the Atelier</a>.</p>"
+        },
+        {
+          "question": "Does it work in my field?",
+          "reponse": "<p>Yes, whether you are a coach, a freelancer, a consultant, an affiliate or a content creator. The CAPTO® method does not change.</p><p>The Atelier adapts to your field, so the examples and the methods speak to you directly.</p>"
+        },
+        {
+          "question": "What tools do I need to sell with a quiz?",
+          "reponse": "<p>You need a quiz plugged into your emailing tool (Systeme.io), and the only one that exists today is <a href=\"https://tiquiz.fr/signup\"><strong>Tiquiz</strong></a>.</p><p>The quiz captures and tags by profile, your emailing sends the right campaigns.</p><p>That is all.</p>"
+        }
+      ]
+    }
+  ]
+}

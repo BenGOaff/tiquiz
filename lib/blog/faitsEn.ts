@@ -537,7 +537,23 @@ export const INTERDITS_EN: readonly { motif: RegExp; pourquoi: string }[] = [
   { motif: /tipote\.blog/i, pourquoi: "l'ancien blog, supprime par Bene" },
   { motif: /http:\/\/Systeme\.io/i, pourquoi: "adresse auto-liee par l'editeur, elle n'existe pas" },
   { motif: /[—–]/, pourquoi: "tiret cadratin ou demi-cadratin : la signature bannie le 7 juin" },
-  { motif: /\?sa=/, pourquoi: "le parametre de Systeme.io, banni le 24 aout" },
+  // LE `?sa=` EST BANNI SUR NOS HÔTES, ET SEULEMENT LÀ.
+  //
+  // Le motif visait `?sa=` partout, et c'était trop large. Mesuré le
+  // 8 septembre sur les 16 articles : les 14 occurrences du corpus sont
+  // toutes `https://systeme.io/...?sa=sa0007...`, c'est à dire le lien
+  // d'affiliation de Béné CHEZ Systeme.io, dans le paramètre de
+  // Systeme.io, sur le site de Systeme.io. Il la paie, et le retirer
+  // lui coûterait ses commissions Systeme.io sans que rien ne le dise.
+  //
+  // Ce que la règle du 24 août interdit, c'est un `?sa=` sur NOS
+  // adresses : là, il ne commissionne plus personne (leur page ignore
+  // le paramètre, notre middleware ne voit jamais la requête). Le motif
+  // dit donc exactement ça.
+  {
+    motif: /(?:tiquiz\.fr|tipote\.(?:fr|com|blog)|quiz\.tipote\.com|atelierduquiz\.fr)[^"'\s]*\?sa=/i,
+    pourquoi: "un ?sa= sur un de NOS hotes ne paie plus personne depuis le 24 aout",
+  },
   { motif: /\$9\b|\$90\b|\$3\.60|\$1,800|\$43\.20|\$62\b|€57/, pourquoi: "l'ancien tarif, ou l'offre beta a vie" },
   // "no conditions" tout court parle de l'INSCRIPTION au programme, qui
   // est vraiment ouverte a tout le monde : l'interdire ferait rougir le
@@ -545,7 +561,24 @@ export const INTERDITS_EN: readonly { motif: RegExp; pourquoi: string }[] = [
   // crie pour rien finit desactive (leçon du filet genre-neutre).
   { motif: /no (payout )?threshold/i, pourquoi: "il y a un seuil de €20 et un delai de 30 jours" },
   { motif: /on the 10th of every month|on the 10th of the month/i, pourquoi: "le versement a lieu ENTRE le 10 et le 13" },
-  { motif: /Tipote/i, pourquoi: "Tipote n'est pas en vente : rien de ce qu'on en promet n'est verifiable" },
+  // "TIPOTE" LE PRODUIT, PAS `quiz.tipote.com` LE DOMAINE.
+  //
+  // Le motif visait le mot partout, et c'était trop large. Mesuré le
+  // 8 septembre : la seule occurrence du corpus est
+  // `quiz.tipote.com/p/mon-popquiz`, c'est à dire l'adresse PUBLIQUE
+  // d'un Popquiz, celle que la créatrice partage vraiment, et qui est
+  // en plus visible dans la capture d'écran juste à côté. La refuser
+  // ferait rougir le contrôle sur un fait exact, et un contrôle qui
+  // crie pour rien finit désactivé (leçon du filet genre-neutre).
+  //
+  // Ce que la règle interdit, c'est de PROMETTRE Tipote : "the Tipote
+  // ecosystem", "when Tipote launches", un taux ou un prix sur un
+  // produit qui n'est pas en vente. Le motif dit donc exactement ça :
+  // le mot seul, jamais un nom d'hôte.
+  {
+    motif: /(?<![.\w])Tipote(?!\.(?:com|fr|blog))/i,
+    pourquoi: "Tipote n'est pas en vente : rien de ce qu'on en promet n'est verifiable",
+  },
   { motif: /50% lifetime|50% lifetime/i, pourquoi: "taux annonce sur un produit qui n'est pas en vente" },
 ];
 
