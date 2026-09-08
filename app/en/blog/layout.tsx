@@ -29,8 +29,20 @@
 // prend celui qui ne ment pas, et le chrome se traduira avec les pages
 // qu'il annonce.
 
+// -- LES DESTINATIONS, ELLES, SUIVENT LA LANGUE ------------------------
+//
+// Les libellés restent français (voir juste au dessus), mais un lien
+// qui MENE quelque part n'a pas la même contrainte : `hrefPourLangue`
+// n'ajoute `/en/` que sur un chemin dont la version anglaise existe
+// VRAIMENT. Sans ça, `/en/tarifs` restait un orphelin : il existe, il
+// est en anglais, il est dans le sitemap, et AUCUN lien du site ne le
+// citait (mesuré le 8 septembre).
+//
+// La langue est écrite en dur parce que ces pages sont `force-static` :
+// prérendues au BUILD, donc sans requête, donc sans en-tête à lire.
+
 import SiteShell from "@/components/site/SiteShell";
 
 export default function BlogLayoutEn({ children }: { children: React.ReactNode }) {
-  return <SiteShell>{children}</SiteShell>;
+  return <SiteShell langue="en">{children}</SiteShell>;
 }

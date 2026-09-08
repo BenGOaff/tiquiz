@@ -13,7 +13,8 @@
 // qui s'ouvre est exactement ce que cette balise fait depuis toujours.
 
 import Link from "next/link";
-import { MENU, CTA_MENU, attributsLien } from "@/lib/site/nav";
+import { MENU, CTA_MENU, attributsLien, hrefPourLangue } from "@/lib/site/nav";
+import type { LanguePublique } from "@/lib/site/langues";
 
 function Marque() {
   return (
@@ -27,7 +28,15 @@ function Marque() {
   );
 }
 
-export default function SiteHeader() {
+export default function SiteHeader({ langue }: { langue: LanguePublique }) {
+  // Le LIBELLÉ reste français, la DESTINATION suit la langue de la page.
+  //
+  // C'est la décision écrite dans `app/en/blog/layout.tsx` : traduire un
+  // libellé sans traduire la page promettrait de l'anglais derrière
+  // chaque clic. Ce qui change ici, c'est le seul cas où la page
+  // anglaise EXISTE : `/tarifs` et le blog. Y envoyer un lecteur
+  // anglophone ne promet rien de faux, ça tient la promesse.
+  const lien = (href: string) => hrefPourLangue(href, langue);
   return (
         // LE FOND EST OPAQUE, et ce n'est pas un detail de gout.
     //
@@ -45,7 +54,7 @@ export default function SiteHeader() {
           {MENU.map((l) => (
             <Link
               key={l.href}
-              href={l.href}
+              href={lien(l.href)}
               className="text-[0.95rem] font-medium text-[var(--tq-encre-douce)] transition-colors hover:text-[var(--tq-encre)]"
               {...attributsLien(l.href)}
             >
@@ -61,7 +70,7 @@ export default function SiteHeader() {
           >
             Se connecter
           </Link>
-          <Link href={CTA_MENU.href} className="tq-bouton !px-4 !py-2 !text-sm">
+          <Link href={lien(CTA_MENU.href)} className="tq-bouton !px-4 !py-2 !text-sm">
             {CTA_MENU.libelle}
           </Link>
         </div>
@@ -80,7 +89,7 @@ export default function SiteHeader() {
             {MENU.map((l) => (
               <Link
                 key={l.href}
-                href={l.href}
+                href={lien(l.href)}
                 className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-[var(--tq-panneau)]"
                 {...attributsLien(l.href)}
               >
@@ -95,7 +104,7 @@ export default function SiteHeader() {
               Se connecter
             </Link>
             <Link
-              href={CTA_MENU.href}
+              href={lien(CTA_MENU.href)}
               className="mt-1 block rounded-lg bg-[var(--tq-bleu)] px-3 py-2 text-center text-sm font-semibold text-white"
             >
               {CTA_MENU.libelle}

@@ -34,6 +34,13 @@
 import { AFFILIATE_DASHBOARD_URL, ATELIER_SALES_URL } from "@/lib/affiliateUrls";
 import { ADRESSES_LEGALES_FR } from "@/lib/site/adressesLegales";
 import { FONCTIONNALITES } from "@/lib/site/fonctionnalites";
+import {
+  CHEMINS_HORS_REECRITURE,
+  cheminPourLangue,
+  LANGUE_SANS_PREFIXE,
+  type LanguePublique,
+} from "@/lib/site/langues";
+import { languesDePage, PAGES_PUBLIQUES } from "@/lib/site/pagesPubliques";
 
 /** Un lien du site public. */
 export interface LienSite {
@@ -171,6 +178,58 @@ export const PIED: readonly ColonnePied[] = [
     ],
   },
 ] as const;
+
+/**
+ * LE CHEMIN D'UN LIEN DU CHROME, DANS LA LANGUE DE LA PAGE SERVIE.
+ *
+ * -- CE QUE LA MESURE A DONNÉ (8 septembre 2026) -----------------------
+ *
+ * `/en/tarifs` existe, il est en anglais, il est dans le sitemap...  et
+ * **AUCUN lien du site ne le cite**. Le menu d'une page anglaise
+ * envoyait sur `/tarifs`, c'est à dire sur le français, sur la page qui
+ * vend. Une page qu'aucun lien ne désigne n'est atteinte par personne :
+ * un lecteur ne la trouve jamais, et un robot ne la découvre que par le
+ * sitemap, sans un seul lien interne pour la peser.
+ *
+ * -- ON NE PRÉFIXE QUE CE QUI EXISTE VRAIMENT --------------------------
+ *
+ * Préfixer tout en `/en/` ferait huit 404 dans le menu : `/a-propos`,
+ * `/integrations` et les autres n'ont pas de version anglaise. La
+ * disponibilité se LIT donc, elle ne se suppose pas :
+ *
+ *   - `PAGES_PUBLIQUES` porte déjà les langues de chaque page, et c'est
+ *     la même source que le sitemap et que les `hreflang`. Une
+ *     deuxième liste écrite ici finirait par annoncer une langue que le
+ *     sitemap ne déclare pas ;
+ *   - `CHEMINS_HORS_REECRITURE` nomme les chemins qui ont leur PROPRE
+ *     segment `/en/...` (le blog). Ce sont exactement ceux dont la
+ *     route anglaise existe pour de bon.
+ *
+ * ET LA CORRESPONDANCE Y EST EXACTE, jamais un préfixe. `/en/blog`
+ * existe ; `/en/blog/<slug francais>` n'existe PAS, parce que les slugs
+ * anglais sont différents (`17-reasons...` contre
+ * `17-raisons-lancer-quiz-business`) : un lien construit par préfixe
+ * mènerait donc à un 404 que personne ne verrait avant de cliquer.
+ * Traduire un slug n'est pas le travail de cette fonction, et c'est
+ * `alternatesDeLangue` qui apparie les deux, article par article.
+ *
+ * Tout le reste reste FRANÇAIS, et c'est ce qui rend le lien honnête :
+ * on ne promet pas de l'anglais derrière un clic qui mène au français.
+ *
+ * LE SENS DE L'ERREUR : un chemin oublié laisse un lien vers le
+ * français, ce qui est le comportement d'aujourd'hui. Un chemin déclaré
+ * à tort donne un 404 dans le menu, sur toutes les pages à la fois.
+ */
+export function hrefPourLangue(href: string, langue: LanguePublique): string {
+  if (langue === LANGUE_SANS_PREFIXE || estLienExterne(href)) return href;
+
+  const page = PAGES_PUBLIQUES.find((p) => p.chemin === href);
+  const dispo = page
+    ? languesDePage(page).includes(langue)
+    : (CHEMINS_HORS_REECRITURE as readonly string[]).includes(href);
+
+  return dispo ? cheminPourLangue(href, langue) : href;
+}
 
 /** Ce lien sort-il du site ? */
 export function estLienExterne(href: string): boolean {

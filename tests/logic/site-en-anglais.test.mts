@@ -50,6 +50,7 @@ import {
 import { listerArticles } from "../../lib/blog/articles.ts";
 import { metadonneesSommaire } from "../../lib/blog/metaSommaire.ts";
 import { PAGES_PUBLIQUES, languesDePage } from "../../lib/site/pagesPubliques.ts";
+import { CTA_MENU, MENU, PIED, hrefPourLangue } from "../../lib/site/nav.ts";
 import { clicASignaler } from "../../lib/affiliate/signalerClic.ts";
 import { vueASignaler } from "../../lib/trafic/vueASignaler.ts";
 
@@ -382,5 +383,136 @@ test("TOUTE PAGE `/en/` PORTE LE CADRE DU SITE", () => {
       cadre,
       `${path.relative(RACINE, page)} sort sans en-tete ni pied de page : aucun layout de sa chaine ne rend SiteShell`,
     );
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// 5. LE CHROME MENE A LA VERSION ANGLAISE QUAND ELLE EXISTE
+// ─────────────────────────────────────────────────────────────────────
+
+test("le menu et le pied de page suivent la langue, mais SEULEMENT ou l'anglais existe", () => {
+  // MESURE DU 8 SEPTEMBRE, sur `/en/blog` servi :
+  //
+  //   <a href="/tarifs">Tarifs</a>
+  //   <a href="/blog">Blog</a>
+  //
+  // `/en/tarifs` existe, il est en anglais, il est dans le sitemap, et
+  // AUCUN lien du site ne le citait. Une page qu'aucun lien ne designe
+  // n'est atteinte par personne : un lecteur ne la trouve jamais, et un
+  // robot ne la decouvre que par le sitemap, sans un seul lien interne
+  // pour la peser.
+  assert.equal(hrefPourLangue("/tarifs", "en"), "/en/tarifs");
+  assert.equal(hrefPourLangue("/blog", "en"), "/en/blog");
+
+  // ET ON NE PREFIXE QUE CE QUI EXISTE. Prefixer tout donnerait huit
+  // 404 dans le menu, sur toutes les pages a la fois.
+  assert.equal(hrefPourLangue("/a-propos", "en"), "/a-propos");
+  assert.equal(hrefPourLangue("/integrations", "en"), "/integrations");
+
+  // UN SLUG D'ARTICLE NE SE TRADUIT PAS PAR UN PREFIXE : l'anglais de
+  // `17-raisons-lancer-quiz-business` s'appelle `17-reasons-...`, donc
+  // `/en/blog/<slug francais>` est un 404.
+  assert.equal(hrefPourLangue("/blog/17-raisons-lancer-quiz-business", "en"), "/blog/17-raisons-lancer-quiz-business");
+
+  // Le francais et les liens sortants ne bougent jamais.
+  for (const href of ["/tarifs", "/blog", "/a-propos"]) {
+    assert.equal(hrefPourLangue(href, LANGUE_SANS_PREFIXE), href);
+  }
+  assert.equal(
+    hrefPourLangue("https://affiliate.tipote.com/signup", "en"),
+    "https://affiliate.tipote.com/signup",
+  );
+});
+
+test("aucun lien du chrome ne peut mener a une adresse `/en/` qui n'existe pas", () => {
+  // LE SENS DE L'ERREUR : un chemin oublie laisse un lien vers le
+  // francais, ce qui est le comportement d'aujourd'hui. Un chemin
+  // declare a tort donne un 404 dans le menu, sur toutes les pages a la
+  // fois, et il ne se voit qu'en cliquant.
+  const tous = [CTA_MENU, ...MENU, ...PIED.flatMap((c) => c.liens)];
+  assert.ok(tous.length > 10, "le chrome est vide : ce test serait muet");
+
+  let prefixes = 0;
+  for (const l of tous) {
+    const en = hrefPourLangue(l.href, "en");
+    if (en === l.href) continue;
+    prefixes += 1;
+
+    // Deux facons d'exister, et une seule suffit :
+    //   - la page DECLARE l'anglais, donc le middleware reecrit
+    //     `/en/<chemin>` vers elle ;
+    //   - un vrai segment `app/en/<chemin>/page.tsx` existe sur disque.
+    const declaree = PAGES_PUBLIQUES.some(
+      (p) => p.chemin === l.href && languesDePage(p).includes("en"),
+    );
+    const surDisque = fs.existsSync(path.join(RACINE, "app", en.replace(/^\//, ""), "page.tsx"));
+    assert.ok(
+      declaree || surDisque,
+      `${l.libelle} mene a ${en}, qui n'existe ni comme page declaree en anglais ni comme route app/en/`,
+    );
+  }
+
+  assert.ok(prefixes > 0, "aucun lien ne bascule en anglais : le chrome ne peut plus fermer l'orphelin");
+});
+
+test("aucun appelant de SiteShell n'omet sa langue", () => {
+  // LA LANGUE NE SE DEVINE PAS, ET C'EST POUR CA QU'ELLE EST UNE PROP
+  // OBLIGATOIRE : `/en/blog` est prerendu au BUILD (aucune requete,
+  // donc aucun en-tete a lire) et `/en/tarifs` passe par la reecriture
+  // du middleware. Un composant qui lirait l'en-tete lui meme rendrait
+  // le premier faux et le second dynamique.
+  //
+  // `tsc` refuse deja un appel sans la prop. Ce test tient l'autre
+  // moitie : qu'il y ait ENCORE des appelants. Un test qui ne peut plus
+  // echouer ment.
+  const appelants: string[] = [];
+  const parcourir = (dossier: string) => {
+    for (const e of fs.readdirSync(dossier, { withFileTypes: true })) {
+      const p = path.join(dossier, e.name);
+      if (e.isDirectory()) parcourir(p);
+      else if (/\.tsx$/.test(e.name) && /<SiteShell/.test(fs.readFileSync(p, "utf8"))) appelants.push(p);
+    }
+  };
+  parcourir(path.join(RACINE, "app"));
+  assert.ok(appelants.length >= 4, `seulement ${appelants.length} appelant(s) de SiteShell : ce test serait muet`);
+
+  for (const f of appelants) {
+    const src = sansCommentaires(fs.readFileSync(f, "utf8"));
+    for (const appel of src.match(/<SiteShell[^>]*>/g) ?? []) {
+      assert.match(
+        appel,
+        /langue=/,
+        `${path.relative(RACINE, f)} rend SiteShell sans dire sa langue`,
+      );
+    }
+  }
+});
+
+test("le groupe (site) reste STATIQUE : aucune lecture d'en-tete dans son layout", () => {
+  // MESURE DU 8 SEPTEMBRE : 8 des 9 pages de `app/(site)/` n'appellent
+  // aucune API dynamique, donc elles sont prerendues au build. Un
+  // `headers()` pose dans leur layout commun les rendrait TOUTES
+  // dynamiques, sur les pages qui commencent justement a ranker, et
+  // pour une langue qu'elles n'ont pas.
+  //
+  // `/tarifs` est le seul chemin de ce site a exister en anglais : il
+  // vit donc dans son propre groupe, `app/(site-langues)/`, qui lui a
+  // le droit de lire l'en-tete. Les deux groupes rendent le MEME
+  // `SiteShell`, donc il n'y a pas deux chromes a tenir d'accord.
+  const site = sansCommentaires(lire("app/(site)/layout.tsx"));
+  assert.doesNotMatch(site, /headers\(\)|langueCanonique/, "app/(site)/layout.tsx rendrait tout le groupe dynamique");
+
+  const langues = sansCommentaires(lire("app/(site-langues)/layout.tsx"));
+  assert.match(langues, /langueCanonique\(\)/, "le groupe multilingue doit lire la langue de l'ADRESSE");
+
+  // Et les pages multilingues vivent bien la bas, jamais dans `(site)`.
+  for (const p of PAGES_PUBLIQUES) {
+    if (!languesDePage(p).includes("en")) continue;
+    const dansLangues = fs.existsSync(
+      path.join(RACINE, "app", "(site-langues)", p.chemin.replace(/^\//, ""), "page.tsx"),
+    );
+    const dansSite = fs.existsSync(path.join(RACINE, "app", "(site)", p.chemin.replace(/^\//, ""), "page.tsx"));
+    assert.ok(!dansSite, `${p.chemin} existe en anglais : son chrome ne peut pas etre celui du groupe statique`);
+    assert.ok(dansLangues, `${p.chemin} existe en anglais mais n'est pas dans app/(site-langues)/`);
   }
 });

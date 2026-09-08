@@ -9,9 +9,13 @@
 // pied serait une page que personne ne trouve.
 
 import Link from "next/link";
-import { PIED, attributsLien, estLienExterne } from "@/lib/site/nav";
+import { PIED, attributsLien, estLienExterne, hrefPourLangue } from "@/lib/site/nav";
+import type { LanguePublique } from "@/lib/site/langues";
 
-export default function SiteFooter() {
+export default function SiteFooter({ langue }: { langue: LanguePublique }) {
+  // Voir `SiteHeader` : le libellé reste français, la destination suit
+  // la langue quand la page anglaise existe vraiment.
+  const lien = (href: string) => hrefPourLangue(href, langue);
   const annee = new Date().getFullYear();
   return (
     <footer className="tq-pied mt-24">
@@ -45,7 +49,7 @@ export default function SiteFooter() {
                           {l.libelle}
                         </a>
                       ) : (
-                        <Link href={l.href} className="text-sm" {...attributsLien(l.href)}>
+                        <Link href={lien(l.href)} className="text-sm" {...attributsLien(l.href)}>
                           {l.libelle}
                         </Link>
                       )}

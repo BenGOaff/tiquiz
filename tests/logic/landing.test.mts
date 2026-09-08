@@ -57,6 +57,7 @@ import { FREE_LIMITS } from "@/lib/planLimits";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { gagne, reglesDeCouleur, specificite, viseTousLesLiens } from "./aide/specificiteCss.mts";
+import { cheminPageDuSite } from "./aide/pageDuSite.mts";
 
 const racine = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 
@@ -91,7 +92,8 @@ const CODE = SOURCE.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, "
 const sansCommentaires = (t: string) =>
   t.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, " ").replace(/^\s*\/\/.*$/gm, " ");
 const PAGE_ACCUEIL = sansCommentaires(racine("app/(site)/apercu-landing-8f2c9d41/page.tsx"));
-const PAGE_TARIFS = sansCommentaires(racine("app/(site)/tarifs/page.tsx"));
+const CHEMIN_TARIFS = cheminPageDuSite("/tarifs");
+const PAGE_TARIFS = sansCommentaires(racine(CHEMIN_TARIFS));
 const MORCEAUX = sansCommentaires(racine("components/landing/morceaux.tsx"));
 const PAGE_CODE = `${PAGE_ACCUEIL}\n${PAGE_TARIFS}\n${MORCEAUX}`;
 const CSS = racine("components/landing/styles.ts");
@@ -1053,7 +1055,7 @@ describe("le corps de texte est aligné à gauche, sans exception à tenir", () 
     );
     for (const p of [
       "app/(site)/apercu-landing-8f2c9d41/page.tsx",
-      "app/(site)/tarifs/page.tsx",
+      CHEMIN_TARIFS,
     ]) {
       assert.ok(!/blocLong/.test(racine(p)), `${p} appelle encore blocLong`);
     }
@@ -1073,7 +1075,7 @@ describe("le corps de texte est aligné à gauche, sans exception à tenir", () 
     assert.ok(/\.tql-intro\{/.test(css), "la boîte .tql-intro a disparu de la feuille");
     for (const p of [
       "app/(site)/apercu-landing-8f2c9d41/page.tsx",
-      "app/(site)/tarifs/page.tsx",
+      CHEMIN_TARIFS,
     ]) {
       assert.ok(
         /className="tql-intro"/.test(racine(p)),

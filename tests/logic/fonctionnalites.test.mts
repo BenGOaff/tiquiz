@@ -33,6 +33,7 @@ import { PAGES_PUBLIQUES } from "../../lib/site/pagesPubliques.ts";
 import { cheminsDuSite } from "../../lib/site/nav.ts";
 import { CSS } from "@/app/(site)/fonctionnalites/styles";
 import { gagne, reglesDeCouleur, specificite, viseTousLesLiens } from "./aide/specificiteCss.mts";
+import { sourcePageDuSite } from "./aide/pageDuSite.mts";
 
 // LA LANDING EST DEUX FICHIERS DEPUIS LE 6 SEPTEMBRE. `/` est la
 // landing courte, `/tarifs` la vraie page de vente : les guards qui
@@ -40,7 +41,7 @@ import { gagne, reglesDeCouleur, specificite, viseTousLesLiens } from "./aide/sp
 const PAGE_LANDING =
   readFileSync("app/(site)/apercu-landing-8f2c9d41/page.tsx", "utf8") +
   "\n" +
-  readFileSync("app/(site)/tarifs/page.tsx", "utf8");
+  sourcePageDuSite("/tarifs");
 const PAGE_HUB = readFileSync("app/(site)/fonctionnalites/page.tsx", "utf8");
 const PAGE_DETAIL = readFileSync("app/(site)/fonctionnalites/[slug]/page.tsx", "utf8");
 

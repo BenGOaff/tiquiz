@@ -1,4 +1,4 @@
-// app/(site)/tarifs/page.tsx
+// app/(site-langues)/tarifs/page.tsx
 //
 // LA VRAIE PAGE DE VENTE.
 //

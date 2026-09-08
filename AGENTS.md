@@ -11179,6 +11179,102 @@ public n'en a jamais eu ; avec UNE page traduite, un lien "English" dans
 le pied de page mènerait nulle part sur les vingt autres. Il se pose le
 jour où plusieurs pages existent en anglais.
 
+### `/en/tarifs` ÉTAIT UN ORPHELIN : le chrome l'ignorait (8 septembre)
+
+Mesuré sur `/en/blog` servi, une fois le blog anglais en ligne :
+
+```
+<a href="/tarifs">Tarifs</a>
+<a href="/blog">Blog</a>
+```
+
+`/en/tarifs` existe, il est en anglais, il est dans le sitemap, et
+**AUCUN lien du site ne le citait.** Une page qu'aucun lien ne désigne
+n'est atteinte par personne : un lecteur anglophone arrivé de
+`tipote.blog` ne la trouve jamais, et un robot ne la découvre que par le
+sitemap, sans un seul lien interne pour la peser.
+
+**Règle : `hrefPourLangue(href, langue)` (`lib/site/nav.ts`), et les
+LIBELLÉS ne bougent pas.** La décision écrite dans
+`app/en/blog/layout.tsx` reste entière : traduire un libellé sans
+traduire la page promettrait de l'anglais derrière chaque clic. Une
+DESTINATION n'a pas cette contrainte, et c'est la seule moitié qui
+change.
+
+**LA DISPONIBILITÉ SE LIT, ELLE NE SE SUPPOSE PAS.** Préfixer tout en
+`/en/` ferait huit 404 dans le menu, sur toutes les pages à la fois :
+`/a-propos`, `/integrations` et les autres n'ont pas de version
+anglaise. Les deux sources sont celles qui existent déjà,
+`PAGES_PUBLIQUES` (la MÊME que le sitemap et les `hreflang`) et
+`CHEMINS_HORS_REECRITURE` (le blog, qui a son propre segment). Une
+deuxième liste écrite ici annoncerait une langue que le sitemap ne
+déclare pas.
+
+**Et la correspondance y est EXACTE, jamais un préfixe.** `/en/blog`
+existe ; `/en/blog/<slug français>` n'existe pas, parce que les slugs
+anglais sont différents (`17-reasons...` contre
+`17-raisons-lancer-quiz-business`). Un lien construit par préfixe
+mènerait à un 404 que personne ne voit avant de cliquer, et traduire un
+slug n'est pas le travail de cette fonction : c'est `alternatesDeLangue`
+qui apparie les deux, article par article.
+
+**LE SENS DE L'ERREUR :** un chemin oublié laisse un lien vers le
+français, c'est à dire le comportement d'aujourd'hui. Un chemin déclaré
+à tort donne un 404 dans le menu, partout d'un coup.
+
+#### `/tarifs` A SON PROPRE GROUPE DE ROUTES, ET C'EST UNE MESURE
+
+`langue` est une prop OBLIGATOIRE de `SiteShell` : elle ne peut pas se
+deviner (le blog anglais est `force-static`, donc prérendu au BUILD,
+donc sans requête à interroger ; `/en/tarifs`, lui, passe par la
+réécriture du middleware). Restait à savoir QUI la lui donne.
+
+**Un `headers()` dans un layout rend TOUT son groupe dynamique.** Relevé
+avant d'écrire une ligne : sur les 10 pages de `app/(site)/`, **8
+n'appellent aucune API dynamique**, donc elles sont prérendues au build,
+et ce sont exactement celles qui commencent à ranker. Poser la lecture
+de langue dans leur layout commun aurait payé un rendu par requête sur
+ces 8 pages, pour une langue qu'elles n'ont pas.
+
+`/tarifs` vit donc dans `app/(site-langues)/`, un DEUXIÈME groupe de
+routes. Un groupe n'ajoute aucun segment d'URL : `/tarifs` reste
+`/tarifs`, sa canonique et ses `hreflang` ne bougent pas (mesuré après
+le déplacement). Et il ne coûte rien : `/tarifs` lit déjà l'en-tête dans
+sa propre `generateMetadata`, il était donc déjà dynamique.
+
+**Les deux layouts rendent le MÊME `SiteShell`**, donc il n'y a pas deux
+chromes à tenir d'accord : le menu, le pied de page et leurs libellés
+vivent à un seul endroit (`lib/site/nav.ts`). Ce qui est dupliqué, c'est
+une ligne de trois mots, et le test exige que tout appelant de
+`SiteShell` passe sa langue.
+
+**MESURÉ après correction, sur le serveur :**
+
+| | Tarifs | Blog |
+|---|---|---|
+| `/en/blog` | **`/en/tarifs`** | `/en/blog` |
+| `/en/tarifs` | `/en/tarifs` | **`/en/blog`** |
+| `/blog`, `/tarifs`, `/a-propos` | `/tarifs` | `/blog` |
+
+Le chemin anglais boucle donc dans les deux sens, et le français ne
+bouge pas d'un caractère. `/en/tarifs` répond toujours `lang="en"`,
+canonique `https://tiquiz.fr/en/tarifs`, ses trois `hreflang`, et il
+pose encore `tq_ref` sur un `?ref=`.
+
+#### ET DEUX TESTS ONT ROUGI SUR UN CODE JUSTE
+
+`landing.test.mts` et `fonctionnalites.test.mts` portaient
+`app/(site)/tarifs/page.tsx` écrit en dur, à quatre endroits. Le
+déplacement de groupe les a fait rougir alors que rien n'était cassé.
+
+**Un groupe de routes n'ajoute aucun segment d'URL : un chemin sur
+disque n'est donc PAS une adresse, et l'écrire en dur dans un test fige
+un rangement.** `tests/logic/aide/pageDuSite.mts` le CHERCHE, et il
+refuse les deux cas qui comptent : introuvable (la page a vraiment
+disparu), ou trouvée DEUX fois (deux groupes serviraient la même URL, ce
+que Next refuse au build, et le dire ici le dit plus tôt). Vérifié en
+rejouant les deux : ils rougissent.
+
 ### LE `.fr` : ce que dit la documentation de Google, pas ma mémoire
 
 Sa question : "c'est très grave que mon domaine soit en .fr ou pas ?"
