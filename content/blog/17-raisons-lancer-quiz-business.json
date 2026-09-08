@@ -24,6 +24,10 @@
     },
     {
       "type": "html",
+      "html": "<ul dir=\"ltr\"><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(43, 50, 100)\">Conversion à 30-40 % au lieu de tes 2-3 %. </span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(43, 50, 100)\">Leads déjà segmentés. </span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(43, 50, 100)\">Page de résultat qui pré-vend ton offre.</span></p></div></li></ul>"
+    },
+    {
+      "type": "html",
       "html": "<p>Voilà 17 raisons concrètes de t’y mettre aujourd'hui (et pas dans 2 ans, quand tous tes concurrents l'auront déjà mis en place).</p>"
     },
     {

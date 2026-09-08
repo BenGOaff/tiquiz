@@ -244,6 +244,12 @@ test("l'affiliation ne parle plus du code Systeme.io", () => {
 test("les regles d'ecriture de Bene tiennent sur le contenu importe", () => {
   const texte = toutLeTexte();
   assert.ok(!/[—–]/.test(texte), "tiret cadratin ou demi-cadratin");
+  // ET SOUS SA FORME D'ENTITE, qui s'affiche pareil.
+  //
+  // Ce test ne cherchait que le CARACTERE, donc `&mdash;` passait : deux
+  // em-dash sont entres dans le comparatif des outils le 8 septembre, a
+  // travers un garde qui ne pouvait pas les voir.
+  assert.ok(!/&mdash;|&ndash;|&#8212;|&#8211;/.test(texte), "tiret cadratin en entite HTML");
   assert.ok(!/[«»]/.test(texte), "chevrons");
   assert.ok(!/\b\w+·e\b/.test(texte), "point median");
 });

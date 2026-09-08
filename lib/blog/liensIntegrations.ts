@@ -112,6 +112,53 @@ export const FAITS_OUTILS: readonly {
     pourquoi:
       "170 EUR x 5 = 850, pas 450, et les 5 000 EUR d'en face n'existaient pas non plus.",
   },
+
+  // ── LES MÊMES CHIFFRES, DANS LES FAQ ──
+  //
+  // Le CORPS de ces deux articles a été corrigé le 1er septembre, leur
+  // FAQ non : le même article annonçait donc 79 $ dans son texte et
+  // 717 € dans sa FAQ, à quelques écrans d'écart. C'est le défaut de
+  // la rente du 31 août, à un autre endroit du même blog.
+  //
+  // Les montants viennent des MÊMES constantes que le corps, donc les
+  // deux ne peuvent plus diverger au prochain changement de tarif.
+  {
+    de:
+      "Typeform Plus combiné à Zapier (le bricolage classique) revient à environ 717 €/mois, " +
+      "soit près de 950 €/an. Sur 5 ans, Tiquiz revient à 450 € au total contre près de 5 000 € " +
+      "pour la stack Typeform + Zapier.",
+    vers:
+      `Typeform Plus combiné à Zapier (le bricolage classique) revient à ` +
+      `${nombre(TOTAL_CONCURRENT)} $/mois. Sur 5 ans, Tiquiz revient à ${nombre(TIQUIZ_5_ANS)} € ` +
+      `en annuel, contre plus de ${nombre(CONCURRENT_5_ANS)} $ pour la stack Typeform + Zapier.`,
+    pourquoi:
+      "717 et 950 ne venaient d'aucun calcul, et 450 EUR sur 5 ans contredisait le corps du meme article.",
+  },
+  {
+    de: "avec Typeform + Zapier autour de 717 €/mois",
+    vers: `avec Typeform + Zapier autour de ${nombre(TOTAL_CONCURRENT)} $/mois`,
+    pourquoi: "le recapitulatif de fin d'article gardait le total faux que le corps avait corrige.",
+  },
+
+  // LE PRIX DE TALLY EST RETIRE, IL N'EST PAS CORRIGE.
+  //
+  // Il n'est verifiable NULLE PART dans ce depot, et un tarif annonce
+  // faux se verifie en un clic. La version anglaise de cet article
+  // l'avait deja retire pour cette raison le 8 septembre.
+  //
+  // Et "Tiquiz en beta c'est 57 EUR une fois a vie" est termine :
+  // c'est exactement la promesse retiree de la page de vente le
+  // 3 septembre, restee dans une FAQ que personne ne relisait.
+  {
+    de:
+      "Côté prix, Typeform Plus c'est 50 €/mois, Tally Pro c'est 29 $/mois, " +
+      "Tiquiz en bêta c'est 57 € une fois à vie.",
+    vers:
+      `Côté prix, Typeform Plus c'est ${TYPEFORM_PLUS_PAR_MOIS_USD} $/mois, et Tiquiz ` +
+      `${TIQUIZ_MENSUEL_EUR} €/mois ou ${TIQUIZ_ANNUEL_EUR} €/an, avec un plan gratuit pour tester.`,
+    pourquoi:
+      "l'acces a vie a 57 EUR est termine, et le prix de Tally n'est verifiable nulle part.",
+  },
 ];
 
 /**

@@ -57,6 +57,8 @@ import {
   nettoyerMiseEnPage,
   normaliserNiveauxTitres,
   retirerBanniereEnTete,
+  retirerTitreOrphelin,
+  retirerBlocsEnDouble,
 } from "../lib/blog/miseEnPage.ts";
 import { poserTableaux } from "../lib/blog/tableauxRente.ts";
 import { corrigerFaitsOutils, poserLiensIntegrations } from "../lib/blog/liensIntegrations.ts";
@@ -160,6 +162,8 @@ let miseEnPage = 0;
 let structure = 0;
 let niveaux = 0;
 let bannieres = 0;
+let orphelins = 0;
+let doublons = 0;
 let tableaux = 0;
 let liens = 0;
 function texte(s) {
@@ -246,7 +250,18 @@ function reparerArticle(a) {
     // complète pour savoir quel niveau ouvre les sections.
     const sansBanniere = retirerBanniereEnTete(a.blocs, String(a.couverture ?? ""));
     if (sansBanniere.length !== a.blocs.length) bannieres += 1;
-    const avant = sansBanniere.map(reparerBloc);
+    // UN TITRE QUI FINIT L'ARTICLE N'ANNONCE RIEN. Il part AVANT le
+    // recalage des niveaux : le recalage lit la suite des titres pour
+    // savoir lequel ouvre une section, et un titre fantome en fin
+    // d'article fausserait sa lecture.
+    const sansOrphelin = retirerTitreOrphelin(sansBanniere);
+    if (sansOrphelin.length !== sansBanniere.length) orphelins += sansBanniere.length - sansOrphelin.length;
+    // LES DOUBLONS PARTENT AVANT LES CORRECTIONS. Corriger d'abord
+    // ferait passer deux fois chaque regle sur le meme texte, et le
+    // compteur annoncerait deux corrections pour un seul paragraphe.
+    const sansDoublon = retirerBlocsEnDouble(sansOrphelin);
+    if (sansDoublon.length !== sansOrphelin.length) doublons += sansOrphelin.length - sansDoublon.length;
+    const avant = sansDoublon.map(reparerBloc);
     // LES TABLEAUX PERDUS À L'IMPORT SE REPOSENT ICI, avant le recalage
     // des niveaux : ils s'accrochent à un titre, donc il faut que ce
     // titre soit encore celui qu'ils connaissent.
@@ -280,6 +295,8 @@ console.log(`Blocs dont la mise en page a ete nettoyee : ${miseEnPage}`);
 console.log(`Fragments de structure repares : ${structure}`);
 console.log(`Articles dont les niveaux de titre ont ete recales : ${niveaux}`);
 console.log(`Bannieres en double retirees : ${bannieres}`);
+console.log(`Titres qui n'annoncaient rien retires : ${orphelins}`);
+console.log(`Blocs en double retires : ${doublons}`);
 console.log(`Tableaux de rente reposes : ${tableaux}`);
 console.log(`Liens vers le hub integrations poses : ${liens}`);
 for (const r of REGLES) {

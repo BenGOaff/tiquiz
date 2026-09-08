@@ -533,6 +533,20 @@ export const FAITS: readonly {
     vers: "à partager : quiz.tipote.com/p/mon-popquiz",
     pourquoi: "un Popquiz vit sur le domaine de l'app, pas sur tipote.fr, qui part chez Systeme.io.",
   },
+  // ── UN TITRE COUPÉ EN PLEIN MOT ──
+  //
+  // Mesuré le 8 septembre : la page SOURCE elle-même s'arrête sur
+  // "un outil U". Ce n'est donc pas l'import qui a tronqué, c'est
+  // l'article, et aucun ré-import ne le réparera.
+  //
+  // "américain" n'est pas deviné : le paragraphe juste en dessous dit
+  // "Quand un outil français est nettement moins cher que ses
+  // concurrents américains, on se demande où est le piège."
+  {
+    de: "Pourquoi tu paies 10 fois moins avec Tiquiz qu’avec un outil U",
+    vers: "Pourquoi tu paies 10 fois moins avec Tiquiz qu’avec un outil américain",
+    pourquoi: "le titre etait coupe en plein mot, sur la page source comme chez nous.",
+  },
 ];
 
 /**

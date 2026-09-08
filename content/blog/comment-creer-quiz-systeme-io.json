@@ -90,6 +90,10 @@
     },
     {
       "type": "html",
+      "html": "<ul dir=\"ltr\"><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Manuel</strong> : tu écris tout de A à Z toi-même (pour les perfectionnistes qui veulent tout contrôler)</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>IA</strong> : tu briefes l’IA en quelques lignes et elle te génère tout</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Import</strong> : tu uploades un quiz que tu as déjà créé ailleurs</span></p></div></li></ul>"
+    },
+    {
+      "type": "html",
       "html": "<p>Et si tu n’as aucune idée de quiz à lancer, tu peux carrément demander à Tiquiz de te brainstormer des sujets avant de te lancer. Pratique quand tu bloques devant la page blanche.</p>"
     },
     {
@@ -100,6 +104,10 @@
     {
       "type": "html",
       "html": "<p>Pour le mode IA (le plus rapide, et celui que je te conseille pour ton premier quiz), tu remplis :</p>"
+    },
+    {
+      "type": "html",
+      "html": "<ul dir=\"ltr\"><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">L’objectif du quiz (sensibiliser, orienter, qualifier, vendre)</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Le format (court ou plus développé)</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Le public cible (déjà prérempli depuis tes paramètres, tu peux préciser si besoin)</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Les infos que tu veux récupérer (email obligatoire, prénom et genre en option)</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Ce que tu veux faire à la sortie du quiz (offrir un lead magnet, rediriger vers une offre)</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">La langue (Tiquiz est multilingue, tu peux faire tes quiz en anglais, espagnol, italien, arabe)</span></p></div></li></ul>"
     },
     {
       "type": "html",
@@ -123,6 +131,10 @@
     {
       "type": "html",
       "html": "<p>Le quiz est généré, mais tout est modifiable. </p><p>Tu cliques sur n’importe quel élément et tu changes ce qui ne te plaît pas. Le titre, une question qui ne sonne pas, un nom de bouton, l’alignement d’un texte, le nombre de questions, ce que tu veux.</p><p>L’étape importante, c’est la configuration des résultats. </p><p>Pour chaque profil de résultat, tu as :</p>"
+    },
+    {
+      "type": "html",
+      "html": "<ul dir=\"ltr\"><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Un titre</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Une description (qui peut reprendre le prénom de la personne si tu l’as demandé)</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Un insight et une projection dans le futur</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Un appel à l’action personnalisé (l’URL où tu veux envoyer ce profil après le quiz)</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">Et surtout, le tag Systeme io à attribuer</span></p></div></li></ul>"
     },
     {
       "type": "html",
@@ -184,6 +196,10 @@
     {
       "type": "html",
       "html": "<p>C’est le dernier morceau, et c’est toi qui le mets en place dans ton compte Systeme io. Mais c’est ce qui rend toute la stratégie automatique pour toujours.</p><p>Tu vas dans ton Systeme io, dans <strong>Automatisation → Workflow</strong>. </p><p>Tu crées un nouveau workflow que tu nommes par exemple “Quiz - Profil Débutant”. Tu choisis comme déclencheur <strong>Ajout d’un tag</strong>, et tu sélectionnes le tag correspondant à ce profil (quiz-debutant).</p><p>À partir de là, tu peux enchaîner toutes les actions que tu veux :</p>"
+    },
+    {
+      "type": "html",
+      "html": "<ul dir=\"ltr\"><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">envoyer un email, </span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">donner accès à une formation, </span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">retirer l’accès à une autre, </span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">inscrire à une campagne email, </span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">ajouter à une communauté, </span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">retirer un autre tag, </span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\">et plein d’autres choses encore.</span></p></div></li></ul>"
     },
     {
       "type": "html",
@@ -250,7 +266,7 @@
         },
         {
           "question": "Combien coûte un outil de quiz pour Systeme io ?",
-          "reponse": "<p>Plusieurs options en 2026. Tiquiz : 17 €/mois ou 170 €/an pour l’illimité, avec un plan gratuit pour tester. Typeform Plus combiné à Zapier (le bricolage classique) revient à environ 717 €/mois, soit près de 950 €/an. Sur 5 ans, Tiquiz revient à 450 € au total contre près de 5 000 € pour la stack Typeform + Zapier.</p>"
+          "reponse": "<p>Plusieurs options en 2026. Tiquiz : 17 €/mois ou 170 €/an pour l’illimité, avec un plan gratuit pour tester. Typeform Plus combiné à Zapier (le bricolage classique) revient à 108,99 $/mois. Sur 5 ans, Tiquiz revient à 850 € en annuel, contre plus de 6 500 $ pour la stack Typeform + Zapier.</p>"
         },
         {
           "question": "Tiquiz fonctionne-t-il avec le compte gratuit Systeme io ?",
@@ -286,7 +302,7 @@
     },
     {
       "type": "html",
-      "html": "<p>Récap rapide. Systeme io n’a pas de fonction quiz native en 2026. Tu as deux options :</p><p>Soit tu te bricoles quelque chose avec Typeform + Zapier autour de 717 €/mois (et tu acceptes de perdre la moitié de la valeur du concept).</p><p>Soit tu utilises <a href=\"https://tiquiz.fr/\"><strong>Tiquiz</strong></a>, le seul outil de quiz nativement connecté à Systeme io, à 17 €/mois ou 170 €/an pour l’illimité (avec un plan gratuit pour tester).</p>"
+      "html": "<p>Récap rapide. Systeme io n’a pas de fonction quiz native en 2026. Tu as deux options :</p><p>Soit tu te bricoles quelque chose avec Typeform + Zapier autour de 108,99 $/mois (et tu acceptes de perdre la moitié de la valeur du concept).</p><p>Soit tu utilises <a href=\"https://tiquiz.fr/\"><strong>Tiquiz</strong></a>, le seul outil de quiz nativement connecté à Systeme io, à 17 €/mois ou 170 €/an pour l’illimité (avec un plan gratuit pour tester).</p>"
     },
     {
       "type": "cta",

@@ -87,9 +87,42 @@ export function reparerEmojiColle(texte: string): string {
  * C'est la même précaution que `applyFrenchTypographyToHtml`, et pour
  * la même raison : insérer est plus dangereux que convertir.
  */
+/**
+ * RETIRE LES TIRETS LONGS, la signature que Béné bannit partout.
+ *
+ * Règle du 7 juin, absolue : aucun em-dash `—` ni en-dash `–` dans un
+ * contenu que quelqu'un lit. Elle vivait dans un test qui INTERDIT
+ * (`blog.test.mts`), et dans aucune règle qui CORRIGE : un import
+ * pouvait donc en rapporter un, et il fallait aller le retirer à la
+ * main. C'est arrivé le 8 septembre, sur une phrase rendue au
+ * `strategie-quiz-marketing-tiquiz`.
+ *
+ * ON N'AGIT QUE SUR UN TIRET ENTOURÉ D'ESPACES, et c'est le
+ * discriminant : là il joue le rôle d'une pause forte, et la virgule le
+ * remplace exactement. Un tiret COLLÉ (`2020–2024`, `Nord–Sud`) est une
+ * plage ou une composition, et le convertir écrirait autre chose.
+ *
+ * La virgule est le remplacement le plus sûr des quatre qu'elle
+ * autorise (`,` `:` `(...)` `.`) : elle marche dans une phrase
+ * affirmative comme dans une énumération, sans jamais couper la phrase
+ * en deux.
+ */
+export function retirerTiretsLongs(fragment: string): string {
+  // ET LES ENTITÉS COMPTENT AUTANT QUE LE CARACTÈRE.
+  //
+  // `&mdash;` s'affiche exactement comme `—`, et le test qui interdit
+  // le tiret long cherchait le CARACTÈRE : deux em-dash sont entrés
+  // dans le comparatif des outils le 8 septembre, à travers un garde
+  // qui ne pouvait pas les voir. Un test qui ne distingue pas ce qu'il
+  // est censé distinguer est pire qu'un test absent.
+  const separateur = "(?:\\s|&nbsp;)+";
+  const tiret = "(?:[—–]|&mdash;|&ndash;|&#8212;|&#8211;)";
+  return fragment.replace(new RegExp(`${separateur}${tiret}${separateur}`, "g"), ", ");
+}
+
 export function reponctuer(html: string): string {
   return String(html ?? "")
     .split(/(<[^>]*>)/)
-    .map((m, i) => (i % 2 === 1 ? m : reparerEmojiColle(reparerPointColle(reparerGuillemets(m)))))
+    .map((m, i) => (i % 2 === 1 ? m : retirerTiretsLongs(reparerEmojiColle(reparerPointColle(reparerGuillemets(m))))))
     .join("");
 }

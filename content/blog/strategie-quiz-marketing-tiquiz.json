@@ -39,6 +39,10 @@
     },
     {
       "type": "html",
+      "html": "<ul dir=\"ltr\"><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Il doit résoudre un vrai problème de ton audience.</strong> Pas un fantasme que tu projettes sur elle. Un vrai problème, qu'elle formule dans tes DMs, tes commentaires, ses emails. Si tu vends une formation en éducation canine, ton quiz parle d'éducation canine, pas d'astrologie canine.</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Il doit matcher ton offre.</strong> À la sortie du quiz, ton prospect doit tomber sur une offre cohérente avec ce qu'il vient de te donner comme infos. Quiz \"Quel type de maître es-tu ?\" → offre \"Programme d'éducation personnalisé selon ton profil\". Cohérence totale.</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Il doit qualifier, pas juste divertir.</strong> Chaque question pose un filtre. Chaque réponse range ton prospect dans un profil précis. À la fin, tu sais qui il est, ce qu'il veut, ce qu'il peut payer. C'est ce qui différencie un <strong>quiz marketing</strong> d'un quiz Buzzfeed.</span></p></div></li></ul>"
+    },
+    {
+      "type": "html",
       "html": "<p><strong>Les 4 thèmes de quiz qui marchent le mieux</strong></p><ul><li><p><strong>Quiz de positionnement</strong> (\"Quel type de X es-tu ?\") <br>- classique, efficace, segmente nettement.</p></li><li><p><strong>Quiz de diagnostic</strong> (\"Qu'est-ce qui bloque ton Y ?\") <br>- parfait pour pré-vendre un accompagnement.</p></li><li><p><strong>Quiz de maturité</strong> (\"Où en es-tu dans ton Z ?\") <br>- idéal pour proposer différents niveaux d'offre.</p></li><li><p><strong>Quiz d'étude de marché</strong> (\"Quelle offre devrais-je créer pour toi ?\") <br>- tu transformes ton audience en conseil stratégique gratuit.</p></li></ul>"
     },
     {
@@ -54,6 +58,10 @@
     {
       "type": "html",
       "html": "<p>Ton audience n'utilise pas le vocabulaire des experts de ta niche. Elle utilise ses propres mots, ses propres images, ses propres angoisses. Si tu parles \"funnel de conversion\" à une maman qui débute une activité en ligne, tu l'as perdue. Elle pensait \"tunnel\", comme celui du métro, et a fermé l'onglet.</p><p><strong>Pour trouver les mots exacts de ton audience</strong>, tu as 4 endroits à scanner :</p>"
+    },
+    {
+      "type": "html",
+      "html": "<ul dir=\"ltr\"><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Les commentaires</strong> sous tes posts et ceux de tes concurrents (pas les likes, les commentaires longs).</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Les DMs</strong> qui te demandent de l'aide (copie-colle les formulations qui reviennent).</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Les avis Amazon</strong> des livres les plus vendus sur ta niche (mine d'or).</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Les forums spécialisés</strong> (Reddit FR, groupes Facebook de ta niche, Discord pro).</span></p></div></li></ul>"
     },
     {
       "type": "html",
@@ -84,7 +92,7 @@
     },
     {
       "type": "html",
-      "html": "<p>Une fois que tu as ce vocabulaire, tu le réinjectes partout dans ton quiz : titre, questions, réponses, pages de résultat. Ton prospect se reconnaît immédiatement. Il se dit \"enfin quelqu'un qui parle comme moi\".</p><p>C'est aussi ça qui déclenche les <strong>partages organiques</strong> : on partage ce qui nous ressemble, pas ce qui nous impressionne.</p>"
+      "html": "<ul dir=\"ltr\"><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>À qui tu parles</strong> (le profil cible ressort en 2-3 mots)</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Ce que le lecteur va découvrir</strong> (la promesse du résultat)</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>L'accroche émotionnelle</strong> (curiosité, challenge, auto-évaluation)</span></p></div></li></ul>"
     },
     {
       "type": "html",
@@ -103,6 +111,10 @@
     {
       "type": "html",
       "html": "<p>Le taux de complétion d'un quiz se joue sur les questions. Trop longues, trop floues, trop intello : ton prospect abandonne au milieu. Trop courtes, trop bêtes : il sent qu'il perd son temps et il ne partage pas.</p><p><strong>La règle d'or :</strong> 5 à 8 questions, pas plus. Au-delà, tu perds plus de 30 % des répondants par question supplémentaire. Moins de 5, tu ne qualifies pas assez.</p><p><strong>Les 5 règles pour des questions de quiz viral :</strong></p>"
+    },
+    {
+      "type": "html",
+      "html": "<ul dir=\"ltr\"><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Une question = une info.</strong> Ne mets jamais deux questions en une (\"Quel est ton âge et ton budget ?\"). C'est la mort du taux de complétion.</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Des phrases courtes.</strong> 10-15 mots max par question. 5-8 mots par option de réponse.</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Du concret, pas du théorique.</strong> Plutôt \"Quand tu regardes ton agenda pour demain, qu'est-ce que tu ressens ?\" que \"Comment évalues-tu ton rapport au temps professionnel ?\".</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Du choix multiple (pas d'ouvert).</strong> Les questions ouvertes tuent la complétion. Garde-les pour les formulaires, pas pour les quiz viraux.</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Un peu d'humour, si ta marque le permet.</strong> Une réponse décalée (\"Honnêtement ? J'ai fermé l'onglet 3 fois en écrivant ça.\") casse le rythme et donne envie de partager.</span></p></div></li></ul>"
     },
     {
       "type": "html",
@@ -126,6 +138,10 @@
     {
       "type": "html",
       "html": "<p>Un <strong>quiz viral</strong> ne devient viral que si tu actives le bon mécanisme. Sans ça, ton quiz reste un formulaire intelligent que seuls tes abonnés actuels voient.</p><p>Le mécanisme qui marche le mieux en 2026 s'appelle le <strong>share bonus</strong> (le bonus de partage) : ton prospect ne voit pas son résultat complet tant qu'il n'a pas partagé le quiz sur ses réseaux. Une fois partagé, il débloque un bonus : une page de résultat enrichie, un code promo, un accès à une ressource.</p><p><strong>Ça paraît agressif. En réalité, le taux de partage monte à 40-60 %</strong> quand le bonus est bien pensé.</p><p><strong>3 bonus de partage qui fonctionnent :</strong></p>"
+    },
+    {
+      "type": "html",
+      "html": "<ul dir=\"ltr\"><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Un code promo</strong> sur une offre payante (pertinent si tu as une offre low-ticket)</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Un accès prioritaire</strong> à une ressource (un replay, une masterclass courte, un template)</span></p></div></li><li dir=\"ltr\" style=\"display: flex; align-items: stretch; \"><i class='fas fa-circle' style=\"line-height: inherit\"></i><div><p dir=\"ltr\"><span style=\"color: rgb(47, 56, 111)\"><strong>Une analyse personnalisée</strong> basée sur leurs réponses (effet \"je veux mon profil complet\")</span></p></div></li></ul>"
     },
     {
       "type": "html",
@@ -194,7 +210,7 @@
         },
         {
           "question": "Quelle est la différence entre Tiquiz, Typeform et Tally ?",
-          "reponse": "<p>Typeform et Tally sont d'excellents <strong>formulaires</strong>. Ils collectent des réponses et te les exportent en CSV. <a href=\"https://tiquiz.fr/\"><strong>Tiquiz</strong></a> est un <strong>système de qualification complet</strong> : génération de quiz par IA, segmentation automatique par profil, page de résultat personnalisée avec CTA dédié, connexion native <a href=\"https://systeme.io/fr?sa=sa0007878317200141bbe3de2b6644176621db2c6580\">Systeme.io</a> (tags, formations, communautés), viralité intégrée. Côté prix, Typeform Plus c'est 50 €/mois, Tally Pro c'est 29 $/mois, Tiquiz en bêta c'est 57 € une fois à vie.</p>"
+          "reponse": "<p>Typeform et Tally sont d'excellents <strong>formulaires</strong>. Ils collectent des réponses et te les exportent en CSV. <a href=\"https://tiquiz.fr/\"><strong>Tiquiz</strong></a> est un <strong>système de qualification complet</strong> : génération de quiz par IA, segmentation automatique par profil, page de résultat personnalisée avec CTA dédié, connexion native <a href=\"https://systeme.io/fr?sa=sa0007878317200141bbe3de2b6644176621db2c6580\">Systeme.io</a> (tags, formations, communautés), viralité intégrée. Côté prix, Typeform Plus c'est 79 $/mois, et Tiquiz 17 €/mois ou 170 €/an, avec un plan gratuit pour tester.</p>"
         }
       ]
     },

@@ -12295,12 +12295,19 @@ Cinq défauts d'IMPORT, tous côté français, tous invisibles à l'écran
 | `quiz-video-popquiz` | un H2 **coupé en plein mot** : "qu'avec un outil U" |
 | `strategie-quiz-marketing-tiquiz` | sa FAQ annonce encore **Typeform 50 €, Tally 29 $, et Tiquiz bêta 57 € à vie** |
 
-**On n'invente pas ce qui manque** : les trois leçons, les quatre
-tableaux et les cinq listes sont son contenu, pas le mien. Ils sont
-simplement absents de l'anglais, avec la raison écrite. Les prix
-périmés, eux, ont été RÉÉCRITS en anglais depuis les sources vérifiées
-(le €57 à vie est terminé, le prix de Tally n'est vérifiable nulle
-part dans le dépôt, donc il ne se cite pas).
+🚨 **TOUT CE TABLEAU EST RÉPARÉ DEPUIS LE 8 SEPTEMBRE AU SOIR**, et je
+le corrige en place plutôt que d'empiler (règle du 31 août). Béné : "ben
+il faut corriger, c'est toi qui a importé mes articles ! [...] on peut
+pas laisser de la merde !!" Elle avait raison : la section
+"LE CONTENU PERDU À L'IMPORT" plus bas dit la cause, la correction et ce
+qui reste. **2 555 mots récupérés**, dont 2 036 dans le comparatif.
+
+Ce qui reste vrai, et qui n'était pas un défaut d'import : **les trois
+leçons de Jocelyne**. Sa page source n'existe plus (cherchée le
+8 septembre : aucune adresse ne répond, ni sommaire, ni sitemap, ni
+étape de tunnel), donc elles ne sont récupérables nulle part, et les
+inventer sur une vraie cliente serait un faux. **Le titre qui les
+annonçait est retiré** : il promettait ce que l'article ne tient pas.
 
 **Et une affirmation reste invérifiée** dans la FAQ du comparatif :
 "support in French and English". Elle vient du français, elle n'est
@@ -12339,3 +12346,188 @@ laisse un `{contact}` à trou, et une raison inconnue retombe sur
 dupliquée, la substitution de `{contact}` retirée) : les deux rougissent.
 
 Fichier SUPPRIMÉ : `app/(site)/newsletter/page.tsx`.
+
+## LE CONTENU PERDU À L'IMPORT (Béné, 8 septembre 2026)
+
+"ben il faut corriger, c'est toi qui a importé mes articles ! Ou un
+autre agent mais en tous cas on peut pas laisser de la merde !!"
+
+Elle a raison, et le pire n'était pas les quatre articles amputés :
+**le script qui les avait importés n'existait plus dans le dépôt.**
+Personne ne pouvait retrouver la cause, ni rejouer l'import, ni même
+vérifier. Seul l'importateur ANGLAIS avait survécu, et il portait les
+deux mêmes bugs.
+
+### LES DEUX CAUSES, MESURÉES SUR SES PAGES SOURCES
+
+**1. `BulletList` N'AVAIT AUCUN CAS.** Ce type porte son `<ul>` dans
+`.content`, exactement comme un `Text`, et il n'a AUCUN enfant : il
+tombait donc dans le `default:` qui marche les `childIds`, et il ne
+produisait rien. Six listes perdues dans un seul article.
+
+**2. `RawHtml` ÉTAIT SAUTÉ SANS REGARDER CE QU'IL PORTE.** La raison
+écrite à côté disait "les RawHtml de ces pages ne portent QUE du
+JSON-LD". C'était vrai des QUATRE pages anglaises sur lesquelles la
+règle a été écrite, et faux des pages françaises, où ce sont des blocs
+de CONTENU : le comparatif des 8 outils, les 4 outils retenus, le coût
+réel, le traitement des données. C'est la faute du 1er août, une règle
+écrite pour un cas et appliquée telle quelle à un autre.
+
+### CE QUI EST RÉCUPÉRÉ : 2 555 MOTS
+
+| | blocs | mots |
+|---|---|---|
+| `comparatif-outils-quiz-systeme-io` | 39 -> 46 | **+2 036** |
+| `strategie-quiz-marketing-tiquiz` | 38 -> 42 | +313 |
+| `comment-creer-quiz-systeme-io` | 52 -> 56 | +186 |
+| `17-raisons-lancer-quiz-business` | 83 -> 84 | +20 |
+| `create-quiz-systeme-io` (anglais) | 41 -> 47 | 6 listes à puces |
+
+Le comparatif avait perdu **le tableau des 8 outils**, c'est à dire
+l'écran qu'on lit avant d'acheter.
+
+### ON NE RÉIMPORTE PAS : ON FUSIONNE, ET LA FUSION NE PEUT QU'AJOUTER
+
+C'est la décision qui tient tout le chantier, et elle a été prise sur
+une MESURE, après avoir essayé le ré-import franc et regardé ce qu'il
+donnait. Il coûtait trois choses, toutes invisibles :
+
+| | ce que le ré-import franc a fait, mesuré |
+|---|---|
+| les images | **62 images renvoyées sur le CDN de Systeme.io**. Le nom local ne se déduit pas du nom source : 22 des 62 ont été RENOMMÉES au rapatriement du 30 août |
+| les textes alternatifs | **62 `alt` perdus d'un coup**. `poserAlt` les pose à partir du chemin LOCAL : avec un chemin de CDN, la table ne reconnaît plus rien |
+| les corrections | la page source porte encore les prix d'avant le 6 août et les promesses corrigées le 31 |
+
+Donc : les blocs du disque sont **RECONDUITS TELS QUELS**, dans leur
+ordre, et seuls les blocs que la source a en plus sont insérés. Un bloc
+n'est jamais retiré ni réécrit, et le titre, la description, les mots
+clés, la date et la couverture ne sont pas touchés.
+
+### CINQ RÈGLES DE LA FUSION, ET AUCUNE N'EST DÉCORATIVE
+
+1. **L'APPARIEMENT EST TOLÉRANT.** Une comparaison exacte verrait un
+   bloc corrigé comme un bloc nouveau, et l'insérerait EN DOUBLE avec sa
+   version d'avant correction. La signature ignore donc les chiffres,
+   les URL et la ponctuation.
+2. **UN BLOC PROCHE D'UN BLOC DU DISQUE EST LE MÊME**, corrigé depuis :
+   on garde celui du disque. **Le seuil ne tranche rien à la limite** :
+   mesuré sur les 22 blocs non appariés, les vraies nouveautés sortent
+   entre 0,00 et 0,12, les blocs simplement corrigés entre 0,89 et 0,97.
+3. **LES IMAGES ET LES FAQ S'APPARIENT PAR LEUR RANG.** Leur `src` a
+   changé et leur texte a été corrigé : le rang est la seule chose qui
+   n'a pas bougé. Un écart de compte est REFUSÉ, jamais deviné.
+4. **UN DOUBLON N'ENTRE PAS, et la liste est amorcée avec ce qui est
+   DÉJÀ sur le disque.** Sans cette amorce, l'import et la réparation se
+   battent : `blog:reparer` retire le doublon, l'import suivant le
+   remet, et rien n'atteint jamais un état stable. Vérifié : la paire
+   converge, les deux ne réécrivent plus rien.
+5. **UN ORDRE AMBIGU EST REFUSÉ.** Si un trou porte à la fois un bloc du
+   disque sans jumeau ET une nouveauté, rien ne dit lequel vient avant.
+
+### CE QUI EST ÉCARTÉ, ET LA RAISON EST ÉCRITE À CÔTÉ
+
+- **`rente-mensuelle-affiliation-tiquiz` n'est PAS fusionné.** Mesuré :
+  23 de ses blocs ne s'apparient plus, parce que sa page source annonce
+  encore un versement "le 10 de chaque mois", 40 % écrit comme un
+  plafond, les rentes calculées sur l'ancien tarif à 9 €, et une section
+  entière sur Tipote, qui n'est pas en vente. Y insérer quoi que ce soit
+  ferait rentrer par la fenêtre ce qu'on a sorti par la porte. Son
+  jumeau anglais est exclu pour la même raison.
+- **`cas-client-jocelyne-tdah` n'a plus de source.** Aucune adresse ne
+  répond, il n'est ni dans le sommaire du blog, ni dans un sitemap, et
+  aucune étape de tunnel ne porte son nom.
+- **Un SVG en ligne, une vidéo, une image dans un bloc brut : écartés et
+  NOMMÉS dans le rapport.** `nettoyerBloc` retire les balises inconnues
+  et garde ce qu'il y a ENTRE : un SVG gardé déverserait toutes ses
+  étiquettes en vrac, un `<style>` ses règles CSS, et l'adresse d'un
+  `<img>` resterait sur notre disque en pointant sur le CDN d'un tiers.
+- **Un type inconnu est COMPTÉ**, jamais avalé. C'est exactement le
+  silence qui a coûté ce chantier.
+
+**Ce qui attend une décision de Béné :** son article `avis-tiquiz` porte
+une VIDÉO YouTube que notre gabarit ne sait pas afficher. On ne pose pas
+une intégration YouTube tout seuls : elle dépose des cookies sur une
+page qui porte une bannière de consentement.
+
+### LES QUATRE AUTRES DÉFAUTS, RÉPARÉS PAR DES RÈGLES GÉNÉRALES
+
+Aucun ne se corrige à la main dans le JSON : un import suivant les
+ramènerait.
+
+| Le défaut | La règle |
+|---|---|
+| un titre qui FINIT l'article sans rien après | `retirerTitreOrphelin` |
+| le même paragraphe deux fois (c'est dans SA source) | `retirerBlocsEnDouble`, seuil à 60 caractères, le PREMIER gagne |
+| un tiret cadratin dans sa prose | `retirerTiretsLongs`, dans `reponctuer` |
+| les prix périmés des FAQ | `liensIntegrations.ts`, aux MÊMES constantes que le corps |
+
+**LE TIRET CADRATIN EN ENTITÉ, ET C'EST LE TROU LE PLUS INSTRUCTIF.**
+La règle du 7 juin est absolue, et elle vivait dans un test qui
+INTERDIT et dans aucune règle qui CORRIGE. Pire : ce test cherchait le
+CARACTÈRE `—`, donc `&mdash;` passait au travers, et deux em-dash sont
+entrés dans le comparatif à la faveur de ce chantier. Un test qui ne
+distingue pas ce qu'il est censé distinguer est pire qu'un test absent.
+La correction et le test couvrent maintenant les deux formes, et **on
+n'agit que sur un tiret ENTOURÉ D'ESPACES** : collé, c'est une plage
+(`2020–2024`) ou une composition, et le convertir écrirait autre chose.
+
+**LES PRIX DES FAQ CONTREDISAIENT LE CORPS DU MÊME ARTICLE.** Le corps
+de `comment-creer-quiz-systeme-io` avait été corrigé le 1er septembre,
+sa FAQ non : le même article annonçait 79 $ dans son texte et 717 €
+dans sa FAQ, à quelques écrans d'écart. Et
+`strategie-quiz-marketing-tiquiz` promettait encore "Tiquiz en bêta
+c'est 57 € une fois à vie", terminé depuis. **Le prix de Tally est
+RETIRÉ, pas corrigé** : il n'est vérifiable nulle part dans le dépôt, et
+un tarif annoncé faux se vérifie en un clic.
+
+### LES DÉCISIONS ONT QUITTÉ LE SCRIPT
+
+`lib/blog/importBlocs.ts` porte l'extraction et la fusion ;
+`scripts/importer-blog-fr.mjs` et `scripts/importer-blog-en.mjs` ne font
+plus que les entrées/sorties, et ils appellent le MÊME module.
+
+Ce n'est pas du rangement : ces scripts vont chercher les pages sur le
+réseau, donc **aucun test ne peut les lancer**, et c'est LÀ que le bug
+s'était installé. Une logique enfermée dans un script n'est pas
+testable, donc elle n'est pas testée (règle du 1er août). L'anglais en
+avait en plus sa PROPRE COPIE, avec les deux bugs dedans.
+
+```bash
+npm run blog:importer-fr -- --verifie   # dit ce qu'il rendrait
+npm run blog:importer-fr                # fusionne
+npm run blog:reparer                    # repasse derriere, idempotent
+```
+
+### ET LE DISCRIMINANT DES "RÈGLES MUETTES" S'EST CASSÉ EN CHEMIN
+
+Côté anglais, `blog:reparer-en` a REFUSÉ de finir sur six règles
+parfaitement bonnes. Sa question est "cette règle a-t-elle trouvé sa
+cible ?", et son discriminant était un drapeau de CORPUS ("au moins une
+règle a mordu quelque part"). Un import qui rend du texte neuf dans UN
+article le fait basculer, et les règles des AUTRES articles, déjà
+corrigées, sont alors dénoncées comme fausses.
+
+**Un contrôle par corpus ne peut pas répondre à une question par
+règle.** La preuve est maintenant PAR RÈGLE : une règle qui n'a pas
+mordu est fausse seulement si son texte d'ARRIVÉE est introuvable lui
+aussi. Son `vers` présent prouve que la correction a déjà eu lieu.
+
+**Et la limite est DITE au lieu d'être maquillée :** une règle qui
+SUPPRIME une phrase n'a pas de texte d'arrivée, donc "la phrase a bien
+été supprimée" est indistinguable de "le motif ne correspond à rien".
+Ces règles sont exemptées du contrôle et **COMPTÉES à l'écran** : une
+exemption silencieuse deviendrait un trou où n'importe quelle règle
+fausse pourrait se ranger.
+
+**Et ma propre preuve était fausse au premier jet** : elle lisait
+`l.href` sur des règles qui portent `l.vers`. `includes(undefined)` rend
+toujours faux, donc le garde dénonçait six règles saines. Un garde écrit
+avec un nom de champ INVENTÉ ne mesure rien.
+
+Test : `tests/logic/import-blog-fr.test.mts` (19 cas), vérifié en
+rejouant ONZE versions fautives (`BulletList` sans cas, `RawHtml` sauté,
+ni SVG ni image retirés, doublon du disque non amorcé, ambiguïté non
+refusée, écart d'images non refusé, la fusion qui écrase au lieu
+d'ajouter, le titre orphelin gardé, les doublons gardés, le tiret retiré
+sans regarder les espaces, le garde aveugle aux entités) : les onze
+rougissent.
