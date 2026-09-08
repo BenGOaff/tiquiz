@@ -65,7 +65,11 @@ export type LanguePublique = (typeof LANGUES_PUBLIQUES)[number];
  * La langue sans préfixe. Tout ce qui est déjà indexé est écrit dedans,
  * et c'est ce qui rend la bascule sans coût de référencement.
  */
-export const LANGUE_SANS_PREFIXE: LanguePublique = "fr";
+// Le type LITTÉRAL, pas `LanguePublique` : `Exclude<LanguePublique,
+// typeof LANGUE_SANS_PREFIXE>` doit rendre les langues traduites, et
+// une annotation large le ferait rendre `never`. Le `satisfies` garde
+// la vérification qu'une annotation apportait.
+export const LANGUE_SANS_PREFIXE = "fr" as const satisfies LanguePublique;
 
 export function estLanguePublique(v: unknown): v is LanguePublique {
   return typeof v === "string" && (LANGUES_PUBLIQUES as readonly string[]).includes(v);
@@ -211,4 +215,27 @@ export const CHEMINS_HORS_REECRITURE = ["/blog"] as const;
 export function serviParUneRouteDeLangue(cheminNu: string): boolean {
   const nu = cheminNu.startsWith("/") ? cheminNu : `/${cheminNu}`;
   return CHEMINS_HORS_REECRITURE.some((base) => nu === base || nu.startsWith(`${base}/`));
+}
+
+/**
+ * La langue du TEXTE, résolue depuis une préférence quelconque.
+ *
+ * Le site public sert deux langues ; l'interface en connaît sept. Une
+ * créatrice dont le cookie dit "it" doit donc lire quelque chose, et
+ * c'est l'ANGLAIS, pas le français : `contenuLanding` (la landing et
+ * `/tarifs`) retombe déjà là dessus depuis le 4 septembre, et deux
+ * replis différents feraient lire l'anglais sur un écran et le français
+ * sur le suivant, au même visiteur.
+ *
+ * À NE PAS CONFONDRE AVEC `langueCanonique()` : celle là répond la
+ * langue de l'ADRESSE, donc ce que Google indexe. Cette fonction répond
+ * la langue AFFICHÉE, qui peut venir d'un cookie ou d'un `?lang=`. Les
+ * confondre ferait annoncer deux canoniques pour la même URL.
+ */
+export function languePubliqueDuTexte(locale: string | null | undefined): LanguePublique {
+  const brut = String(locale ?? "").trim().toLowerCase();
+  if (estLanguePublique(brut)) return brut;
+  const base = brut.split("-")[0];
+  if (estLanguePublique(base)) return base;
+  return "en";
 }

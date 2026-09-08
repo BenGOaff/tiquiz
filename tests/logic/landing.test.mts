@@ -50,7 +50,7 @@ import {
 } from "@/lib/checkout/avantages";
 import { OWNER_CATALOG, formatOwnerPrice } from "@/lib/checkout/catalog";
 import { OUTILS } from "@/lib/site/integrations";
-import { FONCTIONNALITES, fonctionnaliteParSlug } from "@/lib/site/fonctionnalites";
+import { fonctionnalites, fonctionnaliteParSlug } from "@/lib/site/fonctionnalites";
 import { BLOCS_ANIMES, BLOCS_EN_ATTENTE } from "@/lib/site/blocsAnimes";
 import { FREE_LIMITS } from "@/lib/planLimits";
 
@@ -667,7 +667,7 @@ describe("le coût de ne rien faire est dit, et les trois formats aussi", () => 
     // /fonctionnalites/sondages-et-popquiz". La landing courte ne peut
     // pas porter les huit fonctionnalités, mais un produit facturé qui
     // n'est montré NULLE PART reste le défaut qu'on ferme ici.
-    const page = fonctionnaliteParSlug("sondages-et-popquiz");
+    const page = fonctionnaliteParSlug("sondages-et-popquiz", "fr");
     assert.ok(page, "la page qui vend les sondages et les Popquiz n'existe pas");
     // ON LIT LA PAGE ENTIÈRE, son nom et son détail compris : c'est le
     // titre qui nomme les deux produits, et le corps qui dit ce qu'ils
@@ -865,7 +865,7 @@ describe("la règle qui héberge ses îles vit à UN endroit", () => {
   test("les deux feuilles du site public interpolent la même constante", () => {
     const feuilles = {
       "components/landing/styles.ts": racine("components/landing/styles.ts"),
-      "app/(site)/fonctionnalites/styles.ts": racine("app/(site)/fonctionnalites/styles.ts"),
+      "components/fonctionnalites/styles.ts": racine("components/fonctionnalites/styles.ts"),
     };
     for (const [nom, code] of Object.entries(feuilles)) {
       assert.ok(
@@ -896,7 +896,7 @@ describe("la règle qui héberge ses îles vit à UN endroit", () => {
     // servie dans le HTML, lisible, et morte.
     for (const f of [
       "components/landing/styles.ts",
-      "app/(site)/fonctionnalites/styles.ts",
+      "components/fonctionnalites/styles.ts",
       "components/landing/cssIles.ts",
     ]) {
       const gabarit = racine(f).replace(/\/\*[\s\S]*?\*\//g, " ");
@@ -1189,9 +1189,10 @@ describe("chaque animation levée porte son contexte", () => {
     // n'a pas encore de page doit être DÉCLARÉ en attente, avec sa
     // raison. Une exemption sans raison écrite est une exemption que le
     // prochain passage prend pour un oubli.
-    const servisParLesFonctionnalites: string[] = FONCTIONNALITES.map((f) => f.visuel).filter(
-      (v) => v !== null,
-    );
+    const servisParLesFonctionnalites: string[] = fonctionnalites("fr")
+      .map((f) => f.visuel)
+      .filter((v) => v !== null)
+      .map((v) => String(v));
     for (const bloc of Object.keys(BLOCS_ANIMES)) {
       if (bloc.endsWith("-mobile")) continue; // servi par la media query de son île
       const servi =

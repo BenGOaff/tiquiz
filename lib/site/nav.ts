@@ -33,7 +33,7 @@
 
 import { AFFILIATE_DASHBOARD_URL, ATELIER_SALES_URL } from "@/lib/affiliateUrls";
 import { ADRESSES_LEGALES_FR } from "@/lib/site/adressesLegales";
-import { FONCTIONNALITES } from "@/lib/site/fonctionnalites";
+import { SLUGS_FONCTIONNALITES } from "@/lib/site/fonctionnalites";
 import {
   CHEMINS_HORS_REECRITURE,
   cheminPourLangue,
@@ -278,7 +278,7 @@ export function attributsLien(href: string): {
 export const PAGES_PAR_HUB: readonly { hub: string; enfants: readonly string[] }[] = [
   {
     hub: "/fonctionnalites",
-    enfants: FONCTIONNALITES.map((f) => `/fonctionnalites/${f.slug}`),
+    enfants: SLUGS_FONCTIONNALITES.map((slug) => `/fonctionnalites/${slug}`),
   },
 ];
 

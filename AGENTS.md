@@ -10780,17 +10780,18 @@ Mesuré le 8 septembre, pas déduit :
 |---|---|
 | l'APPLICATION (l'éditeur, le viewer, les écrans) | **7** (`SUPPORTED_LOCALES`) |
 | la landing et `/tarifs` | **2** (`langue: "fr"` et `"en"` dans `lib/site/landing.ts`) |
-| les 8 pages de fonctionnalités | **1** (l'en-tête du module le dit) |
+| les 8 pages de fonctionnalités | 🚨 **2 depuis le 8 septembre** (le hub et les 8 pages, voir plus bas) |
 | `/generateur-de-quiz` | **1** |
-| les 10 articles du blog | **1** : ils ne portent aucune clé de langue |
+| le blog | **10 articles fr, 4 en** (servis depuis le 8 septembre) |
 
-Traduire les 8 pages de fonctionnalités, le générateur et le hub dans
-les 7 langues est un vrai chantier, chiffrable et faisable. **Traduire
-le BLOG est autre chose**, et c'est sa décision, pas la mienne : 11
-articles fois 7 langues font 77 pages à tenir à jour, et chaque
-correction de chiffre (le prix, le taux d'affiliation, un lien mort) se
-paierait alors sept fois. Le pipeline `blog:reparer` ne sait corriger
-qu'une langue.
+Traduire le générateur, le hub intégrations, `/a-propos` et
+`/affiliation` reste un vrai chantier, chiffrable et faisable.
+**Traduire le BLOG est autre chose**, et c'est sa décision, pas la
+mienne : 10 articles fois 7 langues font 70 pages à tenir à jour, et
+chaque correction de chiffre (le prix, le taux d'affiliation, un lien
+mort) se paierait alors sept fois. Le pipeline `blog:reparer` ne sait
+corriger qu'une langue à la fois, et il en existe déjà DEUX
+(`faitsProgramme.ts` et `faitsEn.ts`).
 
 ### MES DEUX FAUTES DE CE PASSAGE
 
@@ -10970,7 +10971,8 @@ dans ce sens là.
 | | langues servies |
 |---|---|
 | `/tarifs` | **fr + en** |
-| les 8 pages de fonctionnalités, `/generateur-de-quiz`, `/integrations`, `/a-propos`, `/affiliation` | fr |
+| **le hub et les 8 pages de fonctionnalités** | **fr + en** |
+| `/generateur-de-quiz`, `/integrations`, `/a-propos`, `/affiliation` | fr |
 | les 10 articles du blog | fr |
 | ses 4 articles anglais | **SERVIS** sur `/en/blog/<slug>` |
 
@@ -11274,6 +11276,60 @@ refuse les deux cas qui comptent : introuvable (la page a vraiment
 disparu), ou trouvée DEUX fois (deux groupes serviraient la même URL, ce
 que Next refuse au build, et le dire ici le dit plus tôt). Vérifié en
 rejouant les deux : ils rougissent.
+
+### Le hub et les 8 pages de fonctionnalités passent en anglais (8 septembre)
+
+Deuxième moitié du chantier : l'adresse existait, il fallait le TEXTE.
+`/fonctionnalites` et ses 8 pages sont servies en `fr` et en `en`, et
+elles ont déménagé dans `app/(site-langues)/` (elles lisent maintenant
+`langueCanonique()`, donc leur groupe est celui qui a le droit).
+
+**UNE STRUCTURE, UN TEXTE PAR LANGUE.** Le slug, le palier, le fichier
+`source`, les deux voisines et le visuel vivent UNE fois, dans
+`FONCTIONNALITES_FR` ; une langue n'apporte que du texte, rangé par
+slug. Dupliquer le tableau entier laisserait `liees` et `source`
+diverger sans que rien ne le dise. Et **`TRADUCTIONS` est un `Record`
+dont les clés sont les 8 slugs**, donc en oublier un ne compile pas :
+sans ça, un slug manquant servirait du FRANÇAIS sous une adresse
+anglaise, la page s'afficherait parfaitement, et Google indexerait du
+contenu dupliqué.
+
+**LE SLUG NE SE TRADUIT PAS**, et c'est une décision : le sitemap, les
+`hreflang` et le menu se calculent alors par simple préfixe. Un slug
+traduit exigerait une deuxième table d'appariement, article par
+article, comme le blog a dû la faire.
+
+**LES LIENS INTERNES DE CES PAGES PASSENT PAR `hrefPourLangue`, jamais
+par `cheminPourLangue`.** La différence n'est pas cosmétique : leur CTA
+mène à `/signup`, qui n'est pas dans `PAGES_PUBLIQUES` et n'a aucune
+version anglaise. Un préfixe posé à l'aveugle aurait fabriqué
+`/en/signup`, c'est à dire un 404 au bout du seul bouton de la page.
+
+**Et le repli de langue du TEXTE est l'ANGLAIS, pas le français**
+(`languePubliqueDuTexte`) : le site public sert deux langues, l'app en
+connaît sept, et `contenuLanding` retombait déjà sur l'anglais depuis
+le 4 septembre. Deux replis différents feraient lire l'anglais sur un
+écran et le français sur le suivant, au même visiteur.
+
+#### ET DEUX AUTRES TESTS ONT ROUGI SUR UN CODE JUSTE
+
+La leçon juste au dessus s'est repayée deux fois dans l'heure, sur la
+même cause :
+
+1. **`landing.test.mts` lisait la feuille de style à
+   `app/(site)/fonctionnalites/styles.ts`.** Une feuille rangée À CÔTÉ
+   de sa page se cite forcément par un chemin de groupe : elle vit
+   maintenant dans `components/fonctionnalites/styles.ts`, à un endroit
+   stable, comme celle de la landing.
+2. **`site-en-anglais.test.mts` collait le chemin d'URL entier** pour
+   savoir si une page vit dans tel groupe. `/fonctionnalites/generation-ia`
+   est servi par `fonctionnalites/[slug]/page.tsx` : un segment
+   DYNAMIQUE ne porte pas le nom qu'on cherche, donc `existsSync`
+   répondait "non" sur une page qui existe et qui répond.
+   `servieParLeGroupe` descend segment par segment et accepte un
+   `[param]` à chaque niveau. Vérifié en rejouant la version fautive
+   (une page de fonctionnalité recréée dans `(site)`) : il rougit et il
+   la nomme.
 
 ### Le flux anglais ne portait AUCUNE image (8 septembre)
 

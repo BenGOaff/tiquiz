@@ -1,6 +1,16 @@
-// app/(site)/fonctionnalites/styles.ts
+// components/fonctionnalites/styles.ts
 //
 // LE STYLE DES PAGES DE FONCTIONNALITÉS.
+//
+// -- POURQUOI ELLE NE VIT PLUS DANS LE DOSSIER DE LA PAGE (8 septembre) -
+//
+// Un groupe de routes n'ajoute aucun segment d'URL, donc une page peut
+// changer de groupe sans que son adresse bouge d'un caractere. Une
+// feuille rangee A COTE de la page obligeait alors le test a l'importer
+// par un chemin ecrit en dur (`@/app/(site)/fonctionnalites/styles`), et
+// ce chemin a rougi sur un deplacement parfaitement correct. Un chemin
+// sur disque n'est pas une adresse : la feuille vit donc a un endroit
+// stable, comme celle de la landing.
 //
 // Il reprend les jetons de marque du site (`.tq-site`, globals.css),
 // qui portent depuis le 4 septembre les couleurs RELEVÉES sur sa page

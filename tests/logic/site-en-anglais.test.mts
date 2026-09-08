@@ -488,6 +488,33 @@ test("aucun appelant de SiteShell n'omet sa langue", () => {
   }
 });
 
+/**
+ * Le chemin d'URL `chemin` est-il servi par une page de ce groupe de
+ * routes ?
+ *
+ * On DESCEND segment par segment au lieu de coller le chemin entier :
+ * un segment dynamique (`[slug]`) ne porte pas le nom qu'on cherche, et
+ * un `existsSync` sur le chemin complet repond alors "non" sur une page
+ * qui existe et qui repond.
+ */
+function servieParLeGroupe(groupe: string, chemin: string): boolean {
+  let dossier = path.join(RACINE, "app", groupe);
+  for (const segment of chemin.split("/").filter(Boolean)) {
+    if (fs.existsSync(path.join(dossier, segment))) {
+      dossier = path.join(dossier, segment);
+      continue;
+    }
+    const dynamique = fs.existsSync(dossier)
+      ? fs.readdirSync(dossier, { withFileTypes: true })
+          .filter((e) => e.isDirectory() && /^\[.+\]$/.test(e.name))
+          .map((e) => e.name)
+      : [];
+    if (dynamique.length !== 1) return false;
+    dossier = path.join(dossier, dynamique[0]);
+  }
+  return fs.existsSync(path.join(dossier, "page.tsx"));
+}
+
 test("le groupe (site) reste STATIQUE : aucune lecture d'en-tete dans son layout", () => {
   // MESURE DU 8 SEPTEMBRE : 8 des 9 pages de `app/(site)/` n'appellent
   // aucune API dynamique, donc elles sont prerendues au build. Un
@@ -506,12 +533,16 @@ test("le groupe (site) reste STATIQUE : aucune lecture d'en-tete dans son layout
   assert.match(langues, /langueCanonique\(\)/, "le groupe multilingue doit lire la langue de l'ADRESSE");
 
   // Et les pages multilingues vivent bien la bas, jamais dans `(site)`.
+  //
+  // ON RESOUT LE CHEMIN SEGMENT PAR SEGMENT, PARCE QU'UNE ROUTE PEUT
+  // ETRE DYNAMIQUE : `/fonctionnalites/generation-ia` est servi par
+  // `fonctionnalites/[slug]/page.tsx`, et un `path.join` du chemin
+  // complet ne le trouve jamais. Le test rougissait donc sur un
+  // rangement parfaitement correct.
   for (const p of PAGES_PUBLIQUES) {
     if (!languesDePage(p).includes("en")) continue;
-    const dansLangues = fs.existsSync(
-      path.join(RACINE, "app", "(site-langues)", p.chemin.replace(/^\//, ""), "page.tsx"),
-    );
-    const dansSite = fs.existsSync(path.join(RACINE, "app", "(site)", p.chemin.replace(/^\//, ""), "page.tsx"));
+    const dansLangues = servieParLeGroupe("(site-langues)", p.chemin);
+    const dansSite = servieParLeGroupe("(site)", p.chemin);
     assert.ok(!dansSite, `${p.chemin} existe en anglais : son chrome ne peut pas etre celui du groupe statique`);
     assert.ok(dansLangues, `${p.chemin} existe en anglais mais n'est pas dans app/(site-langues)/`);
   }

@@ -1,4 +1,4 @@
-// app/(site)/fonctionnalites/[slug]/page.tsx
+// app/(site-langues)/fonctionnalites/[slug]/page.tsx
 //
 // LA PAGE DÉTAILLÉE D'UNE FONCTIONNALITÉ.
 //
@@ -24,46 +24,75 @@
 // les quatre paliers payants, l'analyse IA seulement dans les deux
 // paliers PLUS. Les confondre ferait promettre sur cette page ce que le
 // bon de commande ne donne pas.
+//
+// -- LA LANGUE : DEUX QUESTIONS, JAMAIS UNE ---------------------------
+//
+// Le TEXTE vient de la langue résolue (l'en-tête de l'adresse, sinon le
+// cookie, sinon un `?lang=`) ; la CANONIQUE et les liens internes
+// viennent de la langue de l'ADRESSE. Les confondre annoncerait deux
+// canoniques pour la même URL, et c'est celle du robot qui compte.
 
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getLocale } from "next-intl/server";
 
 import { HOTE_VENTE } from "@/lib/publicHost";
+import { SUPPORTED_LOCALES } from "@/i18n/config";
+import { alternatesDeLangue, languePubliqueDuTexte } from "@/lib/site/langues";
+import { hrefPourLangue } from "@/lib/site/nav";
+import { langueCanonique } from "@/lib/site/langueRequete";
 
-import { CSS } from "../styles";
+import { CSS } from "@/components/fonctionnalites/styles";
 import {
-  FONCTIONNALITES,
-  LIBELLE_PALIER,
+  CHROME_FONCTIONNALITES,
+  SLUGS_FONCTIONNALITES,
   fonctionnaliteParSlug,
   fonctionnalitesLiees,
+  libellePalier,
 } from "@/lib/site/fonctionnalites";
 import { AnimVente } from "@/components/landing/anims";
 import DeclencheurAnims from "@/components/landing/DeclencheurAnims";
 
+type PageProps = {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ lang?: string }>;
+};
+
 export function generateStaticParams() {
-  return FONCTIONNALITES.map((f) => ({ slug: f.slug }));
+  return SLUGS_FONCTIONNALITES.map((slug) => ({ slug }));
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
+async function resoudreLangue(searchParams?: Promise<{ lang?: string }>) {
+  const brut = (await searchParams)?.lang;
+  if (brut && (SUPPORTED_LOCALES as readonly string[]).includes(brut)) {
+    return languePubliqueDuTexte(brut);
+  }
+  return languePubliqueDuTexte(await getLocale());
+}
+
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const f = fonctionnaliteParSlug(slug);
+  const langue = await resoudreLangue(searchParams);
+  const f = fonctionnaliteParSlug(slug, langue);
   if (!f) return {};
+  const canonique = await langueCanonique();
+  const alternates = alternatesDeLangue(
+    HOTE_VENTE,
+    `/fonctionnalites/${f.slug}`,
+    canonique,
+  );
   return {
     title: f.nom,
     description: f.resume,
-    alternates: { canonical: `${HOTE_VENTE}/fonctionnalites/${f.slug}` },
+    ...(alternates ? { alternates } : {}),
     openGraph: {
       type: "article",
       title: f.nom,
       description: f.resume,
-      url: `${HOTE_VENTE}/fonctionnalites/${f.slug}`,
+      url: alternates?.canonical ?? `${HOTE_VENTE}/fonctionnalites/${f.slug}`,
       siteName: "Tiquiz",
-      locale: "fr_FR",
+      locale: canonique === "fr" ? "fr_FR" : "en_US",
     },
   };
 }
@@ -101,24 +130,32 @@ function Coche() {
   );
 }
 
-export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
+export default async function Page({ params, searchParams }: PageProps) {
   const { slug } = await params;
-  const f = fonctionnaliteParSlug(slug);
+  const langue = await resoudreLangue(searchParams);
+  const f = fonctionnaliteParSlug(slug, langue);
   if (!f) notFound();
 
-  const voisines = fonctionnalitesLiees(f);
+  const t = CHROME_FONCTIONNALITES[langue];
+  const voisines = fonctionnalitesLiees(f, langue);
+
+  // Les liens internes suivent l'ADRESSE, jamais le texte : voir le hub.
+  const espace = await langueCanonique();
+  const lien = (chemin: string) => hrefPourLangue(chemin, espace);
 
   return (
-    <main className="tqf">
+    <main className="tqf" lang={langue}>
       <style>{CSS}</style>
       <section className="tqf-tete">
         <div className="tqf-lire">
           <p className="tqf-fil">
-            <Link href="/fonctionnalites">Les fonctionnalités</Link>
+            <Link href={lien("/fonctionnalites")}>{t.fil}</Link>
             <span> · </span>
             <span>{f.nom}</span>
           </p>
-          <span className={`tqf-palier tqf-palier-${f.palier}`}>{LIBELLE_PALIER[f.palier]}</span>
+          <span className={`tqf-palier tqf-palier-${f.palier}`}>
+            {libellePalier(f.palier, langue)}
+          </span>
           <h1>{f.nom}</h1>
           <p className="tqf-chapo">{f.resume}</p>
         </div>
@@ -129,10 +166,10 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
           {/* POURQUOI D'ABORD. Le problème avant la mécanique : sinon on
               explique comment marche quelque chose dont le lecteur ne
               sait pas encore pourquoi il en aurait besoin. */}
-          <h2>Pourquoi</h2>
+          <h2>{t.pourquoi}</h2>
           <p>{f.pourquoi}</p>
 
-          <h2>Ce que ça te rapporte</h2>
+          <h2>{t.benefices}</h2>
           <ul className="tqf-benefices">
             {f.benefices.map((b) => (
               <li key={b}>
@@ -142,7 +179,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
             ))}
           </ul>
 
-          <h2>Comment ça marche</h2>
+          <h2>{t.comment}</h2>
           <p className="tqf-court">{f.commentCourt}</p>
           {f.detail.map((d) => (
             <div key={d.titre} className="tqf-bloc">
@@ -164,6 +201,10 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
               sans lire une seule classe `tql-`. La poser ici aurait
               chargé 30 Ko de CSS pour rien.
 
+              LE VISUEL EST DANS LA STRUCTURE, PAS DANS LA TRADUCTION :
+              ses îles sont son dessin, elles n'ont pas de version
+              anglaise, et en réécrire une serait redessiner son travail.
+
               QUATRE PAGES SUR HUIT N'EN ONT PAS, et rien ne s'affiche :
               un visuel inventé pour combler serait pire que son
               absence. */}
@@ -175,22 +216,22 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
           ) : null}
 
           <p className="tqf-ou">
-            <strong>Où ça se passe :</strong> {f.ou}
+            <strong>{t.ouCaSePasse}</strong> {f.ou}
           </p>
 
           {/* LA CAPTURE MANQUANTE, DITE EN CLAIR. Voir l'en-tête. */}
           <div className="tqf-capture">
-            <p className="tqf-capture-t">Capture d'écran à ajouter</p>
+            <p className="tqf-capture-t">{t.captureAAjouter}</p>
             <p>{f.capture}</p>
           </div>
 
           <div className="tqf-fin">
-            <Link href="/signup" className="tqf-cta">
-              Créer mon compte gratuit
+            <Link href={lien("/signup")} className="tqf-cta">
+              {t.cta}
             </Link>
-            <p className="tqf-rassure">Gratuit, sans carte bancaire.</p>
+            <p className="tqf-rassure">{t.rassure}</p>
             <p className="tqf-tarifs">
-              <Link href="/tarifs">Le détail de chaque palier</Link>
+              <Link href={lien("/tarifs")}>{t.detailDesPaliers}</Link>
             </p>
           </div>
 
@@ -202,11 +243,11 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
               et qu'aucune page ne se cite elle même. */}
           {voisines.length > 0 ? (
             <div className="tqf-voisines">
-              <p className="tqf-voisines-t">À lire aussi</p>
+              <p className="tqf-voisines-t">{t.aLireAussi}</p>
               <ul>
                 {voisines.map((v) => (
                   <li key={v.slug}>
-                    <Link href={`/fonctionnalites/${v.slug}`}>{v.nom}</Link>
+                    <Link href={lien(`/fonctionnalites/${v.slug}`)}>{v.nom}</Link>
                     <span>{v.resume}</span>
                   </li>
                 ))}

@@ -16,8 +16,12 @@
 // Un test EXIGE que toute page déclarée ici soit atteignable depuis le
 // pied de page : une page que Google connaît et qu'aucun humain ne peut
 // trouver depuis le site est une page qui ne sert à rien.
-import { FONCTIONNALITES } from "@/lib/site/fonctionnalites";
-import { LANGUE_SANS_PREFIXE, type LanguePublique } from "@/lib/site/langues";
+import { fonctionnalites } from "@/lib/site/fonctionnalites";
+import {
+  LANGUE_SANS_PREFIXE,
+  LANGUES_PUBLIQUES,
+  type LanguePublique,
+} from "@/lib/site/langues";
 
 export interface PagePublique {
   chemin: string;
@@ -154,6 +158,7 @@ const PAGES_ECRITES: readonly PagePublique[] = [
     resume:
       "La connexion Systeme.io, les quiz par profil ou scorés, les sondages, les Popquiz, les tags automatiques, les générateurs : chaque fonctionnalité expliquée en détail.",
     priorite: 0.7,
+    langues: LANGUES_PUBLIQUES,
   },
   {
     chemin: "/newsletter",
@@ -185,10 +190,15 @@ const PAGES_ECRITES: readonly PagePublique[] = [
  */
 export const PAGES_PUBLIQUES: readonly PagePublique[] = [
   ...PAGES_ECRITES,
-  ...FONCTIONNALITES.map((f) => ({
+  // LE TITRE ET LE RÉSUMÉ SONT PRIS EN FRANÇAIS, et c'est délibéré :
+  // ce sont eux qui partent dans `llms.txt`, qui n'a qu'une version.
+  // Les langues, elles, sont DÉCLARÉES, donc le sitemap et les
+  // `hreflang` savent que `/en/fonctionnalites/<slug>` existe.
+  ...fonctionnalites(LANGUE_SANS_PREFIXE).map((f) => ({
     chemin: `/fonctionnalites/${f.slug}`,
     titre: f.nom,
     resume: f.resume,
     priorite: 0.6,
+    langues: LANGUES_PUBLIQUES,
   })),
 ];

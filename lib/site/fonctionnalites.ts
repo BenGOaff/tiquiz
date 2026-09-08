@@ -27,13 +27,33 @@
 // décoration : le test vérifie que le fichier EXISTE, donc une
 // fonctionnalité retirée du produit fait rougir la page qui la vend.
 //
-// -- ET CE MODULE EST EN FRANÇAIS SEULEMENT --------------------------
+// -- UNE STRUCTURE, UN TEXTE PAR LANGUE (8 septembre 2026) -----------
 //
-// Même choix assumé que `lib/checkout/avantages.ts`, pour la même
-// raison : traduire ici fabriquerait une deuxième liste. La traduction
-// se fera une fois, quand le texte français sera validé, et les deux
-// écrans qui le lisent en profiteront le même jour. Sur `?lang=en`, la
-// coquille du site est traduite et ces blocs restent en français.
+// Cette page a dit "ce module est en français seulement" jusqu'au
+// 8 septembre. C'est corrigé en place, parce que Béné a demandé la
+// suite : "je bosse sur la landing, continue la traduction de tout."
+//
+// CE QUI EST STRUCTUREL NE SE DUPLIQUE PAS. Le slug, le palier, le
+// fichier source, les deux voisines et le visuel vivent UNE fois, dans
+// `FONCTIONNALITES_FR`. Une langue n'apporte que du TEXTE, rangé par
+// slug. Dupliquer le tableau entier par langue laisserait `liees` et
+// `source` diverger sans que rien ne le dise, et c'est le défaut que ce
+// dépôt paie en boucle depuis juin.
+//
+// ET LE COMPILATEUR REFUSE UNE LANGUE INCOMPLÈTE : `TRADUCTIONS` est un
+// `Record` dont les clés sont les 8 slugs, donc en oublier un ne
+// compile pas. Sans ça, un slug manquant servirait du FRANÇAIS sous une
+// adresse anglaise, la page s'afficherait parfaitement, et Google
+// indexerait du contenu dupliqué (règle du 8 septembre).
+//
+// LE SLUG EST LE MÊME DANS LES DEUX LANGUES, et c'est une décision.
+// `/fonctionnalites/generation-ia` et `/en/fonctionnalites/generation-ia`
+// désignent la même page : le sitemap, les `hreflang` et le menu se
+// calculent alors par simple préfixe (`cheminPourLangue`). Un slug
+// traduit ranquerait un peu mieux sur une requête anglaise et exigerait
+// une deuxième table d'appariement, article par article, comme le blog
+// a dû le faire : c'est exactement ce qui casse `hrefPourLangue` quand
+// on l'oublie.
 
 /** Le palier minimum, tel que `lib/planLimits.ts` le décide vraiment. */
 export type Palier = "gratuit" | "payant" | "plus";
@@ -42,6 +62,7 @@ export type Palier = "gratuit" | "payant" | "plus";
 // `anims.tsx` : celui la lit le disque et porte du JSX, donc le runner
 // de tests natif ne sait pas le charger.
 import type { BlocAnime } from "@/lib/site/blocsAnimes";
+import { LANGUE_SANS_PREFIXE, type LanguePublique } from "@/lib/site/langues";
 
 export interface Fonctionnalite {
   slug: string;
@@ -102,7 +123,7 @@ export interface Fonctionnalite {
   visuel: BlocAnime | null;
 }
 
-export const FONCTIONNALITES: readonly Fonctionnalite[] = [
+const FONCTIONNALITES_FR = [
   {
     slug: "generation-ia",
     nom: "La génération par l'IA",
@@ -542,7 +563,7 @@ export const FONCTIONNALITES: readonly Fonctionnalite[] = [
     liees: ["connexion-systeme-io", "branding-et-langues"],
     visuel: null,
   },
-] as const;
+] as const satisfies readonly Fonctionnalite[];
 
 /**
  * LES ADRESSES D'AVANT, ET POURQUOI ELLES REDIRIGENT.
@@ -571,9 +592,466 @@ export const ANCIENS_SLUGS: Readonly<Record<string, string>> = {
   "ou-vit-ton-quiz": "ou-placer-son-quiz",
 };
 
+/**
+ * LE TEXTE D'UNE FONCTIONNALITÉ, C'EST À DIRE TOUT CE QUI SE LIT.
+ *
+ * `Pick` sur `Fonctionnalite`, jamais une liste de champs recopiée :
+ * ajouter un champ visible à la fiche fait alors rougir la compilation
+ * de chaque langue, au lieu de laisser un champ français traîner sous
+ * une adresse anglaise.
+ */
+export type TexteFonctionnalite = Pick<
+  Fonctionnalite,
+  "nom" | "resume" | "pourquoi" | "benefices" | "commentCourt" | "detail" | "ou" | "capture"
+>;
+
+/** Les huit slugs, DÉRIVÉS de la liste. Une liste écrite à côté divergerait. */
+export type SlugFonctionnalite = (typeof FONCTIONNALITES_FR)[number]["slug"];
+
+/**
+ * L'ANGLAIS : le champ sémantique, pas le mot à mot.
+ *
+ * Béné, 8 septembre 2026 : "il faut à chaque fois utiliser le champ
+ * sémantique, les expressions, tournures de phrases, ponctuation etc.
+ * propre à chaque langue, c'est pas uniquement du mot à mot."
+ *
+ * Donc la TYPOGRAPHIE est anglaise, comme pour le blog anglais du même
+ * jour : `12.5%` collé, le point décimal, aucune espace devant `?` ou
+ * `:`. Et aucun tiret cadratin, la règle du 7 juin ne dépend pas de la
+ * langue.
+ */
+const TEXTES_EN: Readonly<Record<SlugFonctionnalite, TexteFonctionnalite>> = {
+  "generation-ia": {
+    nom: "AI generation",
+    resume:
+      "You describe your topic, the AI writes the questions, the options and the result profiles.",
+    pourquoi:
+      "The blank page is what stops most people. Writing ten questions, four options for each one and four result profiles that hold together is a full day of work, and it's the day nobody ever finds.",
+    benefices: [
+      "You start from a complete first draft in seconds: what's left is proofreading, not writing.",
+      "The profiles hold together from the start: every question gives every profile a chance, so no result is impossible to reach.",
+      "You can also skip it entirely: importing an existing quiz and writing one by hand sit right there, in the same place.",
+    ],
+    commentCourt:
+      "You pick a goal, a length, your audience and the mechanic, and the quiz comes back written.",
+    detail: [
+      {
+        titre: "What you give",
+        corps: [
+          "The goal of the quiz, the length (short or long), the audience you're after, and the mechanic: by profile, or with a score.",
+          "The tone and the language come from your settings: you don't retype them for every quiz.",
+          "A hundred languages and variants are recognised, with their regional notes.",
+        ],
+      },
+      {
+        titre: "What you get back",
+        corps: [
+          "The questions, their options, and the result profiles with their text.",
+          "Everything is editable, right away, in the editor. Nothing is locked.",
+        ],
+      },
+      {
+        titre: "And if you'd rather not use AI",
+        corps: [
+          "You write your quiz by hand, or you import an existing one from a file. All three roads lead to the same editor.",
+        ],
+      },
+      {
+        titre: "What the AI writes AFTER the quiz",
+        corps: [
+          "Three generators pick up where the quiz stops: the bonus you hand over at the end, the email sequence that follows, and the posts that announce the quiz.",
+          "They start from your quiz: its topic, its profiles, its tone, your language and its public address. You describe nothing twice.",
+          "They're reserved for the PLUS plans.",
+        ],
+      },
+      {
+        titre: "Where people drop off",
+        corps: [
+          "How many people SAW each question, and how many ANSWERED it. Both, because they call for opposite fixes: seen without an answer, the question itself is blocking; answered then gone, that's fatigue, and rewording won't help.",
+          "The drop is carried by the question that SUFFERS it, never by the one after. Someone who leaves between 6 and 7 stopped ON 6: they never read 7.",
+          "Nothing is flagged below 20 people. On eight visitors, one person is worth 12.5%, and an alert based on that makes you rewrite a quiz that's doing fine.",
+        ],
+      },
+      {
+        titre: "The split by result",
+        corps: [
+          "How many people for each profile, including the ones nobody has landed on yet. A profile at zero is information, not a line to hide.",
+        ],
+      },
+      {
+        titre: "Two things we say every single time",
+        corps: [
+          "Losing people is NORMAL and healthy: they're your unqualified visitors first, and no quiz aims for 100% completion.",
+          "One change at a time, then 20 to 30 fresh answers before you judge it.",
+        ],
+      },
+      {
+        titre: "And on the PLUS plan",
+        corps: [
+          "The AI reads your stats and tells you what it makes of them, in plain language, with what to do next.",
+        ],
+      },
+    ],
+    ou: "Create a quiz, Generate with AI tab.",
+    capture:
+      "The Create a quiz screen, Generate with AI tab, with the goal and the target audience filled in.",
+  },
+  "connexion-systeme-io": {
+    nom: "The Systeme.io integration",
+    resume:
+      "Your leads land straight in your Systeme.io account, with no Zapier, Make or Pabbly in between.",
+    pourquoi:
+      "No other quiz tool talks to Systeme.io. To get a lead in there you need a middleman: one more subscription, one more thing to set up, and one more place where it breaks without anyone noticing.",
+    benefices: [
+      "One subscription less: you don't need Zapier for this to work, so you're not paying two tools to move one email address.",
+      "One breaking point less: the contact leaves Tiquiz and lands in Systeme.io, with nothing in between that can go down.",
+      "It works with the FREE Systeme.io account: you don't need a paid plan on their side to use it.",
+    ],
+    commentCourt:
+      "You paste your Systeme.io API key once, and every email you capture lands there within the second.",
+    detail: [
+      {
+        titre: "What you do, once",
+        corps: [
+          "In Systeme.io, open your Settings then Public API keys, and copy your key.",
+          "In Tiquiz, paste it into Settings, Connections. That's it, and you never touch it again.",
+        ],
+      },
+      {
+        titre: "What happens next, on its own",
+        corps: [
+          "Your visitor finishes your quiz and leaves their email on the capture screen.",
+          "Tiquiz looks for that contact in Systeme.io. If it isn't there, it creates it.",
+          "The tag for the result they got is applied to that contact. And if that tag doesn't exist in your account yet, Tiquiz creates it too.",
+        ],
+      },
+      {
+        titre: "What the other tools don't do",
+        corps: [
+          "In Zapier, only the tags you've ALREADY created by hand show up in the list. One forgotten profile means a lead arriving with nothing to recognise them by, and you find out weeks later, reading your list.",
+          "Interact says it in their own documentation: you have to create a tag in Systeme.io for every quiz result, or it won't appear as an option in Zapier.",
+        ],
+      },
+      {
+        titre: "If you don't use Systeme.io",
+        corps: [
+          "The quiz still works, completely. It captures emails, it shows results, and you export your leads to CSV in one click, into whichever autoresponder you use.",
+          "The Systeme.io connection adds the automation behind it: it isn't a condition for using Tiquiz.",
+        ],
+      },
+      {
+        titre: "One key per account, or one key per quiz",
+        corps: [
+          "One key is enough for the vast majority: you paste it once, all your quizzes use it.",
+          "Working for clients? You can save several keys and choose, quiz by quiz, which Systeme.io account the leads should land in. Your client's quiz fills THEIR list, not yours.",
+          "That choice lives in the Create tab of the editor, under Quiz management.",
+        ],
+      },
+      {
+        titre: "Applying a tag doesn't trigger anything on its own",
+        corps: [
+          "This is the most expensive trap, and it isn't on our side: in Systeme.io, a tag only fires a sequence if an automation rule is listening for it.",
+          "Without that rule, you publish your quiz, you collect forty addresses, and nothing happens. So the Automate tab of the editor lists the exact tags your quiz will apply, and the steps to create the rule once and for all.",
+          "Access to a course or a community is the exception: Tiquiz opens it itself, and one more rule would open it twice.",
+        ],
+      },
+    ],
+    ou: "Settings, Connections.",
+    capture: "The Settings > Connections screen with a Systeme.io key connected (key masked).",
+  },
+  "resultats-par-profil": {
+    nom: "Results by profile",
+    resume:
+      "One quiz, and everyone leaves with the text, the button and the offer that concern them.",
+    pourquoi:
+      "A diagnosis that says the same thing to everyone isn't a diagnosis. Worse, it sends everyone to the same offer, when the quiz has just found out that these people don't want the same thing.",
+    benefices: [
+      "Each profile gets its own button: the beginner and the one who's already running don't land on the same page, so you stop selling at the wrong moment.",
+      "The tag travels with the contact: your email sequence knows who it's talking to from the first message, with no sorting on your side.",
+      "You write the profiles once, they keep working for as long as the quiz does.",
+    ],
+    commentCourt:
+      "Every answer votes for a profile, the most voted profile wins, and it carries its text, its button and its tag.",
+    detail: [
+      {
+        titre: "How the profile is decided",
+        corps: [
+          "Every answer option carries a profile. At the end, the most voted profile is the one that shows.",
+          "The profile name shows right under each answer in the editor: you see what you're wiring, you're not counting numbers.",
+          "In score mode the mechanic changes: the points bracket decides. The two never mix.",
+        ],
+      },
+      {
+        titre: "What a profile carries",
+        corps: [
+          "A title and a body, an image, a button with its own address, and a Systeme.io tag.",
+          "You can also lay the result page out in four beats: what they recognise about themselves, the cause, the path, then the bridge to your offer.",
+        ],
+      },
+      {
+        titre: "What Tiquiz records",
+        corps: [
+          "The email address, the first name when you ask for it, the result they got, and the answer given to every question.",
+          "Personal data is encrypted in the database, with one key per creator. Direct access to the database shows nothing but ciphertext.",
+        ],
+      },
+      {
+        titre: "The tag travels with the contact",
+        corps: [
+          "You name one tag per result profile in the editor. The visitor who lands on that profile gets that tag in Systeme.io.",
+          "On a scored quiz the tag is CALCULATED from your bracket labels: a score in the 'on track' bracket gives the tag score-on_track.",
+          "On a survey you can apply one tag per ANSWER: that's what lets you segment on what people told you, not just on the fact that they replied.",
+        ],
+      },
+      {
+        titre: "And if you export",
+        corps: [
+          "One button, one CSV file, and it's all in there: the addresses, the profiles and the answers. Nothing of yours is held hostage.",
+        ],
+      },
+    ],
+    ou: "Quiz editor, Results column, then My leads.",
+    capture: "A result profile open in the editor, with its button and its tag.",
+  },
+  "quiz-profil-ou-score": {
+    nom: "Profile quiz, or scored quiz",
+    resume:
+      "Your quiz tells your visitor WHO they are, or WHERE they stand. You choose, and the AI writes either one.",
+    pourquoi:
+      "A personality test and a level assessment aren't built the same way. A tool that only offers one of them forces half of all topics into the wrong mould.",
+    benefices: [
+      "You ask the question that actually matches your offer: you don't bend your topic to fit a format.",
+      "Every result has its own text, its own button and its own tag: your visitor leaves towards the offer that concerns them, not towards your homepage.",
+      "The AI works out the score brackets on its own: you do no arithmetic to know what 68 out of 100 should show.",
+    ],
+    commentCourt:
+      "You pick the mechanic when you create the quiz, and everything follows: questions, results and tags.",
+    detail: [
+      {
+        titre: "The profile quiz: who are you?",
+        corps: [
+          "Every answer votes for a profile. The most voted profile wins, and its screen is the one that shows.",
+          "It's the format behind every 'What kind of ... are you?', and it's the one that segments an audience best.",
+        ],
+      },
+      {
+        titre: "The scored quiz: where do you stand?",
+        corps: [
+          "Every answer is worth points. The total falls into a bracket, and that bracket's message is what shows.",
+          "You can add AXES: sleep 50 out of 100, food 20 out of 100. Each axis gets its own score and its own bar.",
+          "One button spreads the brackets across the range of points that can actually be reached: you never set the bounds by hand.",
+        ],
+      },
+      {
+        titre: "What's true either way",
+        corps: [
+          "A tag goes into Systeme.io according to the result.",
+          "The result follows the four beats taught in the Atelier du Quiz: the mirror, the cause, the path, the bridge.",
+          "Your visitor never lands on an empty page, even if a score falls outside a bracket you hadn't planned for.",
+        ],
+      },
+    ],
+    ou: "You choose when you create the project, and you can change it in the editor.",
+    capture: "The two choice cards at creation, and a scored result screen with its axes.",
+  },
+  "partage-et-viralite": {
+    nom: "Sharing and the bonus",
+    resume:
+      "Your visitor shares their result to unlock a bonus, and your quiz travels to people who look like them.",
+    pourquoi:
+      "Every other lever you have CONVERTS traffic you already had. This one BRINGS traffic back, and it doesn't cost a cent in ads.",
+    benefices: [
+      "One lead brings you another: it's the only place in your system where that happens, and it keeps running on the days you publish nothing.",
+      "People who arrive through a share look like the person who shared: you're not paying for traffic that has nothing to do with you.",
+      "You pick the networks, and you can switch the whole thing off: on an intimate topic nobody shares, and the tool never forces your hand.",
+    ],
+    commentCourt:
+      "You promise a bonus, the visitor shares, the bonus unlocks, and a tag goes into Systeme.io.",
+    detail: [
+      {
+        titre: "What the visitor sees",
+        corps: [
+          "Their result, then the offer to share it and unlock your bonus. The shared link carries THEIR profile: the preview shows the result they got, not the quiz landing page.",
+          "If they say no, they keep their result anyway. Sharing is never a condition for seeing your answer.",
+        ],
+      },
+      {
+        titre: "The networks",
+        corps: [
+          "X, Facebook, LinkedIn, WhatsApp, Threads, Instagram, Pinterest, Reddit and email. You tick the ones you want; tick none, and your visitor gets them all.",
+        ],
+      },
+      {
+        titre: "One honest caveat",
+        corps: [
+          "On an intimate or stigmatising topic (health, mental health, money, weight, family), sharing means exposing yourself. A low share rate there is neither a flaw in your quiz nor a bonus that's too weak: it's the topic.",
+        ],
+      },
+    ],
+    ou: "The Share tab of the editor.",
+    capture: "The share screen as the visitor sees it, with the bonus to unlock.",
+  },
+  "sondages-et-popquiz": {
+    nom: "Surveys and Popquiz",
+    resume: "You ask your audience a question and you collect their answers in their own words.",
+    pourquoi:
+      "You can spend six months building an offer nobody was waiting for. The only way not to is to ask first, and to listen to the words people actually use.",
+    benefices: [
+      "You know what to sell before you build it: no more weeks spent on an offer nobody wants.",
+      "You get your audience's exact words: those are the ones that go into your sales page, and a page written in their words converts better than one written in yours.",
+      "Every answer can apply its own tag: you segment on what people told you, not just on the fact that they replied.",
+    ],
+    commentCourt:
+      "Same engine as the quizzes, but with no result to show: here it's the answers that matter.",
+    detail: [
+      {
+        titre: "The question types",
+        corps: [
+          "Single or multiple choice, yes or no, free text, rating scale, stars, and ranking by order of importance.",
+          "Free text is the one that pays off most: that's where people write in their own words.",
+        ],
+      },
+      {
+        titre: "What you see next",
+        corps: [
+          "The split by option, with percentages.",
+          "The list of written answers, with a button to copy them in one go.",
+          "The average and the spread of ratings, for scales.",
+        ],
+      },
+      {
+        titre: "And on the PLUS plan",
+        corps: [
+          "The AI reads every answer and tells you what comes out of it: the themes that keep coming back, the words people use, what they agree on and what divides them.",
+        ],
+      },
+      {
+        titre: "Where the video comes from",
+        corps: [
+          "YouTube, Vimeo, or your own file uploaded to Tiquiz. All three work the same way.",
+        ],
+      },
+      {
+        titre: "Where the questions sit",
+        corps: [
+          "You choose the moment for each question, to the second. The video pauses, the question shows on top of it, and playback resumes once your viewer has answered.",
+        ],
+      },
+      {
+        titre: "What it earns you",
+        corps: [
+          "The email, the matching tag, and the answers given during the video.",
+          "And the exact point where each person stopped, which no video platform tells you about your own content.",
+        ],
+      },
+    ],
+    ou: "My projects, Create button, then Survey.",
+    capture: "A survey with its free-text answers and the per-question summary.",
+  },
+  "branding-et-langues": {
+    nom: "Your branding and your languages",
+    resume: "Your logo, your colours, your domain, and a quiz written in your audience's language.",
+    pourquoi:
+      "A visitor who realises they've left your site for some external tool hesitates before handing over their address. Trust is what makes people leave an email, and trust comes from still being at your place.",
+    benefices: [
+      "Your prospect feels they're at your place the whole way through: they never wonder who they're giving their address to.",
+      "Your domain name replaces ours: what you share carries your brand, not ours.",
+      "The AI writes in your audience's language, regional variants included: a Brazilian Portuguese quiz doesn't come out in European Portuguese.",
+    ],
+    commentCourt: "You set your logo, your colours and your font once, and every quiz follows.",
+    detail: [
+      {
+        titre: "What you set",
+        corps: [
+          "The logo, its size and its alignment, independently of the title.",
+          "The colours, the font, the layout of the landing screen and the layout of the answers.",
+          "The image on every question and every answer, kept at ITS own aspect ratio: nothing is cropped by force.",
+        ],
+      },
+      {
+        titre: "Your domain name",
+        corps: ["quiz.yoursite.com instead of our address. The visitor never sees Tiquiz."],
+      },
+      {
+        titre: "The languages",
+        corps: [
+          "The Tiquiz interface exists in 7 languages.",
+          "Generation itself covers 100 languages and variants from the catalogue, with their regional notes.",
+        ],
+      },
+    ],
+    ou: "The editor, settings column.",
+    capture: "The same quiz with two different brandings, side by side.",
+  },
+  "ou-placer-son-quiz": {
+    nom: "A link, or six lines of code",
+    resume: "Your quiz lives on your domain, in a Systeme.io page, in WordPress, or on its own.",
+    pourquoi:
+      "A tool that only exists on its own site forces you to send your audience somewhere else. That's one more click, so it's a share of people who don't follow.",
+    benefices: [
+      "You put your quiz where your audience already is: you lose nobody in one more hop.",
+      "No plugin to install, no line to write: you copy, you paste, it's live.",
+      "No site? Your quiz IS the page, with its own address.",
+    ],
+    commentCourt: "Either you share a link, or you paste six lines of code into your page.",
+    detail: [
+      {
+        titre: "The link",
+        corps: [
+          "You paste it into an email, a story, a bio, a QR code. With your own domain name if you have one.",
+        ],
+      },
+      {
+        titre: "The code",
+        corps: [
+          "Six lines to paste into your page. The quiz shows up inside it, in your place, at whatever size you choose.",
+          "It works in a Systeme.io funnel, in WordPress, in a blog post, in a pop-up, in a footer.",
+        ],
+      },
+    ],
+    ou: "The Share tab of the editor.",
+    capture: "The link field with its Copy button, and the code block.",
+  },
+};
+
+/**
+ * Les langues AUTRES que celle sans préfixe.
+ *
+ * Le français est la source : il vit dans `FONCTIONNALITES_FR`, avec la
+ * structure, exactement comme il vit à la racine des adresses. Une
+ * langue ajoutée ici sans ses 8 textes ne compile pas.
+ */
+const TRADUCTIONS: Readonly<
+  Record<
+    Exclude<LanguePublique, typeof LANGUE_SANS_PREFIXE>,
+    Readonly<Record<SlugFonctionnalite, TexteFonctionnalite>>
+  >
+> = { en: TEXTES_EN };
+
+/** Les huit fonctionnalités, dans la langue demandée. */
+export function fonctionnalites(langue: LanguePublique): readonly Fonctionnalite[] {
+  if (langue === LANGUE_SANS_PREFIXE) return FONCTIONNALITES_FR;
+  const textes = TRADUCTIONS[langue];
+  return FONCTIONNALITES_FR.map((f) => ({ ...f, ...textes[f.slug] }));
+}
+
+/**
+ * LES SLUGS, ET RIEN D'AUTRE.
+ *
+ * Le sitemap et `generateStaticParams` n'ont besoin que de ça, et ils
+ * n'ont pas de langue à passer : les adresses sont les mêmes dans les
+ * deux, au préfixe près.
+ */
+export const SLUGS_FONCTIONNALITES: readonly SlugFonctionnalite[] = FONCTIONNALITES_FR.map(
+  (f) => f.slug,
+);
+
 /** Retrouve une fonctionnalité par son slug, ou rend `null`. */
-export function fonctionnaliteParSlug(slug: string): Fonctionnalite | null {
-  return FONCTIONNALITES.find((f) => f.slug === slug) ?? null;
+export function fonctionnaliteParSlug(
+  slug: string,
+  langue: LanguePublique,
+): Fonctionnalite | null {
+  return fonctionnalites(langue).find((f) => f.slug === slug) ?? null;
 }
 
 /**
@@ -584,10 +1062,98 @@ export function fonctionnaliteParSlug(slug: string): Fonctionnalite | null {
  * paliers PLUS. Les confondre ferait promettre sur la page ce que le
  * bon de commande ne donne pas.
  */
-export const LIBELLE_PALIER: Readonly<Record<Palier, string>> = {
-  gratuit: "Dans tous les paliers, gratuit compris",
-  payant: "Dans les paliers payants",
-  plus: "Réservé aux paliers PLUS",
+const LIBELLES_PALIER: Readonly<Record<LanguePublique, Readonly<Record<Palier, string>>>> = {
+  fr: {
+    gratuit: "Dans tous les paliers, gratuit compris",
+    payant: "Dans les paliers payants",
+    plus: "Réservé aux paliers PLUS",
+  },
+  en: {
+    gratuit: "In every plan, free included",
+    payant: "In the paid plans",
+    plus: "PLUS plans only",
+  },
+};
+
+export function libellePalier(palier: Palier, langue: LanguePublique): string {
+  return LIBELLES_PALIER[langue][palier];
+}
+
+/**
+ * LE CHROME DE CES DEUX ÉCRANS.
+ *
+ * Il vit ici et pas dans les composants pour la raison qui vaut pour
+ * tout le reste du module : deux écrans lisent les mêmes mots, et une
+ * deuxième version des mêmes phrases finit par ne plus dire la même
+ * chose. Le hub et la page détaillée partagent le libellé du palier, le
+ * bouton et la phrase de rassurance.
+ */
+export const CHROME_FONCTIONNALITES: Readonly<
+  Record<
+    LanguePublique,
+    {
+      metaTitre: string;
+      metaDescription: string;
+      titreHub: string;
+      chapoHub: (n: number) => string;
+      lireLeDetail: string;
+      versTarifs: string;
+      rassureHub: string;
+      fil: string;
+      pourquoi: string;
+      benefices: string;
+      comment: string;
+      ouCaSePasse: string;
+      captureAAjouter: string;
+      cta: string;
+      rassure: string;
+      detailDesPaliers: string;
+      aLireAussi: string;
+    }
+  >
+> = {
+  fr: {
+    metaTitre: "Tout ce que Tiquiz sait faire",
+    metaDescription:
+      "La connexion Systeme.io, les quiz par profil ou scorés, les sondages, les Popquiz, les tags automatiques, les générateurs : chaque fonctionnalité, expliquée en détail.",
+    titreHub: "Tout ce que Tiquiz sait faire",
+    chapoHub: (n) =>
+      `${n} fonctionnalités, expliquées une par une : à quoi elles servent, ce qu'elles te rapportent, et comment elles marchent vraiment. Clique sur celle qui t'intéresse.`,
+    lireLeDetail: "Le détail",
+    versTarifs: "Voir les tarifs",
+    rassureHub: "Le premier palier ne coûte rien, et il n'expire pas.",
+    fil: "Les fonctionnalités",
+    pourquoi: "Pourquoi",
+    benefices: "Ce que ça te rapporte",
+    comment: "Comment ça marche",
+    ouCaSePasse: "Où ça se passe :",
+    captureAAjouter: "Capture d'écran à ajouter",
+    cta: "Créer mon compte gratuit",
+    rassure: "Gratuit, sans carte bancaire.",
+    detailDesPaliers: "Le détail de chaque palier",
+    aLireAussi: "À lire aussi",
+  },
+  en: {
+    metaTitre: "Everything Tiquiz can do",
+    metaDescription:
+      "The Systeme.io connection, profile and scored quizzes, surveys, Popquiz, automatic tags, the generators: every feature, explained in full.",
+    titreHub: "Everything Tiquiz can do",
+    chapoHub: (n) =>
+      `${n} features, explained one by one: what they're for, what they earn you, and how they actually work. Click the one you're after.`,
+    lireLeDetail: "The detail",
+    versTarifs: "See the pricing",
+    rassureHub: "The first plan costs nothing, and it doesn't expire.",
+    fil: "Features",
+    pourquoi: "Why",
+    benefices: "What it earns you",
+    comment: "How it works",
+    ouCaSePasse: "Where it happens:",
+    captureAAjouter: "Screenshot to add",
+    cta: "Create my free account",
+    rassure: "Free, no card needed.",
+    detailDesPaliers: "What each plan includes",
+    aLireAussi: "Read next",
+  },
 };
 
 /**
@@ -598,8 +1164,11 @@ export const LIBELLE_PALIER: Readonly<Record<Palier, string>> = {
  * lui, exige que les deux existent : c'est là que ça se voit, pas à
  * l'écran d'une lectrice.
  */
-export function fonctionnalitesLiees(f: Fonctionnalite): Fonctionnalite[] {
+export function fonctionnalitesLiees(
+  f: Fonctionnalite,
+  langue: LanguePublique,
+): Fonctionnalite[] {
   return f.liees
-    .map((slug) => fonctionnaliteParSlug(slug))
+    .map((slug) => fonctionnaliteParSlug(slug, langue))
     .filter((x): x is Fonctionnalite => x !== null && x.slug !== f.slug);
 }
