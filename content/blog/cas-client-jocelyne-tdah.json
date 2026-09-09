@@ -263,6 +263,94 @@
     {
       "type": "html",
       "html": "<p><strong>- Jocelyne Bacquet</strong></p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Et ensuite ? Ce que Jocelyne fait de ces 285 leads",
+      "id": "et-ensuite-ce-que-jocelyne-fait-de-ces-285-leads"
+    },
+    {
+      "type": "html",
+      "html": "<p>Les leads ne sont qu'une étape. Voici ce que Jocelyne en fait concrètement.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<ul><li><strong>Direction prévente du livre.</strong> Chaque lead capturé reçoit un email avec son profil TDAH personnalisé, puis un CTA qui invite à découvrir le livre sur Amazon. Le quiz fonctionne comme la porte d'entrée naturelle vers l'achat.</li><li><strong>Les retours arrivent déjà.</strong> Des bêta-lectrices ont reçu le livre en avant-première et envoient à Jocelyne des emails qui la touchent profondément. Ces premiers témoignages alimentent la suite de la communication et confirment que le livre fait vraiment son boulot auprès de son audience.</li></ul>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "3 leçons à retenir et appliquer",
+      "id": "3-lecons-a-retenir-et-appliquer"
+    },
+    {
+      "type": "html",
+      "html": "<ol><li><strong>Démarrer une niche sans audience préexistante est possible.</strong> Avec 63,50 € de budget pub et un quiz qualifiant, Jocelyne a constitué une base de 285 leads en 9 jours, en partant de comptes sociaux créés pour le lancement.</li><li><strong>La complémentarité expertise + marketing change l'équation.</strong> Jocelyne apporte 40 années d'expérience clinique sur les troubles du neurodéveloppement. Gwenn apporte la compétence pub Meta. Le résultat est le produit de leurs deux savoir-faire combinés.</li><li><strong>L'authenticité a un effet mesurable dans une niche où le contenu IA prolifère.</strong> Comme Jocelyne le dit elle-même au sujet du marché du TDAH : \"C'est un sujet en vue aujourd'hui, mais de nombreux livres n'apportent rien ou sont écrits sous IA.\"</li></ol>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Découvrir Jocelyne et son travail",
+      "id": "decouvrir-jocelyne-et-son-travail"
+    },
+    {
+      "type": "html",
+      "html": "<p>Jocelyne accepte d'être contactée et de partager son parcours. Voici les liens qu'elle a souhaité mettre en avant.</p><ul><li>✍️ <strong>Le blog</strong> : <a href=\"https://jocelyne-bacquet-auteur.fr\">jocelyne-bacquet-auteur.fr</a></li><li>📷 <strong>Instagram</strong> : <a href=\"https://www.instagram.com/j_bacquet.1/\">@j_bacquet.1</a></li></ul>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "À vous de jouer",
+      "id": "a-vous-de-jouer"
+    },
+    {
+      "type": "html",
+      "html": "<h3>🚀 Tester Tiquiz</h3><p>Créez votre propre quiz qualifiant pour Systeme.io en moins d'une heure, sans Zapier. Plan gratuit pour démarrer.</p>"
+    },
+    {
+      "type": "cta",
+      "texte": "Démarrer mon quiz →",
+      "url": "https://tiquiz.fr/signup"
+    },
+    {
+      "type": "html",
+      "html": "<h3>🤝 Travailler avec Gwenn</h3><p>Confiez votre campagne Meta à une freelance qui sait associer pub et tunnel, et qui peut aussi créer vos quiz pour vous.</p><p><a href=\"mailto:contact@webyneo.com\">contact@webyneo.com</a></p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Vos questions, les vraies réponses",
+      "id": "vos-questions-les-vraies-reponses"
+    },
+    {
+      "type": "faq",
+      "questions": [
+        {
+          "question": "Est-ce que ça marche dans tous les secteurs et toutes les niches ?",
+          "reponse": "<p>La méthode du quiz est éprouvée dans des dizaines de secteurs : e-commerce (Warby Parker, Glossier), beauté (Sephora), médias (BuzzFeed), services B2C (coaching, thérapie, bien-être), info-produit (formations, ebooks), services B2B (consulting, freelance). Si votre activité a un sujet où votre prospect cherche à mieux se comprendre ou à choisir entre plusieurs options, le quiz convient. Le cas de Jocelyne est en développement personnel, mais le mécanisme (qualifier puis recommander) fonctionne dans n'importe quelle niche.</p>"
+        },
+        {
+          "question": "Combien de temps faut-il pour créer son premier quiz ?",
+          "reponse": "<p>Si vous partez d'un des 15 templates métier inclus dans Tiquiz (coach, nutrition, parentalité, finance, business, photo, immo…), comptez 30 minutes la première fois. Si vous démarrez d'une idée totalement personnelle, comptez 1 h à 1 h 30, c'est le temps estimé par Gwenn pour le quiz de Jocelyne, hors phase de bêta. L'IA génère le brouillon, vous personnalisez.</p>"
+        },
+        {
+          "question": "Faut-il obligatoirement faire de la pub Meta pour avoir des résultats ?",
+          "reponse": "<p>Non. La pub Meta est ce qui a permis à Jocelyne d'atteindre 285 leads en 9 jours en partant de zéro audience. Si vous avez déjà une audience (newsletter, communauté, abonnés réseaux), vous pouvez démarrer en organique : partagez le quiz dans vos contenus, vos posts, vos emails. Les volumes seront plus modestes, mais sans budget pub. Vous pourrez ajouter la pub Meta plus tard pour accélérer si vous voulez.</p>"
+        },
+        {
+          "question": "Est-ce que je peux tout faire moi-même, sans freelance, et avoir des résultats ?",
+          "reponse": "<p>Oui, tout à fait. Tiquiz est conçu pour que vous puissiez créer votre quiz, le brancher à Systeme.io et lancer une campagne pub Meta vous-même. Le pixel Meta s'installe en quelques minutes, le ciblage se fait via l'interface Meta classique, et la mécanique reste la même. Vos résultats seront probablement plus modestes au démarrage que ceux de Jocelyne (qui bénéficie de l'expérience de Gwenn en optimisation continue), mais vous pouvez tout à fait démarrer sans personne, et faire appel à un freelance plus tard si vous voulez scaler.</p>"
+        },
+        {
+          "question": "Combien coûte une prestation avec Gwenn ?",
+          "reponse": "<p>Les tarifs de Gwenn dépendent de votre projet : création du quiz, mise en place et pilotage de la campagne pub Meta, accompagnement complet… Le plus simple est de la contacter directement à <a href=\"mailto:contact@webyneo.com\">contact@webyneo.com</a> en lui expliquant votre situation, elle vous fera un devis adapté.</p>"
+        },
+        {
+          "question": "Le plan gratuit Tiquiz, qu'est-ce qu'il permet exactement ?",
+          "reponse": "<p>Le plan Free vous permet de créer 1 quiz actif, 1 sondage et 1 popquiz vidéo, avec toutes les fonctionnalités de génération IA et le branchement natif à Systeme.io. Vous voyez les 10 premières réponses (leads) collectées chaque mois ; au-delà, les leads suivants restent capturés mais visibles uniquement après upgrade. Suffisant pour tester votre premier lead magnet, valider que ça fonctionne dans votre niche, et décider ensuite si vous voulez passer au plan Mensuel à 17 €/mois.</p>"
+        }
+      ]
     }
   ]
 }

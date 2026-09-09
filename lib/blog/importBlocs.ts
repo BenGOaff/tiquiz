@@ -21,6 +21,7 @@
 // Le script fait les entrées/sorties, ce module décide.
 
 import type { Bloc } from "./articles";
+import { idYouTube } from "./video";
 
 /** Une entité de l'éditeur Systeme.io, telle qu'elle arrive. */
 export interface Entite {
@@ -92,7 +93,14 @@ export function sansCodeNiStyle(html: unknown): string {
 export interface Restes {
   /** Les types d'entité qu'aucun cas ne traite. */
   perdus: Map<string, number>;
-  /** Les vidéos : notre gabarit n'a pas de bloc vidéo. */
+  /**
+   * Les vidéos qu'on n'a PAS su poser.
+   *
+   * Depuis le 8 septembre, une vidéo YouTube devient un bloc `video`.
+   * Ne restent ici que les adresses dont `idYouTube` ne tire aucun
+   * identifiant : un autre hébergeur, une adresse tronquée. Elles se
+   * signalent au lieu de disparaître.
+   */
   videos: string[];
   /** Les schémas SVG en ligne : notre gabarit n'en rend aucun. */
   schemas: string[];
@@ -195,9 +203,26 @@ export function blocsDe(
       case "Countdown":
         return;
       case "Video": {
-        // Notre gabarit n'a pas de bloc vidéo, et `nettoyerBloc` retire
-        // les `iframe` : la poser en `html` donnerait un bloc VIDE.
-        restes.videos.push(`${slug} : ${(e as { url?: string }).url ?? "(sans url)"}`);
+        // LE GABARIT A UN BLOC VIDÉO DEPUIS LE 8 SEPTEMBRE (Béné : "oui
+        // je veux la vidéo Youtube"). Elle ne peut PAS être un bloc
+        // `html` : `nettoyerBloc` retire les `iframe`, donc le bloc
+        // sortirait vide et personne ne le verrait.
+        //
+        // L'identifiant est VALIDÉ, jamais recopié : il finit dans un
+        // `src`. Une adresse qu'on ne sait pas lire est SIGNALÉE, et on
+        // ne fabrique aucun cadre à partir de ce qu'on n'a pas compris.
+        //
+        // Le TITRE reste vide ici, et c'est voulu : il appartient à
+        // YouTube, donc il se lit chez YouTube, et ce module est PUR.
+        // C'est le script d'import qui le remplit (il fait déjà du
+        // réseau), et qui REFUSE de finir s'il n'y arrive pas.
+        const brute = (e as { url?: string }).url;
+        const id = idYouTube(brute);
+        if (!id) {
+          restes.videos.push(`${slug} : ${brute ?? "(sans url)"}`);
+          return;
+        }
+        out.push({ type: "video", id, titre: "" });
         return;
       }
       case "Section":
@@ -235,6 +260,11 @@ const nuTexte = (b: Bloc | undefined): string =>
 export function signature(b: Bloc, rangs: { img: number; faq: number }): string {
   if (b.type === "image") return `img#${rangs.img}`;
   if (b.type === "faq") return `faq#${rangs.faq}`;
+  // UNE VIDÉO S'APPARIE PAR SON IDENTIFIANT, pas par son rang : c'est
+  // lui qui EST son identité, et il ne bouge pas d'un import à l'autre.
+  // Sans ce cas, `nuTexte` lirait un `html` qui n'existe pas et deux
+  // vidéos différentes porteraient la MÊME signature.
+  if (b.type === "video") return `video#${b.id}`;
   const n = nuTexte(b)
     .toLowerCase()
     .normalize("NFD")

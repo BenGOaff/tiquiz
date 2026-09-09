@@ -80,6 +80,15 @@ export interface MotsDuBlog {
   aLireEnsuite: string;
   /** Le lien pose sous chaque article DANS LE FLUX RSS. */
   lireLArticle: string;
+  /**
+   * LA VIDEO D'UN ARTICLE.
+   *
+   * `note` dit ce qu'un clic declenche, et elle n'est pas decorative :
+   * un article ne porte aucune banniere de consentement, donc c'est la
+   * SEULE phrase qui previent avant que quoi que ce soit ne parte chez
+   * Google. La retirer rendrait le cadre muet.
+   */
+  video: { lire: string; note: string };
   nomDuBlog: string;
   /**
    * LE SOMMAIRE DU BLOG, MOT POUR MOT.
@@ -147,6 +156,10 @@ const MOTS: Record<LanguePublique, MotsDuBlog> = {
     partagerCetArticle: "Partager cet article",
     aLireEnsuite: "À lire ensuite",
     lireLArticle: "Lire l'article",
+    video: {
+      lire: "Lire la vidéo",
+      note: "Rien ne part chez YouTube tant que tu n'as pas cliqué.",
+    },
     nomDuBlog: "Le blog Tiquiz",
     sommaire: {
       metaTitre: "Le blog Tiquiz : quiz, leads et Systeme.io",
@@ -179,6 +192,10 @@ const MOTS: Record<LanguePublique, MotsDuBlog> = {
     partagerCetArticle: "Share this article",
     aLireEnsuite: "Read next",
     lireLArticle: "Read the article",
+    video: {
+      lire: "Play the video",
+      note: "Nothing is sent to YouTube until you click.",
+    },
     nomDuBlog: "The Tiquiz blog",
     sommaire: {
       metaTitre: "The Tiquiz blog: quizzes, leads and Systeme.io",

@@ -8,12 +8,20 @@
 //
 // -- LA CAUSE, ET POURQUOI ELLE NE SE VOIT PAS ------------------------
 //
-// L'import du 29 août remplace les chevrons français `«` et `»` par des
-// guillemets droits, parce que Béné n'en veut nulle part. Le
-// remplacement a emporté l'espace qui les entourait. Le TEXTE reste
-// juste, donc une relecture ne voit rien : seule la ponctuation cloche,
-// et c'est exactement le genre de détail dont elle dit qu'il est
-// "chiant et long à corriger" (3 août).
+// Les chevrons français `«` et `»` ont été remplacés par des guillemets
+// droits, parce que Béné n'en veut nulle part. Le remplacement a emporté
+// l'espace qui les entourait. Le TEXTE reste juste, donc une relecture
+// ne voit rien : seule la ponctuation cloche, et c'est exactement le
+// genre de détail dont elle dit qu'il est "chiant et long à corriger"
+// (3 août).
+//
+// 🚨 CET EN-TÊTE DISAIT "L'IMPORT remplace les chevrons". C'ÉTAIT FAUX,
+// et je le corrige en place (8 septembre 2026). MESURÉ : aucune ligne de
+// code, ni dans l'import ni ici, ne convertissait un chevron. La règle
+// ne vivait que dans un test qui l'INTERDIT, donc un contenu écrit à la
+// main la faisait rougir sans que rien ne sache la corriger. C'est
+// exactement le défaut du tiret cadratin en entité, trouvé le même jour.
+// `remplacerChevrons` existe désormais, et `reponctuer` l'applique.
 //
 // -- POURQUOI C'EST UN MODULE, ET PAS DES LIGNES DANS LE SCRIPT -------
 //
@@ -120,9 +128,39 @@ export function retirerTiretsLongs(fragment: string): string {
   return fragment.replace(new RegExp(`${separateur}${tiret}${separateur}`, "g"), ", ");
 }
 
+/**
+ * LES CHEVRONS DEVIENNENT DES GUILLEMETS DROITS.
+ *
+ * Béné n'en veut nulle part, c'est une règle absolue depuis le 7 juin,
+ * et `tests/logic/blog.test.mts` l'INTERDIT. Elle n'était corrigée par
+ * rien : un texte écrit à la main (ou collé depuis une page rendue)
+ * faisait donc rougir le test sans qu'aucune commande sache le réparer.
+ *
+ * L'ESPACE INTÉRIEURE PART AVEC LE CHEVRON, et c'est la moitié qui
+ * compte. En français un chevron porte une espace de son côté intérieur
+ * (souvent insécable) : la garder donnerait `" C'est un sujet "`, donc
+ * la faute inverse de celle que ce module existe pour corriger.
+ *
+ * L'espace EXTÉRIEURE, elle, est conservée : `dit : « C'est` doit
+ * rester `dit : "C'est`, pas `dit :"C'est`.
+ *
+ * Les entités comptent aussi (`&laquo;`, `&#171;`) : elles s'affichent
+ * exactement pareil, et un garde qui ne cherche que le caractère les
+ * laisse passer. C'est la leçon du tiret cadratin, payée le 8 septembre.
+ *
+ * IDEMPOTENTE par construction : une fois qu'il n'y a plus de chevron,
+ * le motif ne trouve plus rien.
+ */
+export function remplacerChevrons(fragment: string): string {
+  const espace = "(?:\\s|&nbsp;)*";
+  return String(fragment ?? "")
+    .replace(new RegExp(`(?:«|&laquo;|&#171;)${espace}`, "g"), '"')
+    .replace(new RegExp(`${espace}(?:»|&raquo;|&#187;)`, "g"), '"');
+}
+
 export function reponctuer(html: string): string {
   return String(html ?? "")
     .split(/(<[^>]*>)/)
-    .map((m, i) => (i % 2 === 1 ? m : retirerTiretsLongs(reparerEmojiColle(reparerPointColle(reparerGuillemets(m))))))
+    .map((m, i) => (i % 2 === 1 ? m : retirerTiretsLongs(reparerEmojiColle(reparerPointColle(reparerGuillemets(remplacerChevrons(m)))))))
     .join("");
 }

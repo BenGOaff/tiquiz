@@ -20,6 +20,9 @@ import { lireArticle, listerArticles, tousLesSlugs } from "../../lib/blog/articl
 import { estHrefSur, attributsLien, minutesDeLecture, nettoyerBloc, sommaire, texteBrut } from "../../lib/blog/rendu.ts";
 import { jsonLdArticle, jsonLdFaq, jsonLdFilDAriane, ORIGINE_BLOG, urlArticle } from "../../lib/blog/seo.ts";
 import { reponctuer } from "../../lib/blog/reponctuation.ts";
+import { porteUneAdresseEmail } from "../../lib/blog/rendu.ts";
+import { PRIX_MENSUEL_TTC } from "../../lib/blog/faitsProgramme.ts";
+import { sansCommentaires } from "./aide/sansCommentaires.mts";
 
 const ARTICLES = listerArticles("fr");
 const COMPLETS = tousLesSlugs("fr").map((s) => lireArticle(s, "fr")!);
@@ -251,6 +254,12 @@ test("les regles d'ecriture de Bene tiennent sur le contenu importe", () => {
   // travers un garde qui ne pouvait pas les voir.
   assert.ok(!/&mdash;|&ndash;|&#8212;|&#8211;/.test(texte), "tiret cadratin en entite HTML");
   assert.ok(!/[«»]/.test(texte), "chevrons");
+  // ET SOUS LEUR FORME D'ENTITE, pour la meme raison que le tiret.
+  //
+  // MESURE le 8 septembre : le comparatif des outils portait SIX
+  // `&laquo;&nbsp;...&nbsp;&raquo;`, et ce garde ne cherchait que le
+  // CARACTERE. Ils s'affichent exactement pareil.
+  assert.ok(!/&laquo;|&raquo;|&#171;|&#187;/.test(texte), "chevrons en entite HTML");
   assert.ok(!/\b\w+·e\b/.test(texte), "point median");
 });
 
@@ -621,4 +630,86 @@ test("la table des alt GAGNE, mais seulement sur ce qu'elle nomme", async () => 
   // Et une image inconnue sans texte ne recoit rien plutot qu'un texte invente.
   const rien = { src: "/blog/img/pas-dans-la-table.webp", alt: "" };
   assert.equal(poserAlt(rien), false);
+});
+
+// ── LA FIN DU CAS CLIENT DE JOCELYNE (Béné, 8 septembre 2026) ──
+//
+// "voilà tout le texte de la page du cas client". Sa page source
+// n'existe plus (aucune adresse ne repond, absente des sitemaps) : ce
+// contenu n'est recuperable NULLE PART ailleurs, il a ete recopie depuis
+// son message. Ce qui suit fige les trois seules choses qu'on a
+// corrigees en le posant, et le fait qu'il soit la.
+
+test("le cas client de Jocelyne porte bien sa fin", () => {
+  const a = lireArticle("cas-client-jocelyne-tdah", "fr")!;
+  const titres = a.blocs.filter((b) => b.type === "titre").map((b) => b.texte);
+  for (const t of [
+    "Et ensuite ? Ce que Jocelyne fait de ces 285 leads",
+    "3 leçons à retenir et appliquer",
+    "Découvrir Jocelyne et son travail",
+    "À vous de jouer",
+    "Vos questions, les vraies réponses",
+  ]) {
+    assert.ok(titres.includes(t), `section manquante : ${t}`);
+  }
+  const faq = a.blocs.filter((b) => b.type === "faq");
+  assert.equal(faq.length, 1, "une seule FAQ");
+  assert.equal(faq[0]!.questions.length, 6, "ses six questions");
+});
+
+test("la FAQ annonce le prix REEL, jamais celui d'avant le 6 aout", () => {
+  // Son texte disait "9 €/mois" : c'est le tarif d'avant, et c'est la
+  // seule chose FAUSSE de la page qu'elle a collee. Un prix se LIT, il
+  // ne se recopie pas : le jour ou il change, ce test nomme le fichier.
+  const texte = JSON.stringify(lireArticle("cas-client-jocelyne-tdah", "fr"));
+  assert.ok(
+    texte.includes(`plan Mensuel à ${PRIX_MENSUEL_TTC} €/mois`),
+    "le prix affiche vient du catalogue",
+  );
+  assert.ok(!/\b9\s*€\/mois/.test(texte), "l'ancien tarif ne revient pas");
+});
+
+test("la FAQ ne genre pas son lecteur", () => {
+  // "arrête de penser que je n'ai que des users féminines putain !!!"
+  // (24 aout). Son texte disait "vous pouvez tout à fait commencer
+  // seule" : on tourne la phrase, on ne met pas de point median.
+  const texte = JSON.stringify(lireArticle("cas-client-jocelyne-tdah", "fr"));
+  assert.ok(!/commencer seule/.test(texte), "accord au feminin dans une adresse directe");
+});
+
+test("les liens vers Jocelyne sont ceux qu'on a VERIFIES", () => {
+  // Son copier-coller a perdu les href. Les deux qui sont la ont ete
+  // mesures (la page rend son nom) ; les deux autres, l'Amazon et le
+  // Facebook, attendent qu'elle les donne. On n'invente pas une adresse
+  // vers laquelle on envoie ses lecteurs.
+  const texte = JSON.stringify(lireArticle("cas-client-jocelyne-tdah", "fr"));
+  assert.ok(texte.includes("https://jocelyne-bacquet-auteur.fr"), "son blog");
+  assert.ok(texte.includes("https://www.instagram.com/j_bacquet.1/"), "son Instagram");
+});
+
+test("une adresse email d'article reste lisible sans JavaScript", () => {
+  // Cloudflare remplace toute adresse du HTML SERVI par
+  // "[email protected]". Les marqueurs qui l'en empechent sont des
+  // COMMENTAIRES, et `nettoyerBloc` les retire (mesure) : c'est donc le
+  // RENDU qui doit les poser, autour du seul bloc concerne.
+  // ON RETIRE LES IMPORTS AVANT DE CHERCHER, et ce n'est pas un detail :
+  // un garde qui cherche un NOM dans une source ne distingue pas
+  // APPELER de simplement IMPORTER. Verifie en rejouant la version
+  // fautive (`porteUneAdresseEmail(html) ?` remplace par `false ?`) : le
+  // premier jet de ce test restait VERT dessus.
+  const rendu = sansCommentaires(fs.readFileSync("components/site/ArticleBlog.tsx", "utf8"))
+    .split("\n")
+    .filter((l) => !/^\s*(import|\s*[A-Za-z]+,?$|}\s*from)/.test(l))
+    .join("\n");
+  assert.match(rendu, /<SansObfuscationEmail>/, "le rendu enveloppe vraiment un bloc");
+  assert.match(rendu, /porteUneAdresseEmail\(/, "et il APPELLE la decision, il ne l'importe pas juste");
+
+  // ET IL Y A VRAIMENT UNE ADRESSE A PROTEGER : sans ca, ce test ne
+  // mesure plus rien le jour ou le contenu la perd.
+  const avecAdresse = COMPLETS.flatMap((a) =>
+    a.blocs.filter((b) =>
+      porteUneAdresseEmail(b.type === "html" ? b.html : b.type === "faq" ? JSON.stringify(b.questions) : ""),
+    ),
+  );
+  assert.ok(avecAdresse.length >= 1, "au moins un bloc porte une adresse email");
 });

@@ -68,7 +68,22 @@ export interface BlocCta {
   texte: string;
   url: string;
 }
-export type Bloc = BlocTitre | BlocHtml | BlocImage | BlocFaq | BlocCta;
+/**
+ * Une vidéo YouTube.
+ *
+ * Elle ne peut PAS être un bloc `html` : `nettoyerBloc` retire les
+ * `iframe`, donc le bloc sortirait vide. Et elle n'est pas posée telle
+ * quelle non plus : le cadre n'existe qu'au clic, et sa miniature vit
+ * sur notre disque. Le pourquoi est dans `lib/blog/video.ts`.
+ */
+export interface BlocVideo {
+  type: "video";
+  /** L'identifiant YouTube, validé à l'import (11 caractères). */
+  id: string;
+  /** Le titre, lu chez YouTube à l'import. Il sert de texte au lien. */
+  titre: string;
+}
+export type Bloc = BlocTitre | BlocHtml | BlocImage | BlocFaq | BlocCta | BlocVideo;
 
 export interface Article {
   slug: string;

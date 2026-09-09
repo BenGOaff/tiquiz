@@ -67,6 +67,7 @@ import path from "node:path";
 // dans un script n'est pas testable, donc elle n'est pas testée, et
 // c'est LÀ que le bug du 29 août s'était installé.
 import { blocsDe, fusionner, restesVides } from "../lib/blog/importBlocs.ts";
+import { cheminMiniature } from "../lib/blog/video.ts";
 
 const RACINE = path.resolve(import.meta.dirname, "..");
 const SORTIE = path.join(RACINE, "content/blog");
@@ -123,6 +124,80 @@ const SANS_SOURCE = {
     "aucune adresse ne repond (tipote.fr et tipote.blog), absent du sommaire et des sitemaps",
 };
 
+// ── LES VIDÉOS : LE TITRE ET LA MINIATURE ────────────────────────────
+//
+// `blocsDe` rend un bloc vidéo avec un titre VIDE : le titre appartient
+// à YouTube, donc il se lit chez YouTube, et le module d'extraction est
+// PUR. Ce qui suit est la moitié qui fait du réseau.
+//
+// LA MINIATURE EST RECOPIÉE CHEZ NOUS, et ce n'est pas du confort : la
+// servir depuis `i.ytimg.com` serait une requête tierce sur CHAQUE
+// chargement de l'article, sur une page qui ne porte aucune bannière de
+// consentement. C'est exactement ce que le bloc vidéo existe pour
+// éviter.
+//
+// ET ON REFUSE PLUTÔT QUE DE POSER UN CADRE MUET. Un titre vide, c'est
+// une légende vide sous une vidéo, et un lien "lire la vidéo" qui ne dit
+// pas laquelle : personne ne le verrait avant la cliente.
+
+const DOSSIER_VIDEO = path.join(RACINE, "public/blog/video");
+
+async function titreYouTube(id) {
+  const u = `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://youtu.be/${id}`)}&format=json`;
+  const r = await fetch(u);
+  if (!r.ok) throw new Error(`oembed ${id} repond ${r.status}`);
+  const j = await r.json();
+  const t = String(j?.title ?? "").trim();
+  if (!t) throw new Error(`oembed ${id} ne rend aucun titre`);
+  return t;
+}
+
+async function poserMiniature(id) {
+  const chemin = cheminMiniature(id);
+  if (!chemin) throw new Error(`identifiant illisible : ${id}`);
+  const sur = path.join(RACINE, "public", chemin.replace(/^\/+/, "").replace(/^blog\//, "blog/"));
+  if (fs.existsSync(sur)) return { chemin, deja: true };
+  if (VERIFIE) return { chemin, deja: false };
+
+  // `maxresdefault` n'existe pas pour toutes les vidéos : `hqdefault`
+  // existe toujours. On essaie la meilleure d'abord, on ne se contente
+  // de la petite que si la grande n'est pas là.
+  let brut = null;
+  for (const nom of ["maxresdefault", "hqdefault"]) {
+    const r = await fetch(`https://i.ytimg.com/vi/${id}/${nom}.jpg`);
+    if (r.ok) {
+      brut = Buffer.from(await r.arrayBuffer());
+      break;
+    }
+  }
+  if (!brut) throw new Error(`aucune miniature pour ${id}`);
+
+  const { default: sharp } = await import("sharp");
+  fs.mkdirSync(DOSSIER_VIDEO, { recursive: true });
+  const ecrit = await sharp(brut)
+    .resize({ width: 1280, withoutEnlargement: true })
+    .webp({ quality: 78 })
+    .toFile(sur);
+  return { chemin, deja: false, taille: ecrit.size };
+}
+
+async function completerVideos(blocs, slug, journal) {
+  const out = [];
+  for (const b of blocs) {
+    if (b.type !== "video") {
+      out.push(b);
+      continue;
+    }
+    const titre = String(b.titre ?? "").trim() || (await titreYouTube(b.id));
+    const mini = await poserMiniature(b.id);
+    journal.push(
+      `${slug} : ${b.id} "${titre}"` + (mini.deja ? " (miniature deja la)" : " (miniature posee)"),
+    );
+    out.push({ ...b, titre });
+  }
+  return out;
+}
+
 function etat(html) {
   const m = html.match(/window\.__PRELOADED_STATE__\s*=\s*(.*?);?\s*<\/script>/s);
   if (!m) throw new Error("aucun __PRELOADED_STATE__ dans la page");
@@ -132,6 +207,7 @@ function etat(html) {
 
 async function main() {
   const rapport = [];
+  const videosPosees = [];
   const restes = restesVides();
 
   for (const [slug, chemin] of Object.entries(SOURCES)) {
@@ -163,7 +239,7 @@ async function main() {
     } catch (e) {
       throw new Error(`${slug} : ${e.message}`);
     }
-    const fusionnes = fusion.blocs;
+    const fusionnes = await completerVideos(fusion.blocs, slug, videosPosees);
 
     const article = { ...existant, blocs: fusionnes };
     if (!VERIFIE) {
@@ -193,8 +269,15 @@ async function main() {
     for (const v of restes.schemas) console.log(`  ${v}`);
   }
 
+  if (videosPosees.length) {
+    console.log("\nVIDEOS POSEES :");
+    for (const v of videosPosees) console.log(`  ${v}`);
+  }
+
+  // Ne restent ici que les adresses dont `idYouTube` ne tire aucun
+  // identifiant : un autre hebergeur, une adresse tronquee.
   if (restes.videos.length) {
-    console.log("\nVIDEOS NON POSEES (notre gabarit n'a pas de bloc video) :");
+    console.log("\nVIDEOS NON POSEES (adresse illisible ou hebergeur inconnu) :");
     for (const v of restes.videos) console.log(`  ${v}`);
   }
 

@@ -12302,12 +12302,18 @@ pas laisser de la merde !!" Elle avait raison : la section
 "LE CONTENU PERDU À L'IMPORT" plus bas dit la cause, la correction et ce
 qui reste. **2 555 mots récupérés**, dont 2 036 dans le comparatif.
 
-Ce qui reste vrai, et qui n'était pas un défaut d'import : **les trois
-leçons de Jocelyne**. Sa page source n'existe plus (cherchée le
-8 septembre : aucune adresse ne répond, ni sommaire, ni sitemap, ni
-étape de tunnel), donc elles ne sont récupérables nulle part, et les
-inventer sur une vraie cliente serait un faux. **Le titre qui les
-annonçait est retiré** : il promettait ce que l'article ne tient pas.
+🚨 **CE PARAGRAPHE DISAIT QUE LES TROIS LEÇONS DE JOCELYNE ÉTAIENT
+PERDUES. C'EST PÉRIMÉ**, et je le corrige en place plutôt que d'empiler.
+Sa page source n'existe toujours nulle part (cherchée le 8 septembre :
+aucune adresse ne répond, ni sommaire, ni sitemap, ni étape de tunnel),
+et je n'ai rien inventé : **Béné a collé tout le texte de la page**, le
+même jour. Les trois leçons, la fin de parcours, ses liens, les deux
+cartes et la FAQ à six questions sont revenus de là. Voir la section
+"LA FIN DU CAS CLIENT DE JOCELYNE" plus bas.
+
+**La leçon tient : on n'invente pas ce qui manque, on le DEMANDE.** Une
+page perdue n'est pas une page dont le texte a disparu ; c'est une page
+dont la seule copie est chez la personne qui l'a écrite.
 
 **Et une affirmation reste invérifiée** dans la FAQ du comparatif :
 "support in French and English". Elle vient du français, elle n'est
@@ -12444,10 +12450,11 @@ clés, la date et la couverture ne sont pas touchés.
 - **Un type inconnu est COMPTÉ**, jamais avalé. C'est exactement le
   silence qui a coûté ce chantier.
 
-**Ce qui attend une décision de Béné :** son article `avis-tiquiz` porte
-une VIDÉO YouTube que notre gabarit ne sait pas afficher. On ne pose pas
-une intégration YouTube tout seuls : elle dépose des cookies sur une
-page qui porte une bannière de consentement.
+🚨 **CE PARAGRAPHE ATTENDAIT SA DÉCISION SUR LA VIDÉO DE
+`avis-tiquiz`. ELLE L'A PRISE LE 8 SEPTEMBRE : "oui je veux la vidéo
+Youtube".** Le gabarit a un bloc `video` depuis, et il ne contacte
+personne avant qu'on ne clique. Corrigé en place, voir la section
+"LA VIDÉO D'UN ARTICLE" plus bas.
 
 ### LES QUATRE AUTRES DÉFAUTS, RÉPARÉS PAR DES RÈGLES GÉNÉRALES
 
@@ -12531,3 +12538,219 @@ refusée, écart d'images non refusé, la fusion qui écrase au lieu
 d'ajouter, le titre orphelin gardé, les doublons gardés, le tiret retiré
 sans regarder les espaces, le garde aveugle aux entités) : les onze
 rougissent.
+
+## LA VIDÉO D'UN ARTICLE : rien ne part chez Google avant le clic (8 septembre 2026)
+
+Béné : "oui je veux la vidéo Youtube."
+
+Sa page `avis-tiquiz` porte une vidéo depuis l'origine. L'import la
+SIGNALAIT sans la poser, pour une raison qui était juste : `nettoyerBloc`
+retire les `iframe`, donc la poser en bloc `html` aurait donné un bloc
+VIDE, et personne ne l'aurait vu.
+
+### LE BLOG NE PORTE AUCUNE BANNIÈRE DE CONSENTEMENT
+
+**MESURÉ avant d'écrire une ligne, pas supposé.** Le bandeau cookies est
+celui de Béné, il vit dans la page de vente CAPTURÉE, et il range son
+choix dans `aq_consent_v1` (c'est ce que relit `GoogleAnalytics.tsx`
+depuis le 26 août). Un article de blog n'en porte AUCUN.
+
+Poser le cadre au chargement enverrait donc l'adresse IP de chaque
+lecteur chez Google, sur une page où rien ne peut recueillir son accord.
+Et ça ne se verrait sur aucun écran : la vidéo s'afficherait
+parfaitement.
+
+**`youtube-nocookie.com` ne suffit pas, et il faut le dire dans ce sens
+là :** il ne dépose pas de cookie de suivi tant que la vidéo n'est pas
+lancée, mais dès que le cadre existe, l'adresse IP part. C'est pour ça
+que le domaine n'est que la moitié de la réponse.
+
+**Règle : le cadre n'existe QU'AU CLIC.** Avant, une miniature. MESURÉ
+sur le HTML servi de `/blog/avis-tiquiz` : **zéro occurrence de
+`youtube-nocookie`, zéro de `ytimg`**.
+
+### QUATRE CHOSES À NE PAS DÉFAIRE
+
+1. **La miniature est RECOPIÉE chez nous** (`public/blog/video/<id>.webp`,
+   1280x720, 98 Ko). Servie depuis `i.ytimg.com`, elle serait exactement
+   la requête tierce qu'on évite, et elle partirait à CHAQUE chargement.
+2. **La façade est un LIEN vers YouTube, jamais un bouton.** Sans
+   JavaScript, un bouton ne fait RIEN : la vidéo serait morte et le
+   lecteur n'aurait aucun moyen de le savoir. Le clic est intercepté
+   quand JavaScript est là ; un clic modifié (nouvel onglet) n'est pas
+   volé.
+3. **Le triangle de lecture est DESSINÉ.** "▶" n'existe ni dans Open
+   Sans ni dans Inter : Windows rend le carré vide (drame du
+   2 septembre, les icônes de la landing).
+4. **L'identifiant est VALIDÉ, jamais recopié** (`[A-Za-z0-9_-]{11}`,
+   `lib/blog/video.ts`). Il finit dans un `src`. Une adresse qu'on ne
+   sait pas lire rend `null`, et l'import la SIGNALE : on ne fabrique
+   jamais une adresse à partir de ce qu'on n'a pas compris.
+
+**Le TITRE vient de YouTube, et le module d'extraction reste PUR.**
+`blocsDe` rend un titre VIDE ; c'est le script d'import qui le lit chez
+YouTube (il fait déjà du réseau) et qui REFUSE de finir s'il n'y arrive
+pas. Un titre vide, c'est une légende vide sous une vidéo et un lien qui
+ne dit pas laquelle.
+
+**Et le titre ne se traduit pas.** L'article anglais porte la MÊME
+vidéo, avec son titre FRANÇAIS : c'est une vidéo en français, et un
+titre traduit décrirait autre chose que ce que le lecteur va voir.
+
+**Une vidéo s'apparie par son IDENTIFIANT** dans la fusion d'import
+(`signature`), jamais par son rang : c'est lui qui EST son identité.
+Sans ce cas, `nuTexte` lirait un `html` qui n'existe pas et deux vidéos
+différentes porteraient la même signature.
+
+Test : `tests/logic/video-article.test.mts`, vérifié en rejouant SIX
+versions fautives (le cadre sur `youtube.com`, la miniature chez
+`i.ytimg.com`, la façade en bouton, un titre vide en base, le cadre posé
+sans le clic, le glyphe Unicode) : les six rougissent.
+
+## LA FIN DU CAS CLIENT DE JOCELYNE (Béné, 8 septembre 2026)
+
+"Voilà tout le texte de la page du cas client."
+
+Sa page source n'existe plus, et l'article s'arrêtait sur "- Jocelyne
+Bacquet". **Elle a collé le texte manquant**, donc il est revenu : la
+suite de parcours, les trois leçons, ses liens, les deux cartes et une
+FAQ de six questions. **13 blocs, en français ET en anglais** (le jumeau
+anglais s'arrêtait exactement au même endroit).
+
+### TROIS CHOSES ONT ÉTÉ CORRIGÉES EN LE POSANT, ET TROIS SEULEMENT
+
+| Ce que son texte disait | Pourquoi |
+|---|---|
+| "passer au plan Mensuel à 9 €/mois" | le tarif d'avant le 6 août. Le prix vient de `PRIX_MENSUEL_TTC`, il ne se recopie pas |
+| "15 templates métier (coach, nutrition, ..., **entrepreneur**, photo, immo)" | MESURÉ : le catalogue en porte bien 15, et six des sept noms existent. Pas "entrepreneur" : c'est "Coach **business**" |
+| "vous pouvez tout à fait commencer **seule**" | adresse DIRECTE au lecteur, accordée au féminin. On tourne la phrase (règle du 24 août) |
+
+**Tout le reste est verbatim.** "scaler" y compris : c'est son mot, dans
+son texte déjà publié, et ce n'est ni faux ni genré. À elle de trancher.
+
+**Et les DEUX AUTRES claims ont été vérifiés, pas supposés** : les
+limites du gratuit (1 quiz, 1 sondage, 1 popquiz, 10 leads visibles,
+les suivants capturés et masqués) sont exactement `FREE_LIMITS`, et la
+génération IA est bien ouverte au gratuit (`/api/quiz/generate` n'a
+aucun gate de plan).
+
+### LES LIENS : DEUX SUR QUATRE, ET C'EST DIT
+
+Son copier-coller a perdu les `href`. **On n'invente pas une adresse
+vers laquelle on envoie ses lecteurs.**
+
+| | mesuré |
+|---|---|
+| son blog | `https://jocelyne-bacquet-auteur.fr` -> 200, `<title>` "Jocelyne Bacquet auteure" |
+| son Instagram | `https://www.instagram.com/j_bacquet.1/` -> 200, "J. Bacquet - Neurodév" |
+| **le livre sur Amazon** | **manquant**, aucune adresse dérivable |
+| **sa page Facebook auteur** | **manquant**, idem |
+
+Les deux manquants attendent qu'elle les donne. Une section qui dit
+"voici ses liens" avec deux entrées est vraie ; avec quatre dont deux
+inventées, elle ne l'est plus.
+
+Test : les cinq cas ajoutés à `tests/logic/blog.test.mts`, vérifiés en
+rejouant TROIS versions fautives (le prix d'avant, "commencer seule", la
+queue retirée) : les trois rougissent.
+
+## Les chevrons n'étaient corrigés par RIEN (8 septembre 2026)
+
+Trouvé en posant son texte : sa page rendue porte des chevrons `«` `»`,
+et `tests/logic/blog.test.mts` les INTERDIT depuis le 7 juin.
+
+**MESURÉ : aucune ligne de code, ni dans l'import ni dans
+`reponctuation.ts`, n'en convertissait un seul.** L'en-tête de ce module
+affirmait pourtant "l'import du 29 août remplace les chevrons". C'est la
+DIXIÈME fois que ce dépôt paie une règle écrite en commentaire et
+démentie par le code.
+
+La règle ne vivait donc que dans un test qui INTERDIT, et un contenu
+écrit à la main la faisait rougir sans qu'aucune commande sache la
+réparer. C'est exactement le défaut du tiret cadratin en entité, trouvé
+le même jour.
+
+**`remplacerChevrons` existe, et `reponctuer` l'applique.** Trois choses
+comptent :
+
+- **l'espace INTÉRIEURE part avec le chevron** (souvent insécable) :
+  la garder donnerait `" C'est un sujet "`, donc la faute inverse de
+  celle que ce module existe pour corriger. L'espace EXTÉRIEURE reste ;
+- **les entités comptent** (`&laquo;`, `&#171;`) : elles s'affichent
+  exactement pareil ;
+- **elle passe AVANT `reparerGuillemets`**, qui COMPTE les guillemets
+  droits pour savoir lequel ouvre. Convertir après lui, c'est lui cacher
+  la moitié du texte, donc lui faire poser l'espace du mauvais côté.
+
+### ET ELLE A TROUVÉ SIX CHEVRONS EN ENTITÉ DÉJÀ EN LIGNE
+
+`comparatif-outils-quiz-systeme-io` portait six
+`&laquo;&nbsp;...&nbsp;&raquo;`, et le garde ne cherchait que le
+CARACTÈRE. Il cherche maintenant les deux formes, vérifié en rejouant le
+fichier d'avant correction : il rougit.
+
+## Une adresse email d'ARTICLE était masquée par Cloudflare (8 septembre 2026)
+
+La fin du cas client porte le contact de Gwenn, à deux endroits. C'est
+la PREMIÈRE adresse email du blog (mesuré : zéro avant).
+
+Cloudflare l'aurait remplacée par `[email protected]` dans le HTML
+servi, comme les 4 adresses des pages légales le 2 septembre.
+
+**Et les marqueurs qui l'en empêchent ne peuvent pas vivre dans le
+contenu :** `nettoyerBloc` retire les commentaires HTML (MESURÉ, pas
+supposé). C'est donc le RENDU qui les pose, autour du SEUL bloc
+concerné : désarmer l'obfuscation là où il n'y a rien à protéger ne
+protège rien de plus.
+
+`SansObfuscationEmail` a quitté `LegalPageView` pour
+`components/legal/SansObfuscationEmail.tsx`, **où il vit déjà chez
+Tipote et chez l'Atelier** : Tiquiz était le seul des trois à l'avoir
+enfermé dans une page. Son corps est identique à l'octet près aux deux
+autres.
+
+**Et le garde de `politique-google.test.mts` a rougi sur cette
+correction JUSTE**, parce qu'il cherchait les marqueurs dans
+`LegalPageView.tsx`. Un garde-fou qui fige un EMPLACEMENT empêche de
+déplacer le code : il SUIT désormais l'import.
+
+**MA FAUTE, et c'est la 20e de la semaine :** mon premier garde du côté
+blog cherchait `porteUneAdresseEmail` dans la source du rendu. Il est
+resté VERT sur la version fautive (l'appel remplacé par `false`), parce
+que le nom apparaît encore dans la ligne d'import. **Un garde qui
+cherche un NOM dans une source ne distingue pas APPELER de simplement
+IMPORTER.** Il retire les imports avant de chercher, et il exige
+`porteUneAdresseEmail(` : vérifié en rejouant les deux versions
+fautives, elles rougissent.
+
+## Le filet responsive couvre enfin deux articles (8 septembre 2026)
+
+`tests/visual/responsive-site.spec.ts` ne mesurait aucune page d'article,
+et son propre en-tête dit pourquoi (les ajouter d'un coup est un chantier
+à part). Les DEUX que ce passage a touchées y sont maintenant :
+`/blog/avis-tiquiz` (le nouveau bloc vidéo, une façade en 16/9 jamais
+mesurée sur un téléphone) et `/blog/cas-client-jocelyne-tdah` (deux
+listes, deux cartes, une FAQ). Mesuré aux quatre largeurs : aucun
+débordement.
+
+**Les huit autres articles restent dehors**, exprès : un filet qui
+rougit sur des pages qu'on n'a pas regardées finit désactivé.
+
+## Le chrome des articles ANGLAIS est encore en français (mesuré le 8 septembre)
+
+Trouvé en servant `/en/blog/case-study-jocelyne-adhd-quiz`. Le travail
+du 8 septembre au matin a traduit le menu et le pied de page ; **trois
+composants d'article portent encore leurs phrases en dur en français** :
+
+| Le composant | Ce qu'un lecteur anglophone lit |
+|---|---|
+| `PartageArticle` | "Copier le lien" |
+| `EncartCta` | "Un quiz qui tague tes leads dans Systeme.io", "Créer mon quiz gratuitement", "Voir ce que fait Tiquiz" |
+| `Commentaires` | "Ton avis sur cet article", "Laisser un commentaire", "Ton prénom", "Ton email (jamais publié)", "Ton message", "Envoyer" |
+
+C'est le reproche du client anglophone du 7 septembre ("some parts of
+the quiz UI were in French"), sur les pages exactes où atterrissent les
+lecteurs qu'on veut récupérer de `tipote.blog`. **Ce n'est pas une
+régression de ce passage** : c'est antérieur, et ça vaut pour les dix
+articles anglais. Les phrases se posent dans `motsDuBlog.ts`, comme le
+reste du meuble.
