@@ -68,8 +68,29 @@ console.log(`1. le HTML          ${ms(page.duree).padStart(8)}   ${ko(page.trans
 // Le HTML d'un quiz ne porte aucun contenu du quiz : c'est le fait qui
 // explique la page blanche autant que la lenteur. On le DIT.
 const contenuServeur = /<h1|<button/i.test(page.corps.replace(/<script[\s\S]*?<\/script>/g, ""));
+
+// LA CHARGE DU QUIZ VOYAGE-T-ELLE AVEC LE HTML ? (9 septembre 2026)
+//
+// C'est une AUTRE question que la precedente, et il ne faut pas les
+// confondre : le HTML ne rend toujours aucune balise du quiz (tout est
+// monte par React), mais depuis le chantier 2 il PORTE la reponse que le
+// navigateur allait chercher par un appel d'API. Une vague reseau en
+// moins, celle qui coutait 588 a 1150 ms mesurees le meme jour et qui ne
+// pourra jamais etre servie par un cache au bord (sa reponse porte un
+// `set-cookie`).
+//
+// ON CHERCHE UNE CLE DE LA CHARGE, PAS LE NOM DE LA PROP. Mesure du
+// 9 septembre sur un rendu ou la charge est volontairement nulle : le
+// HTML porte quand meme `donneesServeur\":null`, donc chercher ce nom
+// dirait "oui" sur une page qui n'a rien recu. `address_form`, lui, sort
+// a ZERO dans ce meme rendu, et le module le pose toujours sur le quiz :
+// sa presence ne peut venir que de la charge.
+const chargeAvecLeHtml = /address_form/.test(page.corps);
 console.log(
   `   contenu du quiz rendu par le serveur : ${contenuServeur ? "oui" : "NON"}`,
+);
+console.log(
+  `   la charge du quiz voyage avec le HTML : ${chargeAvecLeHtml ? "oui" : "NON"}`,
 );
 
 const chunks = [...new Set([...page.corps.matchAll(/src="(\/_next\/static\/[^"]+)"/g)].map((m) => m[1]))];

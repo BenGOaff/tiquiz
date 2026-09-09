@@ -15,6 +15,7 @@
 // RIEN D'AUTRE.
 
 import { test } from "node:test";
+import { SOURCE_CHARGE_PUBLIQUE } from "./aide/chargePublique.mts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
@@ -195,10 +196,10 @@ test("la route refuse ce qui n'est pas un bucket servi", () => {
 test("la reponse publique passe par la reecriture", () => {
   // C'est LE point de passage du trafic visiteur : le viewer lit tout
   // par cette route.
-  const src = readFileSync(
-    new URL("../../app/api/quiz/[quizId]/public/route.ts", import.meta.url),
-    "utf8",
-  );
+  // On CHERCHE le module qui construit la charge : ce test a rougi le
+  // 9 septembre sur un simple demenagement, alors que la reecriture
+  // n'avait pas bouge d'une ligne.
+  const src = SOURCE_CHARGE_PUBLIQUE;
   assert.match(src, /proxyAssetsDeep/);
   assert.match(src, /quiz: \{\s*\.\.\.asset\(renderedQuiz\)/);
   assert.match(src, /questions: asset\(renderedQuestions\)/);

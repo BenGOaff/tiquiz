@@ -167,7 +167,22 @@ describe("le JSON-LD d'un quiz public etait vide, en silence", () => {
   test("les erreurs de ces requetes sont LUES", () => {
     // C'est ce qui manquait : la ligne faisait `res.data as ... | null`
     // et se contentait du null. Personne ne pouvait voir la panne.
-    assert.ok(/datesRes\.error/.test(PAGE_QUIZ), "l'erreur des dates n'est pas lue");
+    //
+    // CE GARDE VISAIT `datesRes`, ET IL A ROUGI LE 9 SEPTEMBRE SUR UNE
+    // CORRECTION JUSTE : la requete des dates a disparu, ses deux
+    // colonnes vivent maintenant dans le select de `fetchQuizMeta` (un
+    // aller-retour de moins par chargement). Un garde qui fige le NOM
+    // d'une variable empeche de retirer la variable ; celui-ci vise le
+    // FAIT, c'est a dire qu'aucun select de cette page ne jette son
+    // erreur. Et il en couvre plus qu'avant : `fetchQuizMeta` ne lisait
+    // pas la sienne.
+    const selectsMuets = [...PAGE_QUIZ.matchAll(/const \{ data \}\s*=\s*await supabaseAdmin/g)];
+    assert.deepEqual(
+      selectsMuets.map((m) => m[0]),
+      [],
+      "un select de cette page jette son erreur au lieu de la lire",
+    );
+    assert.ok(/console\.error\("\[q\/page\] meta du quiz illisible/.test(PAGE_QUIZ), "l'erreur de la meta n'est pas criee");
     assert.ok(/countRes\.error/.test(PAGE_QUIZ), "l'erreur du compte n'est pas lue");
   });
 

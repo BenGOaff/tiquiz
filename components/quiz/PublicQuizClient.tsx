@@ -93,6 +93,7 @@ import {
   sanitizeAutreTexte,
 } from "@/lib/quiz/otherOption";
 import { brouillonPourQuestion } from "@/lib/quiz/brouillonReponse";
+import { chargeDuViewer } from "@/lib/quiz/chargeViewer";
 import { langueDuNavigateur, messagesApercu, repliLangue } from "@/lib/quiz/langueViewer";
 import {
   AFFILIATE_VIDE,
@@ -335,6 +336,27 @@ interface PublicQuizClientProps {
   /** Branding injecte avec previewData (tests visuels / harness). Sans lui,
       le branding vient de la reponse API comme d'habitude. */
   previewBranding?: QuizBranding | null;
+  /** LA MEME CHARGE QUE L'API, MAIS LIVREE AVEC LE HTML (9 septembre
+   *  2026). La page publique appelle `chargerQuizPublic` cote serveur et
+   *  la passe ici : le visiteur n'attend plus un aller-retour d'API
+   *  APRES le telechargement du JavaScript (mesure du 9 septembre : 588 a
+   *  1150 ms, et cette reponse ne pourra jamais etre mise en cache au
+   *  bord puisqu'elle porte un `set-cookie`).
+   *
+   *  CE N'EST PAS `previewData`, ET IL NE FAUT PAS LES CONFONDRE.
+   *  `previewData` veut dire "on est dans un apercu", et il eteint NEUF
+   *  comportements : le suivi des vues, des demarrages et des completions
+   *  (donc les chiffres de la creatrice), la reprise de session, le
+   *  brouillon de reponse, et le bandeau de reprise. Reutiliser
+   *  `previewData` pour la page publique aurait donc coupe tout le
+   *  tracking de tous les quiz en ligne, en silence, et c'est exactement
+   *  la faute du 1er aout : une logique ecrite pour un cas, appliquee
+   *  telle quelle a un autre.
+   *
+   *  Celle-ci ne fait QU'UNE chose : elle amorce l'etat et evite le
+   *  fetch. Tout le reste du composant continue de ne regarder que
+   *  `previewData`. */
+  donneesServeur?: { quiz: PublicQuizData; branding: QuizBranding | null } | null;
   /** Mode compact : quiz affiché dans l'overlay popquiz (iframe). Réduit
    *  marges/typo + CTA collé en bas pour tenir dans la fenêtre vidéo. */
   compact?: boolean;
@@ -1212,11 +1234,16 @@ function getTErreur(locale?: string | null): QuizTranslations {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function PublicQuizClient({ quizId, previewData, previewBranding, compact = false }: PublicQuizClientProps) {
-  const [quiz, setQuiz] = useState<PublicQuizData | null>(previewData ?? null);
-  const [loading, setLoading] = useState(!previewData);
+export default function PublicQuizClient({ quizId, previewData, previewBranding, donneesServeur, compact = false }: PublicQuizClientProps) {
+  const [quiz, setQuiz] = useState<PublicQuizData | null>(previewData ?? donneesServeur?.quiz ?? null);
+  // Rien a attendre quand la charge est deja la : sans cette ligne, le
+  // visiteur verrait le spinner une fraction de seconde alors que son
+  // quiz est deja dans la page.
+  const [loading, setLoading] = useState(!previewData && !donneesServeur);
   const [error, setError] = useState<string | null>(null);
-  const [branding, setBranding] = useState<QuizBranding>(() => previewBranding ?? resolveQuizBranding(null, null));
+  const [branding, setBranding] = useState<QuizBranding>(
+    () => previewBranding ?? donneesServeur?.branding ?? resolveQuizBranding(null, null),
+  );
 
   // Owner-side preview: ?preview_name=<x> tells us the visitor is the quiz
   // creator pretending to be a real visitor (Marie's feedback #7, 2026-04).
@@ -2003,6 +2030,13 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
       return;
     }
 
+    // LA CHARGE EST DEJA LA : le serveur l'a livree avec le HTML. On ne
+    // la redemande pas, et on ne touche a RIEN d'autre — le suivi, la
+    // reprise de session et le brouillon continuent de tourner comme sur
+    // n'importe quelle visite, parce qu'ils ne regardent que
+    // `previewData`.
+    if (donneesServeur) return;
+
     // Forward the ?embed=<token> URL param when present so the
     // public route can render a still-draft anonymous quiz for the
     // embed visitor's preview. Plain URLs are unaffected.
@@ -2031,12 +2065,16 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
             duration: 8000,
           });
         }
-        // API returns quiz, questions, results as separate fields
-        const quizData: PublicQuizData = {
-          ...json.quiz,
-          questions: json.questions ?? [],
-          results: json.results ?? [],
-        };
+        // API returns quiz, questions, results as separate fields.
+        // LA RECOMPOSITION EST CELLE DE LA PAGE : depuis le 9 septembre
+        // 2026 la page publique livre la meme charge avec le HTML, et
+        // deux recompositions ecrites separement finiraient par ne plus
+        // rendre le meme objet selon la porte empruntee.
+        const quizData = chargeDuViewer({
+          quiz: json.quiz,
+          questions: json.questions,
+          results: json.results,
+        }) as PublicQuizData;
         setQuiz(quizData);
         if (json.branding) setBranding(json.branding as QuizBranding);
       } catch {
@@ -2046,7 +2084,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
       }
     };
     load();
-  }, [quizId, previewData]);
+  }, [quizId, previewData, donneesServeur]);
 
   // ─── Session persistence: resume the bonus/result step across refresh ───
   // Why sessionStorage and not localStorage? sessionStorage is scoped to

@@ -13167,3 +13167,231 @@ maintenant les CINQ NOMS d'événement : un composant qui écrirait
 `"generation_reussie"` en dur aurait forcément fabriqué son propre
 envoi. Vingtième fois qu'un contrôle ne distingue pas ce qu'il est censé
 distinguer, et un test qui crie pour rien finit désactivé.
+
+## LA VITESSE : ses deux causes étaient déjà réglées, la vraie était ailleurs (Béné, 9 septembre 2026)
+
+Son chantier 2 nomme deux causes : Cloudflare qui ne met pas les
+fragments JavaScript en cache, et le doublon Supabase (`generateMetadata`
+et la page lisent la même ligne à chaque chargement). Cible : **sous
+1 s**, mesuré avec `npm run check:vitesse-quiz`.
+
+### LES DEUX SONT FAITES, ET C'EST VÉRIFIÉ AVANT D'ÊTRE DIT
+
+| Sa cause | L'état, mesuré le 9 septembre |
+|---|---|
+| Cloudflare | **20 fragments sur 20** servis par le cache, `HIT / HIT / HIT` sur trois chargements de suite |
+| le doublon Supabase | `cache()` de React est bien posé sur `fetchQuizMeta` ET sur `resolveCustomDomainOwner`, avec sa raison écrite à côté |
+
+### ET LA MESURE A REFRAMÉ LE PROBLÈME
+
+Le HTML du quiz met 2153 ms selon le script, et **le script compte la
+résolution DNS, la poignée de main TLS et le téléchargement complet**,
+pas le temps de réponse. Au chronomètre du serveur (`time_starttransfer`),
+c'est 422 à 1027 ms. Un chiffre lu dans un outil n'est pas une mesure
+tant qu'on n'a pas vérifié ce qu'il COMPTE.
+
+**Et le serveur n'est pas le goulot.** Mesure alternée, huit fois, contre
+une route qui ne fait QUE lire un fichier sur disque (`/favicon.ico`) :
+
+| | médiane |
+|---|---|
+| la route qui ne fait rien | **632 ms** |
+| la page du quiz, avec ses 7 requêtes Supabase | **485 ms** |
+
+La page de quiz est donc au PLANCHER du trajet réseau depuis la machine
+de mesure. Le doublon qu'elle nommait était déjà retiré, et ce qui reste
+côté serveur se perd dans le bruit.
+
+### CE QUI COÛTE VRAIMENT, ET IL NE POURRA JAMAIS ÊTRE MIS EN CACHE
+
+```
+1. le HTML          -> puis 2. 1146 Ko de JavaScript
+                    -> puis 3. un appel a /api/quiz/<id>/public
+                    -> ENFIN la premiere question
+```
+
+Trois vagues réseau, l'une après l'autre. La troisième coûte **588 à
+1150 ms** (trois relevés) et c'est là que la trouvaille est :
+
+```
+cache-control:  public, max-age=0, s-maxage=60, stale-while-revalidate=60
+cf-cache-status: DYNAMIC   (trois appels de suite)
+set-cookie:      ui_locale=fr; ...
+set-cookie:      tq_ref=jocelyne; ...   (sur un lien affilie)
+```
+
+**Cloudflare refuse de la mettre en cache, et il a RAISON.** Cette
+réponse porte un `set-cookie` : un cache partagé servirait le `tq_ref`
+d'UNE affiliée, et la langue d'UN visiteur, à tous les suivants. C'est
+exactement la règle `pages` que Béné a supprimée le 7 septembre.
+
+Donc ses en-têtes `s-maxage` sont **une promesse que rien ne peut
+tenir**, et surtout une invitation pour le prochain qui posera une Cache
+Rule dessus. La raison est maintenant écrite dans la route, en toutes
+lettres. **Ne poser AUCUNE Cache Rule sur `/api/quiz/*/public`.**
+
+Conséquence : cet aller-retour coûte une visite complète à l'origine, à
+CHAQUE visiteur, pour toujours. La seule façon de le retirer du chemin
+critique est de livrer la réponse AVEC le HTML.
+
+### LA CHARGE PART AVEC LE HTML, ET UNE SEULE FONCTION LA CALCULE
+
+`lib/quiz/chargerQuizPublic.ts` porte ce qu'un visiteur reçoit ; la page
+publique ET la route d'API l'appellent. Recalculer la charge côté page
+donnerait deux réponses pour le même quiz selon la porte empruntée, et
+c'est le défaut sorti six fois dans ce dépôt (les réseaux de partage, le
+score, l'alignement du sous-titre, la disposition des réponses). Ici
+l'écart coûterait le branding, le footer, les pixels ou la typographie
+d'une créatrice.
+
+**Les en-têtes HTTP restent à la ROUTE.** La fonction rend `prive` (un
+jeton d'embed, ou un brouillon montré à son auteur) ; la route seule
+répond en HTTP, et la page ne doit surtout pas rendre sa réponse
+cacheable.
+
+**Et la recomposition vit dans un module PUR** (`lib/quiz/chargeViewer.ts`).
+`chargerQuizPublic` importe `supabaseAdmin`, qui LÈVE au chargement quand
+les variables d'environnement manquent : aucun test ne peut l'appeler. Une
+règle enfermée dedans ne serait donc pas testée, et c'est exactement là
+que les bugs s'installent (règle du 1er août). Le client l'appelle aussi,
+sur la réponse de l'API : deux recompositions écrites séparément
+finiraient par ne plus rendre le même objet selon la porte.
+
+### CE N'EST PAS `previewData`, ET C'EST LE POINT LE PLUS CHER
+
+Le viewer avait DÉJÀ une prop qui saute l'appel d'API. La réutiliser était
+la solution en une ligne, et elle aurait coûté ceci, **en silence, sur
+tous les quiz en ligne** :
+
+| `previewData` éteint | Ce que ça retire |
+|---|---|
+| `trackedRef` (2 endroits) | les vues, les démarrages, les complétions : **les chiffres de la créatrice** |
+| `sessionKey` (3 endroits) | la reprise après un rafraîchissement |
+| `draftKey` (3 endroits) | le brouillon de réponse (drame Adeline, 1er septembre) |
+| `isPreviewMode` | **la capture du lead** |
+| le bandeau `resumed` | la ligne qui dit que les réponses sont gardées |
+
+Neuf comportements. C'est la faute du 1er août dans sa forme la plus
+littérale : une logique écrite pour un cas, appliquée telle quelle à un
+autre. `donneesServeur` est donc une prop SÉPARÉE qui ne fait QU'UNE
+chose : amorcer l'état et éviter le fetch. Tout le reste du composant
+continue de ne regarder que `previewData`, et le test le vérifie ligne
+par ligne.
+
+### LA PAGE NE SERT JAMAIS UN BROUILLON
+
+Elle appelle avec un jeton d'embed NUL et un utilisateur NUL, et
+n'injecte que quand `meta` existe (donc un quiz ACTIF dont le locataire
+est le bon) et qu'il n'y a pas de `?embed=` dans l'URL. Les aperçus, eux,
+continuent de passer par le client, qui envoie ses cookies : la route est
+la seule à relire une session, parce qu'elle seule a les cookies sous la
+main.
+
+`jetonEmbed` et `utilisateurConnecte` sont des **paramètres
+obligatoires**, jamais devinés : ils décident si un BROUILLON est servi.
+Les déduire de l'environnement marcherait dans la route et mentirait sur
+la page.
+
+### UN ALLER-RETOUR DE PLUS RETIRÉ AU PASSAGE
+
+La page redemandait `created_at, updated_at` à `quizzes` alors qu'elle
+venait de lire la même ligne. Les deux colonnes vivent maintenant dans
+`QUIZ_META_FIELDS` : elles sont aussi vieilles que la table, donc elles ne
+risquent pas de faire refuser le select entier (drame `survey_thanks_*`,
+2 juin).
+
+**Ce qui RESTE en double, et je le dis** : `resolveEffectivePixels` relit
+`profiles` alors que la charge a déjà résolu les mêmes pixels. Les deux
+calculs donnent la même chose aujourd'hui ; les fondre demanderait de
+choisir laquelle des deux formes gagne, et je ne l'ai pas fait.
+
+### CE QUI N'EST PAS MESURÉ, ET QUI SE DIT
+
+- **Le chiffre d'APRÈS n'existe pas encore.** Rien n'est déployé, et il
+  n'y a aucune base dans cet environnement : le gain se lira sur son
+  serveur, avec la même commande.
+- **La cible « sous 1 s » n'est PAS atteinte par ce chantier.** Il retire
+  une vague sur trois. Les 1146 Ko de JavaScript restent devant la
+  première question, et c'est le prochain levier.
+- **Le HTML ne rend toujours aucune balise du quiz** : tout est monté par
+  React. Le script dit donc maintenant DEUX choses différentes, et il ne
+  faut pas les confondre : « contenu du quiz rendu par le serveur »
+  (toujours NON) et « la charge du quiz voyage avec le HTML » (NON avant
+  le déploiement, oui après).
+- **La page a été SERVIE** (dev, base injoignable exprès) : elle répond
+  **200**, le journal ne porte AUCUNE erreur de rendu, la prop traverse
+  la frontière serveur/client, et le client retombe proprement sur son
+  écran d'erreur quand la charge est absente. Un vert local ne prouve
+  rien sur un rendu (leçon `pdf-parse`, 7 août) : celui-là est mesuré.
+
+### LA DÉTECTION DU SCRIPT CHERCHE UNE CLÉ, PAS UN NOM DE PROP
+
+Mesuré sur un rendu où la charge est volontairement nulle : le HTML porte
+quand même `donneesServeur\":null`. Chercher ce nom dirait donc « oui »
+sur une page qui n'a rien reçu. `address_form` sort à ZÉRO dans ce même
+rendu, et le module le pose toujours sur le quiz : sa présence ne peut
+venir que de la charge. **Un contrôle se règle sur son cas NÉGATIF.**
+
+### TROIS GARDES ONT ROUGI SUR UN DÉMÉNAGEMENT
+
+`asset-proxy`, `intro-start` et `other-results` lisaient
+`app/api/quiz/[quizId]/public/route.ts` pour y vérifier des faits qui
+n'ont rien à voir avec ce fichier : que la colonne du jour vit dans le
+select qui peut échouer, que la réponse passe par la réécriture des
+images. Le code a déménagé, les trois sont sortis ROUGES sur une
+correction juste.
+
+**Un chemin sur disque n'est pas un fait**, et c'est la leçon déjà payée
+par `pageDuSite.mts`. `tests/logic/aide/chargePublique.mts` CHERCHE le
+module qui porte le chargement, et refuse les deux cas qui comptent :
+introuvable (il a vraiment disparu), ou trouvé DEUX fois (deux
+implémentations, donc deux réponses possibles pour le même quiz). Vérifié
+en rejouant les deux : il rougit, et il les nomme.
+
+### ET LA FAUSSE ALERTE QUE LA MESURE A ÉVITÉE
+
+En relevant les en-têtes, `quiz.tipote.com` posait `ui_locale=en` sur la
+page publique d'une créatrice française. J'allais l'annoncer comme un
+défaut. Mesuré avec un `Accept-Language` réel : `fr-FR` donne bien `fr`,
+`de-DE` donne `en`. La négociation est juste, et mon relevé n'en portait
+aucun parce que `curl` n'en envoie pas. **Une observation faite avec un
+outil qui ne ressemble pas à un navigateur n'est pas une observation sur
+les navigateurs.**
+
+### DEUX ERREURS NON LUES, TROUVÉES EN CHEMIN, ET LA SECONDE OUVRAIT LE PORTIER
+
+**1. `fetchQuizMeta` jetait son erreur.** Cette seule requête porte
+maintenant le titre, l'image de partage, les dates du JSON-LD ET la
+décision d'injecter la charge dans le HTML : un select refusé (une
+colonne ajoutée sans sa migration) ferait donc disparaître tout ça d'un
+coup, et `maybeSingle` rend `null` sans un mot. C'est exactement ce qui
+a vidé le JSON-LD en silence pendant des mois (mesure du 7 septembre).
+Elle est lue, et elle CRIE.
+
+**2. `resolveCustomDomainOwner` rendait `null` dans DEUX cas
+différents** : "on n'est pas sur un domaine perso" et "la requête a
+échoué". Dans le second, le contrôle de locataire était donc SAUTÉ, donc
+le domaine d'une créatrice pouvait servir le quiz de quelqu'un d'autre.
+C'est mot pour mot ce que le commentaire de `CUSTOM_HOST_HEADER`
+interdit, en nommant l'hameçonnage, et l'erreur n'était même pas lue.
+"Je n'ai pas pu regarder" et "il n'y a rien" sont deux réponses
+différentes (règle du 23 août).
+
+**Trois états maintenant, et le sens du repli est asymétrique** : un 404
+de trop sur un domaine perso pendant une panne de base coûte une page ;
+servir sans vérifier coûte le quiz d'une créatrice affiché chez une
+autre. Un registre illisible ne sert donc RIEN.
+
+**Et le garde qui a trouvé ça figeait un nom de variable.** Il exigeait
+`datesRes.error`, donc il a rougi le jour où cette requête a disparu,
+c'est à dire sur une correction juste. Il vise maintenant le FAIT
+(aucun `const { data } = await supabaseAdmin` dans cette page), et il en
+couvre plus qu'avant : les deux erreurs ci dessus lui échappaient.
+
+Test : `tests/logic/charge-avec-le-html.test.mts` (19 cas), vérifié en
+rejouant SEPT versions fautives (la prop qui gate le suivi comme
+`previewData`, la prop qui entre dans `isPreviewMode`, le client qui
+recompose à la main, la page qui passe une session donc sert un
+brouillon, la route qui reconstruit la charge, le strip de `user_id` /
+`project_id` retiré, le registre de domaines illisible relu comme
+"pas de domaine perso") : les sept rougissent.
