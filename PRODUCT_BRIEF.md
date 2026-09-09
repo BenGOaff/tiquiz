@@ -79,7 +79,7 @@ Variations selon le canal :
 ### vs Tally, Google Forms
 - **Pas un formulaire, un quiz** : résultats personnalisés, quiz scoré multi-axes, sondage, mécaniques de gamification, mémo persistant.
 - **Branding par quiz** sans toucher au CSS : 9 polices, palette générée depuis ta couleur, 9 thèmes, 8 dégradés, image de fond, dispositions variées (carte/couverture, questions centrées/gauche/deux colonnes), design par défaut réutilisable.
-- **Contenu généré par l'IA dans plus de 100 langues**, avec variantes de genre et personnalisation au prénom.
+- **Contenu généré par l'IA dans 100 langues et variantes** (compté dans `lib/quizLanguages.ts` : 100 entrées exactement, qui couvrent 83 langues distinctes plus leurs variantes régionales), avec variantes de genre et personnalisation au prénom.
 - **Détecteur d'ex-aequo** et rééquilibrage IA des résultats : un vrai moteur de quiz, pas juste des champs.
 
 ### vs Tipote (la plateforme parente)
@@ -169,7 +169,7 @@ Variations selon le canal :
 
 ### 7.6. Multilingue
 - **UI admin en 7 langues** (FR, EN, ES, IT, AR, PT Portugal, PT Brésil), avec RTL arabe.
-- **Contenu de quiz générable dans plus de 100 langues** (19 mises en avant), l'IA produit questions et résultats directement dans la langue choisie.
+- **Contenu de quiz générable dans 100 langues et variantes** (19 mises en avant), l'IA produit questions et résultats directement dans la langue choisie.
 - **Quiz public multilingue**, dont formes tu et vous du français, et variantes de genre adaptées par langue.
 - Typographie française correcte (espaces insécables) appliquée au save et au render.
 
@@ -229,6 +229,35 @@ Variations selon le canal :
 - **Annuler n'est pas rembourser.** Annuler garde l'accès jusqu'à la fin de la période payée. Rembourser rend l'argent, ferme l'accès et arrête le prélèvement.
 - **L'utilisateur peut tout faire seul**, sans écrire au support.
 - Ne jamais promettre "changement dans les deux sens en un clic" : la descente passe par une annulation, et le dire est plus honnête que de le laisser découvrir.
+
+### 7.14bis. Les trois générateurs de contenu (paliers premium)
+
+Ajouté le 1er septembre 2026, absent de ce brief jusqu'au 9. **C'est un
+argument de vente entier qui n'était nulle part.**
+
+Tiquiz écrit ce qui vient APRÈS le quiz, à partir du quiz : il relit le
+titre, la promesse, le ton, les profils et leurs tags côté serveur, donc
+la créatrice ne ressaisit rien.
+
+- **Le bonus post-quiz** : le bonus entier, son mode d'emploi pour le
+  fabriquer, et les textes qui le remettent. Un bonus commun, ou un par
+  profil, avec une offre payante différente par profil.
+- **La séquence d'emails post-quiz** : cinq emails, aux cinq temps
+  enseignés dans l'Atelier du Quiz, écrits pour UN profil.
+- **Les contenus de promotion** : trois emails et quatre publications,
+  chacune par un angle différent.
+
+**Ce qu'on a le droit d'affirmer :** le contenu est écrit dans la langue
+du quiz ; il se corrige sur place ; il s'exporte en PDF ; il se retrouve
+dans une bibliothèque et se reprend là où il a été laissé ; rien n'est
+tronqué ni annulé, un texte long s'écrit en plusieurs tranches.
+
+**Ce qu'on n'affirme PAS :** ce n'est ni un éditeur de newsletter ni un
+planificateur. Le contenu se copie dans Systeme.io.
+
+**Le palier :** `canUseAIAnalysis`, donc beta, lifetime, mensuel PLUS et
+annuel PLUS. Les paliers gratuit, mensuel et annuel VOIENT les trois
+cartes et se voient proposer de monter.
 
 ### 7.15. Domaines personnalisés
 - **Connecte ton propre domaine** : n'importe quel sous-domaine que tu contrôles.
@@ -400,7 +429,7 @@ Variations selon le canal :
 - **5 minutes** pour créer un quiz custom de A à Z.
 - **30 secondes** de génération IA.
 - **15 templates métier** prêts à publier.
-- **7 langues UI**, contenu de quiz dans **plus de 100 langues**, RTL arabe.
+- **7 langues UI**, contenu de quiz dans **100 langues et variantes**, RTL arabe.
 - **9 thèmes**, **8 dégradés**, **9 polices**, palette générée depuis une couleur.
 - **20 Go max** par upload vidéo (popquiz).
 - **6 réseaux** de partage (Facebook, X, LinkedIn, WhatsApp, Telegram, email).
@@ -425,12 +454,33 @@ Variations selon le canal :
 - Ne pas faire de promesse « tu vas exploser tes leads » : promesse outil, pas promesse résultat.
 - Ne pas utiliser de screenshots avec une UI obsolète : vérifier la fraîcheur des assets.
 
-## 16. Le site public et le blog (30 août 2026)
+## 16. Le site public et le blog (30 août 2026, relu le 9 septembre)
 
-Ajouté après la construction du site : ce chapitre n'existait pas, donc
-personne ne savait qu'il y avait du contenu à réutiliser en com.
+🚨 **Ce chapitre listait cinq pages. Le site en porte VINGT ET UNE, et il
+est BILINGUE depuis le 8 septembre.** Corrigé en place plutôt
+qu'empilé : une note d'état des lieux se relit quand on corrige ce
+qu'elle décrit.
 
-### Ce qui est en ligne
+### Ce qui s'est ajouté depuis le 30 août
+
+| Page | Ce qu'on peut en tirer en com |
+|---|---|
+| `/tarifs` | les trois paliers avec leurs puces promesses, la grille comparative, la FAQ d'argent |
+| `/fonctionnalites` + **8 pages** | une page par fonctionnalité, avec son "pourquoi", ses bénéfices et le fichier du code qui la rend vraie |
+| `/integrations` + **6 pages** | Zapier, Tally, Typeform, Jotform, Google Forms, Interact : les prix et les limites de chacun, relevés et datés |
+| `/generateur-de-quiz` | le générateur public, gratuit, sans compte : **le meilleur lead magnet du produit** |
+
+**Le site est en FRANÇAIS et en ANGLAIS.** Chaque page interne a son
+`/en/<chemin>`, et les 10 articles du blog ont leur version anglaise, un
+pour un. Le français ne porte aucun préfixe (les URL indexées ne bougent
+pas). La page de vente `/` elle même reste une capture française.
+
+**Deux choses à ne PAS reprendre en com sans vérifier :** le domaine est
+un `.fr`, qui dit à Google que le site vise la France (handicap réel sur
+un marché anglophone, `hreflang` ne l'annule pas) ; et le générateur
+public est limité à **2 quiz par adresse IP par 24 h**.
+
+### Ce qui existait déjà
 
 `tiquiz.fr` porte la page de vente, le bon de commande, **et un site** :
 `/blog` (10 articles, 5 rubriques), `/affiliation` avec son simulateur

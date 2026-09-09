@@ -105,6 +105,7 @@ serveur s'il servait vraiment le fichier.
 |---|---|
 | ce que le produit promet, quoi écrire en com | `PRODUCT_BRIEF.md` |
 | comment ça marche, écran par écran | `CAHIER_DES_CHARGES.md` |
+| **par quoi reprendre, tout de suite** | **`PASSATION.md`** (daté du 9 septembre) |
 | **ce qui reste à faire, dit par Béné** | **`CHANTIERS.md`** |
 | ce qui reste à reprendre à Systeme.io | `ROADMAP_SORTIE_SIO.md` |
 | les bugs récurrents et les conventions | `CLAUDE_PITFALLS.md` |
