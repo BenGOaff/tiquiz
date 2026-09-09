@@ -1,0 +1,1056 @@
+<title>Landing Tiquiz</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+<style>
+:root{
+  --encre:#2B3264; --gris:#6B7291; --gris-doux:#8A90AE;
+  --bleu:#5E6DDE; --bleu-2:#5A6EF6; --bleu-fonce:#4A57C9; --cyan:#20BBE6;
+  --bord:#E4E8F3; --creme:#F7F9FE; --panneau:#EEF0FF; --blanc:#FFFFFF; --surface:#FFFFFF;
+  --ambre:#FFB800; --rouge:#E0577B;
+  --ombre:0 18px 44px -22px rgba(43,50,100,.34);
+  --ombre-douce:0 8px 24px -14px rgba(43,50,100,.28);
+  --r:18px; --max:1120px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --encre:#EDF0FF; --gris:#A9B0D0; --gris-doux:#848CB0;
+  --bleu:#8590FF; --bleu-2:#8590FF; --bleu-fonce:#6E7BF5; --cyan:#3FD0F2;
+  --bord:#2A3055; --creme:#161A32; --panneau:#1E2444; --blanc:#10132A; --surface:#171B36;
+  --rouge:#F07C9B;
+  --ombre:0 18px 44px -22px rgba(0,0,0,.75); --ombre-douce:0 8px 24px -14px rgba(0,0,0,.65)}}
+:root[data-theme="dark"]{
+  --encre:#EDF0FF; --gris:#A9B0D0; --gris-doux:#848CB0;
+  --bleu:#8590FF; --bleu-2:#8590FF; --bleu-fonce:#6E7BF5; --cyan:#3FD0F2;
+  --bord:#2A3055; --creme:#161A32; --panneau:#1E2444; --blanc:#10132A; --surface:#171B36;
+  --rouge:#F07C9B;
+  --ombre:0 18px 44px -22px rgba(0,0,0,.75); --ombre-douce:0 8px 24px -14px rgba(0,0,0,.65)}
+
+*{box-sizing:border-box}
+body{margin:0; background:var(--blanc); color:var(--gris);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  font-size:17px; line-height:1.62; -webkit-font-smoothing:antialiased}
+h1,h2,h3{color:var(--encre); text-wrap:balance; margin:0; line-height:1.13; letter-spacing:-.025em}
+h1{font-weight:800}
+h2{font-size:clamp(1.9rem,3.7vw,2.7rem); font-weight:800}
+h3{font-size:1.18rem; font-weight:700; line-height:1.32; letter-spacing:-.015em}
+p{margin:0}
+a{color:var(--bleu)}
+
+.wrap{max-width:var(--max); margin:0 auto; padding:0 24px}
+.sec{padding:108px 0}
+.sec--creme{background:var(--creme)}
+.pile{display:flex; flex-direction:column}
+.g10{gap:10px}.g14{gap:14px}.g18{gap:18px}.g24{gap:24px}.g32{gap:32px}.g40{gap:40px}.g56{gap:56px}
+.centre{text-align:center; align-items:center}
+.surb{background:var(--cyan); color:#152047; padding:.02em .22em; border-radius:5px;
+  box-decoration-break:clone; -webkit-box-decoration-break:clone}
+.surtitre{font-size:.78rem; font-weight:800; letter-spacing:.13em; text-transform:uppercase; color:var(--bleu)}
+.chapo{font-size:1.09rem; max-width:62ch}
+.note{font-size:.88rem; color:var(--gris-doux)}
+
+.btn{display:inline-flex; align-items:center; gap:10px; font:inherit; font-weight:700;
+  padding:16px 30px; border-radius:999px; text-decoration:none; border:1px solid transparent;
+  transition:transform .16s ease, box-shadow .16s ease, background .16s ease}
+.btn-p{background:var(--bleu); color:#fff; box-shadow:0 12px 28px -12px rgba(94,109,222,.85)}
+.btn-p:hover{background:var(--bleu-fonce); transform:translateY(-1px)}
+.btn-s{background:var(--surface); color:var(--encre); border-color:var(--bord)}
+.btn-s:hover{border-color:var(--bleu); transform:translateY(-1px)}
+.btn-blanc{background:#fff; color:#3B44A8}
+.btn:focus-visible{outline:3px solid var(--cyan); outline-offset:3px}
+.rassure{font-size:.9rem; color:var(--gris-doux)}
+.ctas{display:flex; flex-wrap:wrap; gap:14px; align-items:center}
+.preuves{display:flex; flex-wrap:wrap; gap:10px 26px; font-size:.92rem; font-weight:600; color:var(--encre)}
+.preuves span{display:inline-flex; align-items:center; gap:7px}
+.tick{color:var(--cyan); font-weight:800}
+.badge200{display:inline-flex; align-items:center; gap:10px; align-self:flex-start;
+  background:var(--surface); border:1px solid var(--bord); border-radius:999px;
+  padding:11px 20px; font-size:.92rem; font-weight:700; color:var(--encre); box-shadow:var(--ombre-douce)}
+.pastille{width:9px;height:9px;border-radius:50%;background:var(--cyan);flex:none}
+
+.nav{position:sticky; top:0; z-index:40; background:color-mix(in srgb, var(--blanc) 88%, transparent);
+  backdrop-filter:blur(10px); border-bottom:1px solid var(--bord)}
+.nav .wrap{display:flex; align-items:center; gap:28px; height:66px}
+.logo{font-weight:900; font-size:1.3rem; color:#152047; letter-spacing:-.04em;
+  background:var(--cyan); padding:2px 9px; border-radius:6px; transform:skewX(-9deg); display:inline-block}
+.liens{display:flex; gap:22px; font-size:.95rem; font-weight:600; margin-left:8px}
+.liens a{color:var(--gris); text-decoration:none}
+.liens a:hover{color:var(--encre)}
+.nav-fin{margin-left:auto; display:flex; align-items:center; gap:18px}
+.nav-fin .co{color:var(--gris); text-decoration:none; font-weight:600; font-size:.95rem}
+.nav .btn{padding:11px 21px; font-size:.93rem}
+@media (max-width:960px){.liens,.nav-fin .co{display:none}}
+
+/* ── HERO ── */
+.hero{padding:40px 0 56px; background:linear-gradient(168deg, var(--panneau) 0%, var(--blanc) 66%)}
+.hero-grid{display:flex; flex-direction:column; align-items:center; text-align:center; gap:14px}
+h1{font-size:clamp(1.85rem,3.9vw,2.85rem); line-height:1.1}
+.h1-mot{display:block; white-space:nowrap; color:var(--encre)}
+@media (max-width:560px){.h1-mot{font-size:.84em}}
+.h1-l2{display:block}
+.hero .chapo{font-size:1.02rem; max-width:66ch; margin-bottom:2px}
+.hero .qz{width:100%; max-width:900px; text-align:left; margin-top:6px}
+.hero-sous{display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:10px 22px; margin-top:12px}
+.hero-sous .preuves{gap:8px 20px; font-size:.88rem}
+.hero-sous .rassure{font-size:.88rem}
+.hero-lien{font-size:.9rem; font-weight:600}
+
+/* ══ QUIZ DU HERO ══ */
+.qz{background:var(--surface); border:1px solid var(--bord); border-radius:20px;
+  box-shadow:0 24px 60px -30px rgba(43,50,100,.45); overflow:hidden}
+.qz-bar{display:flex; align-items:center; gap:8px; padding:11px 20px; border-bottom:1px solid var(--bord);
+  background:linear-gradient(90deg, color-mix(in srgb, var(--cyan) 12%, var(--creme)), var(--creme))}
+.qz-bar .pt{width:8px;height:8px}
+.qz-bar b{font-size:.75rem; letter-spacing:.09em; text-transform:uppercase; color:var(--encre); font-weight:900; margin-left:8px}
+.qz-bar .live{margin-left:auto; display:inline-flex; align-items:center; gap:6px; font-size:.66rem; font-weight:900;
+  letter-spacing:.07em; text-transform:uppercase; color:#152047; background:var(--cyan); padding:4px 10px; border-radius:999px}
+.qz-corps{padding:22px 26px 24px}
+.qz-tete{display:flex; align-items:center; gap:14px; margin-bottom:16px}
+.qz-jauge{flex:1; height:6px; background:var(--bord); border-radius:99px; overflow:hidden}
+.qz-jauge i{display:block; height:100%; background:linear-gradient(90deg,var(--bleu),var(--cyan)); border-radius:99px;
+  transition:width .45s cubic-bezier(.4,0,.2,1); width:25%}
+.qz-cpt{font-size:.72rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:var(--gris-doux);
+  white-space:nowrap; font-variant-numeric:tabular-nums}
+.qz-q{color:var(--encre); font-weight:800; font-size:clamp(1.08rem,1.9vw,1.32rem); margin:0 0 16px;
+  line-height:1.34; letter-spacing:-.015em; text-wrap:balance}
+.qz-opts{display:grid; grid-template-columns:1fr 1fr; gap:9px}
+@media (max-width:660px){.qz-opts{grid-template-columns:1fr}}
+.qz-opt{font:inherit; text-align:left; display:flex; align-items:center; gap:11px; border:1px solid var(--bord);
+  border-radius:12px; padding:12px 14px; font-size:.93rem; color:var(--encre); background:var(--blanc); cursor:pointer;
+  line-height:1.32; transition:border-color .15s ease, box-shadow .15s ease, background .15s ease}
+.qz-opt:hover{border-color:var(--bleu); background:color-mix(in srgb, var(--bleu) 4%, var(--blanc)); box-shadow:0 0 0 3px rgba(94,109,222,.09)}
+.qz-opt:focus-visible{outline:2px solid var(--cyan); outline-offset:2px}
+.qz-opt i{width:15px;height:15px;border-radius:50%;border:2px solid var(--bord);flex:none;transition:.15s ease}
+.qz-opt:hover i{border-color:var(--bleu); box-shadow:inset 0 0 0 3px var(--blanc), inset 0 0 0 9px var(--bleu)}
+.qz-vue{animation:qzIn .3s cubic-bezier(.34,1.25,.64,1) both}
+@keyframes qzIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.qz-res{display:grid; grid-template-columns:1fr 1fr; gap:26px; align-items:start}
+@media (max-width:760px){.qz-res{grid-template-columns:1fr; gap:18px}}
+.qz-res .eti{display:inline-flex; background:var(--cyan); color:#152047; font-size:.66rem; font-weight:900;
+  letter-spacing:.1em; text-transform:uppercase; padding:4px 11px; border-radius:999px; margin-bottom:9px}
+.qz-res h3{font-size:1.42rem; margin-bottom:8px; letter-spacing:-.02em}
+.qz-res .txt{font-size:.94rem; line-height:1.55}
+.qz-idee{background:linear-gradient(150deg, color-mix(in srgb, var(--cyan) 9%, var(--creme)), var(--creme));
+  border:1px solid var(--bord); border-left:3px solid var(--cyan); border-radius:12px; padding:15px 17px; margin-bottom:14px}
+.qz-idee span{font-size:.66rem; font-weight:900; letter-spacing:.1em; text-transform:uppercase; color:var(--bleu); display:block; margin-bottom:6px}
+.qz-idee b{color:var(--encre); font-size:1.05rem; font-weight:800; line-height:1.32; letter-spacing:-.015em}
+.qz-cta{display:flex; flex-direction:column; gap:8px; align-items:flex-start}
+.qz-cta .btn{width:100%; justify-content:center; padding:15px 24px}
+.qz-rejouer{background:none; border:0; font:inherit; font-size:.84rem; color:var(--gris-doux); cursor:pointer; text-decoration:underline; padding:0}
+.qz-rejouer:hover{color:var(--encre)}
+
+/* ══ MODELES ══ */
+.mgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:20px}
+@media (max-width:940px){.mgrid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.mgrid{grid-template-columns:1fr}}
+.m{background:var(--surface); border:1px solid var(--bord); border-radius:16px; padding:24px; display:flex; flex-direction:column; gap:9px; box-shadow:var(--ombre-douce); transition:transform .16s ease, box-shadow .16s ease}
+.m:hover{transform:translateY(-2px); box-shadow:var(--ombre)}
+.m .pour{font-size:.68rem; font-weight:900; letter-spacing:.1em; text-transform:uppercase; color:var(--bleu)}
+.m b{color:var(--encre); font-size:1.06rem; font-weight:700; line-height:1.35}
+.m p{font-size:.92rem; flex:1}
+.m a{font-weight:700; font-size:.9rem; text-decoration:none; margin-top:4px}
+
+/* ══ LOGOS ══ */
+.logos{display:flex; flex-wrap:wrap; gap:10px; justify-content:center}
+.logo-p{background:var(--surface); border:1px solid var(--bord); border-radius:10px; padding:10px 18px;
+  font-size:.94rem; font-weight:700; color:var(--encre)}
+.logo-p.fort{border-color:var(--cyan); box-shadow:0 0 0 3px color-mix(in srgb, var(--cyan) 16%, transparent)}
+
+/* ══ FAQ ══ */
+.faq{max-width:800px; margin:0 auto; display:flex; flex-direction:column; gap:0}
+.faq details{border-bottom:1px solid var(--bord)}
+.faq summary{cursor:pointer; list-style:none; padding:20px 40px 20px 0; font-weight:700; color:var(--encre); font-size:1.04rem; position:relative}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+"; position:absolute; right:6px; top:17px; font-size:1.5rem; font-weight:400; color:var(--bleu); transition:transform .2s ease}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq summary:focus-visible{outline:2px solid var(--cyan); outline-offset:3px}
+.faq p{padding:0 40px 22px 0; font-size:.98rem}
+
+/* ══ BLOG ══ */
+.bgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:20px}
+@media (max-width:860px){.bgrid{grid-template-columns:1fr}}
+.b{background:var(--surface); border:1px solid var(--bord); border-radius:16px; padding:24px; display:flex; flex-direction:column; gap:9px}
+.b .cat{font-size:.68rem; font-weight:900; letter-spacing:.1em; text-transform:uppercase; color:var(--cyan)}
+.b b{color:var(--encre); font-size:1.04rem; line-height:1.35}
+.b p{font-size:.91rem; flex:1}
+
+/* ── SCENE claire pour les composants produit ── */
+.scene{background:#F7F9FE; border:1px solid #E4E8F3; border-radius:24px; padding:8px 8px 18px; box-shadow:var(--ombre)}
+
+/* ── DUEL PDF vs QUIZ (composant existant) ── */
+.tqvs *{margin:0;padding:0;box-sizing:border-box}
+.tqvs{width:100%;max-width:560px;margin:0 auto;padding:30px 10px 26px;position:relative;font-family:'Inter',sans-serif}
+.tqvs-duel{display:flex;gap:18px;align-items:stretch;position:relative}
+.tqvs-card{position:relative;flex:1 1 0;background:#fff;border-radius:20px;box-shadow:0 12px 38px rgba(43,50,100,.12);padding:22px 18px 20px;min-width:0;opacity:0}
+.tqvs-card.pdf{transform:translateY(20px) rotate(-1.5deg)}
+.tqvs-card.qz{transform:translateY(20px) rotate(1.5deg)}
+.tqvs-h{font-size:11.5px;font-weight:800;letter-spacing:1.8px;text-transform:uppercase;margin-bottom:14px}
+.tqvs-card.pdf .tqvs-h{color:#8A93B8}
+.tqvs-card.qz .tqvs-h{color:#20BBE6}
+.tqvs-ico{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;position:relative}
+.tqvs-card.pdf .tqvs-ico{background:#EEF1F8}
+.tqvs-card.qz .tqvs-ico{background:linear-gradient(135deg,#20BBE7,#5A6EF6)}
+.tqvs-ico svg{width:26px;height:26px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tqvs-card.pdf .tqvs-ico svg{stroke:#8A93B8}
+.tqvs-card.qz .tqvs-ico svg{stroke:#fff}
+.tqvs-sleep{position:absolute;right:-7px;top:-7px;font-size:17px;opacity:0;transform:scale(.4)}
+.tqvs-chip{display:flex;align-items:center;gap:7px;background:#F3F6FC;border-radius:10px;padding:9px 11px;font-size:13px;font-weight:700;color:#2B3264;margin-bottom:8px;opacity:0;transform:translateX(-12px);white-space:nowrap;overflow:hidden}
+.tqvs-chip svg{width:14px;height:14px;flex:none;fill:none;stroke:#5A6EF6;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tqvs-card.pdf .tqvs-chip svg{stroke:#8A93B8}
+.tqvs-chip.tag{background:#5E6DDE;color:#fff}
+.tqvs-chip.tag .tg-s{display:none}
+.tqvs-chip.tag svg{stroke:#fff}
+.tqvs-empty{font-size:12px;font-weight:700;color:#B0B8D4;margin-top:4px;opacity:0}
+.tqvs-dim{position:absolute;inset:0;border-radius:20px;background:rgba(255,255,255,.55);opacity:0;pointer-events:none}
+.tqvs-zz{position:absolute;top:6px;right:14px;font-size:16px;font-weight:900;color:#B9C2DB;opacity:0}
+.tqvs-zz.z2{right:30px;top:20px;font-size:12px}
+.tqvs-vs{position:absolute;left:50%;top:30px;transform:translate(-50%,0) scale(.3);width:48px;height:48px;border-radius:50%;background:#2B3264;color:#fff;font-size:16px;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 28px rgba(43,50,100,.35);border:3px solid #fff;z-index:3;opacity:0}
+.tqvs-x5{position:absolute;top:-16px;right:-8px;background:linear-gradient(135deg,#20BBE7,#5A6EF6);color:#fff;font-size:15px;font-weight:900;padding:9px 14px;border-radius:50px;box-shadow:0 10px 26px rgba(90,110,246,.45);opacity:0;transform:scale(.4);z-index:2}
+.tqvs-cf{position:absolute;top:-6px;right:24px;width:7px;height:11px;border-radius:2px;opacity:0;z-index:1}
+.tqvs-cf.f1{background:#20BBE6}
+.tqvs-cf.f2{background:#FFD700;right:8px;width:6px;height:6px;border-radius:50%}
+.tqvs-cf.f3{background:#5A6EF6;right:44px}
+.tqvs-cf.f4{background:#FF6663;right:60px;width:6px;height:6px;border-radius:50%}
+.tqvs-cf.f5{background:#10B981;right:-4px}
+.tqvs-cf.f6{background:#8B5CF6;right:34px;width:5px;height:9px}
+.tqvs-punch{margin:22px auto 0;text-align:center;opacity:0;transform:translateY(12px)}
+.tqvs-punch span{display:inline-block;background:#fff;border:1.5px solid rgba(32,187,230,.4);color:#2B3264;font-size:14.5px;font-weight:700;padding:12px 22px;border-radius:50px;box-shadow:0 10px 28px rgba(43,50,100,.09);line-height:1.4}
+.tqvs-punch b{background:linear-gradient(90deg,#20BBE7,#5A6EF6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tqvs.tqz-visible .tqvs-card.pdf{animation:tqvsUpL .65s cubic-bezier(.34,1.56,.64,1) forwards .2s,tqvsSink 1s ease forwards 3s}
+.tqvs.tqz-visible .tqvs-card.qz{animation:tqvsUpR .65s cubic-bezier(.34,1.56,.64,1) forwards .4s,tqvsGlow 1.6s ease 3.9s 2,tqvsFloat 5s ease-in-out 6.5s infinite}
+.tqvs.tqz-visible .tqvs-vs{animation:tqvsVs .55s cubic-bezier(.34,1.56,.64,1) forwards .85s}
+.tqvs.tqz-visible .pdf .tqvs-c1{animation:tqvsChip .45s ease forwards 1.2s}
+.tqvs.tqz-visible .pdf .tqvs-c2{animation:tqvsChip .45s ease forwards 1.7s}
+.tqvs.tqz-visible .tqvs-empty{animation:tqvsFade .6s ease forwards 3.2s}
+.tqvs.tqz-visible .tqvs-dim{animation:tqvsFade .9s ease forwards 3s}
+.tqvs.tqz-visible .tqvs-sleep{animation:tqvsPop .5s cubic-bezier(.34,1.56,.64,1) forwards 3.4s}
+.tqvs.tqz-visible .tqvs-zz.z1{animation:tqvsZz 2.6s ease-in-out 3.6s infinite}
+.tqvs.tqz-visible .tqvs-zz.z2{animation:tqvsZz 2.6s ease-in-out 4.2s infinite}
+.tqvs.tqz-visible .qz .tqvs-c1{animation:tqvsChip .45s ease forwards 1.4s}
+.tqvs.tqz-visible .qz .tqvs-c2{animation:tqvsChip .45s ease forwards 1.8s}
+.tqvs.tqz-visible .qz .tqvs-c3{animation:tqvsChip .45s ease forwards 2.2s}
+.tqvs.tqz-visible .qz .tqvs-c4{animation:tqvsChip .45s ease forwards 2.6s}
+.tqvs.tqz-visible .qz .tqvs-c5{animation:tqvsChip .5s ease forwards 3.1s}
+.tqvs.tqz-visible .tqvs-x5{animation:tqvsPop .55s cubic-bezier(.34,1.56,.64,1) forwards 3.8s}
+.tqvs.tqz-visible .tqvs-cf{animation:tqvsConf 1.6s ease forwards 4s}
+.tqvs.tqz-visible .tqvs-cf.f2{animation-delay:4.05s}.tqvs.tqz-visible .tqvs-cf.f3{animation-delay:4.1s}
+.tqvs.tqz-visible .tqvs-cf.f4{animation-delay:4.02s}.tqvs.tqz-visible .tqvs-cf.f5{animation-delay:4.08s}
+.tqvs.tqz-visible .tqvs-cf.f6{animation-delay:4.12s}
+.tqvs.tqz-visible .tqvs-punch{animation:tqvsUp .6s cubic-bezier(.34,1.56,.64,1) forwards 4.3s}
+@keyframes tqvsUpL{to{opacity:1;transform:translateY(0) rotate(-1.5deg)}}
+@keyframes tqvsUpR{to{opacity:1;transform:translateY(0) rotate(1.5deg)}}
+@keyframes tqvsUp{to{opacity:1;transform:translateY(0)}}
+@keyframes tqvsVs{to{opacity:1;transform:translate(-50%,0) scale(1)}}
+@keyframes tqvsChip{to{opacity:1;transform:translateX(0)}}
+@keyframes tqvsFade{to{opacity:1}}
+@keyframes tqvsPop{to{opacity:1;transform:scale(1)}}
+@keyframes tqvsSink{to{opacity:1;transform:translateY(8px) rotate(-3deg)}}
+@keyframes tqvsGlow{0%,100%{box-shadow:0 12px 38px rgba(43,50,100,.12)}50%{box-shadow:0 14px 46px rgba(32,187,230,.38)}}
+@keyframes tqvsFloat{0%,100%{transform:translateY(0) rotate(1.5deg)}50%{transform:translateY(-7px) rotate(1.5deg)}}
+@keyframes tqvsZz{0%{opacity:0;transform:translateY(0)}25%{opacity:1}70%{opacity:0;transform:translateY(-15px)}100%{opacity:0}}
+@keyframes tqvsConf{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:0;transform:translateY(70px) rotate(340deg)}}
+@media(max-width:500px){
+.tqvs{padding:24px 6px 20px}.tqvs-duel{gap:10px}.tqvs-card{padding:18px 12px 16px}
+.tqvs-chip{font-size:11px;padding:8px 8px;gap:5px}
+.tqvs-chip.tag{font-size:10.5px;padding:8px 6px;gap:4px}
+.tqvs-chip.tag .tg-l{display:none}.tqvs-chip.tag .tg-s{display:inline}
+.tqvs-vs{width:40px;height:40px;font-size:13px;top:24px}
+.tqvs-x5{right:0;top:-14px;font-size:13px;padding:8px 12px}
+.tqvs-punch span{font-size:12.5px;padding:10px 14px}}
+
+.duo{display:grid; grid-template-columns:1.1fr .9fr; gap:52px; align-items:center}
+@media (max-width:960px){.duo{grid-template-columns:1fr; gap:36px}}
+.chiffre{font-size:clamp(3.4rem,7vw,4.8rem); font-weight:900; color:var(--bleu); line-height:.95; letter-spacing:-.045em}
+.src{font-size:.84rem; color:var(--gris-doux); line-height:1.5; border-left:2px solid var(--bord); padding-left:14px}
+
+/* ── BOUCLE ANIMEE ── */
+.boucle{display:grid; grid-template-columns:minmax(0,420px) minmax(0,1fr); gap:64px; align-items:center}
+@media (max-width:920px){.boucle{grid-template-columns:1fr; gap:36px; justify-items:center}}
+.roue-box{width:100%; max-width:400px; justify-self:center}
+.roue{width:100%; display:block; overflow:visible}
+.noeud .lbl{transition:transform 1.1s cubic-bezier(.62,.02,.28,1)}
+#anneau{transform-origin:200px 200px; transition:transform 1.1s cubic-bezier(.62,.02,.28,1)}
+.n-cercle{fill:var(--bord); transition:fill .5s ease}
+.n-actif .n-cercle{fill:var(--bleu)}
+.n-num{fill:var(--gris-doux); font-weight:900; font-size:22px; transition:fill .5s ease}
+.n-actif .n-num{fill:#fff}
+.etapes-txt{position:relative; min-height:230px; display:flex; align-items:center}
+@media (max-width:920px){.etapes-txt{min-height:250px}}
+.et{position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; gap:10px;
+  opacity:0; transform:translateY(14px); transition:opacity .5s ease, transform .5s ease; pointer-events:none}
+.et.on{opacity:1; transform:translateY(0)}
+.et .rang{font-size:.74rem; font-weight:900; letter-spacing:.14em; text-transform:uppercase; color:var(--cyan)}
+.et h3{font-size:1.42rem}
+.et p{font-size:1.03rem; max-width:46ch}
+.pips{display:flex; gap:8px; margin-top:6px}
+.pip{width:26px; height:4px; border-radius:99px; background:var(--bord); border:0; padding:0; cursor:pointer}
+.pip.on{background:var(--bleu)}
+.pip:focus-visible{outline:2px solid var(--cyan); outline-offset:3px}
+.avert{display:flex; gap:16px; align-items:flex-start; background:var(--surface); border:1px solid var(--bord);
+  border-radius:var(--r); padding:22px 26px; box-shadow:var(--ombre-douce); max-width:760px; margin:0 auto}
+.avert .ico{flex:none; width:34px; height:34px; border-radius:10px; background:var(--panneau); color:var(--bleu);
+  display:grid; place-items:center; font-weight:900; font-size:1rem}
+.avert p{font-size:.97rem}
+
+/* ── TABLEAU ── */
+.tabwrap{overflow-x:auto; border:1px solid var(--bord); border-radius:var(--r); background:var(--surface); box-shadow:var(--ombre-douce)}
+table{border-collapse:collapse; width:100%; min-width:720px; font-size:.95rem}
+th,td{padding:15px 20px; text-align:left; border-bottom:1px solid var(--bord); vertical-align:top}
+thead th{background:var(--creme); font-size:.78rem; text-transform:uppercase; letter-spacing:.06em; color:var(--gris-doux); font-weight:800}
+tbody th{font-weight:700; color:var(--encre); white-space:nowrap}
+tbody tr:last-child td, tbody tr:last-child th{border-bottom:0}
+tr.nous th, tr.nous td{background:color-mix(in srgb, var(--cyan) 12%, transparent); color:var(--encre); font-weight:700}
+.no{color:var(--rouge); font-weight:600}
+.oui{color:var(--encre); font-weight:700}
+
+/* ── ETAPES ── */
+.etape{display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center}
+.etape+.etape{margin-top:96px}
+.etape:nth-child(even) .visuel{order:2}
+@media (max-width:900px){.etape{grid-template-columns:1fr; gap:30px} .etape:nth-child(even) .visuel{order:0}}
+.tag-etape{display:inline-flex; align-self:flex-start; background:var(--cyan); color:#152047;
+  font-size:.72rem; font-weight:900; letter-spacing:.1em; text-transform:uppercase; padding:6px 13px; border-radius:999px}
+.promesses{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:14px}
+.promesses li{display:flex; gap:12px; align-items:flex-start; font-size:1rem}
+.promesses svg{flex:none; width:20px; height:20px; margin-top:3px; stroke:var(--cyan); stroke-width:2.6; fill:none; stroke-linecap:round; stroke-linejoin:round}
+.promesses b{color:var(--encre); font-weight:700}
+.mock{background:var(--surface); border:1px solid var(--bord); border-radius:var(--r); box-shadow:var(--ombre); padding:22px; font-size:.88rem}
+.champ{background:var(--creme); border:1px solid var(--bord); border-radius:10px; padding:12px 14px; color:var(--gris); margin-bottom:10px}
+.champ b{display:block; font-size:.71rem; text-transform:uppercase; letter-spacing:.08em; margin-bottom:5px; color:var(--gris-doux); font-weight:800}
+.ligneq{display:flex; gap:10px; align-items:center; padding:10px 0; border-bottom:1px dashed var(--bord); color:var(--encre); font-weight:600}
+.ligneq:last-child{border-bottom:0}
+.numq{width:22px;height:22px;border-radius:6px;background:var(--panneau);color:var(--bleu);display:grid;place-items:center;font-size:.74rem;font-weight:800;flex:none}
+.codeblk{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.82rem; background:var(--creme); border:1px solid var(--bord); border-radius:10px; padding:14px; color:var(--encre); overflow-x:auto; white-space:pre}
+.leadrow{display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--bord)}
+.leadrow:last-child{border-bottom:0}
+.av{width:28px;height:28px;border-radius:50%;background:var(--panneau);color:var(--bleu);display:grid;place-items:center;font-weight:800;font-size:.76rem;flex:none}
+.leadrow .mail{color:var(--gris); flex:1; font-size:.86rem}
+.tagpuce{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.74rem; background:color-mix(in srgb, var(--bleu) 14%, transparent); color:var(--bleu); border-radius:6px; padding:4px 9px; font-weight:600; white-space:nowrap}
+
+/* atelier IA : 4 temps */
+.ia-tete{display:flex; align-items:center; gap:10px; margin-bottom:16px}
+.ia-pastille{width:8px;height:8px;border-radius:50%;background:var(--cyan)}
+.ia-titre{font-size:.75rem; font-weight:900; letter-spacing:.1em; text-transform:uppercase; color:var(--bleu)}
+.ia-scene{position:relative; min-height:262px}
+.ia-vue{position:absolute; inset:0; opacity:0; transform:translateY(10px); transition:opacity .45s ease, transform .45s ease; pointer-events:none}
+.ia-vue.on{opacity:1; transform:translateY(0)}
+.ia-legende{margin-top:16px; font-size:.92rem; color:var(--encre); font-weight:700; min-height:2.6em}
+.swatch{display:flex; gap:8px; align-items:center; margin-bottom:10px}
+.sw{width:26px;height:26px;border-radius:8px;border:1px solid var(--bord)}
+.mini-logo{font-weight:900; font-size:.86rem; color:#152047; background:var(--cyan); padding:2px 8px; border-radius:5px; transform:skewX(-9deg); display:inline-block}
+.profil-l{display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px dashed var(--bord); font-size:.85rem}
+.profil-l:last-child{border-bottom:0}
+.profil-l b{color:var(--encre); flex:1}
+
+.tag-liste{display:flex; flex-direction:column; gap:6px; margin-top:8px}
+.tag-opt{display:flex; align-items:center; padding:6px 8px; border-radius:8px; border:1px solid transparent}
+.tag-opt.sel{border-color:var(--bleu); background:color-mix(in srgb, var(--bleu) 7%, transparent)}
+.flux{display:flex; align-items:center; gap:10px; font-size:.9rem; color:var(--encre); font-weight:600; padding:9px 0; border-bottom:1px dashed var(--bord)}
+.flux:last-child{border-bottom:0}
+.fl-p{width:20px;height:20px;border-radius:50%;background:var(--cyan);color:#152047;display:grid;place-items:center;font-size:.68rem;font-weight:900;flex:none}
+
+/* ── FONCTIONNALITES ── */
+.fgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:18px}
+@media (max-width:940px){.fgrid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.fgrid{grid-template-columns:1fr}}
+.f{background:var(--surface); border:1px solid var(--bord); border-radius:14px; padding:22px; display:flex; flex-direction:column; gap:7px; position:relative}
+.f .fi{width:34px; height:34px; border-radius:10px; background:var(--panneau); display:grid; place-items:center; margin-bottom:5px}
+.f .fi svg{width:18px;height:18px;stroke:var(--bleu);stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.f b{color:var(--encre); font-size:1rem; font-weight:700; letter-spacing:-.01em}
+.f p{font-size:.91rem; line-height:1.55}
+.plus{position:absolute; top:16px; right:16px; font-size:.62rem; font-weight:900; letter-spacing:.08em;
+  background:color-mix(in srgb, var(--bleu) 15%, transparent); color:var(--bleu); padding:4px 8px; border-radius:999px}
+.groupe-t{font-size:.76rem; font-weight:900; letter-spacing:.13em; text-transform:uppercase; color:var(--gris-doux); margin-bottom:2px}
+
+/* ── AVIS ── */
+.avis{display:grid; grid-template-columns:repeat(3,1fr); gap:22px}
+@media (max-width:900px){.avis{grid-template-columns:1fr}}
+.carte{background:var(--surface); border:1px solid var(--bord); border-radius:var(--r); padding:26px; display:flex; flex-direction:column; gap:14px; box-shadow:var(--ombre-douce)}
+.etoiles{color:var(--ambre); font-size:.9rem; letter-spacing:2px}
+.carte p{font-size:.95rem}
+.qui{display:flex; align-items:center; gap:11px; margin-top:auto; padding-top:6px}
+.qui .av{width:34px;height:34px;font-size:.82rem}
+.qui b{color:var(--encre); font-size:.94rem; display:block; line-height:1.3}
+.qui span{font-size:.83rem; color:var(--gris-doux)}
+
+/* ── OBJECTIONS : dialogue ── */
+.dial{max-width:760px; margin:0 auto; display:flex; flex-direction:column; gap:44px}
+.echange{display:flex; flex-direction:column; gap:16px}
+.bulle{align-self:flex-start; max-width:88%; background:var(--panneau); color:var(--encre); font-weight:700;
+  font-size:1.08rem; padding:16px 22px; border-radius:20px 20px 20px 6px; position:relative; line-height:1.45}
+.bulle::after{content:"toi"; position:absolute; left:6px; bottom:-22px; font-size:.7rem; font-weight:900;
+  letter-spacing:.12em; text-transform:uppercase; color:var(--gris-doux)}
+.rep{align-self:flex-end; max-width:88%; background:var(--surface); border:1px solid var(--bord);
+  border-left:3px solid var(--cyan); border-radius:6px 20px 20px 20px; padding:18px 24px; font-size:1rem;
+  box-shadow:var(--ombre-douce); position:relative}
+.rep::after{content:"béné"; position:absolute; right:12px; bottom:-22px; font-size:.7rem; font-weight:900;
+  letter-spacing:.12em; text-transform:uppercase; color:var(--cyan)}
+
+/* ── PRIX ── */
+.prix{display:grid; grid-template-columns:repeat(3,1fr); gap:20px}
+@media (max-width:860px){.prix{grid-template-columns:1fr}}
+.pal{background:var(--surface); border:1px solid var(--bord); border-radius:var(--r); padding:28px; display:flex; flex-direction:column; gap:10px}
+.pal.mid{border-color:var(--bleu); box-shadow:0 0 0 3px color-mix(in srgb, var(--bleu) 14%, transparent), var(--ombre-douce)}
+.pal .nom{font-size:.78rem; letter-spacing:.11em; text-transform:uppercase; font-weight:900; color:var(--bleu)}
+.pal .euros{font-size:2.35rem; font-weight:800; color:var(--encre); line-height:1; letter-spacing:-.03em}
+.pal .euros small{font-size:.92rem; font-weight:600; color:var(--gris-doux); letter-spacing:0}
+.pal p{font-size:.95rem}
+
+.final{background:linear-gradient(120deg,#5E6DDE 0%,#4A57C9 48%,#20BBE6 130%); color:#fff; border-radius:26px; padding:70px 40px; text-align:center}
+.final h2{color:#fff}
+.final p{color:rgba(255,255,255,.9); max-width:52ch; margin:0 auto}
+.final .preuves{justify-content:center; color:rgba(255,255,255,.95)}
+.final .tick{color:#fff}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none !important; transition:none !important}
+  .tqvs-card,.tqvs-chip,.tqvs-vs,.tqvs-x5,.tqvs-punch,.tqvs-empty{opacity:1 !important; transform:none !important}
+  .et{position:static; opacity:1; transform:none; margin-bottom:26px}
+  .etapes-txt{display:block; min-height:0}
+  .ia-vue{position:static; opacity:1; transform:none; margin-bottom:20px}
+  .ia-scene{min-height:0}
+}
+</style>
+
+<header class="nav">
+  <div class="wrap">
+    <span class="logo">tiquiz</span>
+    <nav class="liens">
+      <a href="#">Fonctionnalités</a><a href="#">Tarifs</a><a href="#">Blog</a>
+      <a href="#">L'Atelier du Quiz</a><a href="#">Affiliation</a><a href="#">Aide</a>
+    </nav>
+    <div class="nav-fin">
+      <a class="co" href="#">Se connecter</a>
+      <a class="btn btn-p" href="#">Créer un compte gratuit</a>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <p class="surtitre">Générateur de quiz connecté à Systeme.io</p>
+    <h1><span class="h1-mot" id="mot">Booste ton trafic</span><span class="h1-l2">grâce aux quiz interactifs</span></h1>
+    <p class="chapo">Crée des quiz viraux qui attirent du trafic qualifié sur tes offres et transforment tes visiteurs en clients payants, sans investir en publicité.</p>
+
+    <div class="qz">
+      <div class="qz-bar">
+        <i class="pt"></i><i class="pt"></i><i class="pt"></i>
+        <b>Quel quiz tu devrais créer&nbsp;?</b>
+        <span class="live">Fait avec Tiquiz</span>
+      </div>
+      <div class="qz-corps">
+        <div class="qz-tete">
+          <div class="qz-jauge"><i id="qz-jauge"></i></div>
+          <span class="qz-cpt" id="qz-cpt">1 / 4</span>
+        </div>
+        <div id="qz-scene"></div>
+      </div>
+    </div>
+
+    <div class="hero-sous">
+      <p class="preuves">
+        <span><i class="tick">✓</i> Connexion native à Systeme.io</span>
+        <span><i class="tick">✓</i> Automatisations marketing</span>
+        <span><i class="tick">✓</i> Adapté aux débutants</span>
+      </p>
+      <span class="badge200"><i class="pastille"></i> Plus de 200 solopreneurs ont créé leur compte Tiquiz</span>
+      <a class="hero-lien" href="https://tiquiz.fr/generateur-de-quiz">Je sais déjà quoi créer, je vais direct au générateur →</a>
+    </div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="wrap pile g56">
+    <div class="pile g18 centre">
+      <h2>Pourquoi un quiz, et pas <span class="surb">un PDF de plus</span></h2>
+      <p class="chapo" style="text-align:center">Le PDF, on le télécharge et on le range. Le quiz, on le finit, parce qu'il parle de nous. Et à la fin, tu ne récupères pas la même chose.</p>
+    </div>
+    <div class="duo">
+      <div class="scene">
+        <div class="tqvs" id="tqvs-widget">
+          <div class="tqvs-duel">
+            <div class="tqvs-vs">VS</div>
+            <div class="tqvs-card pdf">
+              <div class="tqvs-h">PDF gratuit</div>
+              <div class="tqvs-ico"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="tqvs-sleep">😴</span></div>
+              <div class="tqvs-chip tqvs-c1"><svg viewBox="0 0 24 24"><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>Email</div>
+              <div class="tqvs-chip tqvs-c2"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Téléchargé…</div>
+              <div class="tqvs-empty">…rangé, oublié.</div>
+              <div class="tqvs-dim"></div>
+              <span class="tqvs-zz z1">z</span><span class="tqvs-zz z2">z</span>
+            </div>
+            <div class="tqvs-card qz">
+              <div class="tqvs-h">Quiz Tiquiz</div>
+              <div class="tqvs-ico"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+              <div class="tqvs-chip tqvs-c1"><svg viewBox="0 0 24 24"><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>Email</div>
+              <div class="tqvs-chip tqvs-c2"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>Son objectif</div>
+              <div class="tqvs-chip tqvs-c3"><svg viewBox="0 0 24 24"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>Son niveau</div>
+              <div class="tqvs-chip tqvs-c4"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Son blocage</div>
+              <div class="tqvs-chip tag tqvs-c5"><svg viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span class="tg-l">+1 tag → Systeme.io</span><span class="tg-s">+1 tag Systeme.io</span></div>
+              <div class="tqvs-x5">×5 infos</div>
+              <span class="tqvs-cf f1"></span><span class="tqvs-cf f2"></span><span class="tqvs-cf f3"></span><span class="tqvs-cf f4"></span><span class="tqvs-cf f5"></span><span class="tqvs-cf f6"></span>
+            </div>
+          </div>
+          <div class="tqvs-punch"><span>Même effort pour attirer ton visiteur. <b>5× plus de données pour toi.</b></span></div>
+        </div>
+      </div>
+      <div class="pile g18">
+        <p class="chiffre">44,9&nbsp;%</p>
+        <p style="font-size:1.16rem; color:var(--encre); font-weight:700; line-height:1.4">des personnes qui commencent un quiz laissent leur email, dans la catégorie coaching et formation.</p>
+        <p style="font-size:1.05rem">Presque une personne sur deux. Va regarder le taux de ta dernière page de capture, et compare.</p>
+        <p class="src">Rapport Interact sur les taux de conversion des quiz. Ce n'est pas un taux de page&nbsp;: c'est le taux mesuré à partir du moment où le quiz est commencé.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec sec--creme">
+  <div class="wrap pile g56">
+    <div class="pile g18 centre">
+      <h2>D'où vient <span class="surb">le trafic</span></h2>
+      <p class="chapo" style="text-align:center">Active la viralité du quiz en proposant à ton visiteur de partager le quiz pour recevoir un bonus. Il le montre à d'autres personnes intéressées par ton sujet. Qui le montrent à d'autres personnes. Qui le montrent à d'autres personnes… les possibilités sont exponentielles.</p>
+    </div>
+
+    <div class="boucle">
+      <div class="roue-box">
+        <svg class="roue" viewBox="0 0 400 400" role="img" aria-label="La boucle du trafic en quatre temps">
+          <circle cx="200" cy="200" r="132" fill="none" stroke="var(--bord)" stroke-width="30"></circle>
+          <circle cx="200" cy="200" r="132" fill="none" stroke="var(--cyan)" stroke-width="30"
+                  stroke-linecap="round" stroke-dasharray="180 650" id="arc"
+                  style="transform-origin:200px 200px; transform:rotate(-98deg); transition:transform 1.1s cubic-bezier(.62,.02,.28,1)"></circle>
+          <g id="anneau">
+            <g class="noeud n-actif" transform="translate(332,200)"><circle class="n-cercle" r="28"></circle><g class="lbl"><text class="n-num" text-anchor="middle" y="8">1</text></g></g>
+            <g class="noeud" transform="translate(200,332)"><circle class="n-cercle" r="28"></circle><g class="lbl"><text class="n-num" text-anchor="middle" y="8">2</text></g></g>
+            <g class="noeud" transform="translate(68,200)"><circle class="n-cercle" r="28"></circle><g class="lbl"><text class="n-num" text-anchor="middle" y="8">3</text></g></g>
+            <g class="noeud" transform="translate(200,68)"><circle class="n-cercle" r="28"></circle><g class="lbl"><text class="n-num" text-anchor="middle" y="8">4</text></g></g>
+          </g>
+          <text x="200" y="193" text-anchor="middle" fill="var(--encre)" font-size="22" font-weight="800" font-family="Inter,sans-serif">Viralité</text>
+          <text x="200" y="220" text-anchor="middle" fill="var(--encre)" font-size="22" font-weight="800" font-family="Inter,sans-serif">du trafic</text>
+        </svg>
+      </div>
+
+      <div class="pile g18">
+        <div class="etapes-txt" id="etapes">
+          <div class="et on"><p class="rang">Temps 1</p><h3>Tu poses ton quiz là où tu es déjà</h3><p>Un article, une bio, une story, une page de ton tunnel. Pas besoin d'audience pour commencer, juste d'un endroit.</p></div>
+          <div class="et"><p class="rang">Temps 2</p><h3>Quelqu'un répond, parce que ça parle de lui</h3><p>Il ne télécharge pas un document, il répond à des questions sur sa situation. Ce n'est pas le même effort, et ce n'est pas la même envie.</p></div>
+          <div class="et"><p class="rang">Temps 3</p><h3>Il partage pour découvrir son résultat</h3><p>Son profil, il a envie de le montrer. Et en le montrant, il met ton quiz sous les yeux de gens qui lui ressemblent.</p></div>
+          <div class="et"><p class="rang">Temps 4</p><h3>Ses proches arrivent, et répondent à leur tour</h3><p>Tu n'as rien fait de plus, et rien payé de plus. Le quiz tourne pendant que tu fais autre chose.</p></div>
+        </div>
+        <div class="pips" id="pips">
+          <button class="pip on" type="button" aria-label="Temps 1"></button>
+          <button class="pip" type="button" aria-label="Temps 2"></button>
+          <button class="pip" type="button" aria-label="Temps 3"></button>
+          <button class="pip" type="button" aria-label="Temps 4"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="avert">
+      <span class="ico">!</span>
+      <p>Le partage n'est jamais obligatoire, et tu peux le couper. Sur un sujet intime, argent, santé, famille, personne ne partage, et c'est normal&nbsp;: ça ne dit rien de la qualité de ton quiz.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="wrap pile g40">
+    <div class="pile g18 centre">
+      <h2>Pourquoi Tiquiz et pas <span class="surb">un autre outil</span>&nbsp;?</h2>
+      <p class="chapo" style="text-align:center">Les autres logiciels font tous de très bons quiz. Mais la plupart n'ont pas été conçus pour capturer des leads, et il te faut connecter un autre outil entre eux et Systeme.io pour automatiser tout ce qu'il y a autour de ton quiz. Regarde&nbsp;:</p>
+    </div>
+    <div class="tabwrap">
+      <table>
+        <thead><tr>
+          <th scope="col"></th>
+          <th scope="col">Connecté à Systeme.io via&nbsp;:</th>
+          <th scope="col">Personnaliser le tag selon le profil obtenu</th>
+          <th scope="col">Surcoût mensuel</th>
+        </tr></thead>
+        <tbody>
+          <tr><th scope="row">Tally</th><td>Make, Zapier ou n8n</td><td class="no">Un chemin à construire par profil</td><td class="no">12&nbsp;$</td></tr>
+          <tr><th scope="row">Typeform</th><td>Make, Zapier ou n8n</td><td class="no">Un chemin à construire par profil</td><td class="no">12&nbsp;$</td></tr>
+          <tr><th scope="row">Google Forms</th><td>Make, Zapier, n8n ou un script</td><td class="no">Un chemin à construire par profil</td><td class="no">12&nbsp;$</td></tr>
+          <tr><th scope="row">Jotform</th><td>Make, Zapier ou n8n</td><td class="no">Un chemin à construire par profil</td><td class="no">12&nbsp;$</td></tr>
+          <tr><th scope="row">Interact</th><td>Zapier, un Zap par résultat</td><td class="no">Un Zap par profil, tags à créer à la main</td><td class="no">20&nbsp;$</td></tr>
+          <tr><th scope="row">Quizify</th><td>Rien, la clé API suffit</td><td class="no">Non documenté</td><td>0&nbsp;€</td></tr>
+          <tr class="nous"><th scope="row">Tiquiz</th><td>Rien, la clé API suffit</td><td class="oui">Oui, et il est créé s'il manque</td><td class="oui">0&nbsp;€</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note" style="text-align:center; max-width:74ch; margin:0 auto">Surcoûts calculés à partir des tarifs officiels, moyenne basée sur le nombre d'automatisations requises pour faire fonctionner le quiz. Les formules gratuites de Make (2 scénarios) et de Zapier (2 étapes, sans chemins) ne suffisent plus dès que ton quiz a trois profils de résultat.</p>
+
+    <div class="duo" style="margin-top:24px; align-items:center">
+      <div class="pile g18">
+        <h3 style="font-size:1.5rem">Avec Tiquiz, le tag part avec le contact</h3>
+        <p style="font-size:1.06rem">Tu choisis directement le tag Systeme.io que tu veux attribuer à chaque profil, pour déclencher tes envois d'emails, tes bonus, et transformer chaque adresse en client.</p>
+        <ul class="promesses">
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Un menu déroulant, pas un scénario à construire.</b> Tu écris le profil, tu choisis le tag en dessous, c'est fini.</span></li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Le tag manquant est créé pour toi.</b> Tu n'as rien à préparer à l'avance dans ton compte Systeme.io.</span></li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Ta campagne démarre à la seconde où la personne finit son quiz.</b> Le bon email, sur le bon profil, sans que tu ouvres quoi que ce soit.</span></li>
+        </ul>
+        <a href="#" style="font-weight:600; font-size:.95rem">Voir le détail des intégrations →</a>
+      </div>
+
+      <div class="mock" id="tag-mock">
+        <div class="ia-tete"><span class="ia-pastille"></span><span class="ia-titre" id="tag-phase">Dans Tiquiz</span></div>
+        <div class="ia-scene" style="min-height:236px">
+          <div class="ia-vue on">
+            <div class="champ"><b>Profil de résultat</b>Tu poses les bases</div>
+            <div class="champ" style="padding-bottom:6px"><b>Tag Systeme.io</b>
+              <div class="tag-liste">
+                <span class="tag-opt sel"><span class="tagpuce">profil-debutant</span></span>
+                <span class="tag-opt"><span class="tagpuce">profil-liste-tiede</span></span>
+                <span class="tag-opt"><span class="tagpuce">profil-audience</span></span>
+              </div>
+            </div>
+          </div>
+          <div class="ia-vue">
+            <div class="champ" style="border-color:var(--cyan); box-shadow:0 0 0 3px rgba(32,187,230,.14)"><b>Tag Systeme.io</b><span class="tagpuce">profil-debutant</span> <span style="font-size:.78rem; color:var(--cyan); font-weight:800; margin-left:6px">créé pour toi</span></div>
+            <p style="font-size:.85rem; color:var(--gris-doux); margin-top:8px">Le tag n'existait pas encore dans ton compte. Tiquiz vient de le créer.</p>
+          </div>
+          <div class="ia-vue">
+            <div class="leadrow"><i class="av">FM</i><span class="mail">fanny.m@…</span><span class="tagpuce">profil-debutant</span></div>
+            <div class="flux"><span class="fl-p">✓</span> Contact ajouté dans Systeme.io</div>
+            <div class="flux"><span class="fl-p">✓</span> Campagne « Débutants » démarrée</div>
+            <div class="flux"><span class="fl-p">✓</span> Bonus du profil envoyé</div>
+          </div>
+        </div>
+        <p class="ia-legende" id="tag-legende">Tu écris ton profil, tu choisis son tag dans la liste.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec sec--creme">
+  <div class="wrap pile g56">
+    <div class="pile g18 centre"><h2>Trois étapes, et ton quiz <span class="surb">tourne</span></h2></div>
+    <div>
+      <div class="etape">
+        <div class="visuel"><div class="mock">
+          <div class="ia-tete"><span class="ia-pastille"></span><span class="ia-titre" id="ia-phase">Ton brief</span></div>
+          <div class="ia-scene" id="ia-scene">
+            <div class="ia-vue on">
+              <div class="champ"><b>Objectif du quiz</b>Aider mes lecteurs à savoir pourquoi leur liste ne grossit pas</div>
+              <div class="champ"><b>Public visé</b>Coachs et consultants qui débutent avec Systeme.io</div>
+              <div class="champ"><b>Ce que je vends derrière</b>Un accompagnement de 6 semaines</div>
+            </div>
+            <div class="ia-vue">
+              <div class="ligneq"><i class="numq">1</i> Combien de personnes reçoivent tes emails&nbsp;?</div>
+              <div class="ligneq"><i class="numq">2</i> À quelle fréquence tu leur écris&nbsp;?</div>
+              <div class="ligneq"><i class="numq">3</i> Qu'est-ce que tu proposes en échange d'un email&nbsp;?</div>
+              <div class="ligneq"><i class="numq">4</i> Où mets-tu ton formulaire aujourd'hui&nbsp;?</div>
+              <div class="ligneq"><i class="numq">5</i> Qu'est-ce que tu as déjà essayé&nbsp;?</div>
+            </div>
+            <div class="ia-vue">
+              <div class="swatch"><span class="mini-logo">tiquiz</span><span class="sw" style="background:#5E6DDE"></span><span class="sw" style="background:#20BBE6"></span><span class="sw" style="background:#2B3264"></span><span class="sw" style="background:#FFB800"></span></div>
+              <div class="champ"><b>Ta question, ta voix</b>« Combien de personnes reçoivent tes emails aujourd'hui&nbsp;? »</div>
+              <div class="champ"><b>Ton bouton</b>Découvrir mon profil</div>
+            </div>
+            <div class="ia-vue">
+              <div class="profil-l"><b>Tu poses les bases</b><span class="tagpuce">profil-debutant</span></div>
+              <div class="profil-l"><b>Tu as une liste, pas de rythme</b><span class="tagpuce">profil-liste-tiede</span></div>
+              <div class="profil-l"><b>Tu as l'audience, pas l'offre</b><span class="tagpuce">profil-audience</span></div>
+              <div class="champ" style="margin-top:12px"><b>Action au bout</b>Chaque profil part vers l'offre que TU choisis</div>
+            </div>
+          </div>
+          <p class="ia-legende" id="ia-legende">Décris ton objectif et ton public à Tiquiz.</p>
+        </div></div>
+        <div class="pile g18">
+          <span class="tag-etape">Étape 1</span>
+          <h3>Tu décris ton sujet, l'IA écrit le quiz</h3>
+          <ul class="promesses">
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Tu ne pars jamais d'une page blanche.</b> Tu reçois un quiz entier, questions et options comprises, et tu remplaces deux ou trois formulations par les tiennes.</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>L'IA écrit pour attirer les bonnes personnes.</b> Les questions qualifient au lieu d'amuser, donc les adresses qui tombent sont celles qui t'intéressent.</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Ton logo, tes couleurs, tes mots.</b> Le quiz ressemble à ton site, pas à un outil que tu as loué le mois dernier.</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Chaque résultat mène à l'action que tu décides.</b> Ton offre d'entrée, ton appel, ta page de vente&nbsp;: c'est toi qui places la sortie, profil par profil.</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="etape">
+        <div class="visuel"><div class="mock">
+          <div class="champ"><b>Ton lien</b><span style="font-family:ui-monospace,monospace; font-size:.86rem; color:var(--bleu)">https://quiz.tonsite.fr/mon-quiz</span></div>
+          <p style="font-size:.75rem; color:var(--gris-doux); margin:14px 0 8px; text-transform:uppercase; letter-spacing:.08em; font-weight:800">Ou six lignes à coller</p>
+          <div class="codeblk">&lt;iframe
+  src="https://quiz.tonsite.fr/mon-quiz"
+  width="100%" height="600"
+  style="border:0"
+  loading="lazy"&gt;
+&lt;/iframe&gt;</div>
+        </div></div>
+        <div class="pile g18">
+          <span class="tag-etape">Étape 2</span>
+          <h3>Tu le publies là où tes gens passent déjà</h3>
+          <ul class="promesses">
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Un lien à coller dans une story, une bio, un email, un QR code.</b> Ton quiz est en ligne même si tu n'as pas encore de site.</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Six lignes à poser dans une page Systeme.io, un article WordPress, une page de vente.</b> Le quiz s'affiche dedans, à ta place, sans greffon à installer.</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Ton nom de domaine sur le quiz.</b> Ton visiteur ne voit jamais notre marque, il reste chez toi du début à la fin.</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="etape">
+        <div class="visuel"><div class="mock">
+          <p style="font-size:.75rem; color:var(--gris-doux); margin-bottom:10px; text-transform:uppercase; letter-spacing:.08em; font-weight:800">Mes leads</p>
+          <div class="leadrow"><i class="av">FM</i><span class="mail">fanny.m@…</span><span class="tagpuce">profil-debutant</span></div>
+          <div class="leadrow"><i class="av">TR</i><span class="mail">t.rahal@…</span><span class="tagpuce">profil-audience</span></div>
+          <div class="leadrow"><i class="av">PC</i><span class="mail">p.clement@…</span><span class="tagpuce">profil-liste-tiede</span></div>
+          <div class="leadrow"><i class="av">LG</i><span class="mail">luc.g@…</span><span class="tagpuce">profil-debutant</span></div>
+          <p style="font-size:.82rem; color:var(--gris-doux); margin-top:12px">Chaque tag est aussi posé sur le contact dans Systeme.io.</p>
+        </div></div>
+        <div class="pile g18">
+          <span class="tag-etape">Étape 3</span>
+          <h3>Les leads arrivent dans Systeme.io, déjà rangés</h3>
+          <ul class="promesses">
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Le contact arrive avec le tag de son profil.</b> Ta campagne part toute seule, sur le bon message, sans que tu ouvres Systeme.io.</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Le tag est créé s'il n'existe pas encore.</b> Tu n'as rien à préparer à l'avance dans ton compte.</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Tu gardes tout dans Mes leads, avec les réponses.</b> Tu sais ce que ton audience a dit, avec ses mots à elle, et tu sais quoi lui vendre ensuite.</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Tu utilises Brevo, Mailchimp, Kit ou ActiveCampaign&nbsp;?</b> Tu exportes en un clic, et le profil obtenu et les scores partent avec l'adresse.</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="pile g10 centre">
+      <a class="btn btn-p" href="#">Créer mon quiz gratuitement →</a>
+      <p class="rassure">Gratuit, sans carte bancaire</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="wrap pile g40">
+    <div class="pile g18 centre">
+      <h2>Un quiz, ce n'est que <span class="surb">le début</span></h2>
+      <p class="chapo" style="text-align:center">Trois façons de faire parler ton audience, et tout ce qu'il faut autour pour transformer ce qu'elle te dit en clients.</p>
+    </div>
+
+    <p class="groupe-t">Ce que tu crées</p>
+    <div class="fgrid">
+      <div class="f"><span class="fi"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><b>Le quiz</b><p>Par profil, pour dire à ton visiteur qui il est. Ou scoré, pour lui dire où il en est. Dans les deux cas, le tag part tout seul.</p></div>
+      <div class="f"><span class="fi"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><b>Le sondage</b><p>Une question à ton audience, ses réponses avec ses mots à elle. C'est comme ça qu'on trouve quoi vendre.</p></div>
+      <div class="f"><span class="fi"><svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></span><b>Le Popquiz</b><p>Tes questions s'affichent pendant ta vidéo, YouTube, Vimeo ou la tienne. Ton spectateur répond sans quitter l'écran.</p></div>
+      <div class="f"><span class="fi"><svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20"/></svg></span><b>Import d'un quiz existant</b><p>Tu as déjà écrit ton questionnaire ailleurs&nbsp;? Tu l'importes au lieu de le retaper, et tu le connectes.</p></div>
+      <div class="f"><span class="fi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20a15 15 0 0 1 0-20"/></svg></span><b>Ton quiz dans la langue de ton audience</b><p>Sept langues pour l'interface que voit ton visiteur, et plus de cent pour ce que l'IA écrit, variantes régionales comprises : un quiz en portugais du Brésil ne sort pas en portugais du Portugal.</p></div>
+      <div class="f"><span class="fi"><svg viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="19" cy="13" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="10" cy="20" r="2.5"/></svg></span><b>Ton branding, ton domaine</b><p>Ton logo, tes couleurs, ta police, ton nom de domaine. Ton visiteur ne voit jamais notre marque.</p></div>
+    </div>
+
+    <p class="groupe-t" style="margin-top:22px">Ce que tu pilotes</p>
+    <div class="fgrid">
+      <div class="f"><span class="fi"><svg viewBox="0 0 24 24"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></span><b>Statistiques de complétion</b><p>Combien commencent, combien vont au bout, où ça décroche. Tu corriges la question qui fait fuir au lieu de deviner.</p></div>
+      <div class="f"><span class="fi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span><b>Suivi Meta, Google Analytics et Google Ads</b><p>Tes pixels sur tes quiz. Tu sais d'où viennent tes leads, et tu peux mesurer une campagne le jour où tu en lances une.</p></div>
+      <div class="f"><span class="fi"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg></span><b>Guide d'automatisation</b><p>Les tags exacts à créer dans Systeme.io et ce qu'il faut brancher derrière. Tu ne cherches pas comment faire, c'est écrit.</p></div>
+      <div class="f"><span class="fi"><svg viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></span><b>Partage sur 6 réseaux, plus le lien</b><p>Facebook, X, LinkedIn, WhatsApp, Telegram, email, et la copie de lien. C'est le moteur de la boucle plus haut.</p></div>
+      <div class="f"><span class="fi"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></span><b>Un quiz que tes affiliés partagent</b><p>Un seul quiz, et chacun le diffuse avec son identifiant. Tes affiliés t'amènent du trafic sur ton quiz, pas seulement sur ta page.</p></div>
+      <div class="f"><span class="fi"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h18"/></svg></span><b>Modèles prêts par métier</b><p>Quinze modèles métier et six modèles phares, dans tous les paliers, y compris le gratuit. Tu pars d'un quiz déjà écrit.</p></div>
+      <div class="f"><span class="fi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span><b>Un centre d'aide, et moi au bout du mail</b><p>Tu cherches, tu trouves. Et si tu ne trouves pas, tu m'écris et c'est moi qui te réponds. Pas un formulaire, pas un robot, pas un numéro de ticket.</p><a href="https://app.tipote.com/support/tiquiz?lang=fr" style="font-weight:700; font-size:.88rem; text-decoration:none; margin-top:4px">Ouvrir le centre d'aide →</a></div>
+      
+    </div>
+
+    <p class="groupe-t" style="margin-top:22px">Dans Tiquiz PLUS</p>
+    <div class="fgrid">
+      <div class="f"><span class="plus">Plus</span><span class="fi"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><b>Multiprofils</b><p>Un espace par client que tu accompagnes, sans mélanger les quiz ni les leads. Fait pour les agences et les freelances.</p></div>
+      <div class="f"><span class="plus">Plus</span><span class="fi"><svg viewBox="0 0 24 24"><path d="M12 2l2.4 7.2H22l-6 4.4 2.3 7.2-6.3-4.6L5.7 21 8 13.6 2 9.2h7.6z"/></svg></span><b>Analyse IA des résultats</b><p>Ce qui ressort de toutes les réponses, résumé avec leurs mots à eux. Tu sais quoi vendre ensuite sans relire mille lignes.</p></div>
+      <div class="f"><span class="plus">Plus</span><span class="fi"><svg viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.6 7.6a5 5 0 1 1-7 7 5 5 0 0 1 7-7zM15 7l4 4"/></svg></span><b>Plusieurs clés API Systeme.io</b><p>Le compte de chaque client connecté en même temps, sans te déconnecter à chaque fois.</p></div>
+      <div class="f"><span class="plus">Plus</span><span class="fi"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span><b>Le générateur de bonus</b><p>Il lit ton quiz et écrit le cadeau qui va derrière, pour chaque profil de résultat.</p></div>
+      <div class="f"><span class="plus">Plus</span><span class="fi"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg></span><b>Le générateur de séquence email</b><p>Les emails qui partent après le quiz, écrits profil par profil, prêts à coller dans Systeme.io.</p></div>
+      <div class="f"><span class="plus">Plus</span><span class="fi"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></span><b>Le générateur de posts de promo</b><p>Les publications qui envoient du monde sur ton quiz, écrites à partir de ton quiz.</p></div>
+    </div>
+
+    <div class="pile g10 centre" style="margin-top:14px">
+      <a class="btn btn-p" href="#">Créer mon quiz gratuitement →</a>
+      <p class="rassure">Gratuit, sans carte bancaire · <a href="#">Le détail de chaque fonctionnalité →</a></p>
+    </div>
+  </div>
+</section>
+
+<section class="sec sec--creme">
+  <div class="wrap pile g40">
+    <div class="pile g18 centre">
+      <h2>Six quiz déjà écrits, <span class="surb">prêts à générer</span></h2>
+      <p class="chapo" style="text-align:center">Tu cliques, le générateur s'ouvre avec le sujet et l'audience déjà remplis, et l'IA écrit le quiz. Tu n'as pas une ligne à taper.</p>
+    </div>
+    <div class="mgrid">
+      <div class="m"><span class="pour">Coach, consultant, thérapeute</span><b>Es-tu prêt à te faire accompagner, ou pas encore&nbsp;?</b><p>Sépare ceux qui veulent un devis de ceux qui veulent lire un article de plus, avant que tu décroches ton téléphone.</p><a href="https://tiquiz.fr/generateur-de-quiz?sujet=Savoir+si+je+suis+pr%C3%AAt+%C3%A0+me+faire+accompagner&amp;audience=Les+personnes+que+j%27accompagne+ou+qui+h%C3%A9sitent+%C3%A0+se+lancer&amp;objectif=qualifier">Générer ce quiz →</a></div>
+      <div class="m"><span class="pour">Formateur</span><b>Quel est ton vrai niveau sur ce sujet&nbsp;?</b><p>Chacun repart avec son niveau, et avec la formation qui correspond à ce niveau. Fini les gens qui n'osent pas choisir.</p><a href="https://tiquiz.fr/generateur-de-quiz?sujet=%C3%89valuer+mon+niveau+r%C3%A9el+sur+le+sujet+que+j%27enseigne&amp;audience=Les+personnes+qui+h%C3%A9sitent+entre+plusieurs+de+mes+formations&amp;objectif=orienter">Générer ce quiz →</a></div>
+      <div class="m"><span class="pour">Affilié</span><b>Quel outil te convient vraiment&nbsp;?</b><p>Le comparateur qui range chacun sur un seul outil, celui que tu recommandes pour son cas, avec ton lien derrière.</p><a href="https://tiquiz.fr/generateur-de-quiz?sujet=Trouver+l%27outil+qui+correspond+vraiment+%C3%A0+ma+situation&amp;audience=Les+personnes+qui+h%C3%A9sitent+entre+plusieurs+outils&amp;objectif=orienter">Générer ce quiz →</a></div>
+      <div class="m"><span class="pour">Créateur de contenu</span><b>Quel type de créateur tu es&nbsp;?</b><p>On le passe pour se reconnaître, on le partage pour montrer son profil, et chaque partage te met devant une audience neuve.</p><a href="https://tiquiz.fr/generateur-de-quiz?sujet=D%C3%A9couvrir+quel+type+de+cr%C3%A9ateur+de+contenu+je+suis&amp;audience=Les+cr%C3%A9ateurs+et+les+entrepreneurs+qui+publient+en+ligne&amp;objectif=faire-decouvrir">Générer ce quiz →</a></div>
+      <div class="m"><span class="pour">Vendeur de produit ou de service</span><b>Quelle version de mon offre est faite pour toi&nbsp;?</b><p>Le sélecteur qui envoie chacun sur la bonne page, au lieu de le laisser hésiter devant un tableau à trois colonnes.</p><a href="https://tiquiz.fr/generateur-de-quiz?sujet=Choisir+la+version+de+mon+offre+qui+correspond+%C3%A0+ma+situation&amp;audience=Les+visiteurs+qui+h%C3%A9sitent+entre+plusieurs+de+mes+formules&amp;objectif=orienter">Générer ce quiz →</a></div>
+      <div class="m"><span class="pour">Tu démarres de zéro</span><b>Par où commencer quand on part de zéro&nbsp;?</b><p>Ton tout premier quiz. Il aide vraiment, il se partage, et il remplit ta liste pendant que tu construis le reste.</p><a href="https://tiquiz.fr/generateur-de-quiz?sujet=Savoir+par+o%C3%B9+commencer+quand+on+part+de+z%C3%A9ro&amp;audience=Les+personnes+qui+d%C3%A9butent+sur+mon+sujet&amp;objectif=capturer">Générer ce quiz →</a></div>
+    </div>
+    <p class="note" style="text-align:center">Et 21 modèles par métier dans ton compte, accessibles dès le palier gratuit. <a href="#">Voir tous les modèles →</a></p>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="wrap pile g32 centre">
+    <h2>Ton quiz parle à <span class="surb">ce que tu utilises déjà</span></h2>
+    <p class="chapo" style="text-align:center">Connexion native avec Systeme.io. Export en un clic vers le reste. Et le quiz se pose là où tu publies.</p>
+    <div class="logos">
+      <span class="logo-p fort">Systeme.io</span>
+      <span class="logo-p">Brevo</span><span class="logo-p">Mailchimp</span><span class="logo-p">Kit</span>
+      <span class="logo-p">ActiveCampaign</span><span class="logo-p">MailerLite</span>
+      <span class="logo-p">WordPress</span><span class="logo-p">YouTube</span><span class="logo-p">Vimeo</span>
+      <span class="logo-p">Meta Pixel</span><span class="logo-p">Google Analytics</span><span class="logo-p">Google Ads</span>
+    </div>
+    <p class="note">Une seule est native : Systeme.io. Les autres reçoivent tes leads par export, avec les profils et les scores.</p>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="wrap pile g40">
+    <h2 style="text-align:center">Ils utilisent <span class="surb">déjà Tiquiz</span></h2>
+    <div class="avis">
+      <div class="carte"><p class="etoiles">★★★★★</p><p>«&nbsp;J'utilise Tiquiz pour mon quiz de diagnostic client, connecté à System.io avec des séquences emails segmentées par profil. La connexion est propre, les tags s'appliquent automatiquement, et l'interface est suffisamment intuitive pour qu'on configure tout sans développeur.&nbsp;»</p><div class="qui"><i class="av">MM</i><span><b>Maurice Massolin</b><span>Coach pour femmes entrepreneures</span></span></div></div>
+      <div class="carte"><p class="etoiles">★★★★★</p><p>«&nbsp;Super outil&nbsp;! Très simple d'utilisation, et surtout&nbsp;: le quiz punaise mais c'est le meilleur lead magnet aujourd'hui&nbsp;! Je suis fan, voilà. Merci Béné pour ce bijou&nbsp;!&nbsp;»</p><div class="qui"><i class="av">A</i><span><b>Adeline</b><span>Thérapeute</span></span></div></div>
+      <div class="carte"><p class="etoiles">★★★★★</p><p>«&nbsp;J'ai créé mes deux premiers quizz qui ont donné des résultats que je n'aurais jamais imaginés. Ce qui est fabuleux c'est que Tiquiz comble une lacune de System.io qui ne permet pas de faire des quiz. Ça fonctionne comme un rêve.&nbsp;»</p><div class="qui"><i class="av">C</i><span><b>Christian</b><span>Formateur</span></span></div></div>
+      <div class="carte"><p class="etoiles">★★★★★</p><p>«&nbsp;Tiquiz m'a vraiment aidé à clarifier mes idées pour qualifier mes prospects. Mes leads sont tagués automatiquement dans Systeme.io, un vrai gain de temps.&nbsp;»</p><div class="qui"><i class="av">BC</i><span><b>Bernard C.</b><span>Consultant</span></span></div></div>
+      <div class="carte"><p class="etoiles">★★★★★</p><p>«&nbsp;Enfin un outil de quiz parfaitement pensé marketing, relié à Systeme.io pour récupérer les leads et les taguer automatiquement, sans devoir passer par des outils comme Zapier ou Make. Hyper pratique et complet.&nbsp;»</p><div class="qui"><i class="av">G</i><span><b>Gwenn</b><span>Solopreneur</span></span></div></div>
+      <div class="carte"><p class="etoiles">★★★★★</p><p>«&nbsp;J'ai testé la génération de quiz et le résultat est incroyable. Les CTA personnalisés pour chaque profil fonctionnent parfaitement.&nbsp;»</p><div class="qui"><i class="av">JB</i><span><b>Jean&#8209;Bernard R.</b><span>Créateur de contenu</span></span></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec sec--creme">
+  <div class="wrap pile g40">
+    <h2 style="text-align:center">Tu es peut-être en train <span class="surb">de te dire</span></h2>
+    <div class="dial">
+      <div class="echange">
+        <p class="bulle">Encore un outil de plus à apprendre.</p>
+        <p class="rep">Tiquiz en remplace deux&nbsp;: ton créateur de formulaire, et l'intermédiaire qui l'envoie vers Systeme.io. Et tu ne changes rien à ce que tu utilises déjà.</p>
+      </div>
+      <div class="echange">
+        <p class="bulle">Moi et la technique, ça fait deux.</p>
+        <p class="rep">Il n'y a rien à installer, rien à connecter à la main, aucune ligne de code à écrire. Tu décris ton sujet, tu relis, tu publies. Si tu sais copier un lien, tu sais mettre ton quiz en ligne.</p>
+      </div>
+      <div class="echange">
+        <p class="bulle">J'ai déjà essayé d'autres outils, ça n'a rien donné.</p>
+        <p class="rep">Normal. On a tous une liste d'outils qui n'ont rien changé. Alors ne me fais pas confiance&nbsp;: fais le test. Le quiz est gratuit, tu le mets en ligne, et dans une semaine tu comptes les adresses. Ta réponse vaudra mieux que la mienne.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="wrap pile g32">
+    <div class="pile g18 centre">
+      <h2>Trois formules adaptées <span class="surb">à ta situation</span></h2>
+      <p class="chapo" style="text-align:center">Commence gratuitement pour tester sans risque.</p>
+    </div>
+    <div class="prix">
+      <div class="pal"><p class="nom">Gratuit à vie</p><p class="euros">0&nbsp;€</p><p>1 quiz, 1 sondage, 1 Popquiz, 10 réponses visibles sur 30 jours glissants. Sans carte bancaire.</p></div>
+      <div class="pal mid"><p class="nom">Tiquiz</p><p class="euros">17&nbsp;€ <small>par mois</small></p><p>Quiz, sondages et Popquiz illimités, réponses illimitées, ta marque seule sur le quiz.</p></div>
+      <div class="pal"><p class="nom">Tiquiz PLUS</p><p class="euros">29&nbsp;€ <small>par mois</small></p><p>Multiprofils, analyse IA des résultats, plusieurs clés API Systeme.io, les 3 générateurs.</p></div>
+    </div>
+    <p class="note" style="text-align:center">En annuel, deux mois sont offerts. Les prix affichés sont ceux du bon de commande, à l'euro. <a href="#">Le détail de chaque formule →</a></p>
+  </div>
+</section>
+
+<section class="sec sec--creme">
+  <div class="wrap pile g40">
+    <h2 style="text-align:center">Les questions <span class="surb">qu'on nous pose</span></h2>
+    <div class="faq">
+      <details open><summary>Ai-je besoin d'une carte bancaire pour essayer&nbsp;?</summary><p>Non. Le palier gratuit est gratuit à vie, sans carte, et il ne se transforme pas en abonnement au bout de quelques jours.</p></details>
+      <details><summary>J'ai absolument besoin d'un compte Systeme.io&nbsp;?</summary><p>Non. Tiquiz fonctionne seul&nbsp;: tes leads sont capturés et rangés dans Mes leads, et tu les exportes en un clic vers l'outil que tu utilises. La connexion native à Systeme.io est un raccourci, pas une condition.</p></details>
+      <details><summary>Faut-il un abonnement payant chez Systeme.io&nbsp;?</summary><p>La connexion se fait avec ta clé API. Ce que tu peux automatiser derrière dépend de ce que ton palier Systeme.io autorise, pas de Tiquiz.</p></details>
+      <details><summary>Ai-je besoin de Zapier, de Make ou d'un autre outil d'automatisation&nbsp;?</summary><p>Non. C'est précisément ce que Tiquiz remplace&nbsp;: le contact et son tag partent directement dans Systeme.io, sans intermédiaire et sans abonnement supplémentaire.</p></details>
+      <details><summary>Ai-je besoin de mes propres clés d'IA&nbsp;?</summary><p>Non. La génération est comprise, tu n'as aucun compte tiers à ouvrir ni à payer.</p></details>
+      <details><summary>Mes visiteurs sont-ils obligés de partager pour voir leur résultat&nbsp;?</summary><p>Jamais, et tu peux couper le partage complètement. Sur un sujet intime, argent, santé, famille, personne ne partage, et c'est normal.</p></details>
+      <details><summary>Y a-t-il des frais cachés&nbsp;?</summary><p>Les prix affichés sont ceux du bon de commande, à l'euro. Le changement de palier se fait sans double facturation.</p></details>
+      <details><summary>Comment je résilie&nbsp;?</summary><p>Depuis ton compte, sans avoir à écrire à qui que ce soit. Tes quiz déjà en ligne repassent aux limites du palier gratuit, ils ne sont pas supprimés.</p></details>
+    </div>
+    <p class="note" style="text-align:center"><a href="#">Toutes les questions sur la page tarifs →</a></p>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="wrap pile g40">
+    <div class="pile g18 centre">
+      <h2>Pour aller <span class="surb">plus loin</span></h2>
+      <p class="chapo" style="text-align:center">Les trois derniers articles publiés, la méthode et les cas concrets.</p>
+    </div>
+    <div class="bgrid">
+      <div class="b"><span class="cat">Article récent</span><b>Le meilleur lead magnet en 2026 (et ce n'est pas un PDF)</b><p>Pourquoi le document à télécharger ne capture plus, et ce qui l'a remplacé.</p><a href="#" style="font-weight:700; font-size:.9rem; text-decoration:none">Lire →</a></div>
+      <div class="b"><span class="cat">Article récent</span><b>Connecter un quiz à Systeme.io sans Zapier</b><p>La clé API, le tag par profil, et les automatisations à poser derrière.</p><a href="#" style="font-weight:700; font-size:.9rem; text-decoration:none">Lire →</a></div>
+      <div class="b"><span class="cat">Article récent</span><b>285 inscrites en 9 jours pour 63,50&nbsp;€</b><p>Ce que Jocelyne a mis en place, étape par étape, avec son accord.</p><a href="#" style="font-weight:700; font-size:.9rem; text-decoration:none">Lire →</a></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" style="padding-bottom:124px">
+  <div class="wrap">
+    <div class="final pile g24 centre">
+      <h2>Ta liste emails ne va pas se construire toute seule</h2>
+      <p>Pendant que tu hésites, tes visiteurs quittent ton site sans laisser leur email. Un quiz change ça, et tu le crées en quelques minutes.</p>
+      <a class="btn btn-blanc" href="#">Créer mon quiz gratuitement →</a>
+      <p class="preuves">
+        <span><i class="tick">✓</i> Connexion native à Systeme.io</span>
+        <span><i class="tick">✓</i> Automatisations marketing</span>
+        <span><i class="tick">✓</i> Adapté aux débutants</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  var reduit = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* H1 qui tourne */
+  var mots=["Booste ton trafic","Génère plus de leads","Booste tes ventes"], el=document.getElementById("mot");
+  if(el && !reduit){
+    el.style.transition="opacity .38s ease"; var i=0;
+    setInterval(function(){ el.style.opacity="0";
+      setTimeout(function(){ i=(i+1)%mots.length; el.textContent=mots[i]; el.style.opacity="1"; },380); },3200);
+  }
+
+  /* ══ QUIZ DU HERO ══ */
+  var QUESTIONS=[
+    {t:"Tu fais quoi, concrètement ?", o:[
+      ["J'accompagne des gens : coaching, conseil, thérapie",{acc:3}],
+      ["Je forme : formation, atelier, cours en ligne",{for:3}],
+      ["Je recommande des outils qui ne sont pas les miens",{aff:3}],
+      ["Je publie du contenu : blog, chaîne, newsletter",{cre:3}],
+      ["Je vends mon propre produit ou service",{ven:3}]]},
+    {t:"Aujourd'hui, tu récupères des adresses email comment ?", o:[
+      ["Un PDF, une checklist, un guide à télécharger",{acc:1,ven:1}],
+      ["Une formation ou un mini-cours offert",{for:2}],
+      ["Juste un formulaire d'inscription à ma newsletter",{cre:2}],
+      ["Je n'en récupère pas encore",{dem:5}]]},
+    {t:"Ce qui coince chez ceux qui te suivent, c'est plutôt :", o:[
+      ["Ils ne savent pas par où commencer",{dem:2,for:1}],
+      ["Ils ont déjà essayé et ça n'a rien donné",{acc:2}],
+      ["Ils hésitent entre plusieurs options",{aff:2,ven:1}],
+      ["Ils ne savent pas s'ils ont le niveau",{for:2}]]},
+    {t:"Tu veux que ton quiz serve d'abord à :", o:[
+      ["Trier qui est prêt à acheter",{acc:2,ven:2}],
+      ["Me faire découvrir par des gens qui ne me connaissent pas",{cre:3}],
+      ["Aider mes abonnés à choisir la bonne offre",{for:2,aff:2}],
+      ["Récupérer des adresses, tout simplement",{dem:2}]]}
+  ];
+  var G="https://tiquiz.fr/generateur-de-quiz?";
+  var PROFILS={
+    acc:{n:"L'accompagnateur",
+      p:"Tu vends du temps et de l'attention, donc chaque appel avec quelqu'un qui n'est pas prêt te coûte cher. Ton quiz ne doit pas ramener plus de monde, il doit en ramener moins et mieux choisi.",
+      i:"Es-tu prêt à te faire accompagner, ou pas encore ?",
+      u:G+"sujet=Savoir+si+je+suis+pr%C3%AAt+%C3%A0+me+faire+accompagner&audience=Les+personnes+que+j%27accompagne+ou+qui+h%C3%A9sitent+%C3%A0+se+lancer&objectif=qualifier"},
+    for:{n:"Le formateur",
+      p:"Ton problème n'est pas de convaincre. C'est que les gens ne savent pas où ils en sont : ils ont peur d'être trop débutants, ou de payer pour ce qu'ils savent déjà.",
+      i:"Quel est ton vrai niveau sur ce sujet ?",
+      u:G+"sujet=%C3%89valuer+mon+niveau+r%C3%A9el+sur+le+sujet+que+j%27enseigne&audience=Les+personnes+qui+h%C3%A9sitent+entre+plusieurs+de+mes+formations&objectif=orienter"},
+    aff:{n:"L'affilié",
+      p:"Tu ne vends pas ton produit, tu vends ton jugement. Ton quiz doit faire ce que fait un bon conseil : écouter la situation avant de recommander.",
+      i:"Quel outil te convient vraiment ?",
+      u:G+"sujet=Trouver+l%27outil+qui+correspond+vraiment+%C3%A0+ma+situation&audience=Les+personnes+qui+h%C3%A9sitent+entre+plusieurs+outils&objectif=orienter"},
+    cre:{n:"Le créateur",
+      p:"Ce n'est pas de contenu que tu manques. Ce qui te manque, c'est un contenu que ton audience montre aux autres. Un quiz se partage parce qu'on veut montrer son résultat.",
+      i:"Quel type de créateur tu es ?",
+      u:G+"sujet=D%C3%A9couvrir+quel+type+de+cr%C3%A9ateur+de+contenu+je+suis&audience=Les+cr%C3%A9ateurs+et+les+entrepreneurs+qui+publient+en+ligne&objectif=faire-decouvrir"},
+    ven:{n:"Le vendeur",
+      p:"Tu as une offre, et une page qui parle à tout le monde de la même façon. Un quiz règle ça sans que tu écrives trois pages de vente.",
+      i:"Quelle version de mon offre est faite pour toi ?",
+      u:G+"sujet=Choisir+la+version+de+mon+offre+qui+correspond+%C3%A0+ma+situation&audience=Les+visiteurs+qui+h%C3%A9sitent+entre+plusieurs+de+mes+formules&objectif=orienter"},
+    dem:{n:"Celui qui démarre",
+      p:"Tu n'as pas besoin du quiz le plus malin du monde. Tu as besoin du premier : celui qui te donne tes cent premières adresses et qui te dit ce que ces gens attendent de toi.",
+      i:"Par où commencer quand on part de zéro ?",
+      u:G+"sujet=Savoir+par+o%C3%B9+commencer+quand+on+part+de+z%C3%A9ro&audience=Les+personnes+qui+d%C3%A9butent+sur+mon+sujet&objectif=capturer"}
+  };
+  var scene=document.getElementById("qz-scene"), jauge=document.getElementById("qz-jauge"),
+      cpt=document.getElementById("qz-cpt"), pts={}, etape=0;
+  function esc(t){return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+  function poserQ(){
+    var q=QUESTIONS[etape];
+    if(jauge) jauge.style.width=((etape+1)/(QUESTIONS.length+1)*100)+"%";
+    scene.innerHTML='<div class="qz-vue"><p class="qz-num">Question '+(etape+1)+' sur '+QUESTIONS.length+'</p>'
+      +'<p class="qz-q">'+esc(q.t)+'</p><div class="qz-opts">'
+      + q.o.map(function(o,k){ return '<button class="qz-opt" type="button" data-k="'+k+'"><i></i>'+esc(o[0])+'</button>'; }).join("")
+      +'</div></div>';
+    scene.querySelectorAll(".qz-opt").forEach(function(b){
+      b.addEventListener("click",function(){
+        var gains=q.o[+b.dataset.k][1];
+        for(var c in gains){ pts[c]=(pts[c]||0)+gains[c]; }
+        etape++;
+        etape<QUESTIONS.length ? poserQ() : poserResultat();
+      });
+    });
+  }
+  function poserResultat(){
+    var best=null, max=-1;
+    for(var c in PROFILS){ var v=pts[c]||0; if(v>max){max=v;best=c;} }
+    var pr=PROFILS[best];
+    if(jauge) jauge.style.width="100%";
+    if(cpt) cpt.textContent="Ton résultat";
+    scene.innerHTML='<div class="qz-vue qz-res">'
+      +'<div><span class="eti">Ton profil</span><h3>'+esc(pr.n)+'</h3><p class="txt">'+esc(pr.p)+'</p></div>'
+      +'<div class="qz-cta">'
+      +'<div class="qz-idee" style="width:100%"><span>Le quiz à créer en premier</span><b>'+esc(pr.i)+'</b></div>'
+      +'<a class="btn btn-p" href="'+pr.u+'">Générer ce quiz →</a>'
+      +'<p class="rassure">Le générateur s\'ouvre avec le sujet déjà rempli. Sans compte, sans carte.</p>'
+      +'<button class="qz-rejouer" type="button">Recommencer</button></div></div>';
+    var r=scene.querySelector(".qz-rejouer");
+    if(r) r.addEventListener("click",function(){ pts={}; etape=0; poserQ(); });
+  }
+  if(scene) poserQ();
+
+  /* Duel PDF vs quiz */
+  var duel=document.getElementById("tqvs-widget");
+  if(duel){
+    if(reduit || !("IntersectionObserver" in window)) duel.classList.add("tqz-visible");
+    else{ var io=new IntersectionObserver(function(e){ e.forEach(function(x){ if(x.isIntersecting){ duel.classList.add("tqz-visible"); io.disconnect(); } }); },{rootMargin:"0px 0px -12% 0px",threshold:.25}); io.observe(duel); }
+  }
+
+  /* Boucle : l'anneau tourne, le texte suit */
+  var anneau=document.getElementById("anneau"), arc=document.getElementById("arc"),
+      ets=document.querySelectorAll("#etapes .et"), pips=document.querySelectorAll("#pips .pip"),
+      noeuds=document.querySelectorAll(".noeud"), b=0, minuteur=null;
+  var lbls=document.querySelectorAll(".noeud .lbl");
+  function poser(n){
+    b=((n%4)+4)%4;
+    if(anneau) anneau.style.transform="rotate("+(-90*b)+"deg)";
+    if(arc) arc.style.transform="rotate("+(-98-90*b)+"deg)";
+    lbls.forEach(function(l){ l.setAttribute("transform","rotate("+(90*b)+")"); });
+    ets.forEach(function(e,k){ e.classList.toggle("on",k===b); });
+    pips.forEach(function(p,k){ p.classList.toggle("on",k===b); });
+    noeuds.forEach(function(g,k){ g.classList.toggle("n-actif",k===b); });
+  }
+  function relancer(){ clearInterval(minuteur); if(!reduit) minuteur=setInterval(function(){ poser(b+1); },3600); }
+  if(ets.length && !reduit){
+    pips.forEach(function(p,k){ p.addEventListener("click",function(){ poser(k); relancer(); }); });
+    if("IntersectionObserver" in window){
+      var io2=new IntersectionObserver(function(e){ e.forEach(function(x){ x.isIntersecting?relancer():clearInterval(minuteur); }); },{threshold:.3});
+      io2.observe(document.getElementById("etapes"));
+    } else relancer();
+  }
+
+  /* Étape 1 : les quatre temps du générateur */
+  var vues=document.querySelectorAll("#ia-scene .ia-vue"), leg=document.getElementById("ia-legende"), ph=document.getElementById("ia-phase");
+  var textes=[
+    ["Ton brief","Décris ton objectif et ton public à Tiquiz."],
+    ["L'IA écrit","L'IA génère le quiz qui attire et qualifie les bonnes personnes."],
+    ["Ta patte","Tu personnalises ton texte, ton logo et tes couleurs."],
+    ["La sortie","Chaque résultat est optimisé pour amener à l'action que TU décides."]
+  ];
+  if(vues.length && !reduit){
+    var v=0;
+    setInterval(function(){
+      v=(v+1)%vues.length;
+      vues.forEach(function(x,k){ x.classList.toggle("on",k===v); });
+      if(ph) ph.textContent=textes[v][0];
+      if(leg) leg.textContent=textes[v][1];
+    },3400);
+  }
+
+  /* Le tag qui part dans Systeme.io */
+  var tvues=document.querySelectorAll("#tag-mock .ia-vue"), tleg=document.getElementById("tag-legende"), tph=document.getElementById("tag-phase");
+  var ttx=[
+    ["Dans Tiquiz","Tu écris ton profil, tu choisis son tag dans la liste."],
+    ["Le tag","Il n'existait pas encore : Tiquiz le crée dans ton compte."],
+    ["Dans Systeme.io","Le contact arrive tagué, et ta campagne part toute seule."]
+  ];
+  if(tvues.length && !reduit){
+    var t=0;
+    setInterval(function(){
+      t=(t+1)%tvues.length;
+      tvues.forEach(function(x,k){ x.classList.toggle("on",k===t); });
+      if(tph) tph.textContent=ttx[t][0];
+      if(tleg) tleg.textContent=ttx[t][1];
+    },3000);
+  }
+})();
+</script>

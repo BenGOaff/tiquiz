@@ -73,6 +73,92 @@ export interface LigneGeneration {
   modele: string | null;
   jetonsEntree: number | null;
   jetonsSortie: number | null;
+  /**
+   * Combien de temps l'appel au modèle a duré, en millisecondes.
+   *
+   * `null` sur toute ligne d'avant la migration du 9 septembre. Ce
+   * `null` est COMPTÉ (`duree.sansMesure`), jamais lu comme zéro : une
+   * génération à 0 ms n'existe pas, et l'inclure tirerait la médiane
+   * vers le bas exactement là où on cherche à prouver un gain.
+   */
+  dureeMs: number | null;
+}
+
+/**
+ * Combien de générations il faut avant d'annoncer une médiane.
+ *
+ * Une médiane n'est pas un taux, mais elle sert ici à TRANCHER : Béné
+ * veut "la durée médiane mesurée avant et après" le passage en flux,
+ * pour savoir si le chantier a servi. Deux médianes calculées sur trois
+ * générations chacune se comparent très bien et ne disent rien : on
+ * lirait du hasard comme un gain. En dessous, on rend `null` et l'écran
+ * DIT qu'il n'y a pas encore assez de générations.
+ *
+ * C'est le même plancher que les deux taux d'aval, et pour la même
+ * raison : une personne ne doit pas pouvoir tout faire basculer.
+ */
+export const MIN_POUR_UNE_MEDIANE = 10;
+
+export interface MesureDeDuree {
+  /** La médiane, en millisecondes. `null` = pas encore assez de mesures. */
+  medianeMs: number | null;
+  /** Combien de générations portent une durée. */
+  mesurees: number;
+  /**
+   * Combien n'en portent pas (lignes d'avant le 9 septembre).
+   *
+   * AFFICHÉ, jamais soustrait en silence : sans ce compte, une médiane
+   * calculée sur les trois dernières générations d'une période qui en
+   * contient deux cents se lit comme la médiane de la période.
+   */
+  sansMesure: number;
+}
+
+/**
+ * La durée médiane d'une génération.
+ *
+ * ── LA MÉDIANE, PAS LA MOYENNE, ET C'EST LA RAISON DE CETTE FONCTION ─
+ *
+ * GA4 ne calcule pas de médiane dans ses rapports standards : il rend
+ * des moyennes. Or un seul appel parti en timeout à 120 s déplace une
+ * moyenne de plusieurs secondes et ne déplace pas la médiane d'un
+ * millième. C'est la médiane qui décrit ce qu'un visiteur attend
+ * VRAIMENT, donc c'est elle qui dit si le passage en flux a servi.
+ *
+ * ── ELLE COUVRE TOUTES LES PORTES, ET C'EST VOULU ────────────────────
+ *
+ * Contrairement aux quatre marches de l'entonnoir, qui ne comptent que
+ * la page dédiée (sinon le taux ment), la durée est une mesure
+ * TECHNIQUE de l'appel au modèle : elle ne dépend pas de l'endroit d'où
+ * le visiteur est arrivé. Écarter l'iframe diviserait l'échantillon
+ * pour rien. Et il n'y a ici aucun dénominateur venu d'une autre
+ * population, donc aucun risque de comparer deux choses différentes :
+ * c'est précisément ce qui autorise à tout garder.
+ *
+ * ── LE COMPTE PAIR PREND LA MOYENNE DES DEUX DU MILIEU ───────────────
+ *
+ * Définition standard. Prendre l'un des deux au hasard ferait sauter la
+ * valeur d'un point à l'autre entre deux périodes qui se ressemblent.
+ */
+export function mesureDeDuree(generations: readonly LigneGeneration[]): MesureDeDuree {
+  const durees: number[] = [];
+  let sansMesure = 0;
+  for (const g of generations) {
+    const v = g.dureeMs;
+    // `> 0` et pas `>= 0` : une durée de zéro n'est pas une mesure,
+    // c'est une valeur qu'on ne sait pas expliquer.
+    if (typeof v === "number" && Number.isFinite(v) && v > 0) durees.push(v);
+    else sansMesure += 1;
+  }
+  if (durees.length < MIN_POUR_UNE_MEDIANE) {
+    return { medianeMs: null, mesurees: durees.length, sansMesure };
+  }
+  durees.sort((a, b) => a - b);
+  const milieu = Math.floor(durees.length / 2);
+  const medianeMs = durees.length % 2 === 1
+    ? durees[milieu]
+    : Math.round((durees[milieu - 1] + durees[milieu]) / 2);
+  return { medianeMs, mesurees: durees.length, sansMesure };
 }
 
 /**
@@ -111,6 +197,14 @@ export interface EntonnoirGenerateur {
   coutParAbonneMillicents: number | null;
   /** Ce que ça coûte, comparé à ce que ça rapporte. Voir l'en-tête. */
   roi: RoiGenerateur;
+  /**
+   * Combien de temps un visiteur attend son quiz.
+   *
+   * CALCULÉE SUR TOUTES LES PORTES, contrairement aux quatre marches
+   * au dessus : voir `mesureDeDuree`. L'écran doit donc le dire, sinon
+   * ce chiffre se lit comme celui de la seule page dédiée.
+   */
+  duree: MesureDeDuree;
 }
 
 /** Un taux en %, à une décimale, ou `null` si le dénominateur est trop maigre. */
@@ -189,6 +283,8 @@ export function construireEntonnoirGenerateur(args: {
     coutParInscritMillicents: inscrits > 0 ? Math.round(cout.millicents / inscrits) : null,
     coutParAbonneMillicents: abonnes > 0 ? Math.round(cout.millicents / abonnes) : null,
     roi,
+    // TOUTES les générations, pas seulement celles de la page dédiée.
+    duree: mesureDeDuree(args.generations),
   };
 }
 

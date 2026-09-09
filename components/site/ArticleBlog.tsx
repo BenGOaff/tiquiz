@@ -32,9 +32,15 @@ import type { LanguePublique } from "@/lib/site/langues";
 import { cheminBlog, cheminRubrique, motsDuBlog } from "@/lib/blog/motsDuBlog";
 import { articlesVoisins, extraireResume } from "@/lib/blog/gabarit";
 import { normaliserImages } from "@/lib/blog/imagesArticle";
+import LiensArticle from "@/components/site/LiensArticle";
 import { lireCommentairesPublies } from "@/lib/blog/commentairesStore";
 import { rubriqueDe } from "@/lib/blog/rubriques";
-import { minutesDeLecture, nettoyerBloc, sommaire } from "@/lib/blog/rendu";
+import {
+  minutesDeLecture,
+  nettoyerBloc,
+  porteUneAdresseEmail,
+  sommaire,
+} from "@/lib/blog/rendu";
 import { epinglePour, textePartage } from "@/lib/blog/partage";
 import { jsonLdArticle, jsonLdFaq, jsonLdFilDAriane, urlArticle } from "@/lib/blog/seo";
 
@@ -44,6 +50,8 @@ import EncartCta from "@/components/site/EncartCta";
 import PartageArticle from "@/components/site/PartageArticle";
 import RailArticle from "@/components/site/RailArticle";
 import VisuelArticle from "@/components/site/VisuelArticle";
+import VideoArticle from "@/components/site/VideoArticle";
+import SansObfuscationEmail from "@/components/legal/SansObfuscationEmail";
 
 function jourLisible(iso: string, locale: string): string {
   return new Intl.DateTimeFormat(locale, {
@@ -195,7 +203,7 @@ export default async function ArticleBlog({
                 );
               }
               if (b.type === "html") {
-                return <div key={i} dangerouslySetInnerHTML={{ __html: nettoyerBloc(b.html) }} />;
+                return <BlocHtmlRendu key={i} html={nettoyerBloc(b.html)} />;
               }
               if (b.type === "image") {
                 return (
@@ -222,15 +230,26 @@ export default async function ArticleBlog({
                   </p>
                 );
               }
+              if (b.type === "liens") {
+                return <LiensArticle key={i} liens={b.liens} />;
+              }
+              if (b.type === "video") {
+                return (
+                  <VideoArticle
+                    key={i}
+                    id={b.id}
+                    titre={b.titre}
+                    libelleLecture={m.video.lire}
+                    note={m.video.note}
+                  />
+                );
+              }
               return (
                 <section key={i} className="my-10">
                   {b.questions.map((q, k) => (
                     <details key={k} className="border-b border-[var(--tq-bord)] py-4">
                       <summary className="cursor-pointer font-semibold">{q.question}</summary>
-                      <div
-                        className="mt-2"
-                        dangerouslySetInnerHTML={{ __html: nettoyerBloc(q.reponse) }}
-                      />
+                      <ReponseFaq html={nettoyerBloc(q.reponse)} />
                     </details>
                   ))}
                 </section>
@@ -249,13 +268,19 @@ export default async function ArticleBlog({
                 titre={a.titre}
                 texte={partage}
                 epingle={epingle}
+                mots={m.partage}
               />
             </div>
           </div>
 
-          <EncartCta />
+          <EncartCta mots={m.encart} langue={langue} />
 
-          <Commentaires slug={a.slug} commentaires={commentaires} />
+          <Commentaires
+            slug={a.slug}
+            commentaires={commentaires}
+            mots={m.commentaires}
+            locale={m.locale}
+          />
         </div>
 
         <RailArticle
@@ -264,6 +289,8 @@ export default async function ArticleBlog({
           titre={a.titre}
           textePartage={partage}
           epingle={epingle}
+          mots={m}
+          langue={langue}
         />
       </div>
 
@@ -280,5 +307,36 @@ export default async function ArticleBlog({
         </section>
       ) : null}
     </main>
+  );
+}
+
+// UNE ADRESSE EMAIL RESTE LISIBLE SANS JAVASCRIPT.
+//
+// Cloudflare remplace toute adresse du HTML SERVI par
+// `[email protected]` plus un script qui la reconstruit : ni un robot
+// d'indexation, ni un lecteur d'écran en mode dégradé ne la voit
+// (mesuré le 2 septembre sur les pages légales, 4 sur 4 masquées).
+//
+// Les marqueurs de Cloudflare sont des commentaires HTML, et
+// `nettoyerBloc` les retire : ils ne peuvent donc pas vivre dans le
+// contenu, c'est le RENDU qui les pose. Et seulement autour des blocs
+// concernés : désarmer l'obfuscation là où il n'y a rien à protéger ne
+// protège rien de plus.
+
+function BlocHtmlRendu({ html }: { html: string }) {
+  const bloc = <div dangerouslySetInnerHTML={{ __html: html }} />;
+  return porteUneAdresseEmail(html) ? (
+    <SansObfuscationEmail>{bloc}</SansObfuscationEmail>
+  ) : (
+    bloc
+  );
+}
+
+function ReponseFaq({ html }: { html: string }) {
+  const bloc = <div className="mt-2" dangerouslySetInnerHTML={{ __html: html }} />;
+  return porteUneAdresseEmail(html) ? (
+    <SansObfuscationEmail>{bloc}</SansObfuscationEmail>
+  ) : (
+    bloc
   );
 }

@@ -38,6 +38,8 @@
 import EncartCta from "@/components/site/EncartCta";
 import PartageArticle from "@/components/site/PartageArticle";
 import type { EntreeSommaire } from "@/lib/blog/rendu";
+import type { MotsDuBlog } from "@/lib/blog/motsDuBlog";
+import type { LanguePublique } from "@/lib/site/langues";
 
 export default function RailArticle({
   sommaire,
@@ -45,12 +47,16 @@ export default function RailArticle({
   titre,
   textePartage,
   epingle,
+  mots,
+  langue,
 }: {
   sommaire: readonly EntreeSommaire[];
   url: string;
   titre: string;
   textePartage: string;
   epingle: string | null;
+  mots: MotsDuBlog;
+  langue: LanguePublique;
 }) {
   return (
     <aside className="hidden lg:block">
@@ -58,8 +64,10 @@ export default function RailArticle({
           de la grille, donc il ne chevauche jamais le pied de page. */}
       <div className="sticky top-24 space-y-7">
         {sommaire.length >= 3 ? (
-          <nav aria-label="Sommaire de l'article">
-            <p className="tq-etiquette">Dans cet article</p>
+          <nav aria-label={mots.rail.sommaireAria}>
+            {/* `dansCetArticle` existait deja : le rail reecrivait la
+                phrase en dur juste a cote. */}
+            <p className="tq-etiquette">{mots.dansCetArticle}</p>
             {/* Le sommaire peut être long : il défile DANS le rail au
                 lieu de pousser l'invitation hors de l'écran. */}
             <ul className="tq-sommaire mt-3 max-h-[46vh] space-y-2 overflow-y-auto pr-2 text-[0.9rem]">
@@ -78,19 +86,20 @@ export default function RailArticle({
         ) : null}
 
         <div>
-          <p className="tq-etiquette">Partager</p>
+          <p className="tq-etiquette">{mots.rail.partagerCourt}</p>
           <div className="mt-3">
             <PartageArticle
               url={url}
               titre={titre}
               texte={textePartage}
               epingle={epingle}
+              mots={mots.partage}
               orientation="colonne"
             />
           </div>
         </div>
 
-        <EncartCta compact />
+        <EncartCta mots={mots.encart} langue={langue} compact />
       </div>
     </aside>
   );

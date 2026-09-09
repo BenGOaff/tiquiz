@@ -43,6 +43,7 @@ interface SessionRow {
   modele_ia?: unknown;
   jetons_entree?: unknown;
   jetons_sortie?: unknown;
+  duree_ms?: unknown;
 }
 
 function entier(v: unknown): number | null {
@@ -80,14 +81,15 @@ export async function lireGenerations(args: {
   fin: string | null;
 }): Promise<LectureGenerateur> {
   try {
-    // LES TROIS COLONNES DE JETONS SONT DEMANDÉES NOMMÉMENT, et c'est
-    // ce qui fait que la migration manquante se voit tout de suite :
+    // LES COLONNES DE MESURE SONT DEMANDÉES NOMMÉMENT, et c'est ce qui
+    // fait que la migration manquante se voit tout de suite :
     // PostgREST rejette le select entier, on rend `lisible: false`, et
     // l'écran nomme le fichier à passer. Un `select("*")` rendrait des
-    // lignes sans coût, donc un ROI silencieusement faux.
+    // lignes sans coût et sans durée, donc un ROI et une médiane
+    // silencieusement faux.
     let requete = supabaseAdmin
       .from("embed_quiz_sessions")
-      .select("source, claimed_by_user_id, modele_ia, jetons_entree, jetons_sortie")
+      .select("source, claimed_by_user_id, modele_ia, jetons_entree, jetons_sortie, duree_ms")
       .order("created_at", { ascending: false })
       .limit(PLAFOND);
     if (args.debut) requete = requete.gte("created_at", args.debut);
@@ -121,6 +123,10 @@ export async function lireGenerations(args: {
         modele: typeof l.modele_ia === "string" ? l.modele_ia : null,
         jetonsEntree: entier(l.jetons_entree),
         jetonsSortie: entier(l.jetons_sortie),
+        // `null` sur toute ligne d'avant le 9 septembre : la colonne
+        // n'existait pas. Ces lignes sont COMPTÉES à part par la
+        // médiane, jamais lues comme une génération instantanée.
+        dureeMs: entier(l.duree_ms),
       };
     });
 

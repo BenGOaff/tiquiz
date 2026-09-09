@@ -11,6 +11,7 @@
 // au moment précis où il fallait qu'il clique.
 
 import { test } from "node:test";
+import { SOURCE_CHARGE_PUBLIQUE } from "./aide/chargePublique.mts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
@@ -99,10 +100,10 @@ test("la colonne survit à une migration en retard", () => {
   // a déjà un repli. Sans ça, une migration non appliquée ferait
   // échouer TOUTE la requête, donc plus aucun quiz public (c'est
   // exactement le drame du 2 juin 2026).
-  const src = readFileSync(
-    new URL("../../app/api/quiz/[quizId]/public/route.ts", import.meta.url),
-    "utf8",
-  );
+  // Le module qui porte ce select se CHERCHE : il a demenage le
+  // 9 septembre 2026, et ce test a rougi sur le demenagement alors que
+  // la colonne n'avait pas bouge.
+  const src = SOURCE_CHARGE_PUBLIQUE;
   assert.ok(/QUIZ_COLS_NEW = "[^"]*other_results_position/.test(src));
 });
 

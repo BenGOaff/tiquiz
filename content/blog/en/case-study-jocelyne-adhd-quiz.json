@@ -265,6 +265,123 @@
     {
       "type": "html",
       "html": "<p><strong>- Jocelyne Bacquet</strong></p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "What happens next: what Jocelyne does with those 285 leads",
+      "id": "what-happens-next-what-jocelyne-does-with-those-285-leads"
+    },
+    {
+      "type": "html",
+      "html": "<p>Leads are only one step. Here is what Jocelyne actually does with them.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<ul><li><strong>Straight to the book pre-launch.</strong> Every lead gets an email with their personalised ADHD profile, then a call to action that invites them to look at the book on Amazon. The quiz works as the natural front door to the purchase.</li><li><strong>The feedback is already coming in.</strong> Beta readers received the book early and send Jocelyne emails that genuinely move her. Those first testimonials feed the rest of her communication, and they confirm the book does its job with her audience.</li></ul>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "3 lessons to take away and apply",
+      "id": "3-lessons-to-take-away-and-apply"
+    },
+    {
+      "type": "html",
+      "html": "<ol><li><strong>Starting in a niche with no existing audience is possible.</strong> With €63.50 of ad budget and a qualifying quiz, Jocelyne built a list of 285 leads in 9 days, starting from social accounts created for the launch.</li><li><strong>Expertise plus marketing changes the equation.</strong> Jocelyne brings 40 years of clinical experience with neurodevelopmental conditions. Gwenn brings the Meta ads skill. The result is the product of both, combined.</li><li><strong>Authenticity has a measurable effect in a niche flooded with AI content.</strong> As Jocelyne puts it about the ADHD market: \"It's a hot topic right now, but plenty of books bring nothing, or are written by AI.\"</li></ol>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Find Jocelyne and her work",
+      "id": "find-jocelyne-and-her-work"
+    },
+    {
+      "type": "html",
+      "html": "<p>Jocelyne is happy to be contacted and to share her story. These are the links she wanted to put forward.</p>"
+    },
+    {
+      "type": "liens",
+      "liens": [
+        {
+          "emoji": "📖",
+          "libelle": "The book",
+          "sous": "On Amazon",
+          "href": "https://www.amazon.fr/dp/B0H1GP7CJP"
+        },
+        {
+          "emoji": "✍️",
+          "libelle": "Her blog",
+          "sous": "jocelyne-bacquet-auteur",
+          "href": "https://www.jocelyne-bacquet-auteur.fr/blog-jocelyne-bacquet"
+        },
+        {
+          "emoji": "📷",
+          "libelle": "Instagram",
+          "sous": "@j_bacquet.1",
+          "href": "https://www.instagram.com/j_bacquet.1/"
+        },
+        {
+          "emoji": "👥",
+          "libelle": "Facebook",
+          "sous": "Her author page",
+          "href": "https://www.facebook.com/profile.php?id=61590539094570"
+        }
+      ]
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Your turn",
+      "id": "your-turn"
+    },
+    {
+      "type": "html",
+      "html": "<h3>🚀 Try Tiquiz</h3><p>Build your own qualifying quiz for Systeme.io in under an hour, without Zapier. Free plan to get started.</p>"
+    },
+    {
+      "type": "cta",
+      "texte": "Start my quiz →",
+      "url": "https://tiquiz.fr/signup"
+    },
+    {
+      "type": "html",
+      "html": "<h3>🤝 Work with Gwenn</h3><p>Hand your Meta campaign to a freelancer who knows how to pair ads with a funnel, and who can build your quizzes too.</p><p><a href=\"mailto:contact@webyneo.com\">contact@webyneo.com</a></p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Your questions, real answers",
+      "id": "your-questions-real-answers"
+    },
+    {
+      "type": "faq",
+      "questions": [
+        {
+          "question": "Does this work in every sector and every niche?",
+          "reponse": "<p>The quiz mechanism (qualify, then recommend) works anywhere your prospect is trying to understand themselves better or to choose between several options: consumer services (coaching, therapy, wellbeing), digital products (courses, ebooks), B2B services (consulting, freelancing), e-commerce, beauty, media. If your business has a topic where your prospect is trying to understand themselves better, or to choose between several options, a quiz fits. Jocelyne's case is personal development, but the mechanism (qualify, then recommend) works in any niche.</p>"
+        },
+        {
+          "question": "How long does it take to build a first quiz?",
+          "reponse": "<p>If you start from one of the 15 industry templates included in Tiquiz (coaching, nutrition, parenting, finance, business, photography, real estate and more), allow 30 minutes the first time. If you start from an idea that is entirely your own, allow one hour to an hour and a half, which is what Gwenn estimated for Jocelyne's quiz, beta phase excluded. The AI writes the draft, you make it yours.</p>"
+        },
+        {
+          "question": "Do you have to run Meta ads to get results?",
+          "reponse": "<p>No. Meta ads are what let Jocelyne reach 285 leads in 9 days from a standing start with no audience. If you already have an audience (a newsletter, a community, social followers), you can start organically: share the quiz in your content, your posts, your emails. The volumes will be smaller, but there is no ad budget. You can add Meta ads later to speed things up if you want.</p>"
+        },
+        {
+          "question": "Can I do it all myself, without a freelancer, and still get results?",
+          "reponse": "<p>Yes, absolutely. Tiquiz is built so that you can create your quiz, connect it to Systeme.io and launch a Meta campaign on your own. The Meta pixel takes a few minutes to install, targeting happens in the usual Meta interface, and the mechanism is the same. Your results will probably be smaller at first than Jocelyne's (she has Gwenn's experience in continuous optimisation behind her), but you can absolutely start on your own, and bring in a freelancer later if you want to scale.</p>"
+        },
+        {
+          "question": "How much does working with Gwenn cost?",
+          "reponse": "<p>Gwenn's rates depend on your project: building the quiz, setting up and running the Meta campaign, full support. The simplest route is to email her directly at <a href=\"mailto:contact@webyneo.com\">contact@webyneo.com</a> and explain your situation, and she will quote accordingly.</p>"
+        },
+        {
+          "question": "What exactly does the free Tiquiz plan allow?",
+          "reponse": "<p>The Free plan lets you build 1 active quiz, 1 survey and 1 video Popquiz, with every AI generation feature and your native Systeme.io connection. You see the first 10 responses (leads) collected each month; beyond that, the following leads are still captured, and become visible once you upgrade. Enough to test your first lead magnet, confirm it works in your niche, and then decide whether to move to the Monthly plan at €17/month.</p>"
+        }
+      ]
     }
   ]
 }

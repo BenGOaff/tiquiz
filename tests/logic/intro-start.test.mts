@@ -148,11 +148,16 @@ test("le module ne lit ni la base ni l'environnement", async () => {
 // rien, et la doc la decrit pourtant comme active.
 
 import { readFileSync } from "node:fs";
+import { SOURCE_CHARGE_PUBLIQUE } from "./aide/chargePublique.mts";
 
 const lire = (rel: string) => readFileSync(new URL(rel, import.meta.url), "utf8");
 const VIEWER = lire("../../components/quiz/PublicQuizClient.tsx");
 const EDITEUR = lire("../../components/quiz/QuizDetailClient.tsx");
-const PUBLIC_ROUTE = lire("../../app/api/quiz/[quizId]/public/route.ts");
+// LA CHARGE PUBLIQUE SE CHERCHE, elle ne se recopie pas : elle a
+// demenage dans un module partage le 9 septembre 2026, et un chemin
+// ecrit en dur fait rougir ce test sur un demenagement au lieu d'un
+// oubli de colonne.
+const PUBLIC_ROUTE = SOURCE_CHARGE_PUBLIQUE;
 const PATCH_ROUTE = lire("../../app/api/quiz/[quizId]/route.ts");
 const MIGRATION = lire("../../supabase/migrations/20260825_intro_start_mode.sql");
 

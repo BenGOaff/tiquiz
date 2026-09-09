@@ -18,9 +18,25 @@
 
 import { useState } from "react";
 
+import type { MotsCopie } from "@/lib/blog/motsDuBlog";
+
 type Etat = "prêt" | "copié" | "raté";
 
-export default function BoutonCopier({ url }: { url: string }) {
+export default function BoutonCopier({
+  url,
+  mots,
+}: {
+  url: string;
+  /**
+   * Les trois libelles du bouton.
+   *
+   * Ils arrivent en PROP et ne se devinent pas : ce composant est
+   * client, et la langue est celle de l'ADRESSE de l'article (le
+   * segment `/en/`), pas celle d'un cookie ni du navigateur. La
+   * deviner ici afficherait "Copier le lien" sous un article anglais.
+   */
+  mots: MotsCopie;
+}) {
   const [etat, setEtat] = useState<Etat>("prêt");
 
   async function copier() {
@@ -59,7 +75,7 @@ export default function BoutonCopier({ url }: { url: string }) {
         <rect x="9" y="9" width="11" height="11" rx="2" />
         <path d="M5 15V5a2 2 0 0 1 2-2h10" />
       </svg>
-      {etat === "copié" ? "Lien copié" : etat === "raté" ? "Copie refusée" : "Copier le lien"}
+      {etat === "copié" ? mots.lienCopie : etat === "raté" ? mots.copieRatee : mots.copierLeLien}
     </button>
   );
 }

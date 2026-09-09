@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { envoyerEvenement } from "@/lib/analytics/envoi";
+import { evenementCompteCree } from "@/lib/analytics/parcours";
 import { Button } from "@/components/ui/button";
 
 function parseHashParams(hash: string): Record<string, string> {
@@ -22,10 +24,34 @@ function parseHashParams(hash: string): Record<string, string> {
  * Les effets de bord d'une première entrée, appelés APRÈS que la session
  * soit ouverte. Ne jette jamais et ne bloque rien : la session compte,
  * l'accueil compte moins.
+ *
+ * ── `compte_cree` PART D'ICI, ET SEULEMENT SUR UNE PREMIÈRE ENTRÉE ───
+ *
+ * C'est le NUMÉRATEUR du seul ratio que Béné veut lire chaque semaine
+ * (`generation_lancee -> compte_cree`, 9 septembre). La route ne rend
+ * `accueilli: true` qu'une fois par compte : une reconnexion Google d'un
+ * compte existant n'est pas une inscription, et la compter gonflerait le
+ * numérateur d'un ratio dont le dénominateur ne bouge pas.
+ *
+ * `avaitQuiz` vient du SERVEUR : le cookie qui le porte est retiré dans
+ * la même réponse, donc le navigateur ne peut plus le lire après coup.
+ *
+ * L'envoi est silencieux hors domaine de vente (la porte de
+ * `chargerAnalytics` s'en occupe) : une inscription entamée sur
+ * `quiz.tipote.com` n'est donc pas comptée, exactement comme la
+ * génération qui l'a précédée ne l'est pas. Le numérateur et le
+ * dénominateur parlent de la même population, et c'est ce qui compte.
  */
 async function accueillir(): Promise<void> {
   try {
-    await fetch("/api/auth/accueil", { method: "POST" });
+    const res = await fetch("/api/auth/accueil", { method: "POST" });
+    const data = (await res.json().catch(() => ({}))) as {
+      accueilli?: boolean;
+      avaitQuiz?: boolean;
+    };
+    if (data.accueilli === true) {
+      envoyerEvenement(evenementCompteCree({ avaitQuiz: data.avaitQuiz === true }));
+    }
   } catch {
     /* le tableau de bord passe avant */
   }

@@ -32,18 +32,27 @@
 
 import { useState } from "react";
 
-import { MESSAGE_MAX, NOM_MAX, PHRASE_REFUS, type RaisonRefus } from "@/lib/blog/commentaires";
+import { MESSAGE_MAX, NOM_MAX } from "@/lib/blog/commentaires";
+import type { MotsFormulaire } from "@/lib/blog/motsDuBlog";
 
-const AUTRES_RAISONS: Record<string, string> = {
-  "trop-rapide": "Tu viens d'en envoyer plusieurs. Laisse passer un moment.",
-  "corps-illisible": "Le message n'est pas arrivé entier. Réessaie.",
-  table_absente:
-    "Les commentaires ne sont pas encore activés sur le serveur. Rien n'est perdu de ton côté : réessaie plus tard.",
-  ecriture: "Ton commentaire n'a pas pu être enregistré. Réessaie dans un instant.",
-  reseau: "La connexion n'a pas abouti. Ton message n'est pas parti.",
-};
-
-export default function FormulaireCommentaire({ slug }: { slug: string }) {
+export default function FormulaireCommentaire({
+  slug,
+  mots,
+}: {
+  slug: string;
+  /**
+   * Les libelles ET les phrases de refus, dans la langue de l'article.
+   *
+   * Ils vivaient EN DUR dans ce fichier, en francais, refus compris :
+   * un lecteur anglophone lisait "Ton prenom" et, s'il se trompait
+   * d'adresse email, il decouvrait le francais au moment exact ou il a
+   * besoin qu'on lui parle.
+   *
+   * La langue arrive en PROP et ne se devine pas : ce composant est
+   * client, et la langue est celle de l'ADRESSE de l'article.
+   */
+  mots: MotsFormulaire;
+}) {
   const [etat, setEtat] = useState<"prêt" | "envoi" | "envoyé">("prêt");
   const [statut, setStatut] = useState<"publie" | "en_attente">("en_attente");
   const [erreur, setErreur] = useState<string | null>(null);
@@ -80,11 +89,13 @@ export default function FormulaireCommentaire({ slug }: { slug: string }) {
       setEtat("prêt");
       const cle = String(json.raison ?? "");
       setErreur(
-        PHRASE_REFUS[cle as RaisonRefus] ?? AUTRES_RAISONS[cle] ?? AUTRES_RAISONS.ecriture,
+        // Une raison inconnue retombe sur `ecriture` : elle
+        // n'affiche JAMAIS sa cle.
+        mots.refus[cle] ?? mots.refus.ecriture,
       );
     } catch {
       setEtat("prêt");
-      setErreur(AUTRES_RAISONS.reseau);
+      setErreur(mots.refus.reseau);
     }
   }
 
@@ -93,14 +104,11 @@ export default function FormulaireCommentaire({ slug }: { slug: string }) {
       <p className="mt-10 rounded-2xl border border-[var(--tq-bord)] bg-white p-5 leading-relaxed">
         {statut === "publie" ? (
           <>
-            <strong>C&apos;est en ligne.</strong> Recharge la page pour le voir avec les autres.
-            Merci d&apos;avoir pris le temps.
+            <strong>{mots.publieFort}</strong> {mots.publieSuite}
           </>
         ) : (
           <>
-            <strong>C&apos;est envoyé.</strong> Ton commentaire attend d&apos;être relu avant
-            d&apos;apparaître : c&apos;est ce qui garde cette page lisible. Tu ne le verras donc
-            pas tout de suite.
+            <strong>{mots.attenteFort}</strong> {mots.attenteSuite}
           </>
         )}
       </p>
@@ -109,11 +117,11 @@ export default function FormulaireCommentaire({ slug }: { slug: string }) {
 
   return (
     <form onSubmit={envoyer} className="mt-10 max-w-[38rem]">
-      <p className="tq-etiquette">Laisser un commentaire</p>
+      <p className="tq-etiquette">{mots.laisserUn}</p>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <label className="block">
-          <span className="text-[0.9rem] font-medium">Ton prénom</span>
+          <span className="text-[0.9rem] font-medium">{mots.prenom}</span>
           <input
             name="auteur"
             required
@@ -124,14 +132,15 @@ export default function FormulaireCommentaire({ slug }: { slug: string }) {
         </label>
         <label className="block">
           <span className="text-[0.9rem] font-medium">
-            Ton email <span className="tq-doux font-normal">(jamais publié)</span>
+            {mots.email}{" "}
+            <span className="tq-doux font-normal">{mots.emailJamaisPublie}</span>
           </span>
           <input name="email" type="email" autoComplete="email" className="tq-champ mt-1.5" />
         </label>
       </div>
 
       <label className="mt-4 block">
-        <span className="text-[0.9rem] font-medium">Ton message</span>
+        <span className="text-[0.9rem] font-medium">{mots.message}</span>
         <textarea name="message" required rows={5} maxLength={MESSAGE_MAX} className="tq-champ mt-1.5" />
       </label>
 
@@ -141,7 +150,7 @@ export default function FormulaireCommentaire({ slug }: { slug: string }) {
           rempli pour servir. */}
       <div className="absolute left-[-9999px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
         <label>
-          Ne remplis pas ce champ
+          {mots.piegeLibelle}
           <input name="siteWeb" tabIndex={-1} autoComplete="off" />
         </label>
       </div>
@@ -153,8 +162,7 @@ export default function FormulaireCommentaire({ slug }: { slug: string }) {
       ) : null}
 
       <p className="tq-doux mt-4 text-[0.82rem] leading-relaxed">
-        Ton email sert uniquement à te répondre. Il n&apos;apparaît nulle part et ne part dans
-        aucune liste de diffusion.
+        {mots.noteEmail}
       </p>
 
       <button
@@ -162,7 +170,7 @@ export default function FormulaireCommentaire({ slug }: { slug: string }) {
         disabled={etat === "envoi"}
         className="tq-bouton tq-bouton-plein mt-4 disabled:opacity-60"
       >
-        {etat === "envoi" ? "Envoi..." : "Envoyer"}
+        {etat === "envoi" ? mots.envoiEnCours : mots.envoyer}
       </button>
     </form>
   );

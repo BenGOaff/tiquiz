@@ -7,7 +7,7 @@
 // focused step components (EmbedForm, EmbedEditor, EmbedPaywall) so
 // the look stays close to the rest of Tiquiz via shared shadcn UI.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import EmbedForm from "./EmbedForm";
@@ -16,6 +16,12 @@ import type {
   EmbedInputs, EmbedLocale, EmbedPhase,
 } from "./embed-types";
 import { cadreDuGenerateur, type ContexteGenerateur } from "@/lib/embed/remise";
+import { envoyerEvenement } from "@/lib/analytics/envoi";
+import {
+  evenementGenerationLancee,
+  evenementGenerationReussie,
+  parcoursDeLAdresse,
+} from "@/lib/analytics/parcours";
 
 // QuizDetailClient is heavy (drag-and-drop, dnd-kit, recharts in some
 // imports). Code-split it so the form step doesn't pull the whole
@@ -72,6 +78,20 @@ export default function EmbedPreviewClient({
   const [inputs, setInputs] = useState<EmbedInputs>(DEFAULT_INPUTS);
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
+  // ── LE CHRONO DE `generation_reussie` ─────────────────────────────
+  //
+  // Béné : "Ajoute aussi la durée médiane de generation_reussie : c'est
+  // le chiffre qui justifiera le chantier 3."
+  //
+  // Il part au clic et s'arrête à l'AFFICHAGE, pas à la fin de l'appel
+  // au modèle : ce que le visiteur vit, c'est l'attente devant son
+  // écran, réseau et rendu compris. La colonne `duree_ms` en base, elle,
+  // ne mesure que l'appel : les deux chiffres répondent à deux questions
+  // et ne se confondent jamais.
+  //
+  // Un `useRef` et pas un `useState` : le remettre à zéro ne doit pas
+  // re-rendre l'écran pendant qu'un flux arrive.
+  const departGeneration = useRef<number | null>(null);
   // Persist the latest token in localStorage so the dashboard claim
   // hook (components/dashboard/EmbedAutoClaim.tsx) can pick it up
   // after signup.
@@ -148,6 +168,25 @@ export default function EmbedPreviewClient({
     setPhase("generating");
     setProgress(t.genConnect);
 
+    // ── `generation_lancee` : LE DÉNOMINATEUR DU SEUL RATIO QU'ELLE LIT
+    //
+    // Il part ICI, quand l'appel démarre vraiment, pas au clic sur la
+    // landing : un clic qui navigue et repart sans rien générer ne doit
+    // pas gonfler le dénominateur de `generation_lancee -> compte_cree`.
+    //
+    // LA SOURCE SE LIT SUR L'ADRESSE, et c'est la page du générateur qui
+    // la porte : "direct" veut dire "arrivée sans paramètres", donc ça ne
+    // peut se savoir que d'ici. Rien dans l'URL, ou une valeur qu'on ne
+    // reconnaît pas : "direct", jamais rien (une génération sans source
+    // rétrécirait le dénominateur, donc flatterait le ratio).
+    const parcours = parcoursDeLAdresse(
+      typeof window === "undefined" ? "" : window.location.search,
+    );
+    departGeneration.current = Date.now();
+    envoyerEvenement(
+      evenementGenerationLancee({ source: parcours.source, profil: parcours.profil }),
+    );
+
     try {
       const res = await fetch("/api/embed/quiz/generate", {
         method: "POST",
@@ -220,6 +259,22 @@ export default function EmbedPreviewClient({
             // backward-compat but ignored here.
             setQuizId(payload.quiz_id);
             if (typeof payload.session_token === "string") setSessionToken(payload.session_token);
+            // `generation_reussie` part au moment de l'AFFICHAGE, avec la
+            // durée vécue. Une durée absurde (horloge qui recule, onglet
+            // resté ouvert) est refusée par `dureeEnMs` et le paramètre
+            // est alors omis : une valeur fausse déplacerait la médiane
+            // sans que rien ne le dise.
+            envoyerEvenement(
+              evenementGenerationReussie({
+                dureeMs:
+                  departGeneration.current === null
+                    ? null
+                    : Date.now() - departGeneration.current,
+                source: parcours.source,
+                profil: parcours.profil,
+              }),
+            );
+            departGeneration.current = null;
             setPhase("edit");
             return;
           } else if (ev === "error") {

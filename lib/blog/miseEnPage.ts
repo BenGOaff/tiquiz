@@ -146,6 +146,78 @@ export function corrigerStructure(html: string): { html: string; corriges: numbe
 }
 
 /**
+ * LE MÊME PARAGRAPHE, DEUX FOIS.
+ *
+ * Relevé le 8 septembre : `strategie-quiz-marketing-tiquiz` porte deux
+ * fois le paragraphe "Une fois que tu as ce vocabulaire, tu le
+ * réinjectes partout dans ton quiz", et deux fois la même liste de
+ * bonus de partage. Les deux sont DANS SA PAGE SOURCE : ce n'est pas
+ * l'import qui a doublé, c'est l'éditeur de Systeme.io, où un bloc se
+ * duplique d'un clic.
+ *
+ * Un doublon n'est pas du contenu, et il coûte deux fois : le lecteur
+ * croit avoir sauté une ligne, et un moteur lit du contenu répété.
+ *
+ * -- LE SEUIL EST UN GARDE, PAS UN ARBITRAGE -------------------------
+ *
+ * Une phrase courte se répète légitimement ("C'est tout.", un intertitre
+ * de relance), donc on ne regarde que les blocs d'au moins 60
+ * caractères de texte nu. Les deux doublons relevés en font 96 et 214 :
+ * le seuil ne tranche rien à la limite, il constate un écart.
+ *
+ * Le PREMIER gagne : c'est lui qui est à sa place dans le fil de
+ * lecture, la copie arrive toujours après.
+ */
+export function retirerBlocsEnDouble(blocs: readonly Bloc[]): Bloc[] {
+  const vus = new Set<string>();
+  const out: Bloc[] = [];
+  for (const b of blocs) {
+    if (b.type === "html") {
+      const nu = String(b.html ?? "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (nu.length >= 60) {
+        if (vus.has(nu)) continue;
+        vus.add(nu);
+      }
+    }
+    out.push(b);
+  }
+  return out;
+}
+
+/**
+ * UN TITRE QUI N'ANNONCE RIEN, parce qu'il n'a rien après lui.
+ *
+ * Béné, 8 septembre 2026 : "ben il faut corriger, c'est toi qui a
+ * importé mes articles ! [...] on peut pas laisser de la merde !!"
+ *
+ * L'étude de cas de Jocelyne finit sur "3 leçons à retenir et
+ * appliquer", et RIEN ne suit. Le lecteur lit une promesse, fait
+ * défiler, et tombe sur le pied de page.
+ *
+ * -- POURQUOI ON RETIRE AU LIEU D'ÉCRIRE LES TROIS LEÇONS ------------
+ *
+ * Parce qu'on n'invente pas ce qui manque. Sa page source n'existe plus
+ * (cherchée le 8 septembre : aucune adresse ne répond, elle n'est ni
+ * dans le sommaire du blog ni dans un sitemap), donc les trois leçons
+ * ne sont récupérables nulle part. Écrire à sa place trois leçons
+ * "plausibles" sur une vraie cliente serait un faux.
+ *
+ * Retirer le titre ne retire aucun contenu : il n'en portait aucun.
+ * Ça retire une promesse que l'article ne tient pas.
+ *
+ * LA RÈGLE EST GÉNÉRALE, et c'est ce qui la rend utile : le prochain
+ * import qui coupe une fin d'article ne laissera plus un titre en l'air.
+ */
+export function retirerTitreOrphelin(blocs: readonly Bloc[]): Bloc[] {
+  const out = [...blocs];
+  while (out.length && out[out.length - 1]?.type === "titre") out.pop();
+  return out;
+}
+
+/**
  * La bannière posée EN TÊTE du corps, alors que la page affiche déjà la
  * couverture juste au dessus.
  *

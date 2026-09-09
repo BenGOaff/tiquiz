@@ -15,12 +15,15 @@ import { toShareLine } from "@/lib/quiz/shareText";
 import { interpolateText } from "@/lib/quizPersonalization";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 import { echapperMotifLike } from "@/lib/db/motifLike";
+import { chargerQuizPublic, quizLivreAuViewer } from "@/lib/quiz/chargerQuizPublic";
+import type { PublicQuizData } from "@/components/quiz/PublicQuizClient";
+import type { QuizBranding } from "@/lib/quizBranding";
 
 export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ quizId: string }>;
-  searchParams: Promise<{ compact?: string; rp?: string }>;
+  searchParams: Promise<{ compact?: string; rp?: string; embed?: string }>;
 };
 
 // "J'ai obtenu : <profil>" dans la langue du quiz, pour l'og:title des
@@ -48,22 +51,60 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 // domain could serve someone else's quizzes through it (e.g. phishing).
 const CUSTOM_HOST_HEADER = "x-tiquiz-custom-host";
 
-const resolveCustomDomainOwner = cache(async function resolveCustomDomainOwner(): Promise<string | null> {
+/**
+ * Le proprietaire du domaine perso par lequel la requete est arrivee.
+ *
+ * TROIS ETATS, ET ILS NE SE CONFONDENT PAS (9 septembre 2026). Avant,
+ * la fonction rendait `null` aussi bien pour "on n'est pas sur un
+ * domaine perso" que pour "la requete a echoue" : dans le second cas le
+ * controle de locataire etait donc SAUTE, et le domaine d'une creatrice
+ * pouvait servir le quiz de quelqu'un d'autre. C'est exactement ce que
+ * le commentaire de `CUSTOM_HOST_HEADER` interdit, et l'erreur n'etait
+ * meme pas lue. "Je n'ai pas pu regarder" et "il n'y a rien" sont deux
+ * reponses differentes (regle du 23 aout).
+ */
+type LocataireDuDomaine =
+  /** Pas de domaine perso : la page se sert normalement. */
+  | { surUnDomainePerso: false }
+  /** Domaine perso, proprietaire connu (ou aucune ligne verifiee). */
+  | { surUnDomainePerso: true; lisible: true; proprietaire: string | null }
+  /** Domaine perso, registre illisible : on ne sert RIEN. */
+  | { surUnDomainePerso: true; lisible: false };
+
+const resolveCustomDomainOwner = cache(async function resolveCustomDomainOwner(): Promise<LocataireDuDomaine> {
   const h = await headers();
   const host = h.get(CUSTOM_HOST_HEADER);
-  if (!host) return null;
-  const { data } = await supabaseAdmin
+  if (!host) return { surUnDomainePerso: false };
+  const { data, error } = await supabaseAdmin
     .from("custom_domains")
     .select("user_id")
     .ilike("hostname", echapperMotifLike(host))
     .eq("status", "verified")
     .maybeSingle();
-  return (data?.user_id as string | undefined) ?? null;
+  if (error) {
+    // Le sens du repli est ASYMETRIQUE : un 404 de trop sur un domaine
+    // perso pendant une panne de base coute une page ; servir sans
+    // verifier coute le quiz d'une creatrice affiche chez une autre.
+    console.error("[q/page] registre des domaines perso illisible :", error.message);
+    return { surUnDomainePerso: true, lisible: false };
+  }
+  return {
+    surUnDomainePerso: true,
+    lisible: true,
+    proprietaire: (data?.user_id as string | undefined) ?? null,
+  };
 });
 
 // Champs sélectionnés sur quizzes — étendre ici si on ajoute des
 // colonnes (ex : pixel ids) dont on a besoin server-side.
-const QUIZ_META_FIELDS = "id, user_id, slug, title, introduction, og_image_url, og_description, share_message, locale, seo_noindex, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id";
+// `created_at` et `updated_at` sont ICI depuis le 9 septembre 2026, et
+// pas dans une requete a part : cette page les redemandait a `quizzes`
+// alors qu'elle venait de lire la meme ligne, donc un aller-retour de
+// plus a chaque chargement d'un quiz public. Les deux colonnes sont
+// aussi vieilles que la table : elles ne peuvent pas manquer, donc
+// elles ne risquent pas de faire refuser le select entier (le drame
+// `survey_thanks_*` du 2 juin).
+const QUIZ_META_FIELDS = "id, user_id, slug, title, introduction, og_image_url, og_description, share_message, locale, seo_noindex, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id, created_at, updated_at";
 
 // MEMOISE PAR REQUETE. `generateMetadata` et le composant de page
 // tournent tous les deux sur la MEME requete et appelaient chacun cette
@@ -73,20 +114,29 @@ const QUIZ_META_FIELDS = "id, user_id, slug, title, introduction, og_image_url, 
 // Meme raison pour `resolveCustomDomainOwner`, appelee deux fois aussi.
 const fetchQuizMeta = cache(async function fetchQuizMeta(slugOrId: string) {
   if (UUID_RE.test(slugOrId)) {
-    const { data } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from("quizzes")
       .select(QUIZ_META_FIELDS)
       .eq("id", slugOrId)
       .eq("status", "active")
       .maybeSingle();
+    // ON LIT L'ERREUR, ET ON CRIE. Depuis le 9 septembre cette seule
+    // requete porte le titre, l'image de partage, les dates du JSON-LD
+    // ET la decision d'injecter la charge dans le HTML : un select
+    // refuse (une colonne ajoutee sans sa migration) ferait donc
+    // disparaitre tout ca d'un coup, et `maybeSingle` rend `null` sans
+    // un mot. C'est exactement ce qui a vide le JSON-LD en silence
+    // pendant des mois (mesure du 7 septembre).
+    if (error) console.error("[q/page] meta du quiz illisible :", error.message);
     if (data) return data;
   }
-  const { data } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("quizzes")
     .select(QUIZ_META_FIELDS)
     .ilike("slug", echapperMotifLike(slugOrId))
     .eq("status", "active")
     .maybeSingle();
+  if (error) console.error("[q/page] meta du quiz illisible (slug) :", error.message);
   return data;
 });
 
@@ -106,9 +156,11 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     // hostname, the loaded quiz must belong to them. Mismatch = 404 so
     // we never serve another creator's quiz through someone else's
     // domain (phishing / impersonation protection).
-    const customOwner = await resolveCustomDomainOwner();
-    if (customOwner && data.user_id !== customOwner) {
-      return { title: "Quiz" };
+    const locataire = await resolveCustomDomainOwner();
+    if (locataire.surUnDomainePerso) {
+      if (!locataire.lisible || data.user_id !== locataire.proprietaire) {
+        return { title: "Quiz" };
+      }
     }
 
     // Description OG : le titre ET l'introduction sont éditables en
@@ -253,17 +305,18 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
 export default async function PublicQuizPage({ params, searchParams }: Props) {
   const { quizId } = await params;
-  const { compact } = await searchParams;
+  const { compact, embed } = await searchParams;
   const isCompact = compact === "1";
 
   // Same ownership check as in generateMetadata: a custom domain may
   // only render quizzes belonging to its owner. We do it server-side
   // here so a wrong-tenant request short-circuits before the client
   // bundle even loads.
-  const customOwner = await resolveCustomDomainOwner();
+  const locataire = await resolveCustomDomainOwner();
   const meta = await fetchQuizMeta(quizId);
-  if (customOwner) {
-    if (!meta || meta.user_id !== customOwner) notFound();
+  if (locataire.surUnDomainePerso) {
+    if (!locataire.lisible) notFound();
+    if (!meta || meta.user_id !== locataire.proprietaire) notFound();
   }
 
   // ─── JSON-LD pour SEO + indexation IA ─────────────────────────────
@@ -294,16 +347,11 @@ export default async function PublicQuizPage({ params, searchParams }: Props) {
     // On la lit maintenant, et on CRIE : un JSON-LD amputa ne casse aucun
     // ecran, il ne coute que le referencement et la lecture par les IA.
     const quizRowId = (meta as { id?: string }).id ?? quizId;
-    const [profileRes, datesRes, countRes] = await Promise.all([
+    const [profileRes, countRes] = await Promise.all([
       supabaseAdmin
         .from("profiles")
         .select("brand_website_url, full_name")
         .eq("user_id", meta.user_id)
-        .maybeSingle(),
-      supabaseAdmin
-        .from("quizzes")
-        .select("created_at, updated_at")
-        .eq("id", quizRowId)
         .maybeSingle(),
       // `head: true` : on veut le NOMBRE, pas les questions. Les tirer
       // pour les compter ramenerait tout l'enonce de chaque question sur
@@ -313,16 +361,15 @@ export default async function PublicQuizPage({ params, searchParams }: Props) {
         .select("id", { count: "exact", head: true })
         .eq("quiz_id", quizRowId),
     ]);
-    if (datesRes.error) console.error("[q/page] dates du quiz illisibles :", datesRes.error.message);
     if (countRes.error) console.error("[q/page] nombre de questions illisible :", countRes.error.message);
     const profile = profileRes.data as
       | { brand_website_url?: string | null; full_name?: string | null }
       | null;
     authorName = profile?.full_name ?? null;
     authorUrl = profile?.brand_website_url ?? null;
-    const dates = datesRes.data as { created_at?: string; updated_at?: string } | null;
-    createdAt = dates?.created_at ?? null;
-    updatedAt = dates?.updated_at ?? null;
+    const dates = meta as { created_at?: string | null; updated_at?: string | null };
+    createdAt = dates.created_at ?? null;
+    updatedAt = dates.updated_at ?? null;
     questionCount = typeof countRes.count === "number" ? countRes.count : null;
     // La langue DECLAREE d'une page de quiz est celle que son visiteur
     // lit, c'est a dire `quizzes.locale`. `profiles.content_locale` est
@@ -339,6 +386,51 @@ export default async function PublicQuizPage({ params, searchParams }: Props) {
   const pixels = meta
     ? await resolveEffectivePixels(meta, (meta as { user_id?: string }).user_id)
     : null;
+
+  // ─── LA CHARGE DU QUIZ PART AVEC LE HTML ──────────────────────────
+  //
+  // Avant le 9 septembre 2026, cette page ne rendait AUCUN contenu de
+  // quiz : le visiteur attendait le HTML, puis 1146 Ko de JavaScript,
+  // puis un appel a `/api/quiz/<id>/public`, et seulement la voyait sa
+  // premiere question. Trois vagues reseau l'une apres l'autre, et la
+  // troisieme ne pourra JAMAIS etre servie par un cache au bord (sa
+  // reponse porte un `set-cookie`, voir `chargerQuizPublic`).
+  //
+  // On appelle donc LA MEME fonction que la route, et on passe le
+  // resultat au viewer. La route reste en place et sert toujours : les
+  // aperçus, l'embed, et le repli quand cette injection ne s'applique
+  // pas.
+  //
+  // ON N'INJECTE QUE LE CHEMIN PUBLIC STRICT, et les deux gardes
+  // comptent :
+  //   - `meta` n'existe que pour un quiz ACTIF dont le locataire est le
+  //     bon (le filtre `status = active` de `fetchQuizMeta` plus le
+  //     controle de domaine perso juste au dessus) ;
+  //   - un `?embed=` dans l'URL veut dire "montre-moi mon brouillon" :
+  //     ce chemin a besoin du jeton ET des cookies, donc il reste au
+  //     client.
+  // Un brouillon montre a son auteur passe lui aussi par le client, qui
+  // envoie sa session. Cette page n'en sert jamais un a un inconnu.
+  let donneesServeur: { quiz: PublicQuizData; branding: QuizBranding | null } | null = null;
+  if (meta && !embed) {
+    const charge = await chargerQuizPublic({
+      slugOrId: quizId,
+      jetonEmbed: null,
+      utilisateurConnecte: null,
+    });
+    if (charge.ok) {
+      // UNE seule assertion, et elle dit ce qu'elle ne prouve pas : les
+      // colonnes viennent de la base, donc leur forme n'est verifiee ni
+      // ici ni sur le chemin de l'API (ou `res.json()` rend `any`). Ce
+      // n'est PAS un `as unknown as` entre deux formes differentes : les
+      // deux cotes decrivent la meme ligne de `quizzes`, et c'est la
+      // MEME fonction qui la construit pour les deux portes.
+      donneesServeur = {
+        quiz: quizLivreAuViewer(charge) as PublicQuizData,
+        branding: (charge.branding as QuizBranding | null) ?? null,
+      };
+    }
+  }
 
   return (
     <>
@@ -366,7 +458,7 @@ export default async function PublicQuizPage({ params, searchParams }: Props) {
           googleAdsConversionId={pixels.googleAdsConversionId}
         />
       )}
-      <PublicQuizClient quizId={quizId} compact={isCompact} />
+      <PublicQuizClient quizId={quizId} compact={isCompact} donneesServeur={donneesServeur} />
     </>
   );
 }

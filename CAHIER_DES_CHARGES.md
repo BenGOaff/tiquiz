@@ -2,7 +2,11 @@
 
 Application web SaaS multilingue de création de contenus interactifs (quiz par profil, quiz noté, sondage, popquiz vidéo) pour la capture et la qualification de leads, avec intégration native Systeme.io et génération par IA.
 
-Tiquiz est le module quiz autonome de la plateforme Tipote. Le périmètre est volontairement focalisé : quiz, sondage, popquiz, IA de génération, intégration Systeme.io. Pas de coach IA, pas de crédits IA à consommer, pas de réseaux sociaux, pas d'automations, pas de constructeur de pages, pas de production de contenu (posts, emails, articles).
+Tiquiz est le module quiz autonome de la plateforme Tipote. Le périmètre est volontairement focalisé : quiz, sondage, popquiz, IA de génération, intégration Systeme.io. Pas de coach IA, pas de crédits IA à consommer, pas de réseaux sociaux, pas de constructeur de pages.
+
+🚨 **Cette ligne disait « pas d'automations, pas de production de contenu (posts, emails, articles) ». C'est PÉRIMÉ depuis le 1er septembre 2026**, et je la corrige en place plutôt que d'empiler. Deux chantiers l'ont annulée : l'onglet **Automatiser** (le guide des tags Systeme.io à créer, `lib/automatisation/planSysteme.ts`) et les **trois générateurs de contenu** (`/generateurs` : le bonus post-quiz, la séquence d'emails, les contenus de promotion). Le détail vit dans `AGENTS.md`, sections « L'onglet Automatisation » et « Les trois générateurs de contenu ».
+
+Ce qui reste vrai du périmètre : Tiquiz écrit ce qui vient APRÈS le quiz, à partir du quiz. Il n'est ni un éditeur de newsletter, ni un planificateur de publications : le contenu se copie dans Systeme.io.
 
 Domaine de l'application : `quiz.tipote.com`.
 
@@ -35,7 +39,7 @@ Tiquiz permet à un créateur de fabriquer un lead magnet interactif (le classiq
 - **Studio visuel** : génération IA d'images de fond et de textes courts pour la promotion.
 - **Gamification** : jalons (milestones), mur des réussites, objectif hebdomadaire, confettis.
 - **Programme revendeur** : un partenaire revend Tiquiz en gros à ses propres clients (comptes isolés, facturation automatisée).
-- **Multilingue à deux niveaux** : interface admin en 7 langues (dont arabe RTL), et contenu de quiz générable dans plus de 100 langues (19 mises en avant), avec formes tu/vous du français et typographie française automatique.
+- **Multilingue à deux niveaux** : interface admin en 7 langues (dont arabe RTL), et contenu de quiz générable dans 100 langues et variantes (19 mises en avant), avec formes tu/vous du français et typographie française automatique.
 - **Notifications de réponses** : email au créateur à chaque nouveau lead (activable), et masquage optionnel des compteurs de réponses.
 - **Masquage de la marque** : les plans payants peuvent remplacer le lien "offert par Tiquiz" par leur propre lien, ou le retirer complètement.
 - **Monétisation freemium** pilotée par webhooks Systeme.io, avec changement de plan en un clic.
@@ -156,7 +160,7 @@ Interpolation dans les textes du parcours, à partir des données capturées :
 - `{a|b}`, `{a|b|c}`, `{L}` : autres formes de variantes gérées par `lib/quizPersonalization.ts`.
 - **Variables de score** (quiz scoré) : `{score}` et `{label}` (global), `{score_<axe>}` et `{label_<axe>}` par axe, insérables en un clic depuis le menu de variables dans les textes de résultat ET dans l'URL du CTA (valeurs encodées ; jamais l'email dans une URL).
 
-Les variantes de genre peuvent être générées par l'IA sur un champ (bouton ✨) ou sur tout le quiz d'un coup. Le contenu peut être produit dans plus de 100 langues (cf. §17.3).
+Les variantes de genre peuvent être générées par l'IA sur un champ (bouton ✨) ou sur tout le quiz d'un coup. Le contenu peut être produit dans 100 langues et variantes (cf. §17.3).
 
 ---
 
@@ -953,9 +957,56 @@ page, jetons `tq-*` de `globals.css`, scope `.tq-site`).
 | `/affiliation-atelier` | le programme Atelier, 70 % |
 | `/a-propos` | la page auteur de Béné |
 | `/newsletter` | l'inscription, qui pose le tag `newsletter` chez Systeme.io |
+| `/tarifs` | les trois paliers, la grille comparative, la FAQ d'argent |
+| `/fonctionnalites` | le hub, une carte par fonctionnalité |
+| `/fonctionnalites/<slug>` | **8 pages**, une par fonctionnalité (`lib/site/fonctionnalites.ts`) |
+| `/integrations` | le hub : connecter un formulaire ou un quiz à Systeme.io |
+| `/integrations/<outil>-systeme-io` | **6 pages** (Zapier, Tally, Typeform, Jotform, Google Forms, Interact) |
+| `/generateur-de-quiz` | le générateur public, dans une page référençable |
+| `/apercu-landing-8f2c9d41` | la landing en relecture : slug introuvable, `noindex`, hors sitemap |
 
 Les adresses légales françaises redirigent vers les pages existantes
 (`/cgv` -> `/terms`, etc.), depuis `lib/site/adressesLegales.ts`.
+
+### Le site est BILINGUE, et le français ne porte aucun préfixe (8 septembre 2026)
+
+```
+/tarifs        le francais, exactement ou il est aujourd'hui
+/en/tarifs     l'anglais
+```
+
+Poser `/fr/` changerait chaque adresse déjà indexée : c'est sa contrainte
+("je ne veux pas changer les URL actuelles parce qu'elles commencent à
+ranker doucement"). `LANGUE_SANS_PREFIXE = "fr"`
+(`lib/site/langues.ts`), et un test refuse qu'un `/fr/` se fabrique.
+
+**On RÉÉCRIT, on ne redirige pas** : l'adresse vue par le visiteur reste
+`/en/tarifs`, donc c'est elle que Google indexe et elle que le `hreflang`
+apparie. **Et l'URL gagne sur le cookie** : sans cette règle,
+`/en/tarifs` servirait du français à quelqu'un dont le cookie dit "fr",
+et la page s'afficherait parfaitement pendant tout ce temps.
+
+**Une page ne déclare que les langues qu'elle a VRAIMENT**
+(`PagePublique.langues`) : déclarer une langue absente mettrait
+`/en/<chemin>` dans le sitemap et dans ses `hreflang`, et Google y
+trouverait du français sous une adresse anglaise.
+
+**Deux groupes de routes, et ce n'est pas du rangement.** `app/(site)/`
+est prérendu au build ; `app/(site-langues)/` lit l'en-tête de langue
+posé par le middleware, donc il est dynamique. Un `headers()` dans le
+layout commun aurait rendu dynamiques les 8 pages qui n'en ont pas
+besoin. Un groupe n'ajoute aucun segment d'URL.
+
+**Ce qui est servi en anglais au 9 septembre :** toutes les pages
+internes du site (`/tarifs`, `/fonctionnalites` et ses 8 filles,
+`/integrations` et ses 6 filles, `/generateur-de-quiz`, `/a-propos`,
+`/affiliation`, `/affiliation-atelier`, `/newsletter`) et **les 10
+articles du blog**, un pour un avec les 10 français.
+
+**Ce qui NE l'est pas :** la page de vente `/`, qui est une CAPTURE
+française (chantier 4 de `CHANTIERS.md`), et les 5 autres langues de
+l'interface (décision de Béné, pas un oubli : 10 articles fois 7 langues
+font 70 pages, et chaque correction de chiffre se paierait sept fois).
 
 **Ce fichier n'a AUCUN import, et c'est nécessaire** : il est lu par
 `next.config.ts`, qui est compilé HORS du projet TypeScript, donc où
@@ -1008,10 +1059,16 @@ chez Resend, SPF/DKIM/DMARC posés). `lib/email/tiquizShell.ts` :
 
 - `adresseExpediteur()` lit `SUPPORT_FROM_EMAIL`, puis
   `RESELLER_FROM_EMAIL`, puis le repli ;
-- **le repli est DÉLIBÉRÉMENT `hello@tipote.com`**, vérifié chez Resend
-  depuis des mois. Un repli doit être ce qui marche à coup sûr, pas ce
-  qu'on préfère : mettre `tiquiz.fr` ici enverrait en spam tous les
-  emails d'un serveur où la variable a été oubliée ;
+- 🚨 **cette ligne disait « le repli est DÉLIBÉRÉMENT `hello@tipote.com`,
+  vérifié chez Resend depuis des mois ». C'était FAUX, et personne ne
+  l'avait essayé** : relevé dans son compte Resend le 31 août, les
+  domaines vérifiés sont `tiquiz.fr`, `atelierduquiz.fr` et
+  **`send.tipote.com`** ; `tipote.com` tout court n'y est pas. Le repli
+  envoyait donc depuis un domaine que Resend REFUSE, donc **plus aucun
+  email ne partait** dès que la variable manquait, liens de connexion
+  compris. `REPLI_EXPEDITEUR` vaut `hello@tiquiz.fr` depuis. **Une
+  valeur par défaut qu'on n'a jamais essayée n'est pas un garde-fou,
+  c'est une hypothèse** ;
 - `adresseNue()` retire un nom déjà présent dans la variable. Une valeur
   `Tiquiz <hello@tiquiz.fr>` produisait `Tiquiz <Tiquiz <...>>`, que
   Resend refuse : **plus aucun email ne part**, liens de connexion
@@ -1021,3 +1078,92 @@ chez Resend, SPF/DKIM/DMARC posés). `lib/email/tiquizShell.ts` :
 
 Les réponses arrivent sur `hello@tipote.com` par le routage Cloudflare
 Email, et repartent en `tiquiz.fr`.
+
+---
+
+## 24. Les trois générateurs de contenu (1er au 4 septembre 2026)
+
+Ce chapitre manquait, et l'introduction de ce document disait même
+l'inverse ("pas de production de contenu"). Un agent qui reprenait le
+dossier ne pouvait pas savoir que ces écrans existent.
+
+| Le générateur | Ce qu'il écrit | Il marche sur |
+|---|---|---|
+| le BONUS | le bonus entier, son mode d'emploi, les textes qui le remettent | un quiz dont les profils sont remplis |
+| les EMAILS | une séquence post-quiz, écrite pour UN profil | idem |
+| la PROMO | des emails d'invitation et des posts | tout, sondage compris |
+
+Trois écrans : `/generateurs` (les deux cartes), `/generateurs/nouveau`
+(les trois générateurs), `/generateurs/mes-contenus` (la bibliothèque).
+
+**Les modules sont les MÊMES que ceux de Tipote, à l'octet près**
+(`lib/generateurs/*`, `lib/prompts/generateurs/*`, `lib/aiFailure.ts`,
+`lib/quiz/urlPublique.ts`) et **les quatre modules de rendu viennent de
+l'Atelier** (`lib/bonus/document.ts`, `accents.ts`, `markdownHtml.ts`,
+`printable.ts`). Un `cmp` le prouve, et c'est le garde-fou :
+
+```bash
+cmp lib/bonus/document.ts ../formaquiz/lib/bonus/document.ts
+```
+
+**Ce qui diffère entre les deux dépôts, et c'est assumé :** Tiquiz gate
+sur `canUseAIAnalysis` (beta / lifetime / les deux paliers PLUS) et n'a
+pas de crédits ; Tipote gate sur `isPaidPlan` et **consomme des
+crédits** (`lib/generateurs/credits.ts`, qui ne vit QUE là bas). Les
+deux écrans sont identiques à l'octet près, le compteur y est une prop
+optionnelle, nulle ici.
+
+**Six décisions à ne pas défaire**, chacune payée par un retour de Béné,
+et le détail vit dans `AGENTS.md` :
+
+1. **la clé Anthropic passe par `lib/ai/cleAnthropic.ts`**, jamais lue à
+   la main : la route des générateurs était le seul écran à lire
+   `ANTHROPIC_API_KEY` sans son repli, donc le seul incapable d'écrire ;
+2. **les pistes n'existent que pour le BONUS.** Les emails et la promo
+   ont un plan FIXE (`lib/generateurs/sequences.ts`, les cinq temps de
+   l'Atelier mot pour mot) : il n'y a rien à choisir ;
+3. **le parcours dépend du générateur** (`lib/generateurs/parcours.ts`),
+   et le lancement vit au pied des RÉGLAGES, pas sur l'écran d'après ;
+4. **on reprend un contenu là où on l'a laissé** : la table
+   `generateur_contenus` garde le brief, les pistes et les morceaux
+   (migration `20260903_generateurs_reprise.sql`, les DEUX Supabase) ;
+5. **rien n'est tronqué ni annulé** : au delà de ~4500 jetons un appel
+   dépasse le budget de temps et rend ZÉRO ligne, donc on écrit en
+   TRANCHES (6 x 4500, ~18000 mots). **Le prefill assistant est RETIRÉ
+   des modèles 4.6 et 5** : la suite part dans le MESSAGE ;
+6. **deux points de cache** (le socle, puis la consigne), et le bloc
+   variable n'en porte aucun. Le cache échoue EN SILENCE : une variable
+   qui repasse dans le préfixe ne casse rien, elle multiplie la facture.
+
+---
+
+## 25. La mesure du parcours (9 septembre 2026)
+
+Cinq événements GA4, et pas un de plus (`lib/analytics/parcours.ts`) :
+
+```
+quiz_demarre        le visiteur clique la 1re reponse du quiz du hero
+quiz_termine        l'ecran de resultat s'affiche          { profil }
+generation_lancee   le generateur demarre l'appel          { profil, source }
+generation_reussie  le quiz s'affiche dans l'editeur       { duree_ms }
+compte_cree         il va au bout de l'inscription         { avait_quiz }
+```
+
+**Le seul ratio à afficher est `generation_lancee -> compte_cree`.**
+
+**Une seule porte de sortie** (`lib/analytics/envoi.ts`), qui garde une
+FILE : le bandeau de consentement peut être accepté APRÈS le geste, et
+sans file `quiz_demarre` serait perdu pendant que `quiz_termine`
+partirait, c'est à dire un entonnoir avec plus d'arrivées que de
+départs. Un refus ne vide RIEN.
+
+**Les deux durées ne se confondent JAMAIS** : `embed_quiz_sessions.
+duree_ms` mesure l'APPEL AU MODÈLE (migration `20260909_generateur_
+duree.sql`, Supabase de Tiquiz), et GA4 mesure ce que le VISITEUR VIT.
+L'écran d'admin dit laquelle il affiche. La médiane vaut `null` en
+dessous de 10 générations chronométrées, et les générations SANS mesure
+sont comptées à part : aucune ligne d'avant le 9 septembre n'en porte,
+et les compter à zéro annoncerait un générateur deux fois plus rapide.
+
+**Ce qui n'est PAS branché :** `quiz_demarre` et `quiz_termine` attendent
+le quiz du hero de la landing (chantier 6).

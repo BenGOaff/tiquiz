@@ -35,13 +35,36 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
+import { sansCommentaires } from "./aide/sansCommentaires.mts";
+
 import { evenementBeginCheckout, evenementPurchase } from "@/lib/analytics/conversions";
 import { OWNER_CATALOG, OWNER_PRODUCT_ORDER } from "@/lib/checkout/catalog";
 
 const lire = (p: string) => fs.readFileSync(path.join(process.cwd(), p), "utf8");
 
-const sansCommentaires = (src: string) =>
-  src.replace(/(^|[^:])\/\/.*$/gm, "$1").replace(/\/\*[\s\S]*?\*\//g, "");
+/**
+ * Les sources du dépôt, pour les gardes qui BALAIENT au lieu de
+ * surveiller une liste. Les dossiers de sortie et les dépendances sont
+ * écartés : `.next` porte des copies compilées de ces mêmes fichiers,
+ * et elles feraient compter deux fois le même appel.
+ */
+const HORS_BALAYAGE = new Set([
+  "node_modules", ".next", ".git", "public", "coverage", "tests",
+]);
+function fichiersDuDepot(dossier = "."): string[] {
+  const out: string[] = [];
+  for (const e of fs.readdirSync(path.join(process.cwd(), dossier), { withFileTypes: true })) {
+    if (e.name.startsWith(".") && e.name !== ".") continue;
+    const rel = dossier === "." ? e.name : `${dossier}/${e.name}`;
+    if (e.isDirectory()) {
+      if (HORS_BALAYAGE.has(e.name)) continue;
+      out.push(...fichiersDuDepot(rel));
+    } else if (/\.(ts|tsx|mts)$/.test(e.name)) {
+      out.push(rel);
+    }
+  }
+  return out;
+}
 
 describe("le montant vient du catalogue, jamais d'ailleurs", () => {
   test("chaque palier vendu porte SON prix, en unités", () => {
@@ -162,43 +185,98 @@ describe("là où les deux événements sont posés", () => {
 });
 
 describe("la même porte que la balise, consentement compris", () => {
-  const src = sansCommentaires(lire("components/analytics/ConversionGa4.tsx"));
+  // ── CE GARDE-FOU A ROUGI SUR UNE CORRECTION JUSTE (9 septembre) ────
+  //
+  // Il lisait la source de `ConversionGa4.tsx` et y exigeait
+  // `chargerAnalytics({`. Le jour où la décision d'envoi a déménagé
+  // dans `lib/analytics/envoi.ts` (pour que les cinq événements du
+  // parcours passent par la MÊME porte, au lieu d'en recopier une
+  // deuxième), quatre de ses cas sont sortis rouges sur un dépôt plus
+  // sain qu'avant.
+  //
+  // **Un garde-fou qui fige un EMPLACEMENT empêche de déplacer le
+  // code.** Il vise maintenant le FAIT : il n'existe qu'UNE porte dans
+  // tout le dépôt, elle relit l'accord, et le composant DÉLÈGUE.
 
-  test("l'envoi repasse par `chargerAnalytics`, pas par une condition recopiée", () => {
-    // Deux portes qui décideraient chacune de leur côté finiraient par
-    // ne plus dire la même chose : défaut sorti six fois dans ce dépôt.
-    assert.match(src, /chargerAnalytics\(\{/);
-    assert.match(src, /consentementDonne: lireConsentement\(\)/);
+  const PORTE = "lib/analytics/envoi.ts";
+  const porte = sansCommentaires(lire(PORTE));
+  const conversion = sansCommentaires(lire("components/analytics/ConversionGa4.tsx"));
+
+  test("il n'y a qu'UNE porte de plus que la balise, où qu'on l'écrive", () => {
+    // ON BALAIE, on ne surveille pas une liste : une liste oublie le
+    // prochain fichier écrit, et c'est exactement comme ça qu'une
+    // deuxième porte s'installerait (leçon des 47 `.ilike`).
+    //
+    // Deux appelants légitimes, et deux seulement : la BALISE (elle
+    // décide de se charger) et la PORTE des événements. Un troisième
+    // déciderait de son côté, et les trois finiraient par ne plus dire
+    // la même chose.
+    const attendus = new Set([
+      "components/analytics/GoogleAnalytics.tsx",
+      PORTE,
+    ]);
+    const trouves = new Set<string>();
+    for (const fichier of fichiersDuDepot()) {
+      const src = sansCommentaires(lire(fichier));
+      // La DÉFINITION n'est pas un appel.
+      if (/export function chargerAnalytics/.test(src)) continue;
+      if (/chargerAnalytics\(\s*\{/.test(src)) trouves.add(fichier);
+    }
+    assert.deepEqual(
+      [...trouves].sort(),
+      [...attendus].sort(),
+      "une deuxième porte décide de son côté, ou la porte a disparu",
+    );
+  });
+
+  test("la porte relit SA règle de consentement, pas une condition à elle", () => {
+    // Le bandeau de Béné oublie le choix au bout de `MEMOIRE_CONSENTEMENT_JOURS`
+    // jours : relire la clé sans passer par `consentementMesure`
+    // mesurerait encore quelqu'un dont l'accord a expiré de son côté.
+    assert.match(porte, /consentementMesure\(/);
+    assert.match(porte, /CLE_CONSENTEMENT/);
   });
 
   test("un refus ne laisse partir AUCUNE conversion", () => {
     // Le doute ne profite jamais à la mesure : stockage bloqué, JSON
     // illisible, navigation privée -> non.
-    assert.match(src, /return false;/);
-    assert.match(src, /catch \{/);
+    assert.match(porte, /catch \{[\s\S]{0,200}return false;/);
+  });
+
+  test("le composant DÉLÈGUE : il ne pousse rien lui même", () => {
+    assert.match(conversion, /envoyerEvenement\(/);
+    assert.doesNotMatch(
+      conversion,
+      /dataLayer/,
+      "le composant repousse dans dataLayer : c'est la deuxième porte",
+    );
   });
 
   test("et l'événement ne part qu'une fois par montage", () => {
     // React remonte un composant à la moindre raison. `begin_checkout`
     // n'a aucun identifiant pour se dédupliquer côté GA4.
-    assert.match(src, /envoye\.current/);
+    //
+    // Le NOM du drapeau n'est pas figé (il a déjà changé une fois) :
+    // ce qui compte est qu'un `useRef` garde la remise et qu'on sorte
+    // avant d'envoyer une deuxième fois.
+    assert.match(conversion, /useRef\(false\)/);
+    assert.match(conversion, /\.current\)\s*return/);
   });
 
   test("le composant ne DÉCIDE rien : l'événement arrive construit", () => {
     // Le montant vient du serveur, donc du catalogue. Le calculer ici
     // le rendrait forgeable depuis le navigateur.
-    assert.doesNotMatch(src, /findOwnerProduct|amountCents|OWNER_CATALOG/);
+    assert.doesNotMatch(conversion, /findOwnerProduct|amountCents|OWNER_CATALOG/);
   });
 
   test("on pousse un objet `arguments`, jamais un tableau qui y ressemble", () => {
     // C'est LE shim de Google (`function gtag(){dataLayer.push(arguments);}`,
-    // cf. `GoogleAnalytics.tsx`). Un tableau ordinaire n'est documenté
-    // nulle part : rien ne dit que gtag.js le traiterait, et une
-    // conversion ignorée en silence ne se découvre qu'en regardant un
-    // rapport vide des semaines plus tard.
-    assert.match(src, /push\(arguments\)/);
-    assert.doesNotMatch(src, /push\(\[\s*"event"/);
-    // Et l'appel garde la forme d'une commande gtag.
-    assert.match(src, /gtag\("event", evenement\.name, evenement\.params\)/);
+    // cf. `google.ts`). Un tableau ordinaire n'est documenté nulle
+    // part : rien ne dit que gtag.js le traiterait, et une conversion
+    // ignorée en silence ne se découvre qu'en regardant un rapport
+    // vide des semaines plus tard.
+    assert.match(porte, /push\(arguments\)/);
+    assert.doesNotMatch(porte, /push\(\[\s*"event"/);
+    assert.match(porte, /gtag\("event", evenement\.name, evenement\.params\)/);
   });
 });

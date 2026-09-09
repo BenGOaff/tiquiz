@@ -17,6 +17,24 @@
 // DEUX RACINES existent, `BlogPostBody` ET `BlogPageBody` : oublier la
 // seconde a sorti l'étude de cas Jocelyne à zéro bloc, sans un mot.
 //
+// -- IL FUSIONNE, IL N'ÉCRASE PLUS (8 septembre 2026) ------------------
+//
+// Ce script ÉCRASAIT le fichier, et c'était une bombe à retardement :
+// le relancer aujourd'hui remettrait les 27 images sur le CDN de
+// Systeme.io (donc perdrait leurs 27 textes alternatifs, qui se posent
+// à partir du chemin LOCAL) et annulerait toutes les corrections de
+// `faitsEn.ts`. Mesuré côté français le 8 septembre, où le même geste a
+// coûté 62 images et 62 `alt` d'un coup.
+//
+// Il passe donc par `fusionner` : les blocs du disque sont reconduits
+// tels quels, seuls les blocs que la source a en plus sont insérés.
+//
+// ET IL AVAIT SA PROPRE COPIE DE `blocsDe`, avec les deux bugs du
+// 29 août dedans (`BulletList` sans cas, `RawHtml` sauté sans regarder
+// ce qu'il porte). Mesuré : 6 listes à puces perdues dans
+// `create-quiz-systeme-io`. Les deux importateurs appellent maintenant
+// le MÊME module, `lib/blog/importBlocs.ts`, qui est testé.
+//
 // -- CE SCRIPT N'ÉCRIT QUE LE BRUT --------------------------------------
 //
 // Il ne corrige RIEN. Les faits faux, les liens morts et les phrases
@@ -29,6 +47,8 @@
 
 import fs from "node:fs";
 import path from "node:path";
+
+import { blocsDe, fusionner, restesVides } from "../lib/blog/importBlocs.ts";
 
 const RACINE = path.resolve(import.meta.dirname, "..");
 const SORTIE = path.join(RACINE, "content/blog/en");
@@ -49,122 +69,25 @@ const ARTICLES = [
 
 const BASE = "https://www.tipote.blog";
 
+// L'ARTICLE QU'ON NE FUSIONNE PAS, ET LA RAISON.
+//
+// Son jumeau français est exclu pour la même raison, mesurée le
+// 8 septembre : la page source annonce encore un versement "le 10 de
+// chaque mois", 40 % écrit comme un plafond, les rentes calculées sur
+// l'ancien tarif, et une section entière sur Tipote, qui n'est pas en
+// vente. C'est exactement ce que `SECTION_TIPOTE` et `FAITS_EN` ont
+// retiré : y réinsérer quoi que ce soit ferait rentrer par la fenêtre
+// les promesses fausses sorties par la porte.
+const PAS_DE_FUSION = {
+  "monthly-recurring-income-tiquiz-affiliate":
+    "sa page source porte encore les promesses corrigees par faitsEn.ts (versement le 10, 40 % comme plafond, section Tipote)",
+};
+
 function etat(html) {
   const m = html.match(/window\.__PRELOADED_STATE__\s*=\s*(.*?);?\s*<\/script>/s);
   if (!m) throw new Error("aucun __PRELOADED_STATE__ dans la page");
   // eslint-disable-next-line no-eval
   return eval(`(${m[1]})`);
-}
-
-// NOTRE GABARIT NE CONNAIT QUE h2 ET h3 (`lib/blog/articles.ts`).
-// Ses pages descendent jusqu'a h4 : le laisser passer donnerait un
-// niveau que le sommaire ne sait pas ranger, donc un titre qui
-// disparait de la table des matieres sans un mot.
-function niveauDuTitre(html) {
-  const m = String(html).match(/<h([1-6])\b/i);
-  const n = m ? Number(m[1]) : 2;
-  return n <= 2 ? 2 : 3;
-}
-
-function texteNu(html) {
-  return String(html)
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function ancre(texte) {
-  return texteNu(texte)
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
-}
-
-/**
- * Marche l'arbre et rend nos blocs.
- *
- * `ContentTable` et `HorizontalLine` sont IGNORÉS : le sommaire est
- * reconstruit par notre gabarit (`lib/blog/gabarit.ts`) à partir des
- * titres, donc en garder un deuxième donnerait deux sommaires qui
- * divergent au premier renommage de titre.
- */
-function blocsDe(ents, racine, fichiers, images) {
-  const out = [];
-  const vu = new Set();
-
-  const marcher = (id) => {
-    if (vu.has(id)) return;
-    vu.add(id);
-    const e = ents[id];
-    if (!e) return;
-
-    switch (e.type) {
-      case "Headline": {
-        const contenu = e.content ?? e.html ?? "";
-        const texte = texteNu(contenu);
-        if (texte) out.push({ type: "titre", niveau: niveauDuTitre(contenu), texte, id: ancre(texte) });
-        return;
-      }
-      case "Text": {
-        const contenu = e.content ?? e.html ?? "";
-        if (texteNu(contenu)) out.push({ type: "html", html: contenu });
-        return;
-      }
-      case "Image": {
-        const f = fichiers?.[String(e.fileId)];
-        if (f?.path) {
-          images.add(f.path);
-          out.push({ type: "image", src: f.path, alt: "" });
-        }
-        return;
-      }
-      case "Button": {
-        const texte = texteNu(e.text ?? "");
-        if (texte) out.push({ type: "cta", texte, url: e.linkUrl ?? "" });
-        return;
-      }
-      case "Faq": {
-        const items = [];
-        for (const c of e.childIds ?? []) {
-          const it = ents[c];
-          if (!it) continue;
-          vu.add(c);
-          const reponse = (it.childIds ?? [])
-            .map((k) => {
-              vu.add(k);
-              return ents[k]?.content ?? ents[k]?.html ?? "";
-            })
-            .join("");
-          if (it.title) items.push({ question: texteNu(it.title), reponse });
-        }
-        // LA FORME EST CELLE QUE `lib/blog/articles.ts` DECLARE
-        // (`questions`, `url`), jamais celle de Systeme.io. Un champ
-        // mal nomme ne leve rien : le bloc se rend VIDE, et ca ne se
-        // voit que sur la page.
-        if (items.length) out.push({ type: "faq", questions: items });
-        return;
-      }
-      case "RawHtml":
-        // Les `RawHtml` de ces pages ne portent QUE du JSON-LD, et il
-        // pointe sur l'ancien domaine avec `inLanguage: "fr"`. Notre
-        // gabarit émet le sien : en garder un deuxième donnerait deux
-        // FAQPage contradictoires sur la même page.
-        return;
-      case "ContentTable":
-      case "HorizontalLine":
-        return;
-      default:
-        for (const c of e.childIds ?? []) marcher(c);
-    }
-  };
-
-  for (const c of racine.childIds ?? []) marcher(c);
-  return out;
 }
 
 async function main() {
@@ -175,8 +98,8 @@ async function main() {
   const parChemin = new Map((listing?.posts ?? []).map((p) => [p.path, p]));
 
   if (!VERIFIE) fs.mkdirSync(SORTIE, { recursive: true });
-  const images = new Set();
   const rapport = [];
+  const restes = restesVides();
 
   for (const a of ARTICLES) {
     const meta = parChemin.get(a.source);
@@ -190,36 +113,61 @@ async function main() {
     );
     if (!racine) throw new Error(`aucune racine de corps : ${a.source}`);
 
-    const blocs = blocsDe(ents, racine, s.files, images);
+    const blocs = blocsDe(ents, racine, s.files, restes, a.slug);
     if (blocs.length === 0) throw new Error(`zero bloc extrait : ${a.source}`);
 
-    const article = {
-      slug: a.slug,
-      langue: "en",
-      traductionDe: a.traductionDe,
-      titre: meta.name,
-      description: meta.description ?? "",
-      motsCles: [],
-      publieLe: new Date((meta.dateTs ?? 0) * 1000).toISOString().slice(0, 10),
-      couverture: `/blog/img/en/${a.slug}.webp`,
-      couvertureSource: meta.image ?? "",
-      blocs,
-    };
+    const fichier = path.join(SORTIE, `${a.slug}.json`);
+    if (!fs.existsSync(fichier)) throw new Error(`article absent du disque : ${a.slug}`);
+    const existant = JSON.parse(fs.readFileSync(fichier, "utf8"));
+
+    if (PAS_DE_FUSION[a.slug]) {
+      rapport.push(`${a.slug.padEnd(42)} PAS FUSIONNE, ${PAS_DE_FUSION[a.slug]}`);
+      continue;
+    }
+
+    // SEULS LES BLOCS BOUGENT. Le titre, la description, les mots clés,
+    // la date et la couverture sont ceux du disque : ils ont été
+    // corrigés depuis, et la page source porte encore les anciens.
+    let fusion;
+    try {
+      fusion = fusionner(existant.blocs, blocs);
+    } catch (e) {
+      throw new Error(`${a.slug} : ${e.message}`);
+    }
 
     if (!VERIFIE) {
       fs.writeFileSync(
-        path.join(SORTIE, `${a.slug}.json`),
-        `${JSON.stringify(article, null, 2)}\n`,
+        fichier,
+        `${JSON.stringify({ ...existant, blocs: fusion.blocs }, null, 2)}\n`,
         "utf8",
       );
     }
-    const compte = {};
-    for (const b of blocs) compte[b.type] = (compte[b.type] ?? 0) + 1;
-    rapport.push(`${a.slug}  ${blocs.length} blocs  ${JSON.stringify(compte)}`);
+    const ajoutes = fusion.blocs.length - existant.blocs.length;
+    rapport.push(
+      `${a.slug.padEnd(42)} ${String(existant.blocs.length).padStart(3)} -> ` +
+        `${String(fusion.blocs.length).padStart(3)}` +
+        ` (${ajoutes ? `+${ajoutes} bloc(s) rendus` : "rien a rendre"})` +
+        (fusion.retrouves.length ? `  [${fusion.retrouves.length} deja la, corriges]` : "") +
+        (fusion.doublons.length ? `  [${fusion.doublons.length} doublon(s) ecarte(s)]` : ""),
+    );
   }
 
   console.log(rapport.join("\n"));
-  console.log(`\n${images.size} images distinctes dans les corps.`);
+  for (const [slug, pourquoi] of Object.entries(PAS_DE_FUSION)) {
+    if (!rapport.some((l) => l.startsWith(slug))) console.log(`\n${slug} : ${pourquoi}.`);
+  }
+  if (restes.schemas.length) {
+    console.log("\nSCHEMAS SVG ECARTES :");
+    for (const v of restes.schemas) console.log(`  ${v}`);
+  }
+  if (restes.videos.length) {
+    console.log("\nVIDEOS NON POSEES :");
+    for (const v of restes.videos) console.log(`  ${v}`);
+  }
+  if (restes.perdus.size) {
+    console.log("\nTYPES NON TRAITES, a regarder :");
+    for (const [t, n] of [...restes.perdus].sort((x, y) => y[1] - x[1])) console.log(`  ${n}x ${t}`);
+  }
   if (VERIFIE) console.log("\n--verifie : rien n'a ete ecrit.");
 }
 

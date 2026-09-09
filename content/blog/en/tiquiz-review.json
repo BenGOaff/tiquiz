@@ -43,6 +43,11 @@
       "html": "<p>Christelle works with coaches, therapists and course creators on <strong>Systeme.io</strong>.</p><p>She built her first <strong>quiz</strong> in under an hour, connection included, and she walks through the whole thing on screen: building it, the <strong>tags</strong>, the hand-off to Systeme.io, and the places where it gets fiddly.</p>"
     },
     {
+      "type": "video",
+      "id": "9WcPdPtahUo",
+      "titre": "Comment connecter un quiz gratuit à Systeme.io sans Zapier ni Make"
+    },
+    {
       "type": "html",
       "html": "<p><a href=\"https://youtu.be/9WcPdPtahUo?si=kFZS6HnfrklP2BSc\">Watch her video on YouTube (subscribe to her channel, it is excellent)</a></p>"
     },

@@ -20,6 +20,10 @@ import { lireArticle, listerArticles, tousLesSlugs } from "../../lib/blog/articl
 import { estHrefSur, attributsLien, minutesDeLecture, nettoyerBloc, sommaire, texteBrut } from "../../lib/blog/rendu.ts";
 import { jsonLdArticle, jsonLdFaq, jsonLdFilDAriane, ORIGINE_BLOG, urlArticle } from "../../lib/blog/seo.ts";
 import { reponctuer } from "../../lib/blog/reponctuation.ts";
+import { porteUneAdresseEmail } from "../../lib/blog/rendu.ts";
+import { PRIX_MENSUEL_TTC } from "../../lib/blog/faitsProgramme.ts";
+import { sansCommentaires } from "./aide/sansCommentaires.mts";
+import { sansCodeNiStyle } from "../../lib/blog/importBlocs.ts";
 
 const ARTICLES = listerArticles("fr");
 const COMPLETS = tousLesSlugs("fr").map((s) => lireArticle(s, "fr")!);
@@ -244,7 +248,19 @@ test("l'affiliation ne parle plus du code Systeme.io", () => {
 test("les regles d'ecriture de Bene tiennent sur le contenu importe", () => {
   const texte = toutLeTexte();
   assert.ok(!/[—–]/.test(texte), "tiret cadratin ou demi-cadratin");
+  // ET SOUS SA FORME D'ENTITE, qui s'affiche pareil.
+  //
+  // Ce test ne cherchait que le CARACTERE, donc `&mdash;` passait : deux
+  // em-dash sont entres dans le comparatif des outils le 8 septembre, a
+  // travers un garde qui ne pouvait pas les voir.
+  assert.ok(!/&mdash;|&ndash;|&#8212;|&#8211;/.test(texte), "tiret cadratin en entite HTML");
   assert.ok(!/[«»]/.test(texte), "chevrons");
+  // ET SOUS LEUR FORME D'ENTITE, pour la meme raison que le tiret.
+  //
+  // MESURE le 8 septembre : le comparatif des outils portait SIX
+  // `&laquo;&nbsp;...&nbsp;&raquo;`, et ce garde ne cherchait que le
+  // CARACTERE. Ils s'affichent exactement pareil.
+  assert.ok(!/&laquo;|&raquo;|&#171;|&#187;/.test(texte), "chevrons en entite HTML");
   assert.ok(!/\b\w+·e\b/.test(texte), "point median");
 });
 
@@ -615,4 +631,286 @@ test("la table des alt GAGNE, mais seulement sur ce qu'elle nomme", async () => 
   // Et une image inconnue sans texte ne recoit rien plutot qu'un texte invente.
   const rien = { src: "/blog/img/pas-dans-la-table.webp", alt: "" };
   assert.equal(poserAlt(rien), false);
+});
+
+// ── LA FIN DU CAS CLIENT DE JOCELYNE (Béné, 8 septembre 2026) ──
+//
+// "voilà tout le texte de la page du cas client". Sa page source
+// n'existe plus (aucune adresse ne repond, absente des sitemaps) : ce
+// contenu n'est recuperable NULLE PART ailleurs, il a ete recopie depuis
+// son message. Ce qui suit fige les trois seules choses qu'on a
+// corrigees en le posant, et le fait qu'il soit la.
+
+test("le cas client de Jocelyne porte bien sa fin", () => {
+  const a = lireArticle("cas-client-jocelyne-tdah", "fr")!;
+  const titres = a.blocs.filter((b) => b.type === "titre").map((b) => b.texte);
+  for (const t of [
+    "Et ensuite ? Ce que Jocelyne fait de ces 285 leads",
+    "3 leçons à retenir et appliquer",
+    "Découvrir Jocelyne et son travail",
+    "À vous de jouer",
+    "Vos questions, les vraies réponses",
+  ]) {
+    assert.ok(titres.includes(t), `section manquante : ${t}`);
+  }
+  const faq = a.blocs.filter((b) => b.type === "faq");
+  assert.equal(faq.length, 1, "une seule FAQ");
+  assert.equal(faq[0]!.questions.length, 6, "ses six questions");
+});
+
+test("la FAQ annonce le prix REEL, jamais celui d'avant le 6 aout", () => {
+  // Son texte disait "9 €/mois" : c'est le tarif d'avant, et c'est la
+  // seule chose FAUSSE de la page qu'elle a collee. Un prix se LIT, il
+  // ne se recopie pas : le jour ou il change, ce test nomme le fichier.
+  const texte = JSON.stringify(lireArticle("cas-client-jocelyne-tdah", "fr"));
+  assert.ok(
+    texte.includes(`plan Mensuel à ${PRIX_MENSUEL_TTC} €/mois`),
+    "le prix affiche vient du catalogue",
+  );
+  assert.ok(!/\b9\s*€\/mois/.test(texte), "l'ancien tarif ne revient pas");
+});
+
+test("la FAQ ne genre pas son lecteur", () => {
+  // "arrête de penser que je n'ai que des users féminines putain !!!"
+  // (24 aout). Son texte disait "vous pouvez tout à fait commencer
+  // seule" : on tourne la phrase, on ne met pas de point median.
+  const texte = JSON.stringify(lireArticle("cas-client-jocelyne-tdah", "fr"));
+  assert.ok(!/commencer seule/.test(texte), "accord au feminin dans une adresse directe");
+});
+
+test("les quatre liens vers Jocelyne sont ceux qu'ELLE a donnes", () => {
+  // Bene, 8 septembre : "Les liens qui te manquaient", avec les quatre.
+  //
+  // 🚨 CE TEST FIGEAIT LES DEUX LIENS QUE J'AVAIS MESURES, et son
+  // commentaire disait que les deux autres "attendent qu'elle les
+  // donne". Elle les a donnes, ET elle a donne une adresse de blog PLUS
+  // PRECISE que la mienne : le test est alors sorti rouge sur un
+  // contenu juste. Une note d'etat des lieux se relit quand on corrige
+  // ce qu'elle decrit (lecon du 31 aout).
+  //
+  // CE QUI A ETE VERIFIE, ET CE QUI NE L'A PAS ETE. Son blog repond 200
+  // et son <title> dit "Blog de Jocelyne Bacquet". Les trois autres ne
+  // se laissent pas mesurer par un robot : Amazon sert une page
+  // anti-robot (3815 octets, aucun "Bacquet" dedans), Instagram repond
+  // 429 (sa limite de debit sur notre adresse, pas un refus de l'URL,
+  // meme lecon que le 429 de Pinterest du 1er septembre) et Facebook
+  // repond 400 sur un `profile.php` non authentifie. Ce sont SES liens,
+  // et un blocage de plateforme veut dire "je n'ai pas pu regarder",
+  // jamais "ca n'existe pas" (regle du 22 aout).
+  //
+  // Ce que ce test tient, donc : les quatre sont la, ils sont les
+  // SIENS, et aucune adresse n'a ete inventee autour.
+  const SIENS = [
+    "https://www.amazon.fr/dp/B0H1GP7CJP",
+    "https://www.jocelyne-bacquet-auteur.fr/blog-jocelyne-bacquet",
+    "https://www.instagram.com/j_bacquet.1/",
+    "https://www.facebook.com/profile.php?id=61590539094570",
+  ];
+
+  for (const langue of ["fr", "en"] as const) {
+    const slug = langue === "fr" ? "cas-client-jocelyne-tdah" : "case-study-jocelyne-adhd-quiz";
+    const a = lireArticle(slug, langue);
+    assert.ok(a, `${langue} : article introuvable`);
+    const bloc = a!.blocs.find((b) => b.type === "liens");
+    assert.ok(bloc && bloc.type === "liens", `${langue} : le bloc de liens a disparu`);
+    const poses = (bloc as { liens: { href: string; libelle: string; sous: string }[] }).liens;
+
+    assert.deepStrictEqual(
+      poses.map((l) => l.href),
+      SIENS,
+      `${langue} : les adresses posees ne sont pas les quatre qu'elle a donnees`,
+    );
+    for (const l of poses) {
+      assert.ok(l.libelle.trim().length > 0, `${langue} : un lien sans libelle`);
+      assert.ok(l.sous.trim().length > 0, `${langue} : un lien sans precision`);
+    }
+    // SON ANCIENNE ADRESSE DE BLOG NE DOIT PAS REVENIR : la sienne est
+    // plus precise, et c'est elle qui fait foi.
+    const texte = JSON.stringify(a);
+    assert.ok(
+      !/"https:\/\/jocelyne-bacquet-auteur\.fr"/.test(texte),
+      `${langue} : l'ancienne adresse de blog est revenue`,
+    );
+  }
+});
+
+test("une adresse email d'article reste lisible sans JavaScript", () => {
+  // Cloudflare remplace toute adresse du HTML SERVI par
+  // "[email protected]". Les marqueurs qui l'en empechent sont des
+  // COMMENTAIRES, et `nettoyerBloc` les retire (mesure) : c'est donc le
+  // RENDU qui doit les poser, autour du seul bloc concerne.
+  // ON RETIRE LES IMPORTS AVANT DE CHERCHER, et ce n'est pas un detail :
+  // un garde qui cherche un NOM dans une source ne distingue pas
+  // APPELER de simplement IMPORTER. Verifie en rejouant la version
+  // fautive (`porteUneAdresseEmail(html) ?` remplace par `false ?`) : le
+  // premier jet de ce test restait VERT dessus.
+  const rendu = sansCommentaires(fs.readFileSync("components/site/ArticleBlog.tsx", "utf8"))
+    .split("\n")
+    .filter((l) => !/^\s*(import|\s*[A-Za-z]+,?$|}\s*from)/.test(l))
+    .join("\n");
+  assert.match(rendu, /<SansObfuscationEmail>/, "le rendu enveloppe vraiment un bloc");
+  assert.match(rendu, /porteUneAdresseEmail\(/, "et il APPELLE la decision, il ne l'importe pas juste");
+
+  // ET IL Y A VRAIMENT UNE ADRESSE A PROTEGER : sans ca, ce test ne
+  // mesure plus rien le jour ou le contenu la perd.
+  const avecAdresse = COMPLETS.flatMap((a) =>
+    a.blocs.filter((b) =>
+      porteUneAdresseEmail(b.type === "html" ? b.html : b.type === "faq" ? JSON.stringify(b.questions) : ""),
+    ),
+  );
+  assert.ok(avecAdresse.length >= 1, "au moins un bloc porte une adresse email");
+});
+
+// ── UN SVG SUR LE BLOG ───────────────────────────────────────────────
+//
+// Bene, 8 septembre : "tu ne sais pas mettre un svg sur notre blog ?
+// C'est embetant ..."
+//
+// La reponse mesuree : un SVG en FICHIER marche depuis le 31 aout
+// (cinq d'entre eux sont en ligne, poses en blocs `image`). C'est un
+// `<svg>` EN LIGNE qui cassait, et il cassait salement.
+test("un SVG colle dans un article ne deverse pas ses etiquettes en prose", () => {
+  // MESURE AVANT CORRECTION, avec ce meme fragment :
+  //   <p>Avant</p>.t{fill:#333}97 % partent sans rien laisser3 %
+  //   laissent leur email<p>Apres</p>
+  // Le CSS sortait AUSSI, et les deux etiquettes se collaient. C'est ce
+  // que Bene aurait vu en essayant.
+  const colle =
+    '<p>Avant</p><svg viewBox="0 0 300 120"><style>.t{fill:#333}</style>' +
+    '<text class="t" x="10" y="30">97 % partent sans rien laisser</text>' +
+    '<text x="10" y="60">3 % laissent leur email</text></svg><p>Apres</p>';
+  assert.equal(nettoyerBloc(colle), "<p>Avant</p><p>Apres</p>");
+
+  // Un `<style>` et un `<script>` nus tombent pareil : ce sont les deux
+  // autres coupes de la meme regle.
+  assert.equal(nettoyerBloc("<p>a</p><style>p{color:red}</style>"), "<p>a</p>");
+  assert.equal(nettoyerBloc("<p>a</p><script>alert(1)</script>"), "<p>a</p>");
+});
+
+test("l'import et le rendu coupent la MEME chose", () => {
+  // Deux copies de la meme regle finiraient par ne plus couper la meme
+  // chose, et l'import est le seul des deux chemins qui etait protege :
+  // un article ECRIT A LA MAIN ne passe jamais par lui.
+  const fragment = '<p>x</p><svg><text>fuite</text></svg><style>a{b:c}</style><p>y</p>';
+  assert.ok(!sansCodeNiStyle(fragment).includes("fuite"));
+  assert.ok(!nettoyerBloc(fragment).includes("fuite"));
+
+  // ET L'IMPORT DELEGUE VRAIMENT, il ne recopie pas les trois coupes.
+  const src = sansCommentaires(fs.readFileSync("lib/blog/importBlocs.ts", "utf8"))
+    .split("\n")
+    .filter((l) => !/^\s*import\b/.test(l))
+    .join("\n");
+  assert.match(src, /sansContenuNonRendu\(/, "l'import n'appelle pas la regle commune");
+  assert.ok(
+    !/<svg\\b\[\^>\]\*>/.test(src),
+    "l'import a recopie la coupe du SVG au lieu de la deleguer",
+  );
+});
+
+test("un SVG en FICHIER, lui, est bien rendu", () => {
+  // C'est la moitie de la reponse a sa question : ca marche deja, et
+  // ce test le dit au lieu de le laisser supposer. Si un jour plus
+  // aucun article n'en porte, il rougit : la reponse aura change.
+  const svgs = COMPLETS.flatMap((a) =>
+    a.blocs.filter((b) => b.type === "image" && b.src.endsWith(".svg")),
+  );
+  assert.ok(svgs.length >= 5, `attendu au moins 5 SVG en fichier, vu ${svgs.length}`);
+  for (const b of svgs) {
+    const chemin = `public${(b as { src: string }).src}`;
+    assert.ok(fs.existsSync(chemin), `${chemin} : le fichier a disparu`);
+    // Sa taille naturelle se lit dans le `viewBox`, sinon la page ne
+    // peut pas reserver sa place et le texte saute au chargement.
+    assert.match(fs.readFileSync(chemin, "utf8"), /viewBox\s*=/, `${chemin} : aucun viewBox`);
+  }
+});
+
+// ── SOURCER LES FAQ (Bene, 8 septembre : "Source les faq stp") ────────
+//
+// RELEVE : 140 questions de FAQ sur les 20 articles, et 12 reponses
+// portaient une statistique ou une marque tierce sans nommer de source.
+//
+// Mon premier releve en annoncait 36. Il etait FAUX : il ne cherchait
+// qu'un `http`, donc il comptait comme non sourcees des reponses qui
+// disent "selon le rapport Litmus State of Email Marketing 2024" ou
+// "d'apres le Quiz Conversion Rate Report d'Interact". Un controle qui
+// ne distingue pas ce qu'il est cense distinguer est pire qu'absent.
+const NOMME_UNE_SOURCE =
+  /selon |d[’']apr[eè]s |source\s*:|rapport |report|benchmark|study|étude|etude|Litmus|relev[ée]|publi[ée]/i;
+
+test("aucune FAQ ne reprend un claim qu'on n'a pas su sourcer", () => {
+  // Les dix retraits du 9 septembre, dans les deux langues. Ils ne se
+  // recorrigent pas a la main dans le JSON : un import les ramenerait.
+  // La regle vit dans `faitsProgramme.ts` / `faitsEn.ts`, et ce test
+  // verifie qu'elle a bien atterri.
+  const RETIRES = [
+    "Warby Parker, Glossier",           // quatre marques citees comme preuve
+    "12 % des inscrits",
+    "12% of the people who sign up",
+    "entre 150 et 500",
+    "150 and 500 qualified leads",
+    "les quiz ont remplacé les ebooks",
+    "quizzes have replaced ebooks",
+    "adresses mortes",
+    "dead addresses",
+  ];
+  for (const langue of ["fr", "en"] as const) {
+    for (const slug of tousLesSlugs(langue)) {
+      const a = lireArticle(slug, langue);
+      if (!a) continue;
+      const faqs = JSON.stringify(a.blocs.filter((b) => b.type === "faq"));
+      for (const r of RETIRES) {
+        assert.ok(!faqs.includes(r), `${langue}/${slug} : "${r}" est revenu dans une FAQ`);
+      }
+    }
+  }
+});
+
+test("une FAQ qui cite un CONCURRENT et un chiffre nomme sa source", () => {
+  // C'est la regle generale, et elle est bornee EXPRES aux claims
+  // TIERS : nos propres taux et nos propres prix viennent du catalogue
+  // (`faitsProgramme.ts`), donc les exiger sources ferait rougir le
+  // test sur des chiffres qui sont vrais par construction. Un test qui
+  // crie pour rien finit desactive.
+  const TIERS = /Typeform|Tally|Jotform|Interact|Outgrow|ScoreApp|Riddle|BuzzFeed|Warby|Glossier|Sephora|HubSpot|Klaviyo|Mailchimp/;
+  const STAT = /\d[\d   .,]*\s*(?:%|fois plus|x more|times more)/;
+  const manques: string[] = [];
+  for (const langue of ["fr", "en"] as const) {
+    for (const slug of tousLesSlugs(langue)) {
+      const a = lireArticle(slug, langue);
+      if (!a) continue;
+      for (const b of a.blocs) {
+        if (b.type !== "faq") continue;
+        for (const q of b.questions) {
+          const txt = texteBrut(q.question + " " + q.reponse);
+          if (!TIERS.test(txt) || !STAT.test(txt)) continue;
+          if (!NOMME_UNE_SOURCE.test(txt) && !q.reponse.includes("http")) {
+            manques.push(`${langue}/${slug} : ${q.question.slice(0, 60)}`);
+          }
+        }
+      }
+    }
+  }
+  assert.deepStrictEqual(manques, [], `des FAQ citent un concurrent avec un chiffre sans source :\n${manques.join("\n")}`);
+});
+
+test("ET IL Y A VRAIMENT DES FAQ SOURCEES A SURVEILLER", () => {
+  // Sans ca, ce test ne mesure plus rien le jour ou le corpus perd ses
+  // FAQ ou ses sources : il passerait au vert sur zero question.
+  let sourcees = 0;
+  let total = 0;
+  for (const langue of ["fr", "en"] as const) {
+    for (const slug of tousLesSlugs(langue)) {
+      const a = lireArticle(slug, langue);
+      if (!a) continue;
+      for (const b of a.blocs) {
+        if (b.type !== "faq") continue;
+        for (const q of b.questions) {
+          total += 1;
+          if (NOMME_UNE_SOURCE.test(texteBrut(q.reponse))) sourcees += 1;
+        }
+      }
+    }
+  }
+  assert.ok(total >= 100, `attendu au moins 100 questions de FAQ, vu ${total}`);
+  assert.ok(sourcees >= 8, `attendu au moins 8 reponses qui nomment une source, vu ${sourcees}`);
 });

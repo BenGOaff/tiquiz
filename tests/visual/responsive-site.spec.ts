@@ -60,6 +60,28 @@ const PAGES = [
   "/fonctionnalites/sondages-et-popquiz",
   "/fonctionnalites/branding-et-langues",
   "/fonctionnalites/ou-placer-son-quiz",
+  // LES DEUX ARTICLES QUI ONT BOUGE LE 8 SEPTEMBRE, et eux seuls.
+  //
+  // Le premier porte le nouveau bloc VIDEO (une facade en 16/9 qui n'a
+  // jamais ete mesuree sur un telephone), le second la fin restauree du
+  // cas client (deux listes, deux cartes et une FAQ de six questions).
+  //
+  // Les huit autres articles restent hors de ce filet : les ajouter
+  // d'un coup est le chantier que l'en-tete de ce fichier nomme, et un
+  // filet qui rougit sur des pages qu'on n'a pas regardees finit
+  // desactive.
+  "/blog/avis-tiquiz",
+  "/blog/cas-client-jocelyne-tdah",
+  // ET SA VERSION ANGLAISE, ajoutee le 9 septembre.
+  //
+  // Ce filet ne mesurait AUCUN article anglais, et c'est la que le
+  // meuble vient de changer : les phrases du partage, de l'invitation
+  // et des commentaires arrivent maintenant de `motsDuBlog`, et une
+  // phrase anglaise n'a pas la longueur de la francaise. "Create my
+  // quiz for free" dans un bouton, "Your email (never published)" dans
+  // un label : c'est exactement le genre d'ecart qui deborde sur un
+  // telephone sans qu'aucun test de contenu ne le voie.
+  "/en/blog/case-study-jocelyne-adhd-quiz",
 ];
 
 test.describe("le site public tient dans l'écran", () => {

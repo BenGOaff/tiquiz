@@ -354,19 +354,3 @@ export function messageEnHtml(message: string): string {
     .join("<br />");
 }
 
-/** La phrase à afficher pour chaque refus, en français. */
-export const PHRASE_REFUS: Record<RaisonRefus, string> = {
-  "nom-manquant": "Il manque ton prénom.",
-  "nom-trop-long": `Ton nom fait plus de ${NOM_MAX} caractères.`,
-  "message-court": `Ton message fait moins de ${MESSAGE_MIN} caractères.`,
-  "message-long": `Ton message dépasse ${MESSAGE_MAX} caractères.`,
-  "email-invalide": "Cette adresse email ne ressemble pas à une adresse.",
-  "trop-de-liens": "Deux liens au maximum par commentaire, sinon ça part en pub.",
-  // Le robot n'a pas besoin de comprendre, et une personne ne peut pas
-  // tomber dessus : le champ est invisible.
-  piege: "Ce message n'a pas pu être envoyé.",
-  // Dire ce qui bloque, sans commenter la personne. Une phrase qui
-  // sermonne appelle une deuxième tentative plus agressive.
-  "propos-interdits": "Ce message ne peut pas être publié tel quel.",
-  "article-inconnu": "Cet article n'existe pas.",
-};

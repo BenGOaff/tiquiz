@@ -125,16 +125,31 @@ describe("l'adresse de contact reste lisible sans JavaScript", () => {
   // production : 4 adresses sur 4 etaient masquees, y compris celle de
   // l'article Contact. Une politique sans adresse de contact lisible est
   // une politique incomplete pour tout lecteur qui n'execute pas le JS.
-  const source = readFileSync("components/legal/LegalPageView.tsx", "utf8");
+  //
+  // CE GARDE FIGEAIT UN EMPLACEMENT, et il est sorti ROUGE le
+  // 8 septembre sur une correction JUSTE : le composant a demenage pour
+  // servir AUSSI le blog, et le test cherchait encore ses marqueurs dans
+  // `LegalPageView.tsx`. Un garde-fou qui fige un emplacement empeche de
+  // deplacer le code. Il SUIT donc l'import : le fait mesure est que la
+  // page enveloppe ses sections, et que le composant pose vraiment les
+  // deux marqueurs avec sa raison ecrite a cote.
+  const page = readFileSync("components/legal/LegalPageView.tsx", "utf8");
 
-  test("les marqueurs Cloudflare enveloppent le contenu legal", () => {
-    assert.match(source, /<!--email_off-->/, "le marqueur d'ouverture est pose");
-    assert.match(source, /<!--email_on-->/, "le marqueur de fermeture est pose");
-    assert.match(source, /<SansObfuscationEmail>/, "le composant enveloppe vraiment les sections");
+  const chemin = page.match(/import SansObfuscationEmail from "@\/([^"]+)"/)?.[1];
+  const composant = chemin ? readFileSync(`${chemin}.tsx`, "utf8") : "";
+
+  test("la page legale enveloppe vraiment ses sections", () => {
+    assert.ok(chemin, "la page importe le composant d'exemption");
+    assert.match(page, /<SansObfuscationEmail>/, "le composant enveloppe vraiment les sections");
+  });
+
+  test("le composant pose les deux marqueurs Cloudflare", () => {
+    assert.match(composant, /<!--email_off-->/, "le marqueur d'ouverture est pose");
+    assert.match(composant, /<!--email_on-->/, "le marqueur de fermeture est pose");
   });
 
   test("la raison est ecrite a cote, sinon le prochain passage les retire", () => {
-    assert.match(source, /Cloudflare/, "le commentaire nomme la cause");
-    assert.match(source, /__cf_email__/, "il nomme ce que Cloudflare injecte");
+    assert.match(composant, /Cloudflare/, "le commentaire nomme la cause");
+    assert.match(composant, /__cf_email__/, "il nomme ce que Cloudflare injecte");
   });
 });

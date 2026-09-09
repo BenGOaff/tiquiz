@@ -40,6 +40,13 @@ import {
   ponctuationAnglaise,
 } from "../lib/blog/faitsEn.ts";
 import { poserAltEn } from "../lib/blog/altImagesEn.ts";
+// LES DEUX MÊMES NETTOYAGES QUE LE FRANÇAIS.
+//
+// Un garde-fou qui ne protège qu'un des deux jumeaux ne protège
+// personne : les articles anglais viennent du même éditeur, où un bloc
+// se duplique d'un clic, et une traduction peut très bien finir sur un
+// titre dont la section n'a pas été écrite.
+import { retirerTitreOrphelin, retirerBlocsEnDouble } from "../lib/blog/miseEnPage.ts";
 
 /** Compte les remplacements, sans expression reguliere : les motifs sont du HTML. */
 function remplacer(texte, de, vers, compteur, cle) {
@@ -143,7 +150,13 @@ for (const nom of fs.readdirSync(DOSSIER).filter((f) => f.endsWith(".json") && f
   a.titre = corrigerChaine(a.titre, compteur);
   a.description = corrigerChaine(a.description, compteur);
   a.motsCles = (a.motsCles ?? []).map((m) => corrigerChaine(m, compteur));
-  a.blocs = remplacerSection(a.blocs, compteur).map((b) => corrigerBloc(b, compteur));
+  const propres = retirerBlocsEnDouble(retirerTitreOrphelin(remplacerSection(a.blocs, compteur)));
+  // `compteur` est une MAP : y poser une propriete ne compte RIEN.
+  // Le total et `compteur.size` lisent tous ses cles.
+  if (propres.length !== a.blocs.length) {
+    compteur.set("bloc nettoye", (compteur.get("bloc nettoye") ?? 0) + (a.blocs.length - propres.length));
+  }
+  a.blocs = propres.map((b) => corrigerBloc(b, compteur));
 
   const apres = JSON.stringify(a, null, 2) + "\n";
   corriges.set(nom, apres);
@@ -154,12 +167,60 @@ for (const nom of fs.readdirSync(DOSSIER).filter((f) => f.endsWith(".json") && f
 }
 
 // ── CE QUI N'A TROUVE AUCUNE CIBLE ──
+//
+// UNE REGLE SILENCIEUSE NE VEUT PAS DIRE LA MEME CHOSE SELON LE MOMENT.
+// Sur un import frais, elle est fausse. Sur un contenu deja corrige,
+// c'est le resultat attendu.
+//
+// Le premier discriminant etait un drapeau de CORPUS ("au moins une
+// regle a mordu"), et il s'est casse le 8 septembre au soir : un import
+// qui rend du texte neuf dans UN article le fait basculer, et les
+// regles des AUTRES articles, deja corrigees, sont alors denoncees
+// comme fausses. Un controle par corpus ne peut pas repondre a une
+// question par regle.
+//
+// ON COMPARE DONC CE QUI SE COMPARE : une regle qui n'a pas mordu est
+// fausse SEULEMENT si son texte d'arrivee est introuvable lui aussi.
+// Son `vers` present est une PREUVE que la correction a deja eu lieu,
+// pas une deduction.
+const toutLeCorrige = [...corriges.values()].join("\n");
+const dejaLa = (vers) => {
+  const v = String(vers ?? "").trim();
+  // Un `vers` trop court se retrouverait par hasard dans n'importe quel
+  // article : on ne s'en sert comme preuve que s'il est SPECIFIQUE,
+  // c'est a dire long, ou porteur d'un nom de domaine.
+  const specifique = v.length >= 20 || /[a-z0-9-]+\.[a-z]{2,}/i.test(v);
+  return specifique && toutLeCorrige.includes(JSON.stringify(v).slice(1, -1));
+};
+
+// UNE REGLE QUI SUPPRIME NE PEUT PAS SE PROUVER, ET ON LE DIT.
+//
+// Son texte d'arrivee est VIDE : il n'y a donc rien a retrouver dans le
+// contenu corrige, et "la phrase a bien ete supprimee" est
+// indistinguable de "le motif ne correspond a rien". Inventer une
+// preuve serait pire que l'absence de preuve.
+//
+// Elles sont donc exemptees du controle, et COMPTEES : une exemption
+// silencieuse deviendrait un trou ou n'importe quelle regle fausse
+// pourrait se ranger.
+const supprime = (r) => String(r.vers ?? "").trim() === "";
+const nbSuppressions = FAITS_EN.filter(supprime).length;
+
 const muettes = [];
-for (const l of LIENS_EN) if (!compteur.has(`lien ${l.de}`)) muettes.push(`lien   ${l.de}`);
-for (const l of TEXTES_DE_LIEN_EN)
-  if (!compteur.has(`texte ${l.de}`)) muettes.push(`texte  ${l.de}`);
-for (const f of FAITS_EN)
-  if (!compteur.has(`fait ${f.de.slice(0, 60)}`)) muettes.push(`fait   ${f.de.slice(0, 90)}`);
+for (const l of LIENS_EN) {
+  // Pour un lien, la preuve est sa DESTINATION : une adresse est deja
+  // assez specifique pour ne pas se retrouver par hasard, donc pas de
+  // plancher de longueur ici.
+  if (!compteur.has(`lien ${l.de}`) && !toutLeCorrige.includes(l.vers)) muettes.push(`lien   ${l.de}`);
+}
+for (const l of TEXTES_DE_LIEN_EN) {
+  if (!compteur.has(`texte ${l.de}`) && !dejaLa(l.vers)) muettes.push(`texte  ${l.de}`);
+}
+for (const f of FAITS_EN) {
+  if (!compteur.has(`fait ${f.de.slice(0, 60)}`) && !dejaLa(f.vers) && !supprime(f)) {
+    muettes.push(`fait   ${f.de.slice(0, 90)}`);
+  }
+}
 
 // ── CE QUI SURVIT A LA REPARATION ──
 //
@@ -199,41 +260,16 @@ for (const [nom, txt] of corriges) {
 }
 
 console.log(`${ecrits.length} article(s) ${VERIFIE ? "a corriger" : "corriges"} : ${ecrits.join(", ") || "aucun"}`);
+if (nbSuppressions) {
+  console.log(
+    `${nbSuppressions} regle(s) SUPPRIMENT une phrase : elles sont hors du controle des regles muettes, ` +
+      "leur disparition ne se prouve pas.",
+  );
+}
 const total = [...compteur.values()].reduce((s, n) => s + n, 0);
 console.log(`${total} correction(s) appliquee(s), ${compteur.size} regle(s) ont mordu.`);
 
-// UNE REGLE MUETTE NE VEUT PAS DIRE LA MEME CHOSE SELON LE MOMENT.
-//
-// Sur un import FRAIS, une regle qui ne mord pas est une regle fausse :
-// son motif ne correspond a rien, et on croit une correction appliquee
-// alors qu'elle ne l'est pas (lecon du 4 septembre,
-// `appliquerCorrectionsFaq`).
-//
-// Sur un contenu DEJA corrige, aucune regle ne peut mordre, et c'est
-// exactement le resultat attendu : le contenu est propre quand la
-// reparation ne change plus rien. Le test appelle cette meme
-// mecanique, donc un refus systematique la rendrait ininvocable deux
-// fois de suite.
-//
-// LE DISCRIMINANT EST DONC "combien ont mordu", pas "il en reste une" :
-// des regles qui mordent A COTE de regles muettes disent que celles la
-// sont fausses ; zero morsure sur toute la table dit que le travail est
-// deja fait. Un controle qui ne distingue pas les deux est pire qu'un
-// controle absent.
-// ET IL SE MESURE SUR LES SEULES REGLES QUE `muettes` SURVEILLE.
-//
-// `compteur.size === 0` a marche tant que le compteur ne portait que
-// ces trois familles. Le jour ou une QUATRIEME chose s'y est ajoutee
-// (la pose des `alt`, 8 septembre), une reparation parfaitement bonne
-// sur un contenu deja corrige comptait 27 poses, donc `dejaCorrige`
-// tombait a faux, donc les 54 regles de texte etaient denoncees comme
-// fausses. Un controle qui ne distingue pas ce qu'il est cense
-// distinguer est pire qu'un controle absent : on compare donc ce qui
-// se compare.
-const dejaCorrige = ![...compteur.keys()].some(
-  (c) => c.startsWith("lien ") || c.startsWith("texte ") || c.startsWith("fait "),
-);
-if (muettes.length && !dejaCorrige) {
+if (muettes.length) {
   console.error(`\n${muettes.length} regle(s) n'ont trouve AUCUNE cible :`);
   for (const m of muettes) console.error("   " + m);
 }
@@ -246,15 +282,13 @@ if (sansAlt.length) {
   for (const i of sansAlt) console.error("   " + i);
   console.error("   -> ajoute leur chemin a ALT_IMAGES_EN apres avoir REGARDE l'image.");
 }
-if ((muettes.length && !dejaCorrige) || restants.length || sansAlt.length) {
+if (muettes.length || restants.length || sansAlt.length) {
   console.error(
     "\nUne correction qui ne mord pas est une correction qu'on croit appliquee : on ne finit pas en silence.",
   );
   process.exit(1);
 }
-// LA PHRASE FINALE DIT CE QUI S'EST PASSE, pas ce que `dejaCorrige`
-// raconte : celui la ne parle QUE des regles de texte, et il resterait
-// vrai un jour ou 27 `alt` viennent d'etre poses.
+// LA PHRASE FINALE DIT CE QUI S'EST PASSE, et rien d'autre.
 console.log(
   total === 0
     ? "Rien a corriger : l'anglais est deja d'aplomb, et rien d'interdit n'y survit."

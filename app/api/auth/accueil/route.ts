@@ -1,7 +1,13 @@
 // app/api/auth/accueil/route.ts
 //
 //   POST {}  (session Supabase requise)
-//     -> { ok: true, accueilli: boolean }
+//     -> { ok: true, accueilli: boolean, avaitQuiz: boolean }
+//
+// `avaitQuiz` n'existe que pour la MESURE : c'est le paramètre de
+// `compte_cree` (9 septembre), et le cookie qui le porte est retiré ici,
+// donc le navigateur ne pourra plus le lire après coup. Il dit si un
+// quiz de la page de vente attendait cette inscription, rien d'autre :
+// ni son identifiant, ni son contenu.
 //
 // CE QU'UNE INSCRIPTION DOIT FAIRE, QUEL QUE SOIT LE CHEMIN D'ENTRÉE.
 //
@@ -139,6 +145,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // fournisseur, et il reste refusé sur une requête tierce en arrière
   // plan, ce qui est tout l'intérêt de `Lax`.
   const jeton = lireJetonReprise(req.cookies.get(COOKIE_REPRISE)?.value);
+  const avaitQuiz = Boolean(jeton);
   if (jeton) {
     const lue = await lireSessionReclamable({ jeton });
     if (lue.ok) {
@@ -149,7 +156,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
   }
 
-  const res = NextResponse.json({ ok: true, accueilli: true });
+  const res = NextResponse.json({ ok: true, accueilli: true, avaitQuiz });
   // Le cookie a fait son travail : on le retire tout de suite plutôt que
   // de le laisser traîner une demi-heure sur le poste de la personne.
   res.headers.append("set-cookie", efface);

@@ -33,6 +33,8 @@
     "check:stripe": "node scripts/check-stripe.mjs",
     "blog:reparer": "node --experimental-strip-types --import ./tests/logic/register-alias.mjs scripts/reparer-blog.mjs",
     "blog:reparer-en": "node --experimental-strip-types --import ./tests/logic/register-alias.mjs scripts/reparer-blog-en.mjs",
+    "blog:importer-fr": "node --experimental-strip-types --import ./tests/logic/register-alias.mjs scripts/importer-blog-fr.mjs",
+    "blog:importer-en": "node --experimental-strip-types scripts/importer-blog-en.mjs",
     "blog:verifier": "node --experimental-strip-types scripts/reparer-blog.mjs --verifie",
     "blog:epingles": "node scripts/construire-epingles.mjs",
     "check:resend": "node scripts/check-resend.mjs",

@@ -124,6 +124,89 @@ export const FAITS: readonly {
   vers: string;
   pourquoi: string;
 }[] = [
+  // ── SOURCER LES FAQ (Bene, 8 septembre : "Source les faq stp") ──────
+  //
+  // RELEVE avant de toucher a une ligne : 140 questions de FAQ sur les
+  // 20 articles, et **12 reponses** portent une statistique ou une
+  // marque tierce sans nommer de source.
+  //
+  // Mon premier releve en annoncait 36, et il etait FAUX : il ne
+  // cherchait qu'un `http`, donc il comptait comme non sourcees des
+  // reponses qui disent "selon le rapport Litmus State of Email
+  // Marketing 2024" ou "d'apres le Quiz Conversion Rate Report
+  // d'Interact". Un controle qui ne distingue pas ce qu'il est cense
+  // distinguer est pire qu'un controle absent.
+  //
+  // CE QUI EST DEJA SOURCE, ET QUI NE BOUGE PAS : le ROI email de
+  // Litmus, les 44,9 % et 59,1 % d'Interact, les 2 a 3 % contre 30 a
+  // 40 % (benchmarks Sumo, GetResponse, Interact, Outgrow). Ces
+  // reponses NOMMENT leur source, il n'y avait rien a reparer.
+  //
+  // CE QUI SUIT EST RETIRE, PAS SOURCE, et c'est la difference qui
+  // compte : je n'ai pas trouve de source pour ces chiffres, et
+  // "ne jamais mentir, sous aucune forme" ne laisse pas le choix entre
+  // les deux. Un chiffre invente dans une FAQ vit a l'endroit exact ou
+  // un lecteur va verifier.
+  {
+    de:
+      "La méthode du quiz est éprouvée dans des dizaines de secteurs : e-commerce (Warby Parker, Glossier), " +
+      "beauté (Sephora), médias (BuzzFeed), services B2C (coaching, thérapie, bien-être), " +
+      "info-produit (formations, ebooks), services B2B (consulting, freelance).",
+    vers:
+      "Le mécanisme du quiz (qualifier, puis recommander) marche partout où ton prospect cherche à mieux " +
+      "se comprendre ou à choisir entre plusieurs options : services B2C (coaching, thérapie, bien-être), " +
+      "info-produit (formations, ebooks), services B2B (consulting, freelance), e-commerce, beauté, médias.",
+    pourquoi:
+      "quatre entreprises reelles citees comme preuve, et je n'ai aucune source qui dise qu'elles ont fait ca. Le mecanisme se tient sans elles, et le cas de Jocelyne est la vraie preuve, elle est verifiable.",
+  },
+  {
+    de: "L’ebook est téléchargé, lu seulement par 12 % des inscrits, et oublié dans la semaine.",
+    vers: "L’ebook est téléchargé, rarement lu, et oublié dans la semaine.",
+    pourquoi: "les 12 % n'ont aucune source. La phrase dit la meme chose sans le chiffre.",
+  },
+  {
+    // TROUVE EN VERIFIANT QUE LA CORRECTION DE LA FAQ AVAIT ATTERRI :
+    // le meme 12 % vit dans le CORPS de l'article, et il y sert de base
+    // a un deuxieme chiffre ("les 88 % restants"). Corriger la FAQ
+    // seule aurait laisse l'article se contredire a deux ecrans
+    // d'ecart, exactement comme la FAQ de la rente le faisait le
+    // 31 aout.
+    de:
+      "Les chiffres sont implacables. Un ebook classique est lu par moins de 12 % des inscrits. " +
+      "Les 88 % restants sont des <strong>adresses mortes</strong> qui saturent ta liste sans jamais acheter.",
+    vers:
+      "Et c'est le format qui est en cause, pas ton texte. Un ebook se télécharge bien plus " +
+      "souvent qu'il ne se lit, et ce qui reste sur ta liste, ce sont des adresses qui ne " +
+      "t'ont jamais rien dit d'elles.",
+    pourquoi:
+      "les 12 % n'ont aucune source, et les 88 % en decoulent. La phrase garde l'argument, qui est vrai : un telechargement ne dit rien de la personne.",
+  },
+  {
+    de: "Un ebook est lu par moins de 12 % des inscrits.",
+    vers: "Un ebook est téléchargé bien plus souvent qu'il n'est lu.",
+    pourquoi: "le meme 12 % sans source, dans un deuxieme article.",
+  },
+  {
+    de:
+      "En 2026, les quiz ont remplacé les ebooks dans la majorité des stratégies de lead generation performantes.",
+    vers:
+      "Et il te dit QUI est en face, ce qu'un téléchargement ne dit jamais.",
+    pourquoi:
+      "\"dans la majorite des strategies performantes\" est une affirmation sur tout un marche, sans source et invérifiable. Ce qui la remplace est vrai par construction : un quiz rend un profil.",
+  },
+  {
+    de:
+      "En moyenne, un quiz bien optimisé sur une audience de 2 000 à 5 000 abonnés capte entre 150 et 500 " +
+      "leads qualifiés par mois, avec un taux de partage de 30 à 50 %. Les meilleurs quiz dépassent 1 000 " +
+      "leads mensuels.",
+    vers:
+      "Personne ne peut te donner un chiffre honnête là dessus sans connaître ton trafic : ce que tu " +
+      "captes se calcule sur les visiteurs qui arrivent, pas sur une moyenne. Regarde plutôt le taux de ta " +
+      "dernière page de capture, et compare. Et un taux de partage bas n'est pas un défaut du quiz : sur un " +
+      "sujet intime, partager publiquement revient à s'exposer.",
+    pourquoi:
+      "trois chiffres promis (150 a 500 leads/mois, 30 a 50 % de partage, 1 000 leads) sans aucune source : c'est une promesse de resultat. La nuance du partage vient du retour de Jocelyne (4 aout), qui est mesuree.",
+  },
   // ── LES CALCULS DE RENTE ──
   //
   // Deux motifs par phrase, et ce n'est pas un doublon : l'un vise le
@@ -532,6 +615,20 @@ export const FAITS: readonly {
     de: "à partager : tipote.fr/p/mon-popquiz",
     vers: "à partager : quiz.tipote.com/p/mon-popquiz",
     pourquoi: "un Popquiz vit sur le domaine de l'app, pas sur tipote.fr, qui part chez Systeme.io.",
+  },
+  // ── UN TITRE COUPÉ EN PLEIN MOT ──
+  //
+  // Mesuré le 8 septembre : la page SOURCE elle-même s'arrête sur
+  // "un outil U". Ce n'est donc pas l'import qui a tronqué, c'est
+  // l'article, et aucun ré-import ne le réparera.
+  //
+  // "américain" n'est pas deviné : le paragraphe juste en dessous dit
+  // "Quand un outil français est nettement moins cher que ses
+  // concurrents américains, on se demande où est le piège."
+  {
+    de: "Pourquoi tu paies 10 fois moins avec Tiquiz qu’avec un outil U",
+    vers: "Pourquoi tu paies 10 fois moins avec Tiquiz qu’avec un outil américain",
+    pourquoi: "le titre etait coupe en plein mot, sur la page source comme chez nous.",
   },
 ];
 

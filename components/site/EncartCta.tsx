@@ -32,9 +32,26 @@
 
 import Link from "next/link";
 
+import type { MotsDuBlog } from "@/lib/blog/motsDuBlog";
+import { hrefPourLangue } from "@/lib/site/nav";
+import type { LanguePublique } from "@/lib/site/langues";
+
 export default function EncartCta({
+  mots,
+  langue,
   compact = false,
 }: {
+  mots: MotsDuBlog["encart"];
+  /**
+   * La langue de l'ADRESSE de l'article, pour les deux destinations.
+   *
+   * `hrefPourLangue` REFUSE de prefixer une page qui n'a pas la langue,
+   * donc `/signup` (servi par l'app, sans version `/en/`) reste
+   * `/signup` au lieu de devenir un 404 au bout du seul bouton de
+   * l'encart. C'est la lecon des pages de fonctionnalites du
+   * 8 septembre.
+   */
+  langue: LanguePublique;
   /** La version du rail : plus courte, sans le second lien. */
   compact?: boolean;
 }) {
@@ -54,7 +71,7 @@ export default function EncartCta({
         className="block h-[3px] w-12 rounded-full bg-[var(--tq-bleu)]"
       />
       <h2 className={compact ? "mt-4 text-[1.05rem] leading-snug" : "mt-5 max-w-[24ch] text-[1.5rem]"}>
-        Un quiz qui tague tes leads dans Systeme.io
+        {mots.titre}
       </h2>
       <p
         className={
@@ -63,16 +80,25 @@ export default function EncartCta({
             : "tq-doux mt-3 max-w-[54ch] leading-relaxed"
         }
       >
-        Tiquiz écrit le quiz, pose un tag par profil et te rend des leads déjà triés. Plan gratuit
-        pour tester, sans carte bancaire.
+        {mots.corps}
       </p>
       <div className={compact ? "mt-4" : "mt-6 flex flex-wrap gap-3"}>
-        <Link href="/signup" className="tq-bouton tq-bouton-plein no-underline">
-          Créer mon quiz gratuitement
+        <Link
+          href={hrefPourLangue("/signup", langue)}
+          className="tq-bouton tq-bouton-plein no-underline"
+        >
+          {mots.bouton}
         </Link>
-        {compact ? null : (
-          <Link href="/" className="tq-bouton tq-bouton-fantome no-underline">
-            Voir ce que fait Tiquiz
+        {/* Le second bouton mene a `/`, la page de vente CAPTUREE, en
+            francais : `mots.secondaire` vaut `null` en anglais, et on
+            n'affiche rien plutot que de promettre une page qui n'existe
+            pas dans cette langue. */}
+        {compact || !mots.secondaire ? null : (
+          <Link
+            href={hrefPourLangue("/", langue)}
+            className="tq-bouton tq-bouton-fantome no-underline"
+          >
+            {mots.secondaire}
           </Link>
         )}
       </div>

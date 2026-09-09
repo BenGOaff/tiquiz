@@ -105,6 +105,7 @@ serveur s'il servait vraiment le fichier.
 |---|---|
 | ce que le produit promet, quoi écrire en com | `PRODUCT_BRIEF.md` |
 | comment ça marche, écran par écran | `CAHIER_DES_CHARGES.md` |
+| **par quoi reprendre, tout de suite** | **`PASSATION.md`** (daté du 9 septembre) |
 | **ce qui reste à faire, dit par Béné** | **`CHANTIERS.md`** |
 | ce qui reste à reprendre à Systeme.io | `ROADMAP_SORTIE_SIO.md` |
 | les bugs récurrents et les conventions | `CLAUDE_PITFALLS.md` |
@@ -12295,12 +12296,25 @@ Cinq défauts d'IMPORT, tous côté français, tous invisibles à l'écran
 | `quiz-video-popquiz` | un H2 **coupé en plein mot** : "qu'avec un outil U" |
 | `strategie-quiz-marketing-tiquiz` | sa FAQ annonce encore **Typeform 50 €, Tally 29 $, et Tiquiz bêta 57 € à vie** |
 
-**On n'invente pas ce qui manque** : les trois leçons, les quatre
-tableaux et les cinq listes sont son contenu, pas le mien. Ils sont
-simplement absents de l'anglais, avec la raison écrite. Les prix
-périmés, eux, ont été RÉÉCRITS en anglais depuis les sources vérifiées
-(le €57 à vie est terminé, le prix de Tally n'est vérifiable nulle
-part dans le dépôt, donc il ne se cite pas).
+🚨 **TOUT CE TABLEAU EST RÉPARÉ DEPUIS LE 8 SEPTEMBRE AU SOIR**, et je
+le corrige en place plutôt que d'empiler (règle du 31 août). Béné : "ben
+il faut corriger, c'est toi qui a importé mes articles ! [...] on peut
+pas laisser de la merde !!" Elle avait raison : la section
+"LE CONTENU PERDU À L'IMPORT" plus bas dit la cause, la correction et ce
+qui reste. **2 555 mots récupérés**, dont 2 036 dans le comparatif.
+
+🚨 **CE PARAGRAPHE DISAIT QUE LES TROIS LEÇONS DE JOCELYNE ÉTAIENT
+PERDUES. C'EST PÉRIMÉ**, et je le corrige en place plutôt que d'empiler.
+Sa page source n'existe toujours nulle part (cherchée le 8 septembre :
+aucune adresse ne répond, ni sommaire, ni sitemap, ni étape de tunnel),
+et je n'ai rien inventé : **Béné a collé tout le texte de la page**, le
+même jour. Les trois leçons, la fin de parcours, ses liens, les deux
+cartes et la FAQ à six questions sont revenus de là. Voir la section
+"LA FIN DU CAS CLIENT DE JOCELYNE" plus bas.
+
+**La leçon tient : on n'invente pas ce qui manque, on le DEMANDE.** Une
+page perdue n'est pas une page dont le texte a disparu ; c'est une page
+dont la seule copie est chez la personne qui l'a écrite.
 
 **Et une affirmation reste invérifiée** dans la FAQ du comparatif :
 "support in French and English". Elle vient du français, elle n'est
@@ -12339,3 +12353,1046 @@ laisse un `{contact}` à trou, et une raison inconnue retombe sur
 dupliquée, la substitution de `{contact}` retirée) : les deux rougissent.
 
 Fichier SUPPRIMÉ : `app/(site)/newsletter/page.tsx`.
+
+## LE CONTENU PERDU À L'IMPORT (Béné, 8 septembre 2026)
+
+"ben il faut corriger, c'est toi qui a importé mes articles ! Ou un
+autre agent mais en tous cas on peut pas laisser de la merde !!"
+
+Elle a raison, et le pire n'était pas les quatre articles amputés :
+**le script qui les avait importés n'existait plus dans le dépôt.**
+Personne ne pouvait retrouver la cause, ni rejouer l'import, ni même
+vérifier. Seul l'importateur ANGLAIS avait survécu, et il portait les
+deux mêmes bugs.
+
+### LES DEUX CAUSES, MESURÉES SUR SES PAGES SOURCES
+
+**1. `BulletList` N'AVAIT AUCUN CAS.** Ce type porte son `<ul>` dans
+`.content`, exactement comme un `Text`, et il n'a AUCUN enfant : il
+tombait donc dans le `default:` qui marche les `childIds`, et il ne
+produisait rien. Six listes perdues dans un seul article.
+
+**2. `RawHtml` ÉTAIT SAUTÉ SANS REGARDER CE QU'IL PORTE.** La raison
+écrite à côté disait "les RawHtml de ces pages ne portent QUE du
+JSON-LD". C'était vrai des QUATRE pages anglaises sur lesquelles la
+règle a été écrite, et faux des pages françaises, où ce sont des blocs
+de CONTENU : le comparatif des 8 outils, les 4 outils retenus, le coût
+réel, le traitement des données. C'est la faute du 1er août, une règle
+écrite pour un cas et appliquée telle quelle à un autre.
+
+### CE QUI EST RÉCUPÉRÉ : 2 555 MOTS
+
+| | blocs | mots |
+|---|---|---|
+| `comparatif-outils-quiz-systeme-io` | 39 -> 46 | **+2 036** |
+| `strategie-quiz-marketing-tiquiz` | 38 -> 42 | +313 |
+| `comment-creer-quiz-systeme-io` | 52 -> 56 | +186 |
+| `17-raisons-lancer-quiz-business` | 83 -> 84 | +20 |
+| `create-quiz-systeme-io` (anglais) | 41 -> 47 | 6 listes à puces |
+
+Le comparatif avait perdu **le tableau des 8 outils**, c'est à dire
+l'écran qu'on lit avant d'acheter.
+
+### ON NE RÉIMPORTE PAS : ON FUSIONNE, ET LA FUSION NE PEUT QU'AJOUTER
+
+C'est la décision qui tient tout le chantier, et elle a été prise sur
+une MESURE, après avoir essayé le ré-import franc et regardé ce qu'il
+donnait. Il coûtait trois choses, toutes invisibles :
+
+| | ce que le ré-import franc a fait, mesuré |
+|---|---|
+| les images | **62 images renvoyées sur le CDN de Systeme.io**. Le nom local ne se déduit pas du nom source : 22 des 62 ont été RENOMMÉES au rapatriement du 30 août |
+| les textes alternatifs | **62 `alt` perdus d'un coup**. `poserAlt` les pose à partir du chemin LOCAL : avec un chemin de CDN, la table ne reconnaît plus rien |
+| les corrections | la page source porte encore les prix d'avant le 6 août et les promesses corrigées le 31 |
+
+Donc : les blocs du disque sont **RECONDUITS TELS QUELS**, dans leur
+ordre, et seuls les blocs que la source a en plus sont insérés. Un bloc
+n'est jamais retiré ni réécrit, et le titre, la description, les mots
+clés, la date et la couverture ne sont pas touchés.
+
+### CINQ RÈGLES DE LA FUSION, ET AUCUNE N'EST DÉCORATIVE
+
+1. **L'APPARIEMENT EST TOLÉRANT.** Une comparaison exacte verrait un
+   bloc corrigé comme un bloc nouveau, et l'insérerait EN DOUBLE avec sa
+   version d'avant correction. La signature ignore donc les chiffres,
+   les URL et la ponctuation.
+2. **UN BLOC PROCHE D'UN BLOC DU DISQUE EST LE MÊME**, corrigé depuis :
+   on garde celui du disque. **Le seuil ne tranche rien à la limite** :
+   mesuré sur les 22 blocs non appariés, les vraies nouveautés sortent
+   entre 0,00 et 0,12, les blocs simplement corrigés entre 0,89 et 0,97.
+3. **LES IMAGES ET LES FAQ S'APPARIENT PAR LEUR RANG.** Leur `src` a
+   changé et leur texte a été corrigé : le rang est la seule chose qui
+   n'a pas bougé. Un écart de compte est REFUSÉ, jamais deviné.
+4. **UN DOUBLON N'ENTRE PAS, et la liste est amorcée avec ce qui est
+   DÉJÀ sur le disque.** Sans cette amorce, l'import et la réparation se
+   battent : `blog:reparer` retire le doublon, l'import suivant le
+   remet, et rien n'atteint jamais un état stable. Vérifié : la paire
+   converge, les deux ne réécrivent plus rien.
+5. **UN ORDRE AMBIGU EST REFUSÉ.** Si un trou porte à la fois un bloc du
+   disque sans jumeau ET une nouveauté, rien ne dit lequel vient avant.
+
+### CE QUI EST ÉCARTÉ, ET LA RAISON EST ÉCRITE À CÔTÉ
+
+- **`rente-mensuelle-affiliation-tiquiz` n'est PAS fusionné.** Mesuré :
+  23 de ses blocs ne s'apparient plus, parce que sa page source annonce
+  encore un versement "le 10 de chaque mois", 40 % écrit comme un
+  plafond, les rentes calculées sur l'ancien tarif à 9 €, et une section
+  entière sur Tipote, qui n'est pas en vente. Y insérer quoi que ce soit
+  ferait rentrer par la fenêtre ce qu'on a sorti par la porte. Son
+  jumeau anglais est exclu pour la même raison.
+- **`cas-client-jocelyne-tdah` n'a plus de source.** Aucune adresse ne
+  répond, il n'est ni dans le sommaire du blog, ni dans un sitemap, et
+  aucune étape de tunnel ne porte son nom.
+- **Un SVG en ligne, une vidéo, une image dans un bloc brut : écartés et
+  NOMMÉS dans le rapport.** `nettoyerBloc` retire les balises inconnues
+  et garde ce qu'il y a ENTRE : un SVG gardé déverserait toutes ses
+  étiquettes en vrac, un `<style>` ses règles CSS, et l'adresse d'un
+  `<img>` resterait sur notre disque en pointant sur le CDN d'un tiers.
+- **Un type inconnu est COMPTÉ**, jamais avalé. C'est exactement le
+  silence qui a coûté ce chantier.
+
+🚨 **CE PARAGRAPHE ATTENDAIT SA DÉCISION SUR LA VIDÉO DE
+`avis-tiquiz`. ELLE L'A PRISE LE 8 SEPTEMBRE : "oui je veux la vidéo
+Youtube".** Le gabarit a un bloc `video` depuis, et il ne contacte
+personne avant qu'on ne clique. Corrigé en place, voir la section
+"LA VIDÉO D'UN ARTICLE" plus bas.
+
+### LES QUATRE AUTRES DÉFAUTS, RÉPARÉS PAR DES RÈGLES GÉNÉRALES
+
+Aucun ne se corrige à la main dans le JSON : un import suivant les
+ramènerait.
+
+| Le défaut | La règle |
+|---|---|
+| un titre qui FINIT l'article sans rien après | `retirerTitreOrphelin` |
+| le même paragraphe deux fois (c'est dans SA source) | `retirerBlocsEnDouble`, seuil à 60 caractères, le PREMIER gagne |
+| un tiret cadratin dans sa prose | `retirerTiretsLongs`, dans `reponctuer` |
+| les prix périmés des FAQ | `liensIntegrations.ts`, aux MÊMES constantes que le corps |
+
+**LE TIRET CADRATIN EN ENTITÉ, ET C'EST LE TROU LE PLUS INSTRUCTIF.**
+La règle du 7 juin est absolue, et elle vivait dans un test qui
+INTERDIT et dans aucune règle qui CORRIGE. Pire : ce test cherchait le
+CARACTÈRE `—`, donc `&mdash;` passait au travers, et deux em-dash sont
+entrés dans le comparatif à la faveur de ce chantier. Un test qui ne
+distingue pas ce qu'il est censé distinguer est pire qu'un test absent.
+La correction et le test couvrent maintenant les deux formes, et **on
+n'agit que sur un tiret ENTOURÉ D'ESPACES** : collé, c'est une plage
+(`2020–2024`) ou une composition, et le convertir écrirait autre chose.
+
+**LES PRIX DES FAQ CONTREDISAIENT LE CORPS DU MÊME ARTICLE.** Le corps
+de `comment-creer-quiz-systeme-io` avait été corrigé le 1er septembre,
+sa FAQ non : le même article annonçait 79 $ dans son texte et 717 €
+dans sa FAQ, à quelques écrans d'écart. Et
+`strategie-quiz-marketing-tiquiz` promettait encore "Tiquiz en bêta
+c'est 57 € une fois à vie", terminé depuis. **Le prix de Tally est
+RETIRÉ, pas corrigé** : il n'est vérifiable nulle part dans le dépôt, et
+un tarif annoncé faux se vérifie en un clic.
+
+### LES DÉCISIONS ONT QUITTÉ LE SCRIPT
+
+`lib/blog/importBlocs.ts` porte l'extraction et la fusion ;
+`scripts/importer-blog-fr.mjs` et `scripts/importer-blog-en.mjs` ne font
+plus que les entrées/sorties, et ils appellent le MÊME module.
+
+Ce n'est pas du rangement : ces scripts vont chercher les pages sur le
+réseau, donc **aucun test ne peut les lancer**, et c'est LÀ que le bug
+s'était installé. Une logique enfermée dans un script n'est pas
+testable, donc elle n'est pas testée (règle du 1er août). L'anglais en
+avait en plus sa PROPRE COPIE, avec les deux bugs dedans.
+
+```bash
+npm run blog:importer-fr -- --verifie   # dit ce qu'il rendrait
+npm run blog:importer-fr                # fusionne
+npm run blog:reparer                    # repasse derriere, idempotent
+```
+
+### ET LE DISCRIMINANT DES "RÈGLES MUETTES" S'EST CASSÉ EN CHEMIN
+
+Côté anglais, `blog:reparer-en` a REFUSÉ de finir sur six règles
+parfaitement bonnes. Sa question est "cette règle a-t-elle trouvé sa
+cible ?", et son discriminant était un drapeau de CORPUS ("au moins une
+règle a mordu quelque part"). Un import qui rend du texte neuf dans UN
+article le fait basculer, et les règles des AUTRES articles, déjà
+corrigées, sont alors dénoncées comme fausses.
+
+**Un contrôle par corpus ne peut pas répondre à une question par
+règle.** La preuve est maintenant PAR RÈGLE : une règle qui n'a pas
+mordu est fausse seulement si son texte d'ARRIVÉE est introuvable lui
+aussi. Son `vers` présent prouve que la correction a déjà eu lieu.
+
+**Et la limite est DITE au lieu d'être maquillée :** une règle qui
+SUPPRIME une phrase n'a pas de texte d'arrivée, donc "la phrase a bien
+été supprimée" est indistinguable de "le motif ne correspond à rien".
+Ces règles sont exemptées du contrôle et **COMPTÉES à l'écran** : une
+exemption silencieuse deviendrait un trou où n'importe quelle règle
+fausse pourrait se ranger.
+
+**Et ma propre preuve était fausse au premier jet** : elle lisait
+`l.href` sur des règles qui portent `l.vers`. `includes(undefined)` rend
+toujours faux, donc le garde dénonçait six règles saines. Un garde écrit
+avec un nom de champ INVENTÉ ne mesure rien.
+
+Test : `tests/logic/import-blog-fr.test.mts` (19 cas), vérifié en
+rejouant ONZE versions fautives (`BulletList` sans cas, `RawHtml` sauté,
+ni SVG ni image retirés, doublon du disque non amorcé, ambiguïté non
+refusée, écart d'images non refusé, la fusion qui écrase au lieu
+d'ajouter, le titre orphelin gardé, les doublons gardés, le tiret retiré
+sans regarder les espaces, le garde aveugle aux entités) : les onze
+rougissent.
+
+## LA VIDÉO D'UN ARTICLE : rien ne part chez Google avant le clic (8 septembre 2026)
+
+Béné : "oui je veux la vidéo Youtube."
+
+Sa page `avis-tiquiz` porte une vidéo depuis l'origine. L'import la
+SIGNALAIT sans la poser, pour une raison qui était juste : `nettoyerBloc`
+retire les `iframe`, donc la poser en bloc `html` aurait donné un bloc
+VIDE, et personne ne l'aurait vu.
+
+### LE BLOG NE PORTE AUCUNE BANNIÈRE DE CONSENTEMENT
+
+**MESURÉ avant d'écrire une ligne, pas supposé.** Le bandeau cookies est
+celui de Béné, il vit dans la page de vente CAPTURÉE, et il range son
+choix dans `aq_consent_v1` (c'est ce que relit `GoogleAnalytics.tsx`
+depuis le 26 août). Un article de blog n'en porte AUCUN.
+
+Poser le cadre au chargement enverrait donc l'adresse IP de chaque
+lecteur chez Google, sur une page où rien ne peut recueillir son accord.
+Et ça ne se verrait sur aucun écran : la vidéo s'afficherait
+parfaitement.
+
+**`youtube-nocookie.com` ne suffit pas, et il faut le dire dans ce sens
+là :** il ne dépose pas de cookie de suivi tant que la vidéo n'est pas
+lancée, mais dès que le cadre existe, l'adresse IP part. C'est pour ça
+que le domaine n'est que la moitié de la réponse.
+
+**Règle : le cadre n'existe QU'AU CLIC.** Avant, une miniature. MESURÉ
+sur le HTML servi de `/blog/avis-tiquiz` : **zéro occurrence de
+`youtube-nocookie`, zéro de `ytimg`**.
+
+### QUATRE CHOSES À NE PAS DÉFAIRE
+
+1. **La miniature est RECOPIÉE chez nous** (`public/blog/video/<id>.webp`,
+   1280x720, 98 Ko). Servie depuis `i.ytimg.com`, elle serait exactement
+   la requête tierce qu'on évite, et elle partirait à CHAQUE chargement.
+2. **La façade est un LIEN vers YouTube, jamais un bouton.** Sans
+   JavaScript, un bouton ne fait RIEN : la vidéo serait morte et le
+   lecteur n'aurait aucun moyen de le savoir. Le clic est intercepté
+   quand JavaScript est là ; un clic modifié (nouvel onglet) n'est pas
+   volé.
+3. **Le triangle de lecture est DESSINÉ.** "▶" n'existe ni dans Open
+   Sans ni dans Inter : Windows rend le carré vide (drame du
+   2 septembre, les icônes de la landing).
+4. **L'identifiant est VALIDÉ, jamais recopié** (`[A-Za-z0-9_-]{11}`,
+   `lib/blog/video.ts`). Il finit dans un `src`. Une adresse qu'on ne
+   sait pas lire rend `null`, et l'import la SIGNALE : on ne fabrique
+   jamais une adresse à partir de ce qu'on n'a pas compris.
+
+**Le TITRE vient de YouTube, et le module d'extraction reste PUR.**
+`blocsDe` rend un titre VIDE ; c'est le script d'import qui le lit chez
+YouTube (il fait déjà du réseau) et qui REFUSE de finir s'il n'y arrive
+pas. Un titre vide, c'est une légende vide sous une vidéo et un lien qui
+ne dit pas laquelle.
+
+**Et le titre ne se traduit pas.** L'article anglais porte la MÊME
+vidéo, avec son titre FRANÇAIS : c'est une vidéo en français, et un
+titre traduit décrirait autre chose que ce que le lecteur va voir.
+
+**Une vidéo s'apparie par son IDENTIFIANT** dans la fusion d'import
+(`signature`), jamais par son rang : c'est lui qui EST son identité.
+Sans ce cas, `nuTexte` lirait un `html` qui n'existe pas et deux vidéos
+différentes porteraient la même signature.
+
+Test : `tests/logic/video-article.test.mts`, vérifié en rejouant SIX
+versions fautives (le cadre sur `youtube.com`, la miniature chez
+`i.ytimg.com`, la façade en bouton, un titre vide en base, le cadre posé
+sans le clic, le glyphe Unicode) : les six rougissent.
+
+## LA FIN DU CAS CLIENT DE JOCELYNE (Béné, 8 septembre 2026)
+
+"Voilà tout le texte de la page du cas client."
+
+Sa page source n'existe plus, et l'article s'arrêtait sur "- Jocelyne
+Bacquet". **Elle a collé le texte manquant**, donc il est revenu : la
+suite de parcours, les trois leçons, ses liens, les deux cartes et une
+FAQ de six questions. **13 blocs, en français ET en anglais** (le jumeau
+anglais s'arrêtait exactement au même endroit).
+
+### TROIS CHOSES ONT ÉTÉ CORRIGÉES EN LE POSANT, ET TROIS SEULEMENT
+
+| Ce que son texte disait | Pourquoi |
+|---|---|
+| "passer au plan Mensuel à 9 €/mois" | le tarif d'avant le 6 août. Le prix vient de `PRIX_MENSUEL_TTC`, il ne se recopie pas |
+| "15 templates métier (coach, nutrition, ..., **entrepreneur**, photo, immo)" | MESURÉ : le catalogue en porte bien 15, et six des sept noms existent. Pas "entrepreneur" : c'est "Coach **business**" |
+| "vous pouvez tout à fait commencer **seule**" | adresse DIRECTE au lecteur, accordée au féminin. On tourne la phrase (règle du 24 août) |
+
+**Tout le reste est verbatim.** "scaler" y compris : c'est son mot, dans
+son texte déjà publié, et ce n'est ni faux ni genré. À elle de trancher.
+
+**Et les DEUX AUTRES claims ont été vérifiés, pas supposés** : les
+limites du gratuit (1 quiz, 1 sondage, 1 popquiz, 10 leads visibles,
+les suivants capturés et masqués) sont exactement `FREE_LIMITS`, et la
+génération IA est bien ouverte au gratuit (`/api/quiz/generate` n'a
+aucun gate de plan).
+
+### LES LIENS : LES QUATRE SONT LA (elle les a donnés le 8 septembre)
+
+🚨 **CETTE SECTION DISAIT "DEUX SUR QUATRE, ET LES DEUX MANQUANTS
+ATTENDENT QU'ELLE LES DONNE". C'EST PÉRIMÉ**, et je le corrige en place
+plutôt que d'empiler : elle a envoyé les quatre, **et une adresse de
+blog PLUS PRÉCISE que celle que j'avais vérifiée**. La sienne fait foi.
+
+| | ce que la mesure donne |
+|---|---|
+| son blog `.../blog-jocelyne-bacquet` | **200**, `<title>` "Blog de Jocelyne Bacquet" |
+| le livre sur Amazon | **je n'ai pas pu vérifier** : Amazon sert une page anti-robot (3815 octets, aucun "Bacquet" dedans) |
+| son Instagram | **je n'ai pas pu vérifier** : 429, leur limite de débit sur notre adresse |
+| sa page Facebook | **je n'ai pas pu vérifier** : 400 sur un `profile.php` non authentifié |
+
+**Un blocage de plateforme veut dire "je n'ai pas pu regarder", jamais
+"ça n'existe pas"** (règle du 22 août, et c'est déjà la leçon du 429 de
+Pinterest du 1er septembre). Ce sont SES liens : ils sont posés, et le
+message final lui dit lequel des trois n'a pas pu être mesuré.
+
+Test : les cinq cas ajoutés à `tests/logic/blog.test.mts`, vérifiés en
+rejouant TROIS versions fautives (le prix d'avant, "commencer seule", la
+queue retirée) : les trois rougissent.
+
+## Les chevrons n'étaient corrigés par RIEN (8 septembre 2026)
+
+Trouvé en posant son texte : sa page rendue porte des chevrons `«` `»`,
+et `tests/logic/blog.test.mts` les INTERDIT depuis le 7 juin.
+
+**MESURÉ : aucune ligne de code, ni dans l'import ni dans
+`reponctuation.ts`, n'en convertissait un seul.** L'en-tête de ce module
+affirmait pourtant "l'import du 29 août remplace les chevrons". C'est la
+DIXIÈME fois que ce dépôt paie une règle écrite en commentaire et
+démentie par le code.
+
+La règle ne vivait donc que dans un test qui INTERDIT, et un contenu
+écrit à la main la faisait rougir sans qu'aucune commande sache la
+réparer. C'est exactement le défaut du tiret cadratin en entité, trouvé
+le même jour.
+
+**`remplacerChevrons` existe, et `reponctuer` l'applique.** Trois choses
+comptent :
+
+- **l'espace INTÉRIEURE part avec le chevron** (souvent insécable) :
+  la garder donnerait `" C'est un sujet "`, donc la faute inverse de
+  celle que ce module existe pour corriger. L'espace EXTÉRIEURE reste ;
+- **les entités comptent** (`&laquo;`, `&#171;`) : elles s'affichent
+  exactement pareil ;
+- **elle passe AVANT `reparerGuillemets`**, qui COMPTE les guillemets
+  droits pour savoir lequel ouvre. Convertir après lui, c'est lui cacher
+  la moitié du texte, donc lui faire poser l'espace du mauvais côté.
+
+### ET ELLE A TROUVÉ SIX CHEVRONS EN ENTITÉ DÉJÀ EN LIGNE
+
+`comparatif-outils-quiz-systeme-io` portait six
+`&laquo;&nbsp;...&nbsp;&raquo;`, et le garde ne cherchait que le
+CARACTÈRE. Il cherche maintenant les deux formes, vérifié en rejouant le
+fichier d'avant correction : il rougit.
+
+## Une adresse email d'ARTICLE était masquée par Cloudflare (8 septembre 2026)
+
+La fin du cas client porte le contact de Gwenn, à deux endroits. C'est
+la PREMIÈRE adresse email du blog (mesuré : zéro avant).
+
+Cloudflare l'aurait remplacée par `[email protected]` dans le HTML
+servi, comme les 4 adresses des pages légales le 2 septembre.
+
+**Et les marqueurs qui l'en empêchent ne peuvent pas vivre dans le
+contenu :** `nettoyerBloc` retire les commentaires HTML (MESURÉ, pas
+supposé). C'est donc le RENDU qui les pose, autour du SEUL bloc
+concerné : désarmer l'obfuscation là où il n'y a rien à protéger ne
+protège rien de plus.
+
+`SansObfuscationEmail` a quitté `LegalPageView` pour
+`components/legal/SansObfuscationEmail.tsx`, **où il vit déjà chez
+Tipote et chez l'Atelier** : Tiquiz était le seul des trois à l'avoir
+enfermé dans une page. Son corps est identique à l'octet près aux deux
+autres.
+
+**Et le garde de `politique-google.test.mts` a rougi sur cette
+correction JUSTE**, parce qu'il cherchait les marqueurs dans
+`LegalPageView.tsx`. Un garde-fou qui fige un EMPLACEMENT empêche de
+déplacer le code : il SUIT désormais l'import.
+
+**MA FAUTE, et c'est la 20e de la semaine :** mon premier garde du côté
+blog cherchait `porteUneAdresseEmail` dans la source du rendu. Il est
+resté VERT sur la version fautive (l'appel remplacé par `false`), parce
+que le nom apparaît encore dans la ligne d'import. **Un garde qui
+cherche un NOM dans une source ne distingue pas APPELER de simplement
+IMPORTER.** Il retire les imports avant de chercher, et il exige
+`porteUneAdresseEmail(` : vérifié en rejouant les deux versions
+fautives, elles rougissent.
+
+## Le filet responsive couvre enfin deux articles (8 septembre 2026)
+
+`tests/visual/responsive-site.spec.ts` ne mesurait aucune page d'article,
+et son propre en-tête dit pourquoi (les ajouter d'un coup est un chantier
+à part). Les DEUX que ce passage a touchées y sont maintenant :
+`/blog/avis-tiquiz` (le nouveau bloc vidéo, une façade en 16/9 jamais
+mesurée sur un téléphone) et `/blog/cas-client-jocelyne-tdah` (deux
+listes, deux cartes, une FAQ). Mesuré aux quatre largeurs : aucun
+débordement.
+
+**Les huit autres articles restent dehors**, exprès : un filet qui
+rougit sur des pages qu'on n'a pas regardées finit désactivé.
+
+## Le meuble d'un article anglais parlait français (corrigé le 9 septembre)
+
+Trouvé en servant `/en/blog/case-study-jocelyne-adhd-quiz`. Le travail
+du 8 septembre au matin a traduit le menu et le pied de page ; **trois
+composants d'article portaient encore leurs phrases en dur en
+français** :
+
+| Le composant | Ce qu'un lecteur anglophone lit |
+|---|---|
+| `PartageArticle` | "Copier le lien" |
+| `EncartCta` | "Un quiz qui tague tes leads dans Systeme.io", "Créer mon quiz gratuitement", "Voir ce que fait Tiquiz" |
+| `Commentaires` | "Ton avis sur cet article", "Laisser un commentaire", "Ton prénom", "Ton email (jamais publié)", "Ton message", "Envoyer" |
+
+C'est le reproche du client anglophone du 7 septembre ("some parts of
+the quiz UI were in French"), sur les pages exactes où atterrissent les
+lecteurs qu'on veut récupérer de `tipote.blog`. **Ce n'est pas une
+régression de ce passage** : c'est antérieur, et ça vaut pour les dix
+articles anglais. Les phrases se posent dans `motsDuBlog.ts`, comme le
+reste du meuble.
+
+### CE QUI A ÉTÉ FAIT, ET LE PIÈGE QU'AUCUN TEST NE VOYAIT
+
+Les phrases vivent dans `motsDuBlog.ts`, avec le reste du meuble.
+**MESURÉ sur la page servie, dans les deux langues** : 12 phrases
+françaises et 0 anglaise sur `/blog/cas-client-jocelyne-tdah`, 0
+française et 11 anglaises sur `/en/blog/case-study-jocelyne-adhd-quiz`.
+
+**Six composants, pas trois** : le relevé de la veille en nommait
+trois, et il en manquait la moitié. `BoutonCopier` portait ses trois
+libellés, `RailArticle` en portait trois autres ("Dans cet article",
+"Sommaire de l'article", "Partager") **alors que `dansCetArticle`
+existait déjà dans la table et qu'il ne l'appelait pas**, et
+`FormulaireCommentaire` portait ses QUATORZE phrases de refus, celles
+qu'un lecteur découvre au moment exact où il se trompe d'adresse email.
+Et la date d'un commentaire était formatée en `fr-FR` en dur.
+
+🚨 **ET LE VRAI PIÈGE : `tsc` ÉTAIT VERT, LE FILET LOGIQUE ÉTAIT VERT À
+2728, ET LES DEUX ARTICLES RÉPONDAIENT 500.**
+
+```
+Functions cannot be passed directly to Client Components
+{surReseau: function surReseau, copierLeLien: ..., ...}
+```
+
+`BoutonCopier` et `FormulaireCommentaire` sont marqués `use client`, et
+la table portait DEUX fonctions (`surReseau`, `titreN`). **Un composant
+client ne peut pas recevoir une référence de fonction depuis une page
+serveur, et le typecheck ne voit RIEN de tout ça** : c'est le drame du
+1er août (`FolderCard`, dépôt Tipote), payé une deuxième fois.
+
+**Règle : ce qui traverse vers un composant client a son propre TYPE, et
+il ne porte que des chaînes.** `MotsCopie` et `MotsFormulaire`
+(`lib/blog/motsDuBlog.ts`) rendent la frontière visible : le prochain
+qui ajoutera une fonction à `partage` ou à `commentaires` ne pourra pas
+la faire descendre sans le voir. Les deux fonctions restent dehors,
+leurs appelants sont rendus par le serveur.
+
+**Et ça ne s'est vu qu'en SERVANT la page.** Un vert local ne prouve
+rien sur un rendu (leçon de `pdf-parse`, 7 août) : la dernière étape
+n'est pas de lancer les tests, c'est d'aller chercher l'URL.
+
+**Le second bouton de l'encart vaut `null` en anglais**, comme
+`sommaire.ctaSecondaire` depuis le 8 septembre : il mène à `/`, la page
+de vente CAPTURÉE, en français. Et les deux destinations passent par
+`hrefPourLangue`, qui REFUSE de préfixer une page qui n'a pas la langue :
+sans lui, `/signup` deviendrait `/en/signup`, c'est à dire un 404 au
+bout du seul bouton de l'encart.
+
+### MES TROIS ITÉRATIONS SUR LE MÊME GARDE-FOU
+
+Le garde qui vérifie qu'un composant ne porte plus de français en dur a
+été écrit trois fois, et les trois versions disent quelque chose :
+
+| Le motif | Ce qu'il faisait |
+|---|---|
+| le mot nu `"commentaires"` | rougissait sur le chemin d'import, sur le nom de la prop et sur l'`id` de la section : **trois usages légitimes** |
+| `{mots.` (l'interpolation JSX) | rougissait sur un ternaire parfaitement correct (`{etat === "copié" ? mots.lienCopie : ...}`) |
+| `mots.[a-zA-Z]` compté | passe, et **le commentaire dit ce qu'il ne prouve pas** |
+
+**Un motif se vise sur un LITTÉRAL AFFICHÉ, jamais sur un mot nu**, et
+quand un contrôle ne peut pas prouver ce qu'on voudrait, il le DIT au
+lieu de faire semblant. Ce qui garde vraiment le français dehors, c'est
+la liste de phrases, pas le compteur.
+
+## Les quatre liens de Jocelyne, en cartes (Béné, 8 septembre 2026)
+
+"Les liens qui te manquaient", envoyés dans un bloc HTML à elle : une
+grille de quatre cartes, un dégradé pâle, un emoji, un libellé et une
+précision dessous.
+
+**Son HTML ne pouvait pas être posé tel quel, et c'est une règle, pas un
+accident** : `nettoyerBloc` retire TOUS les attributs sauf le `href`
+d'un lien, depuis l'import du 29 août (une classe ou un style importés
+imposeraient l'apparence de Systeme.io au milieu d'une page qui a la
+nôtre). Collé tel quel, son bloc rendait quatre liens nus les uns
+derrière les autres.
+
+**D'où un bloc `liens` qui porte la DONNÉE**, et notre CSS qui la
+dessine : il se traduit, il suit le thème, et il passe à la ligne tout
+seul. Ses trois hexadécimaux deviennent des jetons (`#5A6EF6` EST déjà
+`--tq-bleu`, la palette a été calée sur sa page de vente le
+4 septembre) : un pâle écrit en dur resterait pâle le jour où la palette
+bouge, avec du texte foncé devenu illisible dessus.
+
+### DEUX DÉFAUTS QUE SEULE LA MESURE A MONTRÉS
+
+**1. LES QUATRE CARTES SORTAIENT SOULIGNÉES.** `.tiquiz-blog a` pose
+`text-decoration: underline` avec une spécificité de **0,1,1**, et un
+`no-underline` de Tailwind pèse **0,1,0** : il perd. C'est exactement
+l'arithmétique du bouton bleu sur bleu du 30 août, et la réponse est la
+même : une classe nommée (`tq-carte-lien`) qui monte la spécificité, pas
+un `!important`. La prochaine carte posée dans un article n'aura pas à
+connaître cette histoire.
+
+**2. LA QUATRIÈME CARTE S'ÉTIRAIT SUR TOUTE LA LARGEUR.** Mesuré dans un
+navigateur : `flex: 1 1 200px` donne, dans la colonne de 720 px d'un
+article, des boîtes de **229 / 229 / 229 / 720**. Trois tiennent sur la
+première ligne, la quatrième passe seule et grossit. Ce n'est pas la
+grille qu'elle a dessinée.
+
+La cause n'est pas son CSS : 4 x 200 px plus trois gouttières font
+848 px, et notre colonne de lecture en fait 720 (bornée le 30 août pour
+que la ligne reste lisible). Son bloc vivait dans un conteneur plus
+large. **Une grille 2 x 2** tient dedans avec des cartes de 352 px, et
+passe à UNE colonne sur un téléphone (mesuré à 390 px : 350 px, aucun
+débordement).
+
+**Et son intro est gardée MOT POUR MOT** : "Jocelyne accepte d'être
+contactée et de partager son parcours. Voici les liens qu'elle a
+souhaité mettre en avant." Un chantier de mise en page ne réécrit pas
+ses phrases.
+
+Test : `tests/logic/blog.test.mts`, plus
+`/en/blog/case-study-jocelyne-adhd-quiz` ajouté au filet responsive
+(il ne mesurait AUCUN article anglais, et c'est là que le meuble vient
+de changer : une phrase anglaise n'a pas la longueur de la française).
+
+## UN SVG SUR LE BLOG : ça marche, en FICHIER (Béné, 8 septembre 2026)
+
+"Tu ne sais pas mettre un svg sur notre blog ? C'est embêtant ..."
+
+**LA RÉPONSE EST EN DEUX MOITIÉS, et il faut les deux.**
+
+**Un SVG en FICHIER marche depuis le 31 août**, et ce n'est pas une
+supposition : cinq d'entre eux sont en ligne (`svg-tunnel-jocelyne.svg`,
+`svg-gwenn-3-axes.svg`, `svg-comment-lire-chiffres.svg` et sa variante
+mobile, `svg-12-comparatif-outils-popquiz-fr.svg`), posés en blocs
+`image`, avec 11 références dans trois articles.
+`lib/blog/dimensionsImage.ts` lit leur taille naturelle dans le
+`viewBox`, `apparierVariantes` apparie la version téléphone, et le filet
+responsive du 8 septembre les mesure sur quatre largeurs.
+
+**Ce qui cassait, c'est un `<svg>` EN LIGNE**, celui qu'on obtient en
+collant un schéma dans le HTML d'un article. MESURÉ avant correction :
+
+```
+ENTREE  <p>Avant</p><svg ...><style>.t{fill:#333}</style>
+        <text>97 % partent sans rien laisser</text>
+        <text>3 % laissent leur email</text></svg><p>Apres</p>
+SORTIE  <p>Avant</p>.t{fill:#333}97 % partent sans rien laisser3 %
+        laissent leur email<p>Apres</p>
+```
+
+`nettoyerBloc` retire les BALISES inconnues et garde ce qu'il y a
+ENTRE : le schéma disparaissait, **son CSS sortait en prose**, et ses
+deux étiquettes se collaient l'une à l'autre. C'est ce qu'elle aurait vu
+en essayant.
+
+**Règle : `sansContenuNonRendu` (`lib/blog/rendu.ts`), et l'import
+DÉLÈGUE.** Les trois coupes (`<style>`, `<script>`, `<svg>`) existaient
+déjà à l'IMPORT depuis le 8 septembre. Elles vivent maintenant au RENDU,
+parce qu'un article ÉCRIT À LA MAIN ne passe jamais par l'import : une
+règle posée sur un seul des deux chemins n'en protège que la moitié.
+`sansCodeNiStyle` l'appelle au lieu de recopier les trois motifs.
+
+**ON NE REND PAS UN SVG EN LIGNE, ET C'EST MESURÉ.** Le seul candidat du
+corpus (`comment-creer-quiz-systeme-io`) porte un `<style>` dont les
+sélecteurs s'appliqueraient à TOUTE la page une fois inliné, 25 `class=`,
+cinq `id` et cinq `url(#...)` qui entreraient en collision avec ceux
+d'un deuxième schéma. Un SVG chargé par `<img src>` rend dans un
+document ISOLÉ : son `<style>` y est borné, ses `url(#id)` s'y résolvent,
+et ses scripts ne tournent pas. **Un SVG passe par un fichier, ou il ne
+passe pas.**
+
+Et le deuxième candidat (`rente-mensuelle-affiliation-tiquiz`) ne doit
+de toute façon pas revenir : son article est EXCLU de l'import (23 blocs
+ne s'apparient plus), et son propre `<desc>` porte les promesses Tipote
+retirées le 1er septembre.
+
+Test : les trois cas ajoutés à `tests/logic/blog.test.mts`, vérifiés en
+rejouant la version d'avant (deux rougissent).
+
+## SOURCER LES FAQ (Béné, 8 septembre 2026)
+
+"Source les faq stp."
+
+**LE RELEVÉ, ET IL A ÉTÉ FAUX UNE FOIS.** 140 questions de FAQ sur les
+20 articles. Mon premier passage en annonçait **36 non sourcées** ; le
+vrai chiffre est **12**. Le premier ne cherchait qu'un `http`, donc il
+comptait comme non sourcées des réponses qui disent "selon le rapport
+Litmus State of Email Marketing 2024" ou "d'après le Quiz Conversion
+Rate Report d'Interact". **Un contrôle qui ne distingue pas ce qu'il est
+censé distinguer est pire qu'un contrôle absent**, et j'ai failli aller
+réécrire deux douzaines de réponses parfaitement sourcées.
+
+**CE QUI ÉTAIT DÉJÀ SOURCÉ ET N'A PAS BOUGÉ** : le ROI email (Litmus),
+les 44,9 % et 59,1 % (Quiz Conversion Rate Report d'Interact), les 2 à
+3 % contre 30 à 40 % (benchmarks Sumo, GetResponse, Interact, Outgrow).
+Ces réponses NOMMENT leur source.
+
+**CE QUI A ÉTÉ RETIRÉ, ET C'EST RETIRÉ, PAS SOURCÉ.** Je n'ai pas trouvé
+de source pour ces chiffres, et "ne jamais mentir, sous aucune forme" ne
+laisse pas le choix entre les deux. Un chiffre inventé dans une FAQ vit
+à l'endroit exact où un lecteur va vérifier.
+
+| Le claim | Pourquoi il est parti |
+|---|---|
+| "Warby Parker, Glossier, Sephora, BuzzFeed" (FAQ de Jocelyne) | quatre entreprises réelles citées comme PREUVE, sans une source |
+| "lu seulement par 12 % des inscrits" (deux articles) | aucune source, et il servait de base à un deuxième chiffre ("les 88 % restants") |
+| "en 2026, les quiz ont remplacé les ebooks dans la majorité des stratégies performantes" | une affirmation sur tout un marché, invérifiable |
+| "entre 150 et 500 leads par mois, 30 à 50 % de partage, 1 000 leads mensuels" | trois chiffres promis sans source : c'est une promesse de résultat |
+
+**Dix retraits, dans les deux langues**, par la table nommée
+(`faitsProgramme.ts` et `faitsEn.ts`) et pas à la main : un ré-import
+les ramènerait. Les deux pipelines sont idempotents après.
+
+**ET LA TROUVAILLE QUI COMPTE : `17-raisons-lancer-quiz-business` FAIT
+ÇA BIEN, et c'est le modèle.** Ses mentions de BuzzFeed et de Warby
+Parker sont accompagnées d'une **capture d'écran de leur vrai quiz** et
+d'une invitation à aller le passer ("Va passer le quiz Find Your Frames
+sur Warby Parker", "Va sur buzzfeed.com/quizzes"). Un lecteur vérifie en
+un clic. C'est l'inverse exact de la FAQ de Jocelyne, qui les citait
+sans rien. **Si elle veut un exemple nommé dans cette FAQ, Warby Parker
+est le seul des quatre qui soit adossé quelque part chez nous.**
+
+**Le garde-fou est borné aux claims TIERS**, exprès : nos propres taux et
+nos propres prix viennent du catalogue, donc les exiger sourcés ferait
+rougir le test sur des chiffres vrais par construction, et un test qui
+crie pour rien finit désactivé. Il exige aussi qu'il RESTE des FAQ
+sourcées à surveiller : sans ça, il passerait au vert sur zéro question.
+
+Test : les trois cas ajoutés à `tests/logic/blog.test.mts`, vérifié en
+rejouant les quatre marques dans la FAQ (il rougit et la nomme).
+
+## LA MESURE DU PARCOURS : cinq événements, et pas un de plus (Béné, 9 septembre 2026)
+
+"Cinq chantiers, dans cet ordre. **Le point 1 avant tout : sans mesure,
+on ne saura pas si le reste a servi.**" Et : "Le seul ratio à afficher :
+`generation_lancee -> compte_cree`. Ajoute aussi la durée médiane de
+`generation_reussie` : c'est le chiffre qui justifiera le chantier 3."
+
+### CE QU'IL Y AVAIT, ET CE QU'IL N'Y AVAIT PAS
+
+Mesuré avant d'écrire une ligne. GA4 était bien posé
+(`components/analytics/GoogleAnalytics.tsx`, sur les domaines de vente,
+après consentement), et les deux événements de VENTE existaient depuis
+le 4 septembre. **Du parcours lui même, rien** : aucun des cinq
+événements n'existait, et surtout **la durée médiane n'avait aucun
+endroit pour vivre.**
+
+**GA4 NE CALCULE PAS DE MÉDIANE dans ses rapports standard**, seulement
+des moyennes : une médiane demande une exploration ou BigQuery. C'est ce
+qui a décidé la colonne `duree_ms`, et ce n'est pas un détail de
+plomberie : une seule génération partie en délai d'attente déplace une
+moyenne de plusieurs secondes et une médiane de rien.
+
+### LES DEUX DURÉES NE SE CONFONDENT JAMAIS
+
+C'est le piège de ce chantier, et il est écrit dans la migration elle
+même :
+
+| Où | Ce qu'elle mesure |
+|---|---|
+| `embed_quiz_sessions.duree_ms` | l'APPEL AU MODÈLE : entrée de la requête -> réponse lue |
+| GA4, `generation_reussie.duree_ms` | ce que le VISITEUR VIT : le réseau, le flux et le rendu compris |
+
+Les deux répondent à deux questions différentes. Les additionner ou les
+comparer sous le même nom donnerait un chiffre qui a l'air juste, et
+l'écran d'admin dit donc laquelle il affiche, en toutes lettres.
+
+**Le chrono de la base démarre à l'ENTRÉE du POST**, avant tout `await` :
+posé après la lecture du corps ou après la limite par IP, il cacherait
+tout ce qui l'entoure. Le test mesure cette POSITION, commentaires
+retirés.
+
+**Et la durée est écrite MÊME quand l'usage est illisible.** Une réponse
+tronquée ou refusée a coûté exactement le même temps qu'une réponse
+complète, et c'est précisément le genre de réponse qui traîne le plus :
+l'exclure ferait une médiane trop flatteuse. `duree_ms` vit donc dans la
+ligne TOUJOURS construite, `if (usage)` vient après, et le test exige cet
+ordre.
+
+### LA MÉDIANE COUVRE TOUTES LES PORTES, L'ENTONNOIR NON
+
+Les quatre marches de l'entonnoir ne comptent que la page dédiée : les
+vues de l'iframe de la page de vente ne sont mesurées par personne, donc
+diviser toutes les générations par ces seules vues gonflerait le taux
+(c'est le défaut corrigé le 7 septembre sur l'entonnoir des ventes).
+
+La DURÉE, elle, est une mesure TECHNIQUE : elle n'a pas de dénominateur
+venu d'une autre population, donc elle couvre les deux portes. **L'écran
+le DIT**, sinon on compare deux chiffres qui ne parlent pas des mêmes
+gens.
+
+Trois nombres, jamais un seul : la médiane, les générations
+chronométrées, et **les générations sans mesure**. Aucune ligne d'avant
+le 9 septembre ne porte de durée : les compter à zéro annoncerait un
+générateur deux fois plus rapide qu'il n'est. En dessous de
+`MIN_POUR_UNE_MEDIANE = 10`, la médiane vaut `null` et l'écran dit
+pourquoi.
+
+### UNE SEULE PORTE DE SORTIE, ET ELLE PORTE UNE FILE
+
+`lib/analytics/envoi.ts`. Il y avait déjà un envoi
+(`ConversionGa4.tsx`, 4 septembre) qui gardait sa décision pour lui : le
+consentement, le domaine, le chemin, la façon de pousser dans
+`dataLayer`. **Deux portes qui décideraient chacune de leur côté
+finiraient par ne plus dire la même chose**, et ici la divergence
+coûterait une mesure envoyée après un "refuser".
+
+**LA FILE N'EST PAS UN CONFORT.** Le cas qui la rend nécessaire : le
+bandeau s'affiche, le visiteur ne répond pas tout de suite, il joue au
+quiz, PUIS il accepte. Sans file, `quiz_demarre` est perdu et
+`quiz_termine` envoyé, c'est à dire un entonnoir avec plus d'arrivées
+que de départs.
+
+- l'ORDRE est gardé, et le prix est dit : les événements vidés portent
+  l'horodatage du vidage, pas celui du geste ;
+- **un refus ne vide RIEN**, la file meurt avec l'onglet ;
+- au delà de 20 on ARRÊTE d'empiler au lieu de jeter les plus anciens :
+  jeter le premier ferait exactement l'inversion que cette file existe
+  pour empêcher.
+
+### CE QUE MON PROPRE TEST A TROUVÉ DANS LE CODE
+
+`dureeEnMs` faisait `typeof brut === "number" ? brut : Number(brut)`.
+**`Number(null)` vaut ZÉRO, et `Number("")` aussi** : "je n'ai pas
+mesuré" partait donc en `duree_ms: 0`, c'est à dire un faux zéro au
+milieu de sa médiane. C'est exactement le faux zéro que `mesureDeDuree`
+compte à part côté base, et il rentrait par la porte de GA4. Corrigé :
+on n'accepte qu'un nombre, ou une chaîne qui porte vraiment quelque
+chose.
+
+### LES CINQ ÉVÉNEMENTS, ET OÙ ILS PARTENT
+
+| L'événement | D'où |
+|---|---|
+| `quiz_demarre` | le quiz du hero de la landing : **PAS ENCORE BRANCHÉ** |
+| `quiz_termine` | idem |
+| `generation_lancee` | `EmbedPreviewClient`, quand l'appel démarre vraiment |
+| `generation_reussie` | le même écran, à l'AFFICHAGE du quiz |
+| `compte_cree` | `SignupForm` (formulaire) et `CallbackClient` (Google) |
+
+**`generation_lancee` NE PART PAS AU CLIC SUR LA LANDING.** Un clic qui
+navigue et repart sans rien générer gonflerait le dénominateur du seul
+ratio qu'elle lit. Il part du générateur, au démarrage de l'appel.
+
+**LA SOURCE SE LIT SUR L'ADRESSE**, et `"direct"` veut dire "arrivée sans
+paramètres" : ça ne peut se savoir que SUR la page du générateur.
+`parcoursDeLAdresse(window.location.search)` est pure (elle prend la
+chaîne, pas `window`), et `CLE_SOURCE` / `CLE_PROFIL` sont nommées UNE
+fois : le constructeur de lien de la landing (chantier 4) et le lecteur
+doivent écrire le même mot, sinon toutes les générations sortent
+`"direct"` et sans profil, en silence.
+
+**Une source inconnue retombe sur `"direct"`, jamais sur rien** : une
+génération sans source rétrécirait le dénominateur, donc flatterait le
+ratio.
+
+**`compte_cree` NE COMPTE PAS UN REFUS** (adresse déjà prise, mot de
+passe trop court) : le test mesure que l'envoi vient APRÈS le test de la
+réponse. Et côté Google, il ne compte qu'une PREMIÈRE entrée : la route
+d'accueil est la seule à savoir la différence
+(`accueilli: true`), et une reconnexion d'un compte existant n'est pas
+une inscription.
+
+**`avaitQuiz` vient du SERVEUR** sur le chemin Google : le cookie qui le
+porte est retiré dans la même réponse, donc le navigateur ne peut plus
+le lire après coup. La route rend le seul booléen, jamais l'identifiant
+ni le contenu du quiz.
+
+### CE QUI N'EST PAS MESURÉ, ET QUI SE DIT
+
+- **`quiz_demarre` et `quiz_termine` attendent le quiz du hero**, qui
+  arrive avec la landing (chantier 6). Le bloc de qualification actuel
+  n'a AUCUN script, par décision du 2 septembre, et y en ajouter un
+  rejouerait la FAQ cassée du même jour ;
+- **une génération lancée depuis l'IFRAME de la page de vente n'est pas
+  mesurée par GA4** : `chargerAnalytics` refuse les chemins `/embed`
+  (`CHEMINS_DE_NOS_CLIENTES`), et c'est délibéré, ces pages sont celles
+  de ses clientes. Le trou se ferme tout seul quand la landing remplace
+  cette page : son HTML ne porte aucune iframe de générateur ;
+- **une inscription entamée sur `quiz.tipote.com` n'est pas comptée**,
+  parce que GA4 n'est chargé que sur les domaines de vente. Ce n'est pas
+  un choix de ce chantier, et surtout ce n'est pas un trou dans son
+  ratio : la génération qui précède n'y est pas comptée non plus, donc
+  le numérateur et le dénominateur parlent de la même population ;
+- **la durée médiane AVANT le chantier 3 n'est pas encore relevée** :
+  aucune génération ne portait de durée avant aujourd'hui. Le chiffre
+  apparaît dans `/admin` dès que la migration est passée et que dix
+  générations ont eu lieu.
+
+🚨 Migration : `supabase/migrations/20260909_generateur_duree.sql`,
+**sur le Supabase de TIQUIZ**.
+
+Test : `tests/logic/mesure-du-parcours.test.mts` (29 cas), vérifié en
+rejouant SEIZE versions fautives (le `Number(brut)` nu, les paramètres
+vides envoyés, une source qui rend `null`, `avait_quiz` omis quand il
+vaut faux, une durée absente lue comme un zéro, `duree_ms` écrit
+seulement quand l'usage est lisible, le chrono après la lecture du
+corps, la file qui jette le plus ancien, la file qui se vide sans relire
+le consentement, le `select("*")` du lecteur, la médiane calculée et
+jamais montrée, un nom d'événement écrit à la main, le chrono après
+l'appel, `compte_cree` avant le test de la réponse, le callback qui
+compte chaque reconnexion, la route qui ne dit plus si un quiz
+attendait) : les seize rougissent.
+
+**ET MON PREMIER GARDE CRIAIT SUR TROIS FICHIERS INNOCENTS.** Il
+balayait `dataLayer` hors de `lib/analytics/` : il rougissait sur
+`GoogleAnalytics.tsx` (qui EST le shim documenté de Google) et sur
+`TrackingPixels.tsx` plus `lib/clientPixels.ts`, c'est à dire **les
+pixels DES CRÉATRICES sur leurs pages publiques**. Ceux là ne sont pas
+notre mesure, et les faire passer par notre porte les gaterait sur nos
+domaines de vente alors qu'ils vivent chez leurs clientes. Le garde vise
+maintenant les CINQ NOMS d'événement : un composant qui écrirait
+`"generation_reussie"` en dur aurait forcément fabriqué son propre
+envoi. Vingtième fois qu'un contrôle ne distingue pas ce qu'il est censé
+distinguer, et un test qui crie pour rien finit désactivé.
+
+## LA VITESSE : ses deux causes étaient déjà réglées, la vraie était ailleurs (Béné, 9 septembre 2026)
+
+Son chantier 2 nomme deux causes : Cloudflare qui ne met pas les
+fragments JavaScript en cache, et le doublon Supabase (`generateMetadata`
+et la page lisent la même ligne à chaque chargement). Cible : **sous
+1 s**, mesuré avec `npm run check:vitesse-quiz`.
+
+### LES DEUX SONT FAITES, ET C'EST VÉRIFIÉ AVANT D'ÊTRE DIT
+
+| Sa cause | L'état, mesuré le 9 septembre |
+|---|---|
+| Cloudflare | **20 fragments sur 20** servis par le cache, `HIT / HIT / HIT` sur trois chargements de suite |
+| le doublon Supabase | `cache()` de React est bien posé sur `fetchQuizMeta` ET sur `resolveCustomDomainOwner`, avec sa raison écrite à côté |
+
+### ET LA MESURE A REFRAMÉ LE PROBLÈME
+
+Le HTML du quiz met 2153 ms selon le script, et **le script compte la
+résolution DNS, la poignée de main TLS et le téléchargement complet**,
+pas le temps de réponse. Au chronomètre du serveur (`time_starttransfer`),
+c'est 422 à 1027 ms. Un chiffre lu dans un outil n'est pas une mesure
+tant qu'on n'a pas vérifié ce qu'il COMPTE.
+
+**Et le serveur n'est pas le goulot.** Mesure alternée, huit fois, contre
+une route qui ne fait QUE lire un fichier sur disque (`/favicon.ico`) :
+
+| | médiane |
+|---|---|
+| la route qui ne fait rien | **632 ms** |
+| la page du quiz, avec ses 7 requêtes Supabase | **485 ms** |
+
+La page de quiz est donc au PLANCHER du trajet réseau depuis la machine
+de mesure. Le doublon qu'elle nommait était déjà retiré, et ce qui reste
+côté serveur se perd dans le bruit.
+
+### CE QUI COÛTE VRAIMENT, ET IL NE POURRA JAMAIS ÊTRE MIS EN CACHE
+
+```
+1. le HTML          -> puis 2. 1146 Ko de JavaScript
+                    -> puis 3. un appel a /api/quiz/<id>/public
+                    -> ENFIN la premiere question
+```
+
+Trois vagues réseau, l'une après l'autre. La troisième coûte **588 à
+1150 ms** (trois relevés) et c'est là que la trouvaille est :
+
+```
+cache-control:  public, max-age=0, s-maxage=60, stale-while-revalidate=60
+cf-cache-status: DYNAMIC   (trois appels de suite)
+set-cookie:      ui_locale=fr; ...
+set-cookie:      tq_ref=jocelyne; ...   (sur un lien affilie)
+```
+
+**Cloudflare refuse de la mettre en cache, et il a RAISON.** Cette
+réponse porte un `set-cookie` : un cache partagé servirait le `tq_ref`
+d'UNE affiliée, et la langue d'UN visiteur, à tous les suivants. C'est
+exactement la règle `pages` que Béné a supprimée le 7 septembre.
+
+Donc ses en-têtes `s-maxage` sont **une promesse que rien ne peut
+tenir**, et surtout une invitation pour le prochain qui posera une Cache
+Rule dessus. La raison est maintenant écrite dans la route, en toutes
+lettres. **Ne poser AUCUNE Cache Rule sur `/api/quiz/*/public`.**
+
+Conséquence : cet aller-retour coûte une visite complète à l'origine, à
+CHAQUE visiteur, pour toujours. La seule façon de le retirer du chemin
+critique est de livrer la réponse AVEC le HTML.
+
+### LA CHARGE PART AVEC LE HTML, ET UNE SEULE FONCTION LA CALCULE
+
+`lib/quiz/chargerQuizPublic.ts` porte ce qu'un visiteur reçoit ; la page
+publique ET la route d'API l'appellent. Recalculer la charge côté page
+donnerait deux réponses pour le même quiz selon la porte empruntée, et
+c'est le défaut sorti six fois dans ce dépôt (les réseaux de partage, le
+score, l'alignement du sous-titre, la disposition des réponses). Ici
+l'écart coûterait le branding, le footer, les pixels ou la typographie
+d'une créatrice.
+
+**Les en-têtes HTTP restent à la ROUTE.** La fonction rend `prive` (un
+jeton d'embed, ou un brouillon montré à son auteur) ; la route seule
+répond en HTTP, et la page ne doit surtout pas rendre sa réponse
+cacheable.
+
+**Et la recomposition vit dans un module PUR** (`lib/quiz/chargeViewer.ts`).
+`chargerQuizPublic` importe `supabaseAdmin`, qui LÈVE au chargement quand
+les variables d'environnement manquent : aucun test ne peut l'appeler. Une
+règle enfermée dedans ne serait donc pas testée, et c'est exactement là
+que les bugs s'installent (règle du 1er août). Le client l'appelle aussi,
+sur la réponse de l'API : deux recompositions écrites séparément
+finiraient par ne plus rendre le même objet selon la porte.
+
+### CE N'EST PAS `previewData`, ET C'EST LE POINT LE PLUS CHER
+
+Le viewer avait DÉJÀ une prop qui saute l'appel d'API. La réutiliser était
+la solution en une ligne, et elle aurait coûté ceci, **en silence, sur
+tous les quiz en ligne** :
+
+| `previewData` éteint | Ce que ça retire |
+|---|---|
+| `trackedRef` (2 endroits) | les vues, les démarrages, les complétions : **les chiffres de la créatrice** |
+| `sessionKey` (3 endroits) | la reprise après un rafraîchissement |
+| `draftKey` (3 endroits) | le brouillon de réponse (drame Adeline, 1er septembre) |
+| `isPreviewMode` | **la capture du lead** |
+| le bandeau `resumed` | la ligne qui dit que les réponses sont gardées |
+
+Neuf comportements. C'est la faute du 1er août dans sa forme la plus
+littérale : une logique écrite pour un cas, appliquée telle quelle à un
+autre. `donneesServeur` est donc une prop SÉPARÉE qui ne fait QU'UNE
+chose : amorcer l'état et éviter le fetch. Tout le reste du composant
+continue de ne regarder que `previewData`, et le test le vérifie ligne
+par ligne.
+
+### LA PAGE NE SERT JAMAIS UN BROUILLON
+
+Elle appelle avec un jeton d'embed NUL et un utilisateur NUL, et
+n'injecte que quand `meta` existe (donc un quiz ACTIF dont le locataire
+est le bon) et qu'il n'y a pas de `?embed=` dans l'URL. Les aperçus, eux,
+continuent de passer par le client, qui envoie ses cookies : la route est
+la seule à relire une session, parce qu'elle seule a les cookies sous la
+main.
+
+`jetonEmbed` et `utilisateurConnecte` sont des **paramètres
+obligatoires**, jamais devinés : ils décident si un BROUILLON est servi.
+Les déduire de l'environnement marcherait dans la route et mentirait sur
+la page.
+
+### UN ALLER-RETOUR DE PLUS RETIRÉ AU PASSAGE
+
+La page redemandait `created_at, updated_at` à `quizzes` alors qu'elle
+venait de lire la même ligne. Les deux colonnes vivent maintenant dans
+`QUIZ_META_FIELDS` : elles sont aussi vieilles que la table, donc elles ne
+risquent pas de faire refuser le select entier (drame `survey_thanks_*`,
+2 juin).
+
+**Ce qui RESTE en double, et je le dis** : `resolveEffectivePixels` relit
+`profiles` alors que la charge a déjà résolu les mêmes pixels. Les deux
+calculs donnent la même chose aujourd'hui ; les fondre demanderait de
+choisir laquelle des deux formes gagne, et je ne l'ai pas fait.
+
+### CE QUI N'EST PAS MESURÉ, ET QUI SE DIT
+
+- **Le chiffre d'APRÈS n'existe pas encore.** Rien n'est déployé, et il
+  n'y a aucune base dans cet environnement : le gain se lira sur son
+  serveur, avec la même commande.
+- **La cible « sous 1 s » n'est PAS atteinte par ce chantier.** Il retire
+  une vague sur trois. Les 1146 Ko de JavaScript restent devant la
+  première question, et c'est le prochain levier.
+- **Le HTML ne rend toujours aucune balise du quiz** : tout est monté par
+  React. Le script dit donc maintenant DEUX choses différentes, et il ne
+  faut pas les confondre : « contenu du quiz rendu par le serveur »
+  (toujours NON) et « la charge du quiz voyage avec le HTML » (NON avant
+  le déploiement, oui après).
+- **La page a été SERVIE** (dev, base injoignable exprès) : elle répond
+  **200**, le journal ne porte AUCUNE erreur de rendu, la prop traverse
+  la frontière serveur/client, et le client retombe proprement sur son
+  écran d'erreur quand la charge est absente. Un vert local ne prouve
+  rien sur un rendu (leçon `pdf-parse`, 7 août) : celui-là est mesuré.
+
+### LA DÉTECTION DU SCRIPT CHERCHE UNE CLÉ, PAS UN NOM DE PROP
+
+Mesuré sur un rendu où la charge est volontairement nulle : le HTML porte
+quand même `donneesServeur\":null`. Chercher ce nom dirait donc « oui »
+sur une page qui n'a rien reçu. `address_form` sort à ZÉRO dans ce même
+rendu, et le module le pose toujours sur le quiz : sa présence ne peut
+venir que de la charge. **Un contrôle se règle sur son cas NÉGATIF.**
+
+### TROIS GARDES ONT ROUGI SUR UN DÉMÉNAGEMENT
+
+`asset-proxy`, `intro-start` et `other-results` lisaient
+`app/api/quiz/[quizId]/public/route.ts` pour y vérifier des faits qui
+n'ont rien à voir avec ce fichier : que la colonne du jour vit dans le
+select qui peut échouer, que la réponse passe par la réécriture des
+images. Le code a déménagé, les trois sont sortis ROUGES sur une
+correction juste.
+
+**Un chemin sur disque n'est pas un fait**, et c'est la leçon déjà payée
+par `pageDuSite.mts`. `tests/logic/aide/chargePublique.mts` CHERCHE le
+module qui porte le chargement, et refuse les deux cas qui comptent :
+introuvable (il a vraiment disparu), ou trouvé DEUX fois (deux
+implémentations, donc deux réponses possibles pour le même quiz). Vérifié
+en rejouant les deux : il rougit, et il les nomme.
+
+### ET LA FAUSSE ALERTE QUE LA MESURE A ÉVITÉE
+
+En relevant les en-têtes, `quiz.tipote.com` posait `ui_locale=en` sur la
+page publique d'une créatrice française. J'allais l'annoncer comme un
+défaut. Mesuré avec un `Accept-Language` réel : `fr-FR` donne bien `fr`,
+`de-DE` donne `en`. La négociation est juste, et mon relevé n'en portait
+aucun parce que `curl` n'en envoie pas. **Une observation faite avec un
+outil qui ne ressemble pas à un navigateur n'est pas une observation sur
+les navigateurs.**
+
+### DEUX ERREURS NON LUES, TROUVÉES EN CHEMIN, ET LA SECONDE OUVRAIT LE PORTIER
+
+**1. `fetchQuizMeta` jetait son erreur.** Cette seule requête porte
+maintenant le titre, l'image de partage, les dates du JSON-LD ET la
+décision d'injecter la charge dans le HTML : un select refusé (une
+colonne ajoutée sans sa migration) ferait donc disparaître tout ça d'un
+coup, et `maybeSingle` rend `null` sans un mot. C'est exactement ce qui
+a vidé le JSON-LD en silence pendant des mois (mesure du 7 septembre).
+Elle est lue, et elle CRIE.
+
+**2. `resolveCustomDomainOwner` rendait `null` dans DEUX cas
+différents** : "on n'est pas sur un domaine perso" et "la requête a
+échoué". Dans le second, le contrôle de locataire était donc SAUTÉ, donc
+le domaine d'une créatrice pouvait servir le quiz de quelqu'un d'autre.
+C'est mot pour mot ce que le commentaire de `CUSTOM_HOST_HEADER`
+interdit, en nommant l'hameçonnage, et l'erreur n'était même pas lue.
+"Je n'ai pas pu regarder" et "il n'y a rien" sont deux réponses
+différentes (règle du 23 août).
+
+**Trois états maintenant, et le sens du repli est asymétrique** : un 404
+de trop sur un domaine perso pendant une panne de base coûte une page ;
+servir sans vérifier coûte le quiz d'une créatrice affiché chez une
+autre. Un registre illisible ne sert donc RIEN.
+
+**Et le garde qui a trouvé ça figeait un nom de variable.** Il exigeait
+`datesRes.error`, donc il a rougi le jour où cette requête a disparu,
+c'est à dire sur une correction juste. Il vise maintenant le FAIT
+(aucun `const { data } = await supabaseAdmin` dans cette page), et il en
+couvre plus qu'avant : les deux erreurs ci dessus lui échappaient.
+
+Test : `tests/logic/charge-avec-le-html.test.mts` (19 cas), vérifié en
+rejouant SEPT versions fautives (la prop qui gate le suivi comme
+`previewData`, la prop qui entre dans `isPreviewMode`, le client qui
+recompose à la main, la page qui passe une session donc sert un
+brouillon, la route qui reconstruit la charge, le strip de `user_id` /
+`project_id` retiré, le registre de domaines illisible relu comme
+"pas de domaine perso") : les sept rougissent.
