@@ -20,6 +20,18 @@
 // plus dire la même chose : c'est le défaut sorti six fois dans ce
 // dépôt. D'où la même fonction, et pas une condition recopiée.
 //
+// -- LA PORTE A DÉMÉNAGÉ (9 septembre 2026) ---------------------------
+//
+// Les cinq événements du parcours (`lib/analytics/parcours.ts`) partent
+// d'un GESTE, pas d'un montage de composant : un clic dans le quiz du
+// hero, la fin d'une génération, une inscription. Ce composant portait
+// alors la seule décision d'envoi du dépôt, et la recopier à côté aurait
+// fabriqué la deuxième porte que son propre commentaire interdit.
+//
+// Elle vit donc dans `lib/analytics/envoi.ts`, et ce composant n'est
+// plus qu'un appelant. Il garde ce qui lui est propre : l'événement
+// arrive en prop, et il ne part qu'une fois par montage.
+//
 // -- UNE SEULE FOIS PAR MONTAGE ---------------------------------------
 //
 // React remonte un composant à la moindre raison (Strict Mode en
@@ -29,24 +41,9 @@
 // n'a pas d'identifiant pour se dédupliquer.
 
 import { useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
 
-import {
-  chargerAnalytics,
-  consentementMesure,
-  CLE_CONSENTEMENT,
-} from "@/lib/analytics/google";
+import { envoyerEvenement } from "@/lib/analytics/envoi";
 import type { EvenementGa4 } from "@/lib/analytics/conversions";
-
-function lireConsentement(): boolean {
-  try {
-    return consentementMesure(window.localStorage.getItem(CLE_CONSENTEMENT));
-  } catch {
-    // Navigation privée, stockage bloqué : on ne mesure pas. Le doute ne
-    // profite jamais à la mesure.
-    return false;
-  }
-}
 
 export default function ConversionGa4({
   estHoteDeVente,
@@ -60,55 +57,23 @@ export default function ConversionGa4({
    */
   evenement: EvenementGa4 | null;
 }) {
-  const pathname = usePathname() ?? "/";
-  const envoye = useRef(false);
+  const remis = useRef(false);
 
   useEffect(() => {
-    if (!evenement || envoye.current) return;
-
-    const pousser = () => {
-      if (envoye.current) return false;
-      if (!chargerAnalytics({ estHoteDeVente, pathname, consentementDonne: lireConsentement() })) {
-        return false;
-      }
-      // ON POUSSE UN OBJET `arguments`, EXACTEMENT COMME LE SHIM DE
-      // GOOGLE (`function gtag(){dataLayer.push(arguments);}`, cf.
-      // `GoogleAnalytics.tsx`). Un tableau ordinaire lui RESSEMBLE et
-      // n'est documenté nulle part : je n'ai aucun moyen de vérifier
-      // d'ici ce que gtag.js en ferait, et une conversion ignorée en
-      // silence est exactement le genre de panne qu'on ne découvre qu'en
-      // regardant un rapport vide des semaines plus tard.
-      //
-      // On ne suppose pas non plus que `gtag` existe déjà : la balise se
-      // charge en `afterInteractive`, donc elle peut arriver après nous.
-      // `dataLayer` est une FILE : ce qu'on y pousse avant le chargement
-      // est traité au chargement, rien n'est perdu.
-      const w = window as unknown as { dataLayer?: unknown[] };
-      w.dataLayer = w.dataLayer || [];
-      const file = w.dataLayer;
-      const gtag: (...args: unknown[]) => void = function () {
-        // eslint-disable-next-line prefer-rest-params
-        file.push(arguments);
-      };
-      gtag("event", evenement.name, evenement.params);
-      envoye.current = true;
-      return true;
-    };
-
-    if (pousser()) return;
-
-    // PAS ENCORE D'ACCORD : on attend le clic du bandeau, comme la
-    // balise elle même. Quelqu'un qui accepte après avoir atterri ici
-    // doit être compté ; l'écouteur se retire dès qu'il a sa réponse, il
-    // ne tourne pas en fond.
-    const surClic = () => {
-      setTimeout(() => {
-        if (pousser()) document.removeEventListener("click", surClic, true);
-      }, 0);
-    };
-    document.addEventListener("click", surClic, true);
-    return () => document.removeEventListener("click", surClic, true);
-  }, [estHoteDeVente, pathname, evenement]);
+    if (!evenement || remis.current) return;
+    // ON MARQUE À LA REMISE, PAS À L'ENVOI.
+    //
+    // `envoyerEvenement` garde l'événement quand l'accord n'est pas
+    // encore donné et le vide au clic du bandeau. Attendre l'envoi pour
+    // marquer ferait remettre le même événement à chaque re-rendu, donc
+    // le compterait plusieurs fois le jour où il part enfin.
+    remis.current = true;
+    // `estHoteDeVente` est IMPOSÉ : la page serveur le connaît déjà (la
+    // liste vit dans `lib/sales/salesHosts.ts`), et le laisser deviner
+    // au navigateur mettrait deux réponses possibles sur la même
+    // question.
+    envoyerEvenement(evenement, { estHoteDeVente });
+  }, [estHoteDeVente, evenement]);
 
   return null;
 }

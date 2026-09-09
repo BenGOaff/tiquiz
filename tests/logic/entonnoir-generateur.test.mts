@@ -58,6 +58,7 @@ function gen(over: Partial<LigneGeneration> = {}): LigneGeneration {
     modele: MODELE,
     jetonsEntree: 2000,
     jetonsSortie: 4000,
+    dureeMs: null,
     ...over,
   };
 }

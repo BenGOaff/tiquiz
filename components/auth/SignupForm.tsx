@@ -13,6 +13,8 @@ import LegalFooterLinks from "@/components/legal/LegalFooterLinks";
 import type { Parrainage } from "@/lib/affiliate/accueilParrain";
 import { Gift, Sparkles } from "lucide-react";
 import { urlConnexionReprise } from "@/lib/embed/reprise";
+import { envoyerEvenement } from "@/lib/analytics/envoi";
+import { evenementCompteCree } from "@/lib/analytics/parcours";
 import BoutonGoogle from "@/components/auth/BoutonGoogle";
 import { CANONICAL_APP_URL } from "@/lib/authLinks";
 
@@ -104,6 +106,22 @@ export default function SignupForm({
         return;
       }
 
+      // ── `compte_cree` : LE NUMÉRATEUR DU SEUL RATIO QU'ELLE LIT ────
+      //
+      // Il part quand le compte EXISTE, pas au clic sur le bouton : une
+      // inscription refusée (adresse déjà prise, mot de passe trop
+      // court) n'est pas une inscription, et la compter gonflerait le
+      // numérateur de `generation_lancee -> compte_cree`.
+      //
+      // `avait_quiz` distingue les deux entrées, et c'est tout l'intérêt
+      // du ratio : quelqu'un qui vient sauver le quiz qu'il vient
+      // d'écrire n'a rien à voir avec quelqu'un qui arrive par la page
+      // de connexion. Le paramètre part TOUJOURS, même à `false`.
+      //
+      // Le chemin Google, lui, part de `/auth/callback` : c'est là que
+      // le compte existe vraiment, et la route d'accueil dit si c'était
+      // une première entrée.
+      envoyerEvenement(evenementCompteCree({ avaitQuiz: Boolean(jetonQuiz) }));
       setSuccess(t("successCheckEmail"));
     } catch {
       setError(t("errSignup"));

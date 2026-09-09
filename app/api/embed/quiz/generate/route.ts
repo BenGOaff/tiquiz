@@ -63,6 +63,16 @@ export async function OPTIONS(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  // LE CHRONO DÉMARRE ICI, PAS AVANT L'APPEL AU MODÈLE.
+  //
+  // Ce qu'on veut savoir, c'est combien de temps la requête a duré du
+  // point de vue du serveur : la lecture du corps, la construction du
+  // prompt et la réservation de la session en font partie. Le poser
+  // juste avant `fetchAnthropic` mesurerait le modèle et cacherait
+  // tout ce qui l'entoure, donc dirait le générateur plus rapide qu'il
+  // n'est. Ce qui n'y est PAS : les insertions en base qui suivent, et
+  // le rendu chez le visiteur (voir la migration du 9 septembre).
+  const debut = Date.now();
   const origin = req.headers.get("origin");
   const headers = corsHeaders(origin);
 
@@ -277,7 +287,7 @@ export async function POST(req: NextRequest) {
         // pas encore passée, PostgREST refuse l'update, on crie dans le
         // journal, et le visiteur repart avec son quiz. On perd la
         // mesure, jamais le livrable.
-        await enregistrerUsage(sessionToken, json);
+        await enregistrerUsage(sessionToken, json, Date.now() - debut);
 
         const parts = Array.isArray(json?.content) ? json.content : [];
         const raw = (parts as Record<string, unknown>[])
@@ -473,35 +483,50 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * Range `usage` de la réponse Anthropic sur la session.
+ * Range ce que cette génération a coûté, et combien de temps elle a pris.
  *
- * ON STOCKE DES FAITS (le modèle, les jetons), JAMAIS UN MONTANT. Le
- * prix vit dans `lib/generateur/tarifsIa.ts` avec sa date de relevé :
- * figer un montant dans la base rendrait l'historique impossible à
- * corriger le jour où la table de tarifs est fausse.
+ * ON STOCKE DES FAITS (le modèle, les jetons, la durée), JAMAIS UN
+ * MONTANT. Le prix vit dans `lib/generateur/tarifsIa.ts` avec sa date de
+ * relevé : figer un montant dans la base rendrait l'historique
+ * impossible à corriger le jour où la table de tarifs est fausse.
+ *
+ * UNE SEULE ÉCRITURE, ET UN SEUL ENDROIT QUI DÉCIDE. Une fonction
+ * soeur pour la durée voudrait dire deux updates sur la même ligne, à
+ * deux moments, donc deux occasions de perdre l'un des deux et un
+ * doute permanent sur lequel des deux a réussi.
+ *
+ * LA DURÉE EST ÉCRITE MÊME SANS `usage`. Une réponse dont on ne sait
+ * pas lire les compteurs a quand même pris du temps, et c'est
+ * précisément le genre de réponse (tronquée, refusée) qui traîne le
+ * plus : les exclure ferait une médiane trop flatteuse.
  *
  * Ne lève jamais, ne rend rien : le seul appelant est un flux SSE en
  * train de livrer un quiz.
  */
-async function enregistrerUsage(sessionToken: string, json: Record<string, unknown>): Promise<void> {
-  const usage = (json?.usage ?? null) as Record<string, unknown> | null;
-  if (!usage) return;
+async function enregistrerUsage(
+  sessionToken: string,
+  json: Record<string, unknown>,
+  dureeMs: number,
+): Promise<void> {
   const entier = (v: unknown): number | null => {
     const n = Number(v);
     return Number.isFinite(n) && n >= 0 ? Math.round(n) : null;
   };
+  const usage = (json?.usage ?? null) as Record<string, unknown> | null;
   const modele = typeof json?.model === "string" ? json.model.slice(0, 120) : null;
+  const ligne: Record<string, unknown> = { duree_ms: entier(dureeMs) };
+  if (usage) {
+    ligne.modele_ia = modele;
+    ligne.jetons_entree = entier(usage.input_tokens);
+    ligne.jetons_sortie = entier(usage.output_tokens);
+  }
   const { error } = await supabaseAdmin
     .from("embed_quiz_sessions")
-    .update({
-      modele_ia: modele,
-      jetons_entree: entier(usage.input_tokens),
-      jetons_sortie: entier(usage.output_tokens),
-    })
+    .update(ligne)
     .eq("id", sessionToken);
   if (error) {
     console.error(
-      `[embed/generate] usage non enregistre (migration 20260908_generateur_usage passee ?) : ${error.message}`,
+      `[embed/generate] usage non enregistre (migrations 20260908_generateur_usage et 20260909_generateur_duree passees ?) : ${error.message}`,
     );
   }
 }

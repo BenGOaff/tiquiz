@@ -30,6 +30,7 @@ import {
   repartitionParSource,
   revenuMensuelParPlan,
   MIN_POUR_UN_TAUX_AVAL,
+  MIN_POUR_UNE_MEDIANE,
   type LigneGeneration,
 } from "@/lib/generateur/entonnoirGenerateur";
 import { SOURCE_GENERATEUR } from "@/lib/site/generateurQuiz";
@@ -86,6 +87,19 @@ type Donnees = {
 
 function nombre(n: number): string {
   return new Intl.NumberFormat("fr-FR").format(n);
+}
+
+/**
+ * Une duree, en secondes, avec une decimale.
+ *
+ * Des millisecondes brutes ("23418 ms") ne se lisent pas d'un coup
+ * d'oeil, et c'est le chiffre qu'elle doit comparer avant et apres le
+ * chantier du flux. Une seule decimale : la seconde entiere perdrait la
+ * difference entre 20,4 et 20,9 s, deux decimales feraient croire a une
+ * precision que la mesure n'a pas.
+ */
+function secondes(ms: number): string {
+  return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(ms / 1000)} s`;
 }
 
 function euros(cents: number): string {
@@ -553,6 +567,57 @@ function GenerateurBloc({
               générateur tourne aussi dans une iframe sur la page de vente, et personne ne compte
               les vues de cette iframe : ce qu&apos;elle amène est en dessous, en nombres, sans
               pourcentage.
+            </p>
+          </div>
+
+          <div className={`${CARTE} p-5`}>
+            <h3 className="text-sm font-semibold">Combien de temps ça prend</h3>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-lg border border-border/60 p-4">
+                <p className="text-xs text-muted-foreground">Durée médiane</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {e.duree.medianeMs === null ? "-" : secondes(e.duree.medianeMs)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {e.duree.medianeMs === null
+                    ? `pas encore ${MIN_POUR_UNE_MEDIANE} générations chronométrées`
+                    : "la moitié des générations sont plus rapides"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border/60 p-4">
+                <p className="text-xs text-muted-foreground">Générations chronométrées</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {nombre(e.duree.mesurees)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">toutes les portes comprises</p>
+              </div>
+              <div className="rounded-lg border border-border/60 p-4">
+                <p className="text-xs text-muted-foreground">Sans mesure</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {nombre(e.duree.sansMesure)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {e.duree.sansMesure === 0
+                    ? "toutes les générations sont chronométrées"
+                    : "comptées à part, jamais lues comme instantanées"}
+                </p>
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Une <strong>médiane</strong>, pas une moyenne : une seule génération partie en délai
+              d&apos;attente déplace une moyenne de plusieurs secondes et une médiane de rien. Ce
+              chiffre couvre <strong>toutes les portes</strong>, la page dédiée comme l&apos;iframe
+              de la page de vente : c&apos;est une mesure technique, elle n&apos;a pas de
+              dénominateur venu d&apos;une autre population.
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Ce qui est chronométré, c&apos;est l&apos;<strong>appel au modèle</strong> : de
+              l&apos;entrée de la requête à la réponse lue. Ce que le visiteur vit devant son écran
+              est plus long (les écritures en base et le rendu s&apos;ajoutent), et ce temps là vit
+              dans Google Analytics, sous <code>generation_reussie</code>.
+              {e.duree.sansMesure > 0
+                ? " Aucune génération d'avant le 9 septembre 2026 ne porte de durée : elles sont dans la colonne du milieu, jamais comptées à zéro."
+                : null}
             </p>
           </div>
 

@@ -12982,3 +12982,188 @@ sourcées à surveiller : sans ça, il passerait au vert sur zéro question.
 
 Test : les trois cas ajoutés à `tests/logic/blog.test.mts`, vérifié en
 rejouant les quatre marques dans la FAQ (il rougit et la nomme).
+
+## LA MESURE DU PARCOURS : cinq événements, et pas un de plus (Béné, 9 septembre 2026)
+
+"Cinq chantiers, dans cet ordre. **Le point 1 avant tout : sans mesure,
+on ne saura pas si le reste a servi.**" Et : "Le seul ratio à afficher :
+`generation_lancee -> compte_cree`. Ajoute aussi la durée médiane de
+`generation_reussie` : c'est le chiffre qui justifiera le chantier 3."
+
+### CE QU'IL Y AVAIT, ET CE QU'IL N'Y AVAIT PAS
+
+Mesuré avant d'écrire une ligne. GA4 était bien posé
+(`components/analytics/GoogleAnalytics.tsx`, sur les domaines de vente,
+après consentement), et les deux événements de VENTE existaient depuis
+le 4 septembre. **Du parcours lui même, rien** : aucun des cinq
+événements n'existait, et surtout **la durée médiane n'avait aucun
+endroit pour vivre.**
+
+**GA4 NE CALCULE PAS DE MÉDIANE dans ses rapports standard**, seulement
+des moyennes : une médiane demande une exploration ou BigQuery. C'est ce
+qui a décidé la colonne `duree_ms`, et ce n'est pas un détail de
+plomberie : une seule génération partie en délai d'attente déplace une
+moyenne de plusieurs secondes et une médiane de rien.
+
+### LES DEUX DURÉES NE SE CONFONDENT JAMAIS
+
+C'est le piège de ce chantier, et il est écrit dans la migration elle
+même :
+
+| Où | Ce qu'elle mesure |
+|---|---|
+| `embed_quiz_sessions.duree_ms` | l'APPEL AU MODÈLE : entrée de la requête -> réponse lue |
+| GA4, `generation_reussie.duree_ms` | ce que le VISITEUR VIT : le réseau, le flux et le rendu compris |
+
+Les deux répondent à deux questions différentes. Les additionner ou les
+comparer sous le même nom donnerait un chiffre qui a l'air juste, et
+l'écran d'admin dit donc laquelle il affiche, en toutes lettres.
+
+**Le chrono de la base démarre à l'ENTRÉE du POST**, avant tout `await` :
+posé après la lecture du corps ou après la limite par IP, il cacherait
+tout ce qui l'entoure. Le test mesure cette POSITION, commentaires
+retirés.
+
+**Et la durée est écrite MÊME quand l'usage est illisible.** Une réponse
+tronquée ou refusée a coûté exactement le même temps qu'une réponse
+complète, et c'est précisément le genre de réponse qui traîne le plus :
+l'exclure ferait une médiane trop flatteuse. `duree_ms` vit donc dans la
+ligne TOUJOURS construite, `if (usage)` vient après, et le test exige cet
+ordre.
+
+### LA MÉDIANE COUVRE TOUTES LES PORTES, L'ENTONNOIR NON
+
+Les quatre marches de l'entonnoir ne comptent que la page dédiée : les
+vues de l'iframe de la page de vente ne sont mesurées par personne, donc
+diviser toutes les générations par ces seules vues gonflerait le taux
+(c'est le défaut corrigé le 7 septembre sur l'entonnoir des ventes).
+
+La DURÉE, elle, est une mesure TECHNIQUE : elle n'a pas de dénominateur
+venu d'une autre population, donc elle couvre les deux portes. **L'écran
+le DIT**, sinon on compare deux chiffres qui ne parlent pas des mêmes
+gens.
+
+Trois nombres, jamais un seul : la médiane, les générations
+chronométrées, et **les générations sans mesure**. Aucune ligne d'avant
+le 9 septembre ne porte de durée : les compter à zéro annoncerait un
+générateur deux fois plus rapide qu'il n'est. En dessous de
+`MIN_POUR_UNE_MEDIANE = 10`, la médiane vaut `null` et l'écran dit
+pourquoi.
+
+### UNE SEULE PORTE DE SORTIE, ET ELLE PORTE UNE FILE
+
+`lib/analytics/envoi.ts`. Il y avait déjà un envoi
+(`ConversionGa4.tsx`, 4 septembre) qui gardait sa décision pour lui : le
+consentement, le domaine, le chemin, la façon de pousser dans
+`dataLayer`. **Deux portes qui décideraient chacune de leur côté
+finiraient par ne plus dire la même chose**, et ici la divergence
+coûterait une mesure envoyée après un "refuser".
+
+**LA FILE N'EST PAS UN CONFORT.** Le cas qui la rend nécessaire : le
+bandeau s'affiche, le visiteur ne répond pas tout de suite, il joue au
+quiz, PUIS il accepte. Sans file, `quiz_demarre` est perdu et
+`quiz_termine` envoyé, c'est à dire un entonnoir avec plus d'arrivées
+que de départs.
+
+- l'ORDRE est gardé, et le prix est dit : les événements vidés portent
+  l'horodatage du vidage, pas celui du geste ;
+- **un refus ne vide RIEN**, la file meurt avec l'onglet ;
+- au delà de 20 on ARRÊTE d'empiler au lieu de jeter les plus anciens :
+  jeter le premier ferait exactement l'inversion que cette file existe
+  pour empêcher.
+
+### CE QUE MON PROPRE TEST A TROUVÉ DANS LE CODE
+
+`dureeEnMs` faisait `typeof brut === "number" ? brut : Number(brut)`.
+**`Number(null)` vaut ZÉRO, et `Number("")` aussi** : "je n'ai pas
+mesuré" partait donc en `duree_ms: 0`, c'est à dire un faux zéro au
+milieu de sa médiane. C'est exactement le faux zéro que `mesureDeDuree`
+compte à part côté base, et il rentrait par la porte de GA4. Corrigé :
+on n'accepte qu'un nombre, ou une chaîne qui porte vraiment quelque
+chose.
+
+### LES CINQ ÉVÉNEMENTS, ET OÙ ILS PARTENT
+
+| L'événement | D'où |
+|---|---|
+| `quiz_demarre` | le quiz du hero de la landing : **PAS ENCORE BRANCHÉ** |
+| `quiz_termine` | idem |
+| `generation_lancee` | `EmbedPreviewClient`, quand l'appel démarre vraiment |
+| `generation_reussie` | le même écran, à l'AFFICHAGE du quiz |
+| `compte_cree` | `SignupForm` (formulaire) et `CallbackClient` (Google) |
+
+**`generation_lancee` NE PART PAS AU CLIC SUR LA LANDING.** Un clic qui
+navigue et repart sans rien générer gonflerait le dénominateur du seul
+ratio qu'elle lit. Il part du générateur, au démarrage de l'appel.
+
+**LA SOURCE SE LIT SUR L'ADRESSE**, et `"direct"` veut dire "arrivée sans
+paramètres" : ça ne peut se savoir que SUR la page du générateur.
+`parcoursDeLAdresse(window.location.search)` est pure (elle prend la
+chaîne, pas `window`), et `CLE_SOURCE` / `CLE_PROFIL` sont nommées UNE
+fois : le constructeur de lien de la landing (chantier 4) et le lecteur
+doivent écrire le même mot, sinon toutes les générations sortent
+`"direct"` et sans profil, en silence.
+
+**Une source inconnue retombe sur `"direct"`, jamais sur rien** : une
+génération sans source rétrécirait le dénominateur, donc flatterait le
+ratio.
+
+**`compte_cree` NE COMPTE PAS UN REFUS** (adresse déjà prise, mot de
+passe trop court) : le test mesure que l'envoi vient APRÈS le test de la
+réponse. Et côté Google, il ne compte qu'une PREMIÈRE entrée : la route
+d'accueil est la seule à savoir la différence
+(`accueilli: true`), et une reconnexion d'un compte existant n'est pas
+une inscription.
+
+**`avaitQuiz` vient du SERVEUR** sur le chemin Google : le cookie qui le
+porte est retiré dans la même réponse, donc le navigateur ne peut plus
+le lire après coup. La route rend le seul booléen, jamais l'identifiant
+ni le contenu du quiz.
+
+### CE QUI N'EST PAS MESURÉ, ET QUI SE DIT
+
+- **`quiz_demarre` et `quiz_termine` attendent le quiz du hero**, qui
+  arrive avec la landing (chantier 6). Le bloc de qualification actuel
+  n'a AUCUN script, par décision du 2 septembre, et y en ajouter un
+  rejouerait la FAQ cassée du même jour ;
+- **une génération lancée depuis l'IFRAME de la page de vente n'est pas
+  mesurée par GA4** : `chargerAnalytics` refuse les chemins `/embed`
+  (`CHEMINS_DE_NOS_CLIENTES`), et c'est délibéré, ces pages sont celles
+  de ses clientes. Le trou se ferme tout seul quand la landing remplace
+  cette page : son HTML ne porte aucune iframe de générateur ;
+- **une inscription entamée sur `quiz.tipote.com` n'est pas comptée**,
+  parce que GA4 n'est chargé que sur les domaines de vente. Ce n'est pas
+  un choix de ce chantier, et surtout ce n'est pas un trou dans son
+  ratio : la génération qui précède n'y est pas comptée non plus, donc
+  le numérateur et le dénominateur parlent de la même population ;
+- **la durée médiane AVANT le chantier 3 n'est pas encore relevée** :
+  aucune génération ne portait de durée avant aujourd'hui. Le chiffre
+  apparaît dans `/admin` dès que la migration est passée et que dix
+  générations ont eu lieu.
+
+🚨 Migration : `supabase/migrations/20260909_generateur_duree.sql`,
+**sur le Supabase de TIQUIZ**.
+
+Test : `tests/logic/mesure-du-parcours.test.mts` (29 cas), vérifié en
+rejouant SEIZE versions fautives (le `Number(brut)` nu, les paramètres
+vides envoyés, une source qui rend `null`, `avait_quiz` omis quand il
+vaut faux, une durée absente lue comme un zéro, `duree_ms` écrit
+seulement quand l'usage est lisible, le chrono après la lecture du
+corps, la file qui jette le plus ancien, la file qui se vide sans relire
+le consentement, le `select("*")` du lecteur, la médiane calculée et
+jamais montrée, un nom d'événement écrit à la main, le chrono après
+l'appel, `compte_cree` avant le test de la réponse, le callback qui
+compte chaque reconnexion, la route qui ne dit plus si un quiz
+attendait) : les seize rougissent.
+
+**ET MON PREMIER GARDE CRIAIT SUR TROIS FICHIERS INNOCENTS.** Il
+balayait `dataLayer` hors de `lib/analytics/` : il rougissait sur
+`GoogleAnalytics.tsx` (qui EST le shim documenté de Google) et sur
+`TrackingPixels.tsx` plus `lib/clientPixels.ts`, c'est à dire **les
+pixels DES CRÉATRICES sur leurs pages publiques**. Ceux là ne sont pas
+notre mesure, et les faire passer par notre porte les gaterait sur nos
+domaines de vente alors qu'ils vivent chez leurs clientes. Le garde vise
+maintenant les CINQ NOMS d'événement : un composant qui écrirait
+`"generation_reussie"` en dur aurait forcément fabriqué son propre
+envoi. Vingtième fois qu'un contrôle ne distingue pas ce qu'il est censé
+distinguer, et un test qui crie pour rien finit désactivé.
