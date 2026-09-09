@@ -115,23 +115,44 @@ question Systeme.io **ne bloque rien**, sa réponse part dans
 
 ### c) Chantiers 4, 5, 6
 
-Dans son ordre. **Le 4 est bloqué sur elle** : il faut lui redemander le
-code de `lib/generateur/prefillUrl.ts`, qui n'est plus dans le fil. Le 6
-est bloqué de la même façon : `tiquiz-landing.html` n'est pas dans le
-dépôt.
+🚨 **LE CHANTIER 4 EST FAIT (9 septembre, `55d6c63f`)**, et cette section
+disait qu'il était bloqué. `lib/generateur/prefillUrl.ts` existe, il est
+pur, il écrit le lien ET le relit, et le détail vit dans `AGENTS.md`
+(section « Le contrat d'URL du générateur »). À retenir sans l'ouvrir :
+la PORTE (`page-generateur`) ne se lit plus dans l'URL, sinon les six
+cartes de la landing auraient fait disparaître leurs générations de son
+entonnoir.
+
+**Le chantier 6 n'est plus bloqué non plus** : `tiquiz-landing.html` est
+dans le dépôt, sur `main`, à `copywriting-claude/tiquiz-landing.html`
+(1056 lignes, aucun tiret cadratin). Le point à ne pas rater en le
+portant : **ses douze liens ne portent NI `source` NI `profil`**, donc
+toutes les générations de la landing sortiraient en `"direct"`. Les six
+cartes sont `source: "modeles"`, les six boutons de résultat du quiz du
+hero `source: "hero"` avec leur profil, et `lienGenerateur` l'exige par
+le compilateur.
+
+Reste le chantier 5 (le brouillon 7 jours), qui n'a jamais été bloqué.
 
 ---
 
 ## 5. Ce qu'il faut lui demander, et qui bloque du travail
 
-1. **le code de `lib/generateur/prefillUrl.ts`** (chantier 4) ;
-2. **le fichier `tiquiz-landing.html`** (chantier 6) ;
-3. **3 générations par heure et par IP, ou 2 par 24 h ?** Son brief dit
-   la première, le code fait la seconde depuis le 8 septembre
-   (`lib/embed/limites.ts`). Les deux ne peuvent pas coexister ;
-4. **le champ « À qui s'adresse-t-il ? »** : obligatoire et annoncé, ou
-   facultatif et déduit par l'IA ?
-5. **la validation de la landing** sur `/apercu-landing-8f2c9d41`.
+🚨 **QUATRE DES CINQ ONT ÉTÉ TRANCHÉES LE 9 SEPTEMBRE**, et cette liste
+les posait encore. Corrigé en place plutôt qu'empilé.
+
+| Ce qui était demandé | Sa réponse |
+|---|---|
+| le code de `prefillUrl.ts` | donné, corrigé, en place |
+| `tiquiz-landing.html` | sur `main`, dans `copywriting-claude/` |
+| 3 par heure, ou 2 par 24 h ? | **2 par 24 h**, le code ne bouge pas |
+| « À qui s'adresse-t-il ? » | **obligatoire et annoncé** |
+
+Reste ouvert, et ça bloque encore :
+
+1. **la validation de la landing** sur `/apercu-landing-8f2c9d41` ;
+2. **la migration `20260909_generateur_duree.sql`**, sans laquelle la
+   médiane d'avant le chantier 3 ne pourra jamais être relevée.
 
 ---
 

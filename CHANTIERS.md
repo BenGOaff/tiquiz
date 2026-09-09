@@ -112,34 +112,34 @@ en trois morceaux :
 3. `EmbedPreviewClient` attend l'événement `result` et n'affiche rien
    avant.
 
-### 4. Le contrat d'URL du générateur : IL MANQUE SON CODE
+### 4. Le contrat d'URL du générateur ✅ FAIT le 9 septembre
 
-`/generateur-de-quiz` ne lit AUCUN paramètre aujourd'hui, donc les six
-boutons « Générer ce quiz » de sa landing et le bouton du quiz du hero
-ne mèneraient nulle part.
+🚨 **Ce bloc disait « IL MANQUE SON CODE » et attendait deux décisions.
+Les trois sont réglées**, corrigé en place plutôt qu'empilé.
 
-🚨 **Elle avait fourni le code complet de `lib/generateur/prefillUrl.ts`,
-les six lignes à poser dans le formulaire et l'enveloppe `Suspense`. Ce
-code n'est plus dans le fil : IL FAUT LE LUI REDEMANDER**, plutôt que
-d'en réinventer un qui ne correspondrait pas à ce qu'elle a en tête.
+Elle a redonné le code, et elle a tranché : **2 générations par 24 h et
+par IP** (son brief en demandait 3 par heure, ce qui est plus généreux
+que ce qui tourne : 72 par jour contre 2, donc `lib/embed/limites.ts` ne
+bouge pas), et le champ « À qui s'adresse-t-il ? » devient **obligatoire
+ET annoncé** (« Un clic rejeté sur "Générer" fait partir des gens »). Le
+sujet portait le même défaut : les deux portent leur étoile.
 
-**Et il faudra réconcilier les noms de clés** : `CLE_SOURCE` et
-`CLE_PROFIL` (`lib/analytics/parcours.ts`) sont MON choix, pas le sien.
-Le constructeur de lien et le lecteur doivent écrire le même mot, sinon
-toutes les générations sortent en `"direct"` et sans profil, **en
-silence**.
+Le détail vit dans `AGENTS.md`, section « Le contrat d'URL du
+générateur ». Les trois choses à savoir sans l'ouvrir :
 
-**Deux garde-fous en même temps, et ce sont ses mots :**
-
-- **3 générations par heure et par IP.** "La page est publique, un robot
-  peut lancer autant d'appels IA qu'il veut et la facture est pour
-  nous." 🚨 **Aujourd'hui c'est 2 par 24 h** (`lib/embed/limites.ts`,
-  posé le 8 septembre) : les deux règles ne peuvent pas coexister, il
-  faut trancher AVEC elle et n'en garder qu'UNE, à un seul endroit ;
-- **le champ « À qui s'adresse-t-il ? » est obligatoire sans que rien ne
-  le dise.** Soit on le marque obligatoire, soit on le rend facultatif
-  et l'IA déduit l'audience du sujet. "Un clic rejeté sur « Générer »
-  fait partir des gens."
+1. **la PORTE ne se lit plus dans l'URL.** `source` désignait deux
+   choses qui lisaient la même clé : la porte (`page-generateur`, la
+   seule que compte l'entonnoir) et le parcours (`hero` / `modeles` /
+   `direct`, qui part dans GA4). `?source=modeles` sur ses six cartes
+   aurait fait disparaître leurs générations de son entonnoir, sans
+   rien casser ;
+2. **sa table d'objectifs visait des libellés français.** Le formulaire
+   stocke une clé et traduit le libellé : viser le libellé aurait donné
+   un champ vide sur `/en/`. Ses quatre slugs marchent, et les huit clés
+   réelles aussi ;
+3. **le lancement automatique ne part que d'une navigation depuis chez
+   nous.** Un robot qui rend le JavaScript ferait partir des générations
+   payantes. Sans referrer, le formulaire est rempli et il reste un clic.
 
 ### 5. Le quiz gardé 7 jours
 
