@@ -10,6 +10,12 @@ type Strings = Record<string, string>;
 const FR: Strings = {
   formTitle: "Crée ton premier quiz en 30 secondes ✨",
   formLead: "Dis-nous l'essentiel, l'IA fait le reste. Tu pourras tout modifier ensuite.",
+  // LES DEUX CHAMPS OBLIGATOIRES SONT ANNONCÉS AVANT LE CLIC.
+  // Béné, 9 septembre : « Le champ "À qui s'adresse-t-il ?" est
+  // obligatoire sans que rien ne le dise. […] Un clic rejeté sur
+  // "Générer" fait partir des gens. » Le sujet portait le même
+  // défaut : les deux sont validés au clic depuis le début.
+  reqLegend: "Les champs marqués d'une étoile sont obligatoires.",
   lblTopic: "Sujet de ton quiz",
   phTopic: "Ex : la productivité pour entrepreneurs débordés",
   lblAudience: "À qui s'adresse-t-il ?",
@@ -106,6 +112,7 @@ const FR: Strings = {
 const EN: Strings = {
   formTitle: "Build your first quiz in 30 seconds ✨",
   formLead: "Tell us the basics, the AI does the rest. You can edit everything afterwards.",
+  reqLegend: "Fields marked with a star are required.",
   lblTopic: "Quiz topic",
   phTopic: "E.g. productivity for overwhelmed entrepreneurs",
   lblAudience: "Who is it for?",

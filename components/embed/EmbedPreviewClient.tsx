@@ -16,6 +16,7 @@ import type {
   EmbedInputs, EmbedLocale, EmbedPhase,
 } from "./embed-types";
 import { cadreDuGenerateur, type ContexteGenerateur } from "@/lib/embed/remise";
+import { lancementAutomatiqueAutorise, lirePrefill } from "@/lib/generateur/prefillUrl";
 import { envoyerEvenement } from "@/lib/analytics/envoi";
 import {
   evenementGenerationLancee,
@@ -92,6 +93,66 @@ export default function EmbedPreviewClient({
   // Un `useRef` et pas un `useState` : le remettre à zéro ne doit pas
   // re-rendre l'écran pendant qu'un flux arrive.
   const departGeneration = useRef<number | null>(null);
+
+  // ── LE BRIEF QUI VIENT DU LIEN ────────────────────────────────────
+  //
+  // Béné, 9 septembre : « /generateur-de-quiz ne lit aucun paramètre
+  // aujourd'hui. Sans ça, les six boutons "Générer ce quiz" de la
+  // landing et ceux du quiz du hero ne mènent nulle part. »
+  //
+  // La DÉCISION vit dans `lib/generateur/prefillUrl.ts`, pur et testé.
+  // Ici il ne reste que la lecture du navigateur, et elle vit dans un
+  // effet : lire `window.location.search` PENDANT le rendu donnerait un
+  // rendu serveur et un rendu client différents.
+  //
+  // Un seul lecteur d'adresse dans ce composant : `handleSubmit` lit
+  // déjà `window.location.search` pour la mesure, et les deux passent
+  // par un module pur. Un `useSearchParams` en plus aurait exigé une
+  // enveloppe `Suspense` et fabriqué un deuxième lecteur.
+  const prefillApplique = useRef(false);
+  const lancementFait = useRef(false);
+  const [lancerLeBrief, setLancerLeBrief] = useState(false);
+  useEffect(() => {
+    if (prefillApplique.current) return;
+    // Il revient sur un quiz déjà écrit : on ne réécrit pas son brief
+    // par dessus, et on ne relance surtout pas une génération payante.
+    if (initialSessionToken) return;
+    prefillApplique.current = true;
+    const brief = lirePrefill(window.location.search);
+    if (!brief.sujet && !brief.audience && !brief.objectif) return;
+    setInputs((v) => ({
+      ...v,
+      ...(brief.sujet ? { topic: brief.sujet } : null),
+      ...(brief.audience ? { audience: brief.audience } : null),
+      ...(brief.objectif ? { objective: brief.objectif } : null),
+    }));
+    if (!brief.pret) return;
+    if (!lancementAutomatiqueAutorise({
+      referrer: typeof document === "undefined" ? "" : document.referrer,
+      hote: window.location.host,
+    })) return;
+    setLancerLeBrief(true);
+  }, [initialSessionToken]);
+
+  // LE LANCEMENT ATTEND QUE LE FORMULAIRE PORTE VRAIMENT LE BRIEF.
+  //
+  // `setInputs` ne se voit pas dans le rendu qui l'appelle : lancer dans
+  // le même effet enverrait le formulaire VIDE, donc le lancement
+  // automatique se ferait refuser par sa propre validation. On dépend
+  // donc de l'état, jamais d'un délai (un délai est une course, et elle
+  // se perd sur une machine lente).
+  //
+  // Et on re-teste les DEUX seuils de `handleSubmit` : un lancement
+  // automatique ne peut pas se faire rejeter, jamais. C'est sa règle,
+  // « un clic rejeté sur Générer fait partir des gens », appliquée au
+  // clic qu'on donne à sa place.
+  useEffect(() => {
+    if (!lancerLeBrief || lancementFait.current) return;
+    if (inputs.topic.trim().length < 3 || inputs.audience.trim().length < 2) return;
+    lancementFait.current = true;
+    void handleSubmit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lancerLeBrief, inputs.topic, inputs.audience]);
   // Persist the latest token in localStorage so the dashboard claim
   // hook (components/dashboard/EmbedAutoClaim.tsx) can pick it up
   // after signup.

@@ -13396,3 +13396,147 @@ recompose à la main, la page qui passe une session donc sert un
 brouillon, la route qui reconstruit la charge, le strip de `user_id` /
 `project_id` retiré, le registre de domaines illisible relu comme
 "pas de domaine perso") : les sept rougissent.
+
+## Le contrat d'URL du générateur, et la porte qu'il allait casser (9 septembre 2026)
+
+Béné, chantier 4 : « /generateur-de-quiz ne lit aucun paramètre
+aujourd'hui. Sans ça, les six boutons "Générer ce quiz" de la landing et
+ceux du quiz du hero ne mènent nulle part. »
+
+### CE QUI ÉTAIT VRAI AVANT D'ÉCRIRE UNE LIGNE
+
+| | mesuré le 9 septembre |
+|---|---|
+| `lib/generateur/prefillUrl.ts` | **n'existait pas** |
+| le type de la page | `{ session?, source?, lang? }` : tout autre paramètre jeté par le type |
+| `EmbedPreviewClient` | **aucun lecteur d'adresse au montage** |
+
+Un lien qui portait un brief atterrissait donc sur un formulaire VIDE, et
+le visiteur ne voyait pas que quelque chose s'était perdu.
+
+### 🚨 CE QUE LE CHANTIER ALLAIT CASSER, ET C'EST LA VRAIE TROUVAILLE
+
+**Le mot `source` désignait DEUX choses différentes, et elles lisaient la
+même clé d'URL.**
+
+| | ce que ça veut dire | qui le lit |
+|---|---|---|
+| la PORTE | quelle surface héberge le générateur (`page-generateur`, `tiquiz-fr`) | écrite dans `embed_quiz_sessions.source`, et `construireEntonnoirGenerateur` ne compte QUE `page-generateur` |
+| le PARCOURS | d'où vient le visiteur (`hero`, `modeles`, `direct`) | `parcoursDeLAdresse`, envoyé à GA4 |
+
+Or la page faisait `source={sp?.source ?? SOURCE_GENERATEUR}`. Ses six
+cartes portent `?source=modeles` : **chacune aurait écrit `modeles` dans
+la colonne de la porte, donc toutes ces générations auraient disparu de
+son entonnoir** pendant que les vues de la page, elles, restaient. Le
+seul ratio qu'elle lit se serait effondré, et rien n'aurait cassé.
+
+**Règle : la PORTE est décidée par la ROUTE, jamais par un paramètre.**
+`source={SOURCE_GENERATEUR}`, point. Le parcours se lit sur l'adresse
+côté client et ne touche que GA4. Mesuré au passage : **aucun lien du
+dépôt** ne posait `?source=` sur cette page, donc l'ancienne surcharge ne
+protégeait rien et laissait n'importe qui écrire dans cette colonne.
+
+C'est la règle du 7 septembre ("le numérateur et le dénominateur parlent
+de la même page"), qui allait se faire casser par l'autre bout.
+
+### SA TABLE D'OBJECTIFS VISAIT LES LIBELLÉS, PAS LES CLÉS
+
+Elle l'avait écrit elle même : « Vérifie les deux dernières entrées
+contre les libellés réels de ta liste déroulante "Ton objectif" et
+corrige si besoin. » La correction est plus profonde que ses deux
+dernières entrées : sa table pointait vers des LIBELLÉS français
+("Qualifier mes prospects"), alors que le formulaire stocke une CLÉ
+(`objective: "qualifier"`) dont le libellé est traduit par l'écran.
+**Viser le libellé aurait donné un champ vide sur `/en/`**, sans que rien
+ne le dise.
+
+| son slug | notre clé | pourquoi |
+|---|---|---|
+| `qualifier` | `qualifier` | même mot |
+| `orienter` | `orienter` | « aider mon audience à choisir » |
+| `faire-decouvrir` | `decouvrir` | « me faire découvrir » |
+| `capturer` | `qualifier` | « capturer des leads QUALIFIÉS », ses mots |
+
+Les **huit clés réelles** passent aussi, telles quelles : un lien écrit
+demain avec `objectif=diagnostiquer` marche sans revenir dans ce fichier.
+
+### UN LANCEMENT AUTOMATIQUE NE PEUT PAS SE FAIRE REJETER
+
+C'est sa phrase, « un clic rejeté sur Générer fait partir des gens »,
+appliquée au clic qu'on donne à sa place.
+
+- `pret` est **plus exigeant** que la validation du formulaire (3 et 3,
+  contre 3 et 2) : un lancement automatique ne peut donc jamais tomber
+  sur son propre message d'erreur. Le test lit les DEUX seuils dans la
+  source et refuse qu'ils se croisent ;
+- le lancement **dépend de l'état du formulaire**, jamais d'un délai.
+  `setInputs` ne se voit pas dans le rendu qui l'écrit : lancer dans le
+  même effet enverrait le formulaire VIDE. Un `setTimeout` de 80 ms
+  marcherait la plupart du temps, et c'est exactement ce qui définit une
+  course.
+
+### ET IL NE PART QUE D'UNE NAVIGATION DEPUIS CHEZ NOUS
+
+Béné : « La page est publique, un robot peut lancer autant d'appels IA
+qu'il veut et la facture est pour nous. »
+
+Un robot qui rend le JavaScript et qui suit les six liens de la landing
+ferait partir six générations PAYANTES (le générateur public écrit avec
+le modèle de l'éditeur payant depuis le 8 septembre), et il gonflerait
+`generation_lancee` avec des gens qui n'existent pas.
+`lancementAutomatiqueAutorise` exige donc un referrer de chez nous.
+
+**Le sens de l'erreur est sûr** : un referrer absent ou étranger (un lien
+partagé sur un réseau, une adresse collée à la main) coûte UN CLIC sur un
+formulaire déjà rempli et déjà valide. Jamais un écran vide, jamais un
+refus.
+
+**Ce que je n'ai PAS mesuré, et qui se dit :** le comportement réel d'un
+robot qui rend le JavaScript sur cette page. C'est un garde contre un
+risque identifié, pas contre un fait observé.
+
+### MESURÉ DANS UN NAVIGATEUR, LES DEUX CHEMINS
+
+| | referrer | le formulaire | appels à `/api/embed/quiz/generate` |
+|---|---|---|---|
+| arrivée directe | vide | rempli, objectif « Faire découvrir un sujet » | **0** |
+| vrai clic depuis une de nos pages | notre page | rempli | **1** |
+
+Un vert local ne prouve rien sur un rendu (leçon `pdf-parse`, 7 août) :
+celui là est mesuré, avec les deux étoiles et la légende à l'écran.
+
+### LES DEUX CHAMPS OBLIGATOIRES SE DISENT AVANT LE CLIC
+
+« Le champ "À qui s'adresse-t-il ?" est obligatoire sans que rien ne le
+dise. » Mesuré : le SUJET portait le même défaut, et les deux étaient
+validés au clic depuis le début. Les deux portent maintenant leur étoile,
+`aria-required`, et une légende sous le titre du formulaire, en français
+comme en anglais.
+
+### CE QUI RESTE À FAIRE, ET C'EST LE CHANTIER 6
+
+**Ses douze liens ne portent NI `source` NI `profil`** (mesuré dans
+`copywriting-claude/tiquiz-landing.html` : `sujet`, `audience`,
+`objectif`, et rien d'autre). Portés tels quels, toutes les générations
+de la landing sortiraient en `source: "direct"` et le profil du quiz du
+hero serait perdu, c'est à dire que le chantier 1 ne mesurerait plus rien
+de ce que le chantier 6 apporte. `lienGenerateur` exige donc `source` par
+le compilateur : les six cartes sont `"modeles"`, les six boutons de
+résultat `"hero"` avec leur profil.
+
+**Endroits à respecter :** `lib/generateur/prefillUrl.ts` (pur, il écrit
+le lien ET le relit : deux orthographes rendraient le formulaire vide et
+la mesure aveugle, en silence), `components/embed/EmbedPreviewClient.tsx`
+(la lecture du navigateur, aucune décision),
+`components/embed/EmbedForm.tsx`,
+`app/(site-langues)/generateur-de-quiz/page.tsx`.
+Test : `tests/logic/prefill-generateur.test.mts`, vérifié en rejouant SIX
+versions fautives (la porte relue dans l'URL, `pret` plus permissif que
+le formulaire, le lancement autorisé pour tout le monde, sa table qui
+vise les libellés, les champs qui ne disent plus qu'ils sont
+obligatoires, un `setTimeout` à la place de l'état) : les six rougissent.
+
+**Le débit reste à 2 par 24 h et par IP** (`lib/embed/limites.ts`).
+Tranché par Béné le 9 septembre : son brief demandait 3 par heure, ce qui
+est **plus généreux** que ce qui tourne (72 par jour contre 2), et elle a
+gardé le chiffre en place.
