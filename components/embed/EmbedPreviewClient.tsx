@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
+import { Button } from "@/components/ui/button";
 import EmbedForm from "./EmbedForm";
 import { getEmbedStrings } from "./embed-i18n";
 import type {
@@ -17,6 +18,11 @@ import type {
 } from "./embed-types";
 import { cadreDuGenerateur, type ContexteGenerateur } from "@/lib/embed/remise";
 import { lancementAutomatiqueAutorise, lirePrefill } from "@/lib/generateur/prefillUrl";
+import {
+  chargerBrouillon, enregistrerBrouillon, ligneDeSortieDejaVue,
+  marquerLigneDeSortieVue, oublierBrouillon, sortieParLeHaut,
+  type Brouillon,
+} from "@/lib/generateur/brouillon";
 import { envoyerEvenement } from "@/lib/analytics/envoi";
 import {
   evenementGenerationLancee,
@@ -94,6 +100,38 @@ export default function EmbedPreviewClient({
   // re-rendre l'écran pendant qu'un flux arrive.
   const departGeneration = useRef<number | null>(null);
 
+  // ── LE QUIZ GARDÉ 7 JOURS ─────────────────────────────────────────
+  //
+  // Béné : « Aujourd'hui, quelqu'un qui génère un quiz et ferme
+  // l'onglet est perdu pour toujours. »
+  //
+  // Le quiz, lui, n'était pas perdu : il est en base, et le jeton était
+  // même déjà écrit dans `localStorage`. Ce qui manquait, c'est que
+  // PERSONNE ne le relisait ici.
+  const [brouillon, setBrouillon] = useState<Brouillon | null>(null);
+  const [jetonRepris, setJetonRepris] = useState("");
+  const [ligneDeSortie, setLigneDeSortie] = useState(false);
+  useEffect(() => {
+    if (initialSessionToken) return;
+    setBrouillon(chargerBrouillon());
+  }, [initialSessionToken]);
+
+  // LA LIGNE DE SORTIE : une ligne, JAMAIS une fenêtre modale, et une
+  // seule fois par session. Elle n'existe que s'il y a vraiment quelque
+  // chose à garder : l'afficher sans brouillon serait une promesse
+  // vide.
+  useEffect(() => {
+    if (!brouillon || phase !== "form") return;
+    if (ligneDeSortieDejaVue()) return;
+    const surSortie = (e: MouseEvent) => {
+      if (!sortieParLeHaut({ clientY: e.clientY, relatedTarget: e.relatedTarget })) return;
+      marquerLigneDeSortieVue();
+      setLigneDeSortie(true);
+    };
+    document.addEventListener("mouseout", surSortie);
+    return () => document.removeEventListener("mouseout", surSortie);
+  }, [brouillon, phase]);
+
   // ── LE BRIEF QUI VIENT DU LIEN ────────────────────────────────────
   //
   // Béné, 9 septembre : « /generateur-de-quiz ne lit aucun paramètre
@@ -127,6 +165,12 @@ export default function EmbedPreviewClient({
       ...(brief.objectif ? { objective: brief.objectif } : null),
     }));
     if (!brief.pret) return;
+    // UN BROUILLON COUPE LE LANCEMENT AUTOMATIQUE. Écrire un deuxième
+    // quiz (donc payer) pendant qu'un bandeau annonce que le premier
+    // attend, c'est retirer à quelqu'un une décision qu'il a sous les
+    // yeux. Le formulaire reste rempli : il lui reste un clic, de
+    // chaque côté.
+    if (chargerBrouillon()) return;
     if (!lancementAutomatiqueAutorise({
       referrer: typeof document === "undefined" ? "" : document.referrer,
       hote: window.location.host,
@@ -185,12 +229,16 @@ export default function EmbedPreviewClient({
   void checkoutUrl;
 
   // ── Hydrate from existing session ───────────────────────────────
+  // LE JETON REPRIS PASSE PAR LE MÊME CHEMIN QUE CELUI DE L'URL : deux
+  // hydratations écrites séparément finiraient par ne plus rendre le
+  // même écran selon la porte empruntée.
+  const jetonAHydrater = initialSessionToken || jetonRepris;
   useEffect(() => {
     let cancelled = false;
-    if (!initialSessionToken) return;
+    if (!jetonAHydrater) return;
     (async () => {
       try {
-        const res = await fetch(`/api/embed/quiz/${encodeURIComponent(initialSessionToken)}`);
+        const res = await fetch(`/api/embed/quiz/${encodeURIComponent(jetonAHydrater)}`);
         const json = await res.json();
         if (cancelled) return;
         if (json?.ok && json?.quiz_id) {
@@ -212,7 +260,24 @@ export default function EmbedPreviewClient({
       }
     })();
     return () => { cancelled = true; };
-  }, [initialSessionToken]);
+  }, [jetonAHydrater]);
+
+  function reprendreLeBrouillon() {
+    if (!brouillon) return;
+    setLigneDeSortie(false);
+    setPhase("loading");
+    setJetonRepris(brouillon.jeton);
+  }
+
+  // « En créer un nouveau » OUBLIE le brouillon, il ne le masque pas.
+  // Un bandeau simplement caché reviendrait au rechargement suivant, et
+  // elle aurait à refuser la même proposition tous les jours pendant
+  // une semaine.
+  function repartirDeZero() {
+    oublierBrouillon();
+    setBrouillon(null);
+    setLigneDeSortie(false);
+  }
 
   // ── Submit form → SSE generate ──────────────────────────────────
   // Save / save-for-later helpers from the previous architecture are
@@ -336,6 +401,10 @@ export default function EmbedPreviewClient({
               }),
             );
             departGeneration.current = null;
+            // LE BROUILLON EST ÉCRIT ICI, une fois le quiz VRAIMENT là.
+            // L'écrire au démarrage promettrait un quiz qui n'existe
+            // pas, et le bandeau de retour rouvrirait un jeton mort.
+            if (token) enregistrerBrouillon({ jeton: token, titre: inputs.topic });
             setPhase("edit");
             return;
           } else if (ev === "error") {
@@ -390,6 +459,36 @@ export default function EmbedPreviewClient({
             <Loader2 className="size-5 mr-2 animate-spin" /> {t.genConnect}
           </div>
         )}
+
+        {/* LE BANDEAU DE RETOUR, DISCRET ET EN HAUT. Il ne s'affiche
+            que sur le formulaire : par dessus l'éditeur, il proposerait
+            de rouvrir le quiz qui est déjà à l'écran. */}
+        {phase === "form" && brouillon && (
+          <div className="mb-6 rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <div className="flex-1 min-w-[12rem]">
+              <p className="text-sm font-semibold">{t.brouillonTitre}</p>
+              {brouillon.titre ? (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {t.brouillonQuel.replace("{titre}", brouillon.titre)}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button type="button" size="sm" onClick={reprendreLeBrouillon}>
+                {t.brouillonReprendre}
+              </Button>
+              <Button type="button" size="sm" variant="ghost" onClick={repartirDeZero}>
+                {t.brouillonNouveau}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* « JAMAIS une fenêtre modale » : une ligne, sous le bandeau,
+            qui ne prend le geste de personne. */}
+        {phase === "form" && brouillon && ligneDeSortie ? (
+          <p className="-mt-3 mb-6 text-xs text-muted-foreground">{t.brouillonSortie}</p>
+        ) : null}
 
         {phase === "form" && (
           <div className="flex-1 flex items-center justify-center py-4">

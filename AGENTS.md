@@ -13540,3 +13540,114 @@ obligatoires, un `setTimeout` à la place de l'état) : les six rougissent.
 Tranché par Béné le 9 septembre : son brief demandait 3 par heure, ce qui
 est **plus généreux** que ce qui tourne (72 par jour contre 2), et elle a
 gardé le chiffre en place.
+
+## Le quiz gardé 7 jours, et il n'était perdu qu'à un cheveu près (9 septembre 2026)
+
+Béné, chantier 5 : « Aujourd'hui, quelqu'un qui génère un quiz et ferme
+l'onglet est perdu pour toujours. »
+
+**Mesuré : le quiz ne l'était pas.** `EmbedPreviewClient` ÉCRIT déjà le
+jeton de session dans `localStorage` (clé `tiquiz_embed_session`), la
+ligne est en base, et aucun cron ne purge `embed_quiz_sessions`. Mais
+**personne ne relisait ce jeton sur le générateur** : seul
+`EmbedAutoClaim`, sur le tableau de bord, s'en servait après une
+inscription. Il ne manquait que la porte de retour.
+
+### ON GARDE L'ADRESSE DU QUIZ, PAS LE QUIZ
+
+Le brouillon porte le JETON, pas le contenu. Recopier le quiz dans le
+navigateur donnerait deux versions de la même chose : celle du serveur,
+que l'éditeur modifie à chaque frappe, et une photo prise au moment de
+la génération. **La photo gagnerait à la réouverture et effacerait tout
+ce qui a été corrigé depuis**, sans que rien ne le dise.
+
+### CINQ DÉCISIONS, ET AUCUNE N'EST DÉCORATIVE
+
+1. **Une horloge qui recule ne jette PAS le travail de quelqu'un.** Un
+   changement d'heure ou une machine remise à l'heure met l'horodatage
+   dans le futur ; le périmer perdrait un brouillon vivant, et personne
+   ne saurait pourquoi. Perdre le travail de quelqu'un coûte plus cher
+   que de garder un brouillon un jour de trop.
+2. **Le brouillon est écrit quand le quiz EXISTE**, sur l'événement
+   `result`, jamais au démarrage de la génération : le bandeau de retour
+   rouvrirait sinon un jeton mort.
+3. **« En créer un nouveau » OUBLIE, il ne masque pas.** Un bandeau
+   simplement caché reviendrait au rechargement suivant, et elle aurait
+   à refuser la même proposition tous les jours pendant une semaine.
+4. **Un brouillon COUPE le lancement automatique du chantier 4.** Écrire
+   un deuxième quiz, donc payer, pendant qu'un bandeau annonce que le
+   premier attend, c'est retirer une décision à quelqu'un qui l'a sous
+   les yeux. Le formulaire reste rempli : il reste un clic, de chaque
+   côté.
+5. **Une inscription emporte le brouillon avec le jeton**
+   (`EmbedAutoClaim`). Le quiz est dans son compte : le laisser ferait
+   réapparaître « Ton quiz t'attend. » pendant une semaine, pour un quiz
+   qu'elle a déjà.
+
+### « JAMAIS UNE FENÊTRE MODALE »
+
+C'est en majuscules dans son brief. La sortie est une LIGNE, sous le
+bandeau, qui ne prend le geste de personne. Elle ne part que par le
+HAUT (`sortieParLeHaut`) : le bas c'est la barre des tâches, le côté un
+deuxième écran, et un `relatedTarget` non nul veut dire que la souris
+est simplement passée sur un autre élément.
+
+**Le repli d'un `sessionStorage` qui lève est « déjà vue »**, donc rien
+ne s'affiche. Une ligne qui se réafficherait à chaque mouvement de
+souris serait pire que pas de ligne du tout.
+
+### LES ACCÈS AU NAVIGATEUR SONT TOUS DANS UN TRY/CATCH
+
+« En navigation privée, l'accès peut lever une exception et ça ne doit
+rien casser. » Les décisions vivent dans `lib/generateur/brouillon.ts`,
+pur (il prend la chaîne et l'HEURE, pas `window` ni `Date.now()` : un
+test qui dépend de l'horloge clignote). Le test se sert de Node comme
+fixture : cet environnement n'a ni `localStorage` ni `sessionStorage`,
+donc l'accès y LÈVE vraiment, et c'est la seule façon honnête de
+mesurer ce cas d'ici.
+
+### MESURÉ DANS UN NAVIGATEUR
+
+| | |
+|---|---|
+| brouillon frais | bandeau, titre du quiz, les deux boutons |
+| brouillon de 8 jours | rien du tout |
+| vrai clic depuis chez nous, SANS brouillon | 1 appel IA |
+| vrai clic depuis chez nous, AVEC brouillon | **0 appel** |
+| un vrai mouvement de souris dans la page | ne consomme PAS la ligne de sortie |
+| une sortie par le haut | la ligne s'affiche, une seule fois |
+| « En créer un nouveau » | bandeau parti ET la clé effacée |
+
+**Et ma première sonde a dit « la ligne ne s'affiche pas », à tort :**
+elle dispatchait l'événement avant que l'effet React ne soit attaché.
+Une seconde d'attente en plus, et le comportement était là. **Une sonde
+qui mesure un GESTE doit d'abord attendre que le geste soit
+écoutable** ; sans la refaire, j'allais aller réparer du code qui
+marchait.
+
+### MA FAUTE, ET C'EST LA VINGT ET UNIÈME DE LA SÉRIE
+
+Trois de mes neuf rejeux de versions fautives sont d'abord ressortis
+VERTS. Deux parce que mon `sed` visait une indentation que j'avais
+INVENTÉE (quatre espaces là où le fichier en porte deux) : le motif ne
+trouvait rien, donc rien n'était modifié, donc le test passait sur du
+code intact. **Un rejeu qui ne trouve pas sa cible ne mesure rien**, et
+il ment dans le sens le plus dangereux, celui qui rassure. Chaque
+mutation passe désormais par un `assert s.count(old) == 1`.
+
+Le troisième est pire, parce qu'il visait un vrai bug : mon cas
+« l'horloge recule » posait un brouillon **trois jours** dans le futur,
+c'est à dire DANS la fenêtre de sept jours. Une valeur absolue rendait
+donc exactement le même résultat, et le garde restait vert en ne
+distinguant rien. Le cas couvre maintenant trois jours ET trente.
+
+**Endroits à respecter :** `lib/generateur/brouillon.ts` (pur, les
+décisions), `components/embed/EmbedPreviewClient.tsx` (le bandeau, la
+ligne, l'écriture sur `result`),
+`components/dashboard/EmbedAutoClaim.tsx` (l'oubli après inscription).
+Test : `tests/logic/brouillon-generateur.test.mts`, vérifié en rejouant
+NEUF versions fautives (aucune péremption, le futur périmé, le repli
+non sûr, le bandeau masqué au lieu d'être oublié, le brouillon écrit au
+démarrage, le lancement non coupé, une deuxième hydratation, une
+inscription qui n'oublie pas, une sortie par le bas) : les neuf
+rougissent.

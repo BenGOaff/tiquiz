@@ -132,7 +132,9 @@ cartes sont `source: "modeles"`, les six boutons de résultat du quiz du
 hero `source: "hero"` avec leur profil, et `lienGenerateur` l'exige par
 le compilateur.
 
-Reste le chantier 5 (le brouillon 7 jours), qui n'a jamais été bloqué.
+**Le chantier 5 est fait aussi** (`AGENTS.md`, section « Le quiz gardé
+7 jours »). Il ne reste donc que le 3, bloqué sur la mesure de la
+médiane, et le 6.
 
 ---
 

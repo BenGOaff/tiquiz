@@ -141,27 +141,28 @@ générateur ». Les trois choses à savoir sans l'ouvrir :
    nous.** Un robot qui rend le JavaScript ferait partir des générations
    payantes. Sans referrer, le formulaire est rempli et il reste un clic.
 
-### 5. Le quiz gardé 7 jours
+### 5. Le quiz gardé 7 jours ✅ FAIT le 9 septembre
 
-Aujourd'hui, quelqu'un qui génère un quiz et ferme l'onglet est perdu
-pour toujours.
+« Aujourd'hui, quelqu'un qui génère un quiz et ferme l'onglet est perdu
+pour toujours. »
 
-Après `generation_reussie`, enregistrer dans `localStorage` sous
-`tiquiz.brouillon`, avec un horodatage. Au retour, si le brouillon a
-moins de 7 jours : un bandeau discret « Ton quiz t'attend. » avec
-« Le reprendre » et « En créer un nouveau ». Purger au delà de 7 jours.
+**Le quiz ne l'était pas** : le jeton était déjà écrit dans
+`localStorage`, la ligne est en base, aucun cron ne la purge. Personne
+ne relisait ce jeton sur le générateur, c'est tout.
 
-**Chaque lecture et chaque écriture dans un `try/catch`** : la navigation
-privée peut lever.
+Le bandeau (« Ton quiz t'attend. », « Le reprendre », « En créer un
+nouveau »), la ligne de sortie (une LIGNE, jamais une fenêtre modale,
+une fois par session) et la fenêtre de sept jours sont en place, en
+français comme en anglais. Le détail vit dans `AGENTS.md`, section
+« Le quiz gardé 7 jours ». Les deux choses à savoir sans l'ouvrir :
 
-Quand la souris sort par le HAUT et qu'un brouillon existe : **une seule
-ligne discrète, JAMAIS une fenêtre modale**. « Tu pars ? Ton quiz reste
-enregistré sur cet appareil pendant 7 jours. » Une fois par session.
-
-**À vérifier avant d'écrire :** le jeton de session du générateur vit
-déjà dans un cookie `tq_reprise` et dans l'URL depuis le 2 septembre
-(`lib/embed/reprise.ts`). Ce chantier ajoute un brouillon LOCAL, il ne
-remplace pas ce mécanisme, et les deux ne doivent pas se contredire.
+1. **on garde l'ADRESSE du quiz, pas le quiz.** Recopier le contenu
+   dans le navigateur ferait gagner la photo prise à la génération sur
+   ce que l'éditeur a corrigé depuis ;
+2. **un brouillon COUPE le lancement automatique du chantier 4.** Écrire
+   un deuxième quiz, donc payer, pendant qu'un bandeau annonce que le
+   premier attend, c'est retirer une décision à quelqu'un qui l'a sous
+   les yeux.
 
 ### 6. La landing, d'après SON HTML
 
