@@ -298,7 +298,36 @@
     },
     {
       "type": "html",
-      "html": "<p>Jocelyne is happy to be contacted and to share her story. These are the links she wanted to put forward.</p><ul><li>✍️ <strong>Her blog</strong>: <a href=\"https://jocelyne-bacquet-auteur.fr\">jocelyne-bacquet-auteur.fr</a></li><li>📷 <strong>Instagram</strong>: <a href=\"https://www.instagram.com/j_bacquet.1/\">@j_bacquet.1</a></li></ul>"
+      "html": "<p>Jocelyne is happy to be contacted and to share her story. These are the links she wanted to put forward.</p>"
+    },
+    {
+      "type": "liens",
+      "liens": [
+        {
+          "emoji": "📖",
+          "libelle": "The book",
+          "sous": "On Amazon",
+          "href": "https://www.amazon.fr/dp/B0H1GP7CJP"
+        },
+        {
+          "emoji": "✍️",
+          "libelle": "Her blog",
+          "sous": "jocelyne-bacquet-auteur",
+          "href": "https://www.jocelyne-bacquet-auteur.fr/blog-jocelyne-bacquet"
+        },
+        {
+          "emoji": "📷",
+          "libelle": "Instagram",
+          "sous": "@j_bacquet.1",
+          "href": "https://www.instagram.com/j_bacquet.1/"
+        },
+        {
+          "emoji": "👥",
+          "libelle": "Facebook",
+          "sous": "Her author page",
+          "href": "https://www.facebook.com/profile.php?id=61590539094570"
+        }
+      ]
     },
     {
       "type": "titre",
@@ -330,7 +359,7 @@
       "questions": [
         {
           "question": "Does this work in every sector and every niche?",
-          "reponse": "<p>The quiz method is proven in dozens of sectors: e-commerce (Warby Parker, Glossier), beauty (Sephora), media (BuzzFeed), consumer services (coaching, therapy, wellbeing), digital products (courses, ebooks), B2B services (consulting, freelancing). If your business has a topic where your prospect is trying to understand themselves better, or to choose between several options, a quiz fits. Jocelyne's case is personal development, but the mechanism (qualify, then recommend) works in any niche.</p>"
+          "reponse": "<p>The quiz mechanism (qualify, then recommend) works anywhere your prospect is trying to understand themselves better or to choose between several options: consumer services (coaching, therapy, wellbeing), digital products (courses, ebooks), B2B services (consulting, freelancing), e-commerce, beauty, media. If your business has a topic where your prospect is trying to understand themselves better, or to choose between several options, a quiz fits. Jocelyne's case is personal development, but the mechanism (qualify, then recommend) works in any niche.</p>"
         },
         {
           "question": "How long does it take to build a first quiz?",

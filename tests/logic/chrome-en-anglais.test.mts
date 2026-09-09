@@ -52,6 +52,8 @@ import {
 import { LANGUES_PUBLIQUES, type LanguePublique } from "@/lib/site/langues";
 import { PAGES_PUBLIQUES, languesDePage } from "@/lib/site/pagesPubliques";
 import { ADRESSES_LEGALES_FR } from "@/lib/site/adressesLegales";
+import { motsDuBlog } from "@/lib/blog/motsDuBlog";
+import { sansCommentaires } from "./aide/sansCommentaires.mts";
 
 const RACINE = process.cwd();
 
@@ -243,5 +245,127 @@ describe("le chrome du site suit la langue de la page", () => {
     // controles ci dessus.
     assert.notEqual(CHROME_SITE.fr.navigation, CHROME_SITE.en.navigation);
     assert.notEqual(CHROME_SITE.fr.promesse, CHROME_SITE.en.promesse);
+  });
+});
+
+// ── LE MEUBLE D'UN ARTICLE ANGLAIS ───────────────────────────────────
+//
+// Mesure du 8 septembre, en servant `/en/blog/case-study-jocelyne-adhd-quiz` :
+// le menu et le pied de page etaient traduits, et TROIS composants
+// d'article portaient encore leurs phrases en dur en francais. Un
+// lecteur anglophone arrive de `tipote.blog` lisait donc "Copier le
+// lien", "Ton avis sur cet article", "Ton prenom", et decouvrait le
+// francais au moment exact ou il se trompait d'adresse email.
+//
+// C'est le reproche du client du 7 septembre ("some parts of the quiz
+// UI were in French") sur les pages exactes ou on veut le recuperer.
+//
+// CE TEST VISE LE FAIT, PAS UNE FORMULATION : il exige que ces phrases
+// ne soient plus ECRITES dans les composants, et que chacun DELEGUE a
+// `mots.`. Si Bene reecrit une phrase dans `motsDuBlog`, il reste vert.
+describe("le meuble d'un article ne parle plus francais en dur", () => {
+  const MEUBLE: { fichier: string; phrases: string[] }[] = [
+    {
+      fichier: "components/site/BoutonCopier.tsx",
+      phrases: ["Copier le lien", "Lien copié", "Copie refusée"],
+    },
+    {
+      fichier: "components/site/PartageArticle.tsx",
+      phrases: ["Partager sur"],
+    },
+    {
+      fichier: "components/site/EncartCta.tsx",
+      phrases: [
+        "Un quiz qui tague tes leads",
+        "Créer mon quiz gratuitement",
+        "Voir ce que fait Tiquiz",
+      ],
+    },
+    {
+      fichier: "components/site/Commentaires.tsx",
+      phrases: ['"Ton avis sur cet article"', '"1 commentaire"', "Personne n"],
+    },
+    {
+      fichier: "components/site/FormulaireCommentaire.tsx",
+      phrases: [
+        "Laisser un commentaire",
+        "Ton prénom",
+        "Ton message",
+        "jamais publié",
+        "Envoyer",
+        "Il manque ton prénom",
+      ],
+    },
+    {
+      fichier: "components/site/RailArticle.tsx",
+      phrases: ["Dans cet article", "Sommaire de l'article"],
+    },
+  ];
+
+  for (const { fichier, phrases } of MEUBLE) {
+    test(`${fichier} ne porte plus ses phrases en dur`, () => {
+      // Les commentaires de ces fichiers RACONTENT la panne, donc ils
+      // citent les phrases : sans ce retrait, le test tomberait sur sa
+      // propre explication. Les lignes `//` partent AVANT les blocs
+      // `/* */` (un `//` peut contenir un `/*`).
+      const src = sansCommentaires(
+        readFileSync(join(process.cwd(), fichier), "utf8"),
+      );
+      for (const p of phrases) {
+        assert.ok(!src.includes(p), `${fichier} : "${p}" est encore ecrit dans le composant`);
+      }
+      // ET IL LIT VRAIMENT LA TABLE.
+      //
+      // CE QUE CE CONTROLE PROUVE, ET CE QU'IL NE PROUVE PAS. Il
+      // attrape le composant qui garderait son `import type` sans plus
+      // rien lire ; il ne prouve PAS que chaque phrase atteint l'ecran.
+      // Deux motifs plus stricts ont ete essayes et rejetes en les
+      // rejouant : `{mots.` exige que l'interpolation COMMENCE par
+      // `mots.`, donc il rougissait sur un ternaire parfaitement
+      // correct (`{etat === "copie" ? mots.lienCopie : ...}`), et un
+      // `mots.` unique passait au vert sur un composant dont tous les
+      // affichages avaient ete vides. Ce qui garde vraiment le francais
+      // dehors, c'est la liste de phrases juste au dessus.
+      const lectures = (src.match(/\bmots\.[a-zA-Z]/g) ?? []).length;
+      assert.ok(
+        lectures >= 2,
+        `${fichier} : il importe la table et n'y lit (presque) rien`,
+      );
+    });
+  }
+
+  test("les phrases du meuble existent dans les DEUX langues", () => {
+    for (const langue of ["fr", "en"] as const) {
+      const m = motsDuBlog(langue);
+      const obligatoires = [
+        m.partage.copie.copierLeLien, m.partage.copie.lienCopie, m.partage.copie.copieRatee,
+        m.partage.surReseau("Pinterest"),
+        m.encart.titre, m.encart.corps, m.encart.bouton,
+        m.commentaires.titreVide, m.commentaires.titreUn, m.commentaires.titreN(3),
+        m.commentaires.aucun, m.commentaires.formulaire.laisserUn, m.commentaires.formulaire.prenom,
+        m.commentaires.formulaire.email, m.commentaires.formulaire.emailJamaisPublie, m.commentaires.formulaire.message,
+        m.commentaires.formulaire.envoyer, m.commentaires.formulaire.envoiEnCours, m.commentaires.formulaire.piegeLibelle,
+        m.commentaires.formulaire.noteEmail, m.commentaires.formulaire.publieFort, m.commentaires.formulaire.publieSuite,
+        m.commentaires.formulaire.attenteFort, m.commentaires.formulaire.attenteSuite,
+        m.rail.sommaireAria, m.rail.partagerCourt,
+      ];
+      for (const p of obligatoires) {
+        assert.ok(p && p.trim().length > 0, `${langue} : une phrase du meuble est vide`);
+        assert.ok(!/—|–/.test(p), `${langue} : tiret cadratin dans "${p}"`);
+      }
+    }
+  });
+
+  // LE SECOND BOUTON DE L'ENCART MENE A `/`, LA PAGE DE VENTE CAPTUREE,
+  // EN FRANCAIS. Meme decision que `sommaire.ctaSecondaire` : on
+  // n'affiche rien plutot que de promettre une page qui n'existe pas
+  // dans cette langue.
+  test("l'encart ne propose sa page de vente qu'en francais", () => {
+    assert.ok(motsDuBlog("fr").encart.secondaire, "le francais doit avoir son second bouton");
+    assert.equal(
+      motsDuBlog("en").encart.secondaire,
+      null,
+      "en anglais, le second bouton mene a une page francaise : il ne s'affiche pas",
+    );
   });
 });

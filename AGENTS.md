@@ -12634,21 +12634,24 @@ les suivants capturés et masqués) sont exactement `FREE_LIMITS`, et la
 génération IA est bien ouverte au gratuit (`/api/quiz/generate` n'a
 aucun gate de plan).
 
-### LES LIENS : DEUX SUR QUATRE, ET C'EST DIT
+### LES LIENS : LES QUATRE SONT LA (elle les a donnés le 8 septembre)
 
-Son copier-coller a perdu les `href`. **On n'invente pas une adresse
-vers laquelle on envoie ses lecteurs.**
+🚨 **CETTE SECTION DISAIT "DEUX SUR QUATRE, ET LES DEUX MANQUANTS
+ATTENDENT QU'ELLE LES DONNE". C'EST PÉRIMÉ**, et je le corrige en place
+plutôt que d'empiler : elle a envoyé les quatre, **et une adresse de
+blog PLUS PRÉCISE que celle que j'avais vérifiée**. La sienne fait foi.
 
-| | mesuré |
+| | ce que la mesure donne |
 |---|---|
-| son blog | `https://jocelyne-bacquet-auteur.fr` -> 200, `<title>` "Jocelyne Bacquet auteure" |
-| son Instagram | `https://www.instagram.com/j_bacquet.1/` -> 200, "J. Bacquet - Neurodév" |
-| **le livre sur Amazon** | **manquant**, aucune adresse dérivable |
-| **sa page Facebook auteur** | **manquant**, idem |
+| son blog `.../blog-jocelyne-bacquet` | **200**, `<title>` "Blog de Jocelyne Bacquet" |
+| le livre sur Amazon | **je n'ai pas pu vérifier** : Amazon sert une page anti-robot (3815 octets, aucun "Bacquet" dedans) |
+| son Instagram | **je n'ai pas pu vérifier** : 429, leur limite de débit sur notre adresse |
+| sa page Facebook | **je n'ai pas pu vérifier** : 400 sur un `profile.php` non authentifié |
 
-Les deux manquants attendent qu'elle les donne. Une section qui dit
-"voici ses liens" avec deux entrées est vraie ; avec quatre dont deux
-inventées, elle ne l'est plus.
+**Un blocage de plateforme veut dire "je n'ai pas pu regarder", jamais
+"ça n'existe pas"** (règle du 22 août, et c'est déjà la leçon du 429 de
+Pinterest du 1er septembre). Ce sont SES liens : ils sont posés, et le
+message final lui dit lequel des trois n'a pas pu être mesuré.
 
 Test : les cinq cas ajoutés à `tests/logic/blog.test.mts`, vérifiés en
 rejouant TROIS versions fautives (le prix d'avant, "commencer seule", la
@@ -12736,11 +12739,12 @@ débordement.
 **Les huit autres articles restent dehors**, exprès : un filet qui
 rougit sur des pages qu'on n'a pas regardées finit désactivé.
 
-## Le chrome des articles ANGLAIS est encore en français (mesuré le 8 septembre)
+## Le meuble d'un article anglais parlait français (corrigé le 9 septembre)
 
 Trouvé en servant `/en/blog/case-study-jocelyne-adhd-quiz`. Le travail
 du 8 septembre au matin a traduit le menu et le pied de page ; **trois
-composants d'article portent encore leurs phrases en dur en français** :
+composants d'article portaient encore leurs phrases en dur en
+français** :
 
 | Le composant | Ce qu'un lecteur anglophone lit |
 |---|---|
@@ -12754,3 +12758,227 @@ lecteurs qu'on veut récupérer de `tipote.blog`. **Ce n'est pas une
 régression de ce passage** : c'est antérieur, et ça vaut pour les dix
 articles anglais. Les phrases se posent dans `motsDuBlog.ts`, comme le
 reste du meuble.
+
+### CE QUI A ÉTÉ FAIT, ET LE PIÈGE QU'AUCUN TEST NE VOYAIT
+
+Les phrases vivent dans `motsDuBlog.ts`, avec le reste du meuble.
+**MESURÉ sur la page servie, dans les deux langues** : 12 phrases
+françaises et 0 anglaise sur `/blog/cas-client-jocelyne-tdah`, 0
+française et 11 anglaises sur `/en/blog/case-study-jocelyne-adhd-quiz`.
+
+**Six composants, pas trois** : le relevé de la veille en nommait
+trois, et il en manquait la moitié. `BoutonCopier` portait ses trois
+libellés, `RailArticle` en portait trois autres ("Dans cet article",
+"Sommaire de l'article", "Partager") **alors que `dansCetArticle`
+existait déjà dans la table et qu'il ne l'appelait pas**, et
+`FormulaireCommentaire` portait ses QUATORZE phrases de refus, celles
+qu'un lecteur découvre au moment exact où il se trompe d'adresse email.
+Et la date d'un commentaire était formatée en `fr-FR` en dur.
+
+🚨 **ET LE VRAI PIÈGE : `tsc` ÉTAIT VERT, LE FILET LOGIQUE ÉTAIT VERT À
+2728, ET LES DEUX ARTICLES RÉPONDAIENT 500.**
+
+```
+Functions cannot be passed directly to Client Components
+{surReseau: function surReseau, copierLeLien: ..., ...}
+```
+
+`BoutonCopier` et `FormulaireCommentaire` sont marqués `use client`, et
+la table portait DEUX fonctions (`surReseau`, `titreN`). **Un composant
+client ne peut pas recevoir une référence de fonction depuis une page
+serveur, et le typecheck ne voit RIEN de tout ça** : c'est le drame du
+1er août (`FolderCard`, dépôt Tipote), payé une deuxième fois.
+
+**Règle : ce qui traverse vers un composant client a son propre TYPE, et
+il ne porte que des chaînes.** `MotsCopie` et `MotsFormulaire`
+(`lib/blog/motsDuBlog.ts`) rendent la frontière visible : le prochain
+qui ajoutera une fonction à `partage` ou à `commentaires` ne pourra pas
+la faire descendre sans le voir. Les deux fonctions restent dehors,
+leurs appelants sont rendus par le serveur.
+
+**Et ça ne s'est vu qu'en SERVANT la page.** Un vert local ne prouve
+rien sur un rendu (leçon de `pdf-parse`, 7 août) : la dernière étape
+n'est pas de lancer les tests, c'est d'aller chercher l'URL.
+
+**Le second bouton de l'encart vaut `null` en anglais**, comme
+`sommaire.ctaSecondaire` depuis le 8 septembre : il mène à `/`, la page
+de vente CAPTURÉE, en français. Et les deux destinations passent par
+`hrefPourLangue`, qui REFUSE de préfixer une page qui n'a pas la langue :
+sans lui, `/signup` deviendrait `/en/signup`, c'est à dire un 404 au
+bout du seul bouton de l'encart.
+
+### MES TROIS ITÉRATIONS SUR LE MÊME GARDE-FOU
+
+Le garde qui vérifie qu'un composant ne porte plus de français en dur a
+été écrit trois fois, et les trois versions disent quelque chose :
+
+| Le motif | Ce qu'il faisait |
+|---|---|
+| le mot nu `"commentaires"` | rougissait sur le chemin d'import, sur le nom de la prop et sur l'`id` de la section : **trois usages légitimes** |
+| `{mots.` (l'interpolation JSX) | rougissait sur un ternaire parfaitement correct (`{etat === "copié" ? mots.lienCopie : ...}`) |
+| `mots.[a-zA-Z]` compté | passe, et **le commentaire dit ce qu'il ne prouve pas** |
+
+**Un motif se vise sur un LITTÉRAL AFFICHÉ, jamais sur un mot nu**, et
+quand un contrôle ne peut pas prouver ce qu'on voudrait, il le DIT au
+lieu de faire semblant. Ce qui garde vraiment le français dehors, c'est
+la liste de phrases, pas le compteur.
+
+## Les quatre liens de Jocelyne, en cartes (Béné, 8 septembre 2026)
+
+"Les liens qui te manquaient", envoyés dans un bloc HTML à elle : une
+grille de quatre cartes, un dégradé pâle, un emoji, un libellé et une
+précision dessous.
+
+**Son HTML ne pouvait pas être posé tel quel, et c'est une règle, pas un
+accident** : `nettoyerBloc` retire TOUS les attributs sauf le `href`
+d'un lien, depuis l'import du 29 août (une classe ou un style importés
+imposeraient l'apparence de Systeme.io au milieu d'une page qui a la
+nôtre). Collé tel quel, son bloc rendait quatre liens nus les uns
+derrière les autres.
+
+**D'où un bloc `liens` qui porte la DONNÉE**, et notre CSS qui la
+dessine : il se traduit, il suit le thème, et il passe à la ligne tout
+seul. Ses trois hexadécimaux deviennent des jetons (`#5A6EF6` EST déjà
+`--tq-bleu`, la palette a été calée sur sa page de vente le
+4 septembre) : un pâle écrit en dur resterait pâle le jour où la palette
+bouge, avec du texte foncé devenu illisible dessus.
+
+### DEUX DÉFAUTS QUE SEULE LA MESURE A MONTRÉS
+
+**1. LES QUATRE CARTES SORTAIENT SOULIGNÉES.** `.tiquiz-blog a` pose
+`text-decoration: underline` avec une spécificité de **0,1,1**, et un
+`no-underline` de Tailwind pèse **0,1,0** : il perd. C'est exactement
+l'arithmétique du bouton bleu sur bleu du 30 août, et la réponse est la
+même : une classe nommée (`tq-carte-lien`) qui monte la spécificité, pas
+un `!important`. La prochaine carte posée dans un article n'aura pas à
+connaître cette histoire.
+
+**2. LA QUATRIÈME CARTE S'ÉTIRAIT SUR TOUTE LA LARGEUR.** Mesuré dans un
+navigateur : `flex: 1 1 200px` donne, dans la colonne de 720 px d'un
+article, des boîtes de **229 / 229 / 229 / 720**. Trois tiennent sur la
+première ligne, la quatrième passe seule et grossit. Ce n'est pas la
+grille qu'elle a dessinée.
+
+La cause n'est pas son CSS : 4 x 200 px plus trois gouttières font
+848 px, et notre colonne de lecture en fait 720 (bornée le 30 août pour
+que la ligne reste lisible). Son bloc vivait dans un conteneur plus
+large. **Une grille 2 x 2** tient dedans avec des cartes de 352 px, et
+passe à UNE colonne sur un téléphone (mesuré à 390 px : 350 px, aucun
+débordement).
+
+**Et son intro est gardée MOT POUR MOT** : "Jocelyne accepte d'être
+contactée et de partager son parcours. Voici les liens qu'elle a
+souhaité mettre en avant." Un chantier de mise en page ne réécrit pas
+ses phrases.
+
+Test : `tests/logic/blog.test.mts`, plus
+`/en/blog/case-study-jocelyne-adhd-quiz` ajouté au filet responsive
+(il ne mesurait AUCUN article anglais, et c'est là que le meuble vient
+de changer : une phrase anglaise n'a pas la longueur de la française).
+
+## UN SVG SUR LE BLOG : ça marche, en FICHIER (Béné, 8 septembre 2026)
+
+"Tu ne sais pas mettre un svg sur notre blog ? C'est embêtant ..."
+
+**LA RÉPONSE EST EN DEUX MOITIÉS, et il faut les deux.**
+
+**Un SVG en FICHIER marche depuis le 31 août**, et ce n'est pas une
+supposition : cinq d'entre eux sont en ligne (`svg-tunnel-jocelyne.svg`,
+`svg-gwenn-3-axes.svg`, `svg-comment-lire-chiffres.svg` et sa variante
+mobile, `svg-12-comparatif-outils-popquiz-fr.svg`), posés en blocs
+`image`, avec 11 références dans trois articles.
+`lib/blog/dimensionsImage.ts` lit leur taille naturelle dans le
+`viewBox`, `apparierVariantes` apparie la version téléphone, et le filet
+responsive du 8 septembre les mesure sur quatre largeurs.
+
+**Ce qui cassait, c'est un `<svg>` EN LIGNE**, celui qu'on obtient en
+collant un schéma dans le HTML d'un article. MESURÉ avant correction :
+
+```
+ENTREE  <p>Avant</p><svg ...><style>.t{fill:#333}</style>
+        <text>97 % partent sans rien laisser</text>
+        <text>3 % laissent leur email</text></svg><p>Apres</p>
+SORTIE  <p>Avant</p>.t{fill:#333}97 % partent sans rien laisser3 %
+        laissent leur email<p>Apres</p>
+```
+
+`nettoyerBloc` retire les BALISES inconnues et garde ce qu'il y a
+ENTRE : le schéma disparaissait, **son CSS sortait en prose**, et ses
+deux étiquettes se collaient l'une à l'autre. C'est ce qu'elle aurait vu
+en essayant.
+
+**Règle : `sansContenuNonRendu` (`lib/blog/rendu.ts`), et l'import
+DÉLÈGUE.** Les trois coupes (`<style>`, `<script>`, `<svg>`) existaient
+déjà à l'IMPORT depuis le 8 septembre. Elles vivent maintenant au RENDU,
+parce qu'un article ÉCRIT À LA MAIN ne passe jamais par l'import : une
+règle posée sur un seul des deux chemins n'en protège que la moitié.
+`sansCodeNiStyle` l'appelle au lieu de recopier les trois motifs.
+
+**ON NE REND PAS UN SVG EN LIGNE, ET C'EST MESURÉ.** Le seul candidat du
+corpus (`comment-creer-quiz-systeme-io`) porte un `<style>` dont les
+sélecteurs s'appliqueraient à TOUTE la page une fois inliné, 25 `class=`,
+cinq `id` et cinq `url(#...)` qui entreraient en collision avec ceux
+d'un deuxième schéma. Un SVG chargé par `<img src>` rend dans un
+document ISOLÉ : son `<style>` y est borné, ses `url(#id)` s'y résolvent,
+et ses scripts ne tournent pas. **Un SVG passe par un fichier, ou il ne
+passe pas.**
+
+Et le deuxième candidat (`rente-mensuelle-affiliation-tiquiz`) ne doit
+de toute façon pas revenir : son article est EXCLU de l'import (23 blocs
+ne s'apparient plus), et son propre `<desc>` porte les promesses Tipote
+retirées le 1er septembre.
+
+Test : les trois cas ajoutés à `tests/logic/blog.test.mts`, vérifiés en
+rejouant la version d'avant (deux rougissent).
+
+## SOURCER LES FAQ (Béné, 8 septembre 2026)
+
+"Source les faq stp."
+
+**LE RELEVÉ, ET IL A ÉTÉ FAUX UNE FOIS.** 140 questions de FAQ sur les
+20 articles. Mon premier passage en annonçait **36 non sourcées** ; le
+vrai chiffre est **12**. Le premier ne cherchait qu'un `http`, donc il
+comptait comme non sourcées des réponses qui disent "selon le rapport
+Litmus State of Email Marketing 2024" ou "d'après le Quiz Conversion
+Rate Report d'Interact". **Un contrôle qui ne distingue pas ce qu'il est
+censé distinguer est pire qu'un contrôle absent**, et j'ai failli aller
+réécrire deux douzaines de réponses parfaitement sourcées.
+
+**CE QUI ÉTAIT DÉJÀ SOURCÉ ET N'A PAS BOUGÉ** : le ROI email (Litmus),
+les 44,9 % et 59,1 % (Quiz Conversion Rate Report d'Interact), les 2 à
+3 % contre 30 à 40 % (benchmarks Sumo, GetResponse, Interact, Outgrow).
+Ces réponses NOMMENT leur source.
+
+**CE QUI A ÉTÉ RETIRÉ, ET C'EST RETIRÉ, PAS SOURCÉ.** Je n'ai pas trouvé
+de source pour ces chiffres, et "ne jamais mentir, sous aucune forme" ne
+laisse pas le choix entre les deux. Un chiffre inventé dans une FAQ vit
+à l'endroit exact où un lecteur va vérifier.
+
+| Le claim | Pourquoi il est parti |
+|---|---|
+| "Warby Parker, Glossier, Sephora, BuzzFeed" (FAQ de Jocelyne) | quatre entreprises réelles citées comme PREUVE, sans une source |
+| "lu seulement par 12 % des inscrits" (deux articles) | aucune source, et il servait de base à un deuxième chiffre ("les 88 % restants") |
+| "en 2026, les quiz ont remplacé les ebooks dans la majorité des stratégies performantes" | une affirmation sur tout un marché, invérifiable |
+| "entre 150 et 500 leads par mois, 30 à 50 % de partage, 1 000 leads mensuels" | trois chiffres promis sans source : c'est une promesse de résultat |
+
+**Dix retraits, dans les deux langues**, par la table nommée
+(`faitsProgramme.ts` et `faitsEn.ts`) et pas à la main : un ré-import
+les ramènerait. Les deux pipelines sont idempotents après.
+
+**ET LA TROUVAILLE QUI COMPTE : `17-raisons-lancer-quiz-business` FAIT
+ÇA BIEN, et c'est le modèle.** Ses mentions de BuzzFeed et de Warby
+Parker sont accompagnées d'une **capture d'écran de leur vrai quiz** et
+d'une invitation à aller le passer ("Va passer le quiz Find Your Frames
+sur Warby Parker", "Va sur buzzfeed.com/quizzes"). Un lecteur vérifie en
+un clic. C'est l'inverse exact de la FAQ de Jocelyne, qui les citait
+sans rien. **Si elle veut un exemple nommé dans cette FAQ, Warby Parker
+est le seul des quatre qui soit adossé quelque part chez nous.**
+
+**Le garde-fou est borné aux claims TIERS**, exprès : nos propres taux et
+nos propres prix viennent du catalogue, donc les exiger sourcés ferait
+rougir le test sur des chiffres vrais par construction, et un test qui
+crie pour rien finit désactivé. Il exige aussi qu'il RESTE des FAQ
+sourcées à surveiller : sans ça, il passerait au vert sur zéro question.
+
+Test : les trois cas ajoutés à `tests/logic/blog.test.mts`, vérifié en
+rejouant les quatre marques dans la FAQ (il rougit et la nomme).

@@ -32,6 +32,7 @@ import type { LanguePublique } from "@/lib/site/langues";
 import { cheminBlog, cheminRubrique, motsDuBlog } from "@/lib/blog/motsDuBlog";
 import { articlesVoisins, extraireResume } from "@/lib/blog/gabarit";
 import { normaliserImages } from "@/lib/blog/imagesArticle";
+import LiensArticle from "@/components/site/LiensArticle";
 import { lireCommentairesPublies } from "@/lib/blog/commentairesStore";
 import { rubriqueDe } from "@/lib/blog/rubriques";
 import {
@@ -229,6 +230,9 @@ export default async function ArticleBlog({
                   </p>
                 );
               }
+              if (b.type === "liens") {
+                return <LiensArticle key={i} liens={b.liens} />;
+              }
               if (b.type === "video") {
                 return (
                   <VideoArticle
@@ -264,13 +268,19 @@ export default async function ArticleBlog({
                 titre={a.titre}
                 texte={partage}
                 epingle={epingle}
+                mots={m.partage}
               />
             </div>
           </div>
 
-          <EncartCta />
+          <EncartCta mots={m.encart} langue={langue} />
 
-          <Commentaires slug={a.slug} commentaires={commentaires} />
+          <Commentaires
+            slug={a.slug}
+            commentaires={commentaires}
+            mots={m.commentaires}
+            locale={m.locale}
+          />
         </div>
 
         <RailArticle
@@ -279,6 +289,8 @@ export default async function ArticleBlog({
           titre={a.titre}
           textePartage={partage}
           epingle={epingle}
+          mots={m}
+          langue={langue}
         />
       </div>
 

@@ -29,6 +29,7 @@
 
 import BoutonCopier from "@/components/site/BoutonCopier";
 import { urlPartage } from "@/lib/partage/urlsReseaux";
+import type { MotsDuBlog } from "@/lib/blog/motsDuBlog";
 
 /**
  * Les réseaux proposés sur un ARTICLE, dans cet ordre.
@@ -77,6 +78,7 @@ export default function PartageArticle({
   titre,
   texte,
   epingle,
+  mots,
   orientation = "ligne",
 }: {
   /** L'adresse ABSOLUE de l'article. Un chemin relatif ne partage rien. */
@@ -86,6 +88,8 @@ export default function PartageArticle({
   texte: string;
   /** L'image verticale à épingler, absolue. Absente -> pas de bouton Pinterest. */
   epingle: string | null;
+  /** Les libelles, dans la langue de l'ADRESSE de l'article. */
+  mots: MotsDuBlog["partage"];
   orientation?: "ligne" | "colonne";
 }) {
   const liens = RESEAUX.map((r) => ({
@@ -111,8 +115,8 @@ export default function PartageArticle({
           href={r.href as string}
           target="_blank"
           rel="noopener noreferrer"
-          title={`Partager sur ${r.nom}`}
-          aria-label={`Partager sur ${r.nom}`}
+          title={mots.surReseau(r.nom)}
+          aria-label={mots.surReseau(r.nom)}
           className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--tq-bord)] bg-white text-[var(--tq-encre-douce)] transition hover:border-transparent hover:text-white"
           style={{ ["--survol" as string]: r.couleur }}
           data-partage={r.cle}
@@ -122,7 +126,7 @@ export default function PartageArticle({
           </svg>
         </a>
       ))}
-      <BoutonCopier url={url} />
+      <BoutonCopier url={url} mots={mots.copie} />
     </div>
   );
 }

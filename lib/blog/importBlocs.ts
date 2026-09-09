@@ -21,6 +21,7 @@
 // Le script fait les entrées/sorties, ce module décide.
 
 import type { Bloc } from "./articles";
+import { sansContenuNonRendu } from "./rendu";
 import { idYouTube } from "./video";
 
 /** Une entité de l'éditeur Systeme.io, telle qu'elle arrive. */
@@ -81,10 +82,12 @@ export function ancre(texte: string): string {
  *                  qui n'est pas le nôtre.
  */
 export function sansCodeNiStyle(html: unknown): string {
-  return String(html ?? "")
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, "")
+  // LES TROIS PREMIERES COUPES VIVENT DANS `rendu.ts`, ET ELLES Y
+  // VIVENT SEULES. Le rendu en a besoin pour un article ECRIT A LA
+  // MAIN, qui ne passe jamais par l'import : deux copies de la meme
+  // regle finiraient par ne plus couper la meme chose, et c'est le
+  // defaut que ce depot paie en boucle depuis juin.
+  return sansContenuNonRendu(String(html ?? ""))
     .replace(/<img\b[^>]*>/gi, "")
     .replace(/<!--[\s\S]*?-->/g, "");
 }
@@ -265,6 +268,12 @@ export function signature(b: Bloc, rangs: { img: number; faq: number }): string 
   // Sans ce cas, `nuTexte` lirait un `html` qui n'existe pas et deux
   // vidéos différentes porteraient la MÊME signature.
   if (b.type === "video") return `video#${b.id}`;
+  // UNE RANGEE DE LIENS S'APPARIE PAR SES ADRESSES, pour la meme raison
+  // qu'une video : `nuTexte` ne sait pas lire ce bloc, donc deux
+  // rangees differentes porteraient la MEME signature, et la fusion en
+  // insererait une en double. Aucun article importe n'en porte
+  // aujourd'hui ; ce cas existe pour que ca reste vrai.
+  if (b.type === "liens") return `liens#${b.liens.map((l) => l.href).join("|")}`;
   const n = nuTexte(b)
     .toLowerCase()
     .normalize("NFD")

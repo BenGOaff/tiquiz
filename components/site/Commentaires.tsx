@@ -25,11 +25,18 @@
 
 import FormulaireCommentaire from "@/components/site/FormulaireCommentaire";
 import { messageEnHtml } from "@/lib/blog/commentaires";
+import type { MotsDuBlog } from "@/lib/blog/motsDuBlog";
 import type { CommentairePublie } from "@/lib/blog/commentairesStore";
 
-function jourCourt(iso: string): string {
+/**
+ * La date d'un commentaire, dans la langue de l'ARTICLE.
+ *
+ * La locale est un PARAMETRE : `fr-FR` etait ecrit en dur, donc un
+ * commentaire sous un article anglais s'affichait "8 septembre 2026".
+ */
+function jourCourt(iso: string, locale: string): string {
   try {
-    return new Intl.DateTimeFormat("fr-FR", {
+    return new Intl.DateTimeFormat(locale, {
       day: "numeric",
       month: "long",
       year: "numeric",
@@ -43,18 +50,23 @@ function jourCourt(iso: string): string {
 export default function Commentaires({
   slug,
   commentaires,
+  mots,
+  locale,
 }: {
   slug: string;
   commentaires: readonly CommentairePublie[];
+  mots: MotsDuBlog["commentaires"];
+  /** La locale de `Intl`, celle de l'article. */
+  locale: string;
 }) {
   return (
     <section id="commentaires" className="mt-16 border-t border-[var(--tq-bord)] pt-12">
       <h2 className="text-[1.6rem]">
         {commentaires.length === 0
-          ? "Ton avis sur cet article"
+          ? mots.titreVide
           : commentaires.length === 1
-            ? "1 commentaire"
-            : `${commentaires.length} commentaires`}
+            ? mots.titreUn
+            : mots.titreN(commentaires.length)}
       </h2>
 
       {commentaires.length > 0 ? (
@@ -63,7 +75,7 @@ export default function Commentaires({
             <li key={c.id}>
               <p className="font-semibold">{c.auteur}</p>
               <p className="tq-doux mt-0.5 text-[0.82rem]">
-                <time dateTime={c.cree_le}>{jourCourt(c.cree_le)}</time>
+                <time dateTime={c.cree_le}>{jourCourt(c.cree_le, locale)}</time>
               </p>
               {/* Le message vient d'un inconnu : il est ÉCHAPPÉ par
                   `messageEnHtml`, qui ne laisse passer aucune balise et
@@ -77,12 +89,11 @@ export default function Commentaires({
         </ol>
       ) : (
         <p className="tq-doux mt-3 leading-relaxed">
-          Personne n&apos;a encore réagi. Si un point te fait tiquer ou s&apos;il te manque quelque
-          chose, dis-le : c&apos;est comme ça que ces articles s&apos;améliorent.
+          {mots.aucun}
         </p>
       )}
 
-      <FormulaireCommentaire slug={slug} />
+      <FormulaireCommentaire slug={slug} mots={mots.formulaire} />
     </section>
   );
 }

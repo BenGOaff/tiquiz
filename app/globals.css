@@ -1009,6 +1009,27 @@ html[data-pq-compact] body {
   color: #fff;
 }
 
+/* UNE CARTE DE LIEN N'EST PAS UN LIEN SOULIGNE.
+   Meme arithmetique que le bouton juste au dessus, et mesuree avant
+   d'ecrire la regle : `.tiquiz-blog a` pese 0,1,1 (une classe + un
+   element) et pose `text-decoration: underline`. Un `no-underline` de
+   Tailwind pese 0,1,0 : il PERD, et les quatre cartes de liens
+   sortaient soulignees.
+
+   `color: inherit` retire au passage le bleu fonce des liens
+   d'article : les enfants de la carte posent leur propre couleur, et
+   l'emoji suit l'encre du corps au lieu du bleu.
+
+   On monte la specificite au lieu d'un `!important`, pour la meme
+   raison que `tq-bouton-plein` : la prochaine carte posee dans un
+   article n'aura pas a connaitre cette histoire, elle portera la
+   classe. */
+.tiquiz-blog a.tq-carte-lien,
+.tq-site .tiquiz-blog a.tq-carte-lien {
+  color: inherit;
+  text-decoration: none;
+}
+
 /* LE RÉSUMÉ (TL;DR), MIS EN ÉVIDENCE.
    Il était rendu comme un paragraphe parmi les autres, alors que c'est
    le seul que la moitié des lecteurs lira. Aucun aplat de couleur : un

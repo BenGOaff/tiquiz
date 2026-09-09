@@ -166,6 +166,63 @@ export const TEXTES_DE_LIEN_EN: readonly { de: string; vers: string; pourquoi: s
  * faux.
  */
 export const FAITS_EN: readonly { de: string; vers: string; pourquoi: string }[] = [
+  // ── SOURCER LES FAQ (Bene, 8 septembre) : LES MEMES CINQ QU'EN FR ────
+  //
+  // Les cinq claims retires du francais vivent aussi ici, mot pour mot
+  // traduits. Ne corriger qu'une langue laisserait l'anglais annoncer
+  // un chiffre que le francais vient de retirer, sur les pages exactes
+  // ou on veut recuperer ses lecteurs anglophones.
+  //
+  // CE QUI RESTE SOURCE ET NE BOUGE PAS : les 44,9 % / 59,1 % d'Interact
+  // et les benchmarks Interact + Outgrow, qui NOMMENT leur source.
+  {
+    de:
+      "The quiz method is proven in dozens of sectors: e-commerce (Warby Parker, Glossier), " +
+      "beauty (Sephora), media (BuzzFeed), consumer services (coaching, therapy, wellbeing), " +
+      "digital products (courses, ebooks), B2B services (consulting, freelancing).",
+    vers:
+      "The quiz mechanism (qualify, then recommend) works anywhere your prospect is trying to " +
+      "understand themselves better or to choose between several options: consumer services " +
+      "(coaching, therapy, wellbeing), digital products (courses, ebooks), B2B services " +
+      "(consulting, freelancing), e-commerce, beauty, media.",
+    pourquoi:
+      "four real companies cited as proof, with no source. The mechanism stands without them, and Jocelyne is the verifiable case.",
+  },
+  {
+    de: "An ebook is read by fewer than 12% of the people who sign up for it.",
+    vers: "An ebook gets downloaded far more often than it gets read.",
+    pourquoi: "the 12% has no source.",
+  },
+  {
+    de:
+      "The numbers are brutal. A classic ebook gets read by fewer than 12% of the people who sign " +
+      "up for it. The other 88% are <strong>dead addresses</strong> clogging your list without ever " +
+      "buying a thing.",
+    vers:
+      "And it is the format that is at fault, not your writing. An ebook gets downloaded far more " +
+      "often than it gets read, and what stays on your list are addresses that never told you a " +
+      "thing about themselves.",
+    pourquoi: "the 12% has no source, and the 88% is derived from it.",
+  },
+  {
+    de: "In 2026, quizzes have replaced ebooks in most lead generation strategies that actually perform.",
+    vers: "And it tells you WHO is on the other side, which a download never does.",
+    pourquoi:
+      "a claim about a whole market, unsourced and unverifiable. What replaces it is true by construction: a quiz returns a profile.",
+  },
+  {
+    de:
+      "On average, a well-optimised quiz on an audience of 2,000 to 5,000 subscribers captures " +
+      "between 150 and 500 qualified leads a month, with a share rate of 30 to 50%. The best " +
+      "quizzes go past 1,000 leads a month.",
+    vers:
+      "Nobody can give you an honest number there without knowing your traffic: what you capture " +
+      "is calculated on the visitors who arrive, not on an average. Go and look at the rate of " +
+      "your last capture page, and compare. And a low share rate is not a flaw in the quiz: on an " +
+      "intimate subject, sharing publicly means exposing yourself.",
+    pourquoi:
+      "three promised numbers with no source at all: that is a promise of results. The nuance about sharing comes from Jocelyne's feedback (4 August), which is measured.",
+  },
   // ── LES PRIX DES CONCURRENTS, RELUS AU LIEU D'ETRE RECOPIES ──────────
   //
   // Son anglais annonce "Typeform at $59/month" et "$88/month" a cinq

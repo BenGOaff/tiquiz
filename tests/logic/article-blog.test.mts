@@ -41,8 +41,10 @@ import {
   PHRASE_MOTIF,
   messageEnHtml,
   MESSAGE_MAX,
-  PHRASE_REFUS,
+  MESSAGE_MIN,
+  NOM_MAX,
 } from "../../lib/blog/commentaires.ts";
+import { motsDuBlog } from "../../lib/blog/motsDuBlog.ts";
 
 const SLUGS = tousLesSlugs("fr");
 const COMPLETS = SLUGS.map((s) => lireArticle(s, "fr")!);
@@ -382,15 +384,49 @@ test("trois liens dans un commentaire, c'est de la pub", () => {
   assert.equal(v.raison, "trop-de-liens");
 });
 
-test("chaque refus a une phrase, sinon la lectrice ne sait pas quoi corriger", () => {
+test("chaque refus a une phrase, DANS LES DEUX LANGUES", () => {
   // Regle du 3 aout : un `ok: false` DOIT produire quelque chose a
   // l'ecran. Le serveur rend la RAISON, l'interface ecrit la phrase.
+  //
+  // CE TEST VISAIT LE FRANCAIS SEUL, et il passait au vert sur un
+  // formulaire anglais dont TOUTES les phrases de refus etaient en
+  // francais : c'est ce qu'un lecteur anglophone decouvrait au moment
+  // exact ou il se trompait d'adresse email. Il boucle donc sur les
+  // langues, et il compare les deux tables entre elles : une cle
+  // laissee en francais rend la MEME chaine des deux cotes.
   const raisons = [
+    // Ce que le SERVEUR refuse (les `RaisonRefus`).
     "nom-manquant", "nom-trop-long", "message-court", "message-long",
     "email-invalide", "trop-de-liens", "piege", "propos-interdits", "article-inconnu",
+    // Ce que le CLIENT rencontre en plus. `ecriture` est le repli d'une
+    // raison inconnue : sans elle, l'ecran afficherait sa cle.
+    "trop-rapide", "corps-illisible", "table_absente", "ecriture", "reseau",
   ] as const;
+
+  const fr = motsDuBlog("fr").commentaires.formulaire.refus;
+  const en = motsDuBlog("en").commentaires.formulaire.refus;
+
   for (const r of raisons) {
-    assert.ok(PHRASE_REFUS[r] && PHRASE_REFUS[r].length > 10, `${r} : phrase manquante`);
+    for (const [langue, table] of [["fr", fr], ["en", en]] as const) {
+      const phrase = table[r];
+      assert.ok(phrase && phrase.length > 10, `${langue}/${r} : phrase manquante`);
+      assert.ok(!phrase.includes("{"), `${langue}/${r} : une variable est restee a trou`);
+      assert.ok(!/—|–/.test(phrase), `${langue}/${r} : tiret cadratin`);
+    }
+    assert.notStrictEqual(
+      en[r],
+      fr[r],
+      `${r} : la phrase anglaise est celle du francais, donc elle n'est pas traduite`,
+    );
+  }
+
+  // LES BORNES SE LISENT, ELLES NE SE RECOPIENT PAS : les quatre
+  // phrases qui citent un nombre doivent citer CELUI du module, sinon
+  // l'ecran annonce une limite que le serveur n'applique pas.
+  for (const table of [fr, en]) {
+    assert.ok(table["nom-trop-long"].includes(String(NOM_MAX)));
+    assert.ok(table["message-court"].includes(String(MESSAGE_MIN)));
+    assert.ok(table["message-long"].includes(String(MESSAGE_MAX)));
   }
 });
 

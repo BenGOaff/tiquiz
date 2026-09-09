@@ -296,7 +296,36 @@
     },
     {
       "type": "html",
-      "html": "<p>Jocelyne accepte d'être contactée et de partager son parcours. Voici les liens qu'elle a souhaité mettre en avant.</p><ul><li>✍️ <strong>Le blog</strong> : <a href=\"https://jocelyne-bacquet-auteur.fr\">jocelyne-bacquet-auteur.fr</a></li><li>📷 <strong>Instagram</strong> : <a href=\"https://www.instagram.com/j_bacquet.1/\">@j_bacquet.1</a></li></ul>"
+      "html": "<p>Jocelyne accepte d'être contactée et de partager son parcours. Voici les liens qu'elle a souhaité mettre en avant.</p>"
+    },
+    {
+      "type": "liens",
+      "liens": [
+        {
+          "emoji": "📖",
+          "libelle": "Le livre",
+          "sous": "Sur Amazon",
+          "href": "https://www.amazon.fr/dp/B0H1GP7CJP"
+        },
+        {
+          "emoji": "✍️",
+          "libelle": "Le blog",
+          "sous": "jocelyne-bacquet-auteur",
+          "href": "https://www.jocelyne-bacquet-auteur.fr/blog-jocelyne-bacquet"
+        },
+        {
+          "emoji": "📷",
+          "libelle": "Instagram",
+          "sous": "@j_bacquet.1",
+          "href": "https://www.instagram.com/j_bacquet.1/"
+        },
+        {
+          "emoji": "👥",
+          "libelle": "Facebook",
+          "sous": "Sa page auteur",
+          "href": "https://www.facebook.com/profile.php?id=61590539094570"
+        }
+      ]
     },
     {
       "type": "titre",
@@ -328,7 +357,7 @@
       "questions": [
         {
           "question": "Est-ce que ça marche dans tous les secteurs et toutes les niches ?",
-          "reponse": "<p>La méthode du quiz est éprouvée dans des dizaines de secteurs : e-commerce (Warby Parker, Glossier), beauté (Sephora), médias (BuzzFeed), services B2C (coaching, thérapie, bien-être), info-produit (formations, ebooks), services B2B (consulting, freelance). Si votre activité a un sujet où votre prospect cherche à mieux se comprendre ou à choisir entre plusieurs options, le quiz convient. Le cas de Jocelyne est en développement personnel, mais le mécanisme (qualifier puis recommander) fonctionne dans n'importe quelle niche.</p>"
+          "reponse": "<p>Le mécanisme du quiz (qualifier, puis recommander) marche partout où ton prospect cherche à mieux se comprendre ou à choisir entre plusieurs options : services B2C (coaching, thérapie, bien-être), info-produit (formations, ebooks), services B2B (consulting, freelance), e-commerce, beauté, médias. Si votre activité a un sujet où votre prospect cherche à mieux se comprendre ou à choisir entre plusieurs options, le quiz convient. Le cas de Jocelyne est en développement personnel, mais le mécanisme (qualifier puis recommander) fonctionne dans n'importe quelle niche.</p>"
         },
         {
           "question": "Combien de temps faut-il pour créer son premier quiz ?",

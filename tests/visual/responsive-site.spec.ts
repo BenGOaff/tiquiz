@@ -72,6 +72,16 @@ const PAGES = [
   // desactive.
   "/blog/avis-tiquiz",
   "/blog/cas-client-jocelyne-tdah",
+  // ET SA VERSION ANGLAISE, ajoutee le 9 septembre.
+  //
+  // Ce filet ne mesurait AUCUN article anglais, et c'est la que le
+  // meuble vient de changer : les phrases du partage, de l'invitation
+  // et des commentaires arrivent maintenant de `motsDuBlog`, et une
+  // phrase anglaise n'a pas la longueur de la francaise. "Create my
+  // quiz for free" dans un bouton, "Your email (never published)" dans
+  // un label : c'est exactement le genre d'ecart qui deborde sur un
+  // telephone sans qu'aucun test de contenu ne le voie.
+  "/en/blog/case-study-jocelyne-adhd-quiz",
 ];
 
 test.describe("le site public tient dans l'écran", () => {

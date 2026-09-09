@@ -83,7 +83,40 @@ export interface BlocVideo {
   /** Le titre, lu chez YouTube à l'import. Il sert de texte au lien. */
   titre: string;
 }
-export type Bloc = BlocTitre | BlocHtml | BlocImage | BlocFaq | BlocCta | BlocVideo;
+/**
+ * Une rangee de liens NOMMES, rendue en cartes.
+ *
+ * Bene a envoye ces liens dans un bloc HTML a elle, avec ses styles en
+ * ligne (un degrade pale, un rayon, une grille de quatre cartes).
+ * `nettoyerBloc` retire TOUS les attributs sauf le `href` d'un lien :
+ * son `style=` ne survit pas, et c'est voulu depuis l'import du
+ * 29 aout (une classe ou un style importes imposeraient l'apparence de
+ * Systeme.io au milieu d'une page qui a la notre).
+ *
+ * Le bloc porte donc la DONNEE, et c'est notre CSS qui la dessine :
+ *
+ *   - il se traduit (chaque langue a ses libelles) ;
+ *   - il suit le theme clair et le theme sombre, parce que ses couleurs
+ *     sont des jetons et pas des hexadecimaux ;
+ *   - il passe a la ligne tout seul sur un telephone.
+ *
+ * Un `<ul>` de quatre liens aurait marche et n'aurait pas ressemble a
+ * ce qu'elle a dessine.
+ */
+export interface BlocLiens {
+  type: "liens";
+  liens: {
+    /** L'emoji qu'elle a choisi. Decoratif : il est masque aux lecteurs d'ecran. */
+    emoji: string;
+    /** Ce qu'on va trouver la : "Le livre", "Le blog". */
+    libelle: string;
+    /** La precision sous le libelle : "Sur Amazon", "@j_bacquet.1". */
+    sous: string;
+    href: string;
+  }[];
+}
+
+export type Bloc = BlocTitre | BlocHtml | BlocImage | BlocFaq | BlocCta | BlocVideo | BlocLiens;
 
 export interface Article {
   slug: string;
