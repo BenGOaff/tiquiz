@@ -15,7 +15,11 @@ import { listTemplates } from "@/lib/templates/catalog";
 import TemplatesGallery from "./TemplatesGallery";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const title = "Modèles de quiz prêts à l'emploi par métier — Tiquiz";
+  // LE GABARIT DU SITE AJOUTE DÉJÀ " · Tiquiz" : mesuré en production
+  // le 10 septembre, la page servait "… par métier — Tiquiz · Tiquiz",
+  // avec le nom deux fois et un tiret cadratin entre les deux, dans la
+  // ligne exacte que Google AFFICHE.
+  const title = "Modèles de quiz prêts à l'emploi par métier";
   const description =
     "Des quiz lead magnet déjà rédigés pour les coachs, profs de yoga, naturopathes, formateurs, photographes et plus. Choisis ton modèle, personnalise-le, capture tes leads en 5 minutes.";
   return {

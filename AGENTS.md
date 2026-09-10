@@ -13651,3 +13651,197 @@ non sûr, le bandeau masqué au lieu d'être oublié, le brouillon écrit au
 démarrage, le lancement non coupé, une deuxième hydratation, une
 inscription qui n'oublie pas, une sortie par le bas) : les neuf
 rougissent.
+
+## Le quiz du haut de page, et les six briefs qu'il partage (Béné, 9 septembre 2026)
+
+Chantier 6 : « Reprends-le, ne le réinvente pas », à propos de
+`copywriting-claude/tiquiz-landing.html`. Sa maquette porte quatorze
+sections ; ses onze points de vigilance, eux, ne nomment que ce qui
+n'existait nulle part : le quiz du hero, les six cartes, la section
+blog. C'est donc ça le chantier, et le reste de sa page vit déjà sur
+`/fonctionnalites/<slug>` depuis sa décision du 6 septembre (« rien
+n'est à jeter, tout est à déplacer »).
+
+### UN SEUL TABLEAU DE BRIEFS, DEUX RENDUS
+
+Dans sa maquette, chaque brief est écrit DEUX fois : dans `PROFILS[].u`
+(le bouton du résultat) et dans le `href` de la carte. Mesuré : les six
+couples (sujet, audience, objectif) sont identiques des deux côtés.
+
+Les recopier les laisserait diverger, et le symptôme serait muet : le
+générateur s'ouvrirait avec un sujet que la carte n'annonçait pas.
+`BRIEFS` (`lib/site/quizHero.ts`) est la seule source, et les deux
+écrans la lisent.
+
+**Ce qui DIFFÈRE, c'est la porte, et c'est tout l'intérêt** : le
+résultat porte `source=hero` PLUS le profil obtenu, les six cartes
+portent `source=modeles`. Sans ça, les douze liens de sa maquette
+seraient sortis en `"direct"` et le seul ratio qu'elle lit ne dirait
+plus d'où viennent les gens.
+
+**Les sujets sont écrits EN CLAIR.** Les siens sont déjà encodés
+(`%C3%AA`) : recopiés tels quels, `lienGenerateur` les encoderait une
+seconde fois et la créatrice lirait `%C3%AA` dans son formulaire.
+
+### LES SIX PROFILS SONT TOUS ATTEIGNABLES, ET C'EST MESURÉ
+
+C'est le contrôle de Véronique (1er août) : en mode profils, un résultat
+que le barème ne peut jamais attribuer est un résultat que personne ne
+verra. Les 320 combinaisons ont été jouées :
+
+| acc | for | aff | cre | ven | dem |
+|---|---|---|---|---|---|
+| 18,1 % | 24,1 % | 11,2 % | 14,4 % | 10,9 % | 21,2 % |
+
+Son barème est sain. Le test rejoue les 320 parties, avec des bornes
+LOIN des valeurs mesurées (8 % et 30 %) : il attrape un profil devenu
+inatteignable, il n'arbitre pas à la limite.
+
+**Et le barème anglais est le MÊME que le français**, gain par gain :
+sans ça, deux visiteurs qui cliquent la même chose obtiendraient deux
+profils différents, et personne ne le verrait.
+
+### CE QUI A ÉTÉ MESURÉ DANS UN NAVIGATEUR
+
+Ses trois contraintes de forme, sur la page servie :
+
+| Sa contrainte | Mesuré |
+|---|---|
+| « pas de scroll pour voir la première question et ses options » à 1440x800 | bas des options à **791 px** sur 800 |
+| « le hero est centré, une seule colonne » | une colonne, `tql-hero-centre` |
+| « deux colonnes au-dessus de 660 px, une seule en dessous » | **2 colonnes à 661 px, 1 à 659 px** |
+| aucun débordement horizontal | 0 px à 1440, 900, 700, 661, 659, 390 et 320 |
+
+Et le geste, joué pour de vrai : quatre questions (5, 4, 4, 4 options),
+résultat « L'accompagnateur », bouton vers
+`/generateur-de-quiz?sujet=…&audience=…&objectif=qualifier&source=hero&profil=acc`,
+« Recommencer » qui remet à zéro. Les deux événements partent :
+
+```
+event quiz_demarre  {}
+event quiz_termine  {"profil":"acc"}
+```
+
+`quiz_demarre` part UNE fois pour quatre clics : il marque « quelqu'un a
+commencé », pas « quelqu'un a cliqué ». Le poser à chaque réponse le
+rendrait quatre fois plus gros que le nombre de personnes, dans le sens
+flatteur.
+
+### 🚨 CE GESTE NE SE MESURE PAS EN DÉVELOPPEMENT, ET ON SAIT ENFIN POURQUOI
+
+La note du 8 septembre disait : « le formulaire du générateur ne
+s'hydrate pas dans ce conteneur, c'est identique sur /embed/preview qui
+est en production depuis des mois, je ne sais pas si c'est
+l'environnement ou un vrai bug ». **C'est l'environnement, et c'est
+mesuré.**
+
+| | fibers React sur la page |
+|---|---|
+| `next dev` | **1 / 1030** (le seul est l'overlay de Next) |
+| `next build` puis `next start` | **813 / 1030** |
+
+Le HTML servi par le dev porte pourtant ses 54 poussées `__next_f` : la
+charge RSC est bien émise, c'est le navigateur qui ne l'exécute pas ici.
+Les mêmes 1 fiber sortent sur `/tarifs` et sur `/generateur-de-quiz`,
+deux pages qui tournent en production depuis des semaines.
+
+**Règle : un geste se mesure sur un build de production.** Un
+`next dev` de ce conteneur ne dit rien de l'interactivité, ni en bien ni
+en mal, et un test qui ne distingue pas ce qu'il est censé distinguer
+est pire qu'un test absent.
+
+Le build a demandé un `.env.local` de mesure (trois valeurs bidon) parce
+que `supabaseAdmin` LÈVE au chargement sans variables : il est
+`.gitignore` et il a été SUPPRIMÉ après la mesure.
+
+### CE QUE LA MESURE A CORRIGÉ DANS SA MAQUETTE
+
+**« Et 21 modèles par métier dans ton compte » : il y en a 15.** Compté
+dans `lib/templates/catalog.ts`. Les six autres sont les six cartes
+juste au dessus, et sa propre section « Un quiz, ce n'est que le début »
+le dit d'ailleurs juste : « Quinze modèles métier et six modèles
+phares ». Le compte vient donc du CATALOGUE
+(`nombreDeModelesMetier()`) : un nombre recopié est faux au premier
+modèle ajouté, et il vit à l'endroit exact où un lecteur le vérifie, il
+lui suffit d'ouvrir `/templates` et de compter.
+
+**Ses dix-neuf `href="#"` ne sont pas portés.** Dix-neuf liens morts sur
+la page qui vend.
+
+### 🚨 ET `/templates` SERVAIT 70 TIRETS CADRATINS
+
+Trouvé en allant vérifier le compte. Mesuré EN PRODUCTION, avec l'agent
+de Googlebot :
+
+| | |
+|---|---|
+| `tiquiz.fr/templates` | **200**, 455 mots, `lang="fr"` |
+| son `<title>` | `Modèles de quiz prêts à l'emploi par métier — Tiquiz · Tiquiz` |
+| tirets cadratins dans le HTML servi | **70** |
+
+Deux choses, et la seconde est la plus chère.
+
+**Le titre porte le nom DEUX fois et un tiret cadratin entre les deux**,
+dans la ligne exacte que Google affiche : le gabarit du site ajoute déjà
+` · Tiquiz` (`app/layout.tsx`). Retiré des deux pages de modèles.
+
+**Et 64 tirets cadratins vivaient dans `lib/templates/catalog.ts`**,
+tous dans la forme ` — `, **aucun dans un commentaire** : c'est du texte
+de quiz, servi aux visiteurs des quiz de vraies clientes. Sa règle du
+7 juin est absolue et ce fichier ne l'avait jamais vue.
+
+**Le mot qui suit décide la ponctuation**, parce qu'un `-` simple
+donnerait « stratégie - c'est une première action », qui ne se lit pas :
+
+| ce qui suit | ce qu'on écrit |
+|---|---|
+| `et`, `mais`, `pas`, `sans`, `rien` | `, ` (il coordonne ou il oppose) |
+| tout le reste | ` : ` (il annonce ce qui suit) |
+
+Relu : « Ta force : tu construis des bases solides », « Tu n'as pas
+besoin de travailler plus : tu as besoin de travailler sur le bon
+levier », « Ton succès n'enlève rien à personne, au contraire ». Les
+1950 `─` du fichier sont des séparateurs de commentaire, pas des tirets
+cadratins : `grep -c` comptait des LIGNES, pas des caractères.
+
+### CE QUI A ÉTÉ VÉRIFIÉ ET QUI N'AVAIT RIEN
+
+**J'ai d'abord lu le middleware et conclu que `/templates` était derrière
+`/login`.** C'était faux : mesuré en production, la page répond **200** à
+un navigateur ET à Googlebot. Une lecture de code n'est pas une mesure,
+et cette conclusion aurait envoyé Béné valider un correctif qui ne
+corrigeait rien.
+
+**Le lien du centre d'aide suit déjà la locale.** Sa consigne écrit
+`https://app.tipote.com/support/tiquiz?lang=${locale}` : c'est
+EXACTEMENT ce que rend `helpUrl(locale)` (`lib/help.ts`), branché sur
+les trois écrans qui connaissent la langue. Les deux formes répondent
+200, vérifié.
+
+Le seul `lang=fr` écrit en dur qui reste est `LIEN_SUPPORT`
+(`lib/checkout/brand.ts`), sur la page de retour du bon de commande. Et
+ce n'est pas une fuite de langue : cette page est écrite **entièrement
+en français en dur**, zéro `getTranslations`. Quelqu'un qui achète en
+anglais y lit du français de bout en bout. C'est un autre chantier, il
+est nommé ici pour ne pas être découvert par une cliente.
+
+### CE QUI RESTE DE SA MAQUETTE, ET CE N'EST PAS UN OUBLI
+
+Trois sections de sa page ne sont pas portées : « D'où vient le
+trafic », « Pourquoi Tiquiz et pas un autre outil », « Un quiz, ce n'est
+que le début ». Leur contenu vit sur `/fonctionnalites/<slug>` depuis le
+6 septembre, et le ramener sur la landing déferait sa propre décision
+(« la page actuelle fait 5 000 mots, un visiteur froid décroche au
+troisième écran »). À trancher par elle, pas par du code.
+
+**Endroits à respecter :** `lib/site/quizHero.ts` (pur : les questions,
+les profils, les briefs, le barème), `components/landing/QuizHero.tsx`
+(le rendu et les deux événements, aucune décision),
+`components/landing/cssQuizHero.ts`,
+`app/(site)/apercu-landing-8f2c9d41/page.tsx`.
+Test : `tests/logic/quiz-du-hero.test.mts` (16 cas), vérifié en rejouant
+NEUF versions fautives (le profil retiré du bouton de résultat, un gain
+anglais différent, `dem` rendu inatteignable, un sujet recopié déjà
+encodé, la grille à deux colonnes revenue, une adresse de générateur en
+dur, la section blog non gardée, `revalidate` retiré, un nombre de
+modèles écrit à la main) : les neuf rougissent.

@@ -22,10 +22,10 @@ saura pas si le reste a servi."
 |---|---|---|
 | 1 | **la mesure** : cinq événements, pas un de plus | ✅ **POUSSÉ** (`f741d9b6`) |
 | 2 | **la vitesse** : sous 1 s sur un quiz public | ✅ **POUSSÉ** (`ea255bd3`), **cible PAS atteinte**, voir plus bas |
-| 3 | **les questions qui s'écrivent au fur et à mesure** | ⬜ **À FAIRE, et c'est le suivant** |
-| 4 | **le contrat d'URL du générateur** | ⬜ à faire, **il manque son code** |
-| 5 | **le quiz gardé 7 jours** | ⬜ à faire |
-| 6 | **la landing**, d'après son HTML | ⬜ à faire, et elle porte les 2 événements manquants |
+| 3 | **les questions qui s'écrivent au fur et à mesure** | ⬜ **À FAIRE, et il attend la médiane d'avant** |
+| 4 | **le contrat d'URL du générateur** | ✅ **POUSSÉ** (`55d6c63f`) |
+| 5 | **le quiz gardé 7 jours** | ✅ **POUSSÉ** (`635168fa`) |
+| 6 | **la landing**, d'après son HTML | ✅ le quiz du hero, les six cartes et le blog sont posés. **Reste à valider** sur `/apercu-landing-8f2c9d41` |
 
 **À la fin, elle veut :** la liste des fichiers créés et modifiés, la
 durée médiane de génération mesurée **avant et après** le chantier 3, le
@@ -37,10 +37,20 @@ la liste des emplacements d'images restés vides.
 Les cinq événements vivent dans `lib/analytics/parcours.ts`, l'envoi
 dans `lib/analytics/envoi.ts` (une seule porte, avec une file).
 
-🚨 **`quiz_demarre` et `quiz_termine` ne partent de NULLE PART** : ils
-viennent du quiz du hero, qui arrive avec le chantier 6. Le ratio
-qu'elle lit (`generation_lancee -> compte_cree`) ne les utilise pas,
-donc il fonctionne déjà.
+🚨 **CETTE LIGNE DISAIT QUE `quiz_demarre` ET `quiz_termine` NE
+PARTAIENT DE NULLE PART. C'EST PÉRIMÉ** (10 septembre) : le quiz du
+hero les émet, et c'est mesuré sur un build de production, avec l'hôte
+de vente et le consentement posés :
+
+```
+event quiz_demarre  {}
+event quiz_termine  {"profil":"acc"}
+```
+
+`quiz_demarre` part UNE fois pour quatre clics. Les cinq événements
+existent donc tous. Le ratio qu'elle lit
+(`generation_lancee -> compte_cree`) ne les utilise toujours pas : il
+fonctionnait déjà, ils ajoutent la marche d'avant.
 
 **La durée médiane AVANT le chantier 3 n'existe pas encore** : aucune
 génération ne portait de durée avant le 9 septembre, et

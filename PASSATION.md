@@ -123,18 +123,26 @@ la PORTE (`page-generateur`) ne se lit plus dans l'URL, sinon les six
 cartes de la landing auraient fait disparaître leurs générations de son
 entonnoir.
 
-**Le chantier 6 n'est plus bloqué non plus** : `tiquiz-landing.html` est
-dans le dépôt, sur `main`, à `copywriting-claude/tiquiz-landing.html`
-(1056 lignes, aucun tiret cadratin). Le point à ne pas rater en le
-portant : **ses douze liens ne portent NI `source` NI `profil`**, donc
-toutes les générations de la landing sortiraient en `"direct"`. Les six
-cartes sont `source: "modeles"`, les six boutons de résultat du quiz du
-hero `source: "hero"` avec leur profil, et `lienGenerateur` l'exige par
-le compilateur.
+🚨 **LE CHANTIER 6 EST POSÉ (10 septembre)**, et cette section disait
+qu'il restait à faire. Le quiz du haut de page, les six cartes et la
+section blog vivent sur `/apercu-landing-8f2c9d41` ; le détail est dans
+`AGENTS.md` (section « Le quiz du haut de page »). Trois choses à
+retenir sans l'ouvrir :
+
+- **les douze liens de sa maquette portaient un brief écrit DEUX fois**,
+  une fois dans le bouton du résultat et une fois dans la carte. Il n'y
+  a plus qu'une table (`lib/site/quizHero.ts`), et les deux écrans la
+  lisent ;
+- **un geste ne se mesure pas en `next dev` dans ce conteneur** : 1
+  fiber React sur 1030, contre 813 sur un build de production. La
+  question laissée ouverte le 8 septembre est donc tranchée, c'est
+  l'environnement. Le quiz a été joué bout en bout sur un `next start` ;
+- **sa maquette annonce « 21 modèles par métier », il y en a 15** (les
+  six autres sont les six cartes). Le compte vient du catalogue.
 
 **Le chantier 5 est fait aussi** (`AGENTS.md`, section « Le quiz gardé
 7 jours »). Il ne reste donc que le 3, bloqué sur la mesure de la
-médiane, et le 6.
+médiane, et la VALIDATION de la landing par Béné.
 
 ---
 
@@ -152,9 +160,17 @@ les posait encore. Corrigé en place plutôt qu'empilé.
 
 Reste ouvert, et ça bloque encore :
 
-1. **la validation de la landing** sur `/apercu-landing-8f2c9d41` ;
+1. **la validation de la landing** sur `/apercu-landing-8f2c9d41`,
+   maintenant qu'elle porte le quiz du haut de page, les six cartes et
+   les trois derniers articles ;
 2. **la migration `20260909_generateur_duree.sql`**, sans laquelle la
-   médiane d'avant le chantier 3 ne pourra jamais être relevée.
+   médiane d'avant le chantier 3 ne pourra jamais être relevée ;
+3. **les trois sections de sa maquette qui ne sont pas portées**
+   (« D'où vient le trafic », « Pourquoi Tiquiz et pas un autre outil »,
+   « Un quiz, ce n'est que le début ») : leur contenu vit sur
+   `/fonctionnalites/<slug>` depuis sa décision du 6 septembre, et les
+   ramener sur la landing déferait cette décision. C'est à elle de
+   trancher.
 
 ---
 

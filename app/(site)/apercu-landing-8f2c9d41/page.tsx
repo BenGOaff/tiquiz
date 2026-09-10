@@ -60,21 +60,51 @@ import {
   DEMO_POPQUIZ,
   TEMOIGNAGES,
   contenuLanding,
+  noteDesModeles,
   paliersAffiches,
   sansDoublons,
 } from "@/lib/site/landing";
 import { CSS } from "@/components/landing/styles";
+import QuizHero from "@/components/landing/QuizHero";
+import { lienDeLaCarte, PROFILS_HERO, quizHero } from "@/lib/site/quizHero";
+import { languePubliqueDuTexte } from "@/lib/site/langues";
+import { hrefPourLangue } from "@/lib/site/nav";
+import { listerArticles } from "@/lib/blog/articles";
+import { cheminArticle } from "@/lib/blog/motsDuBlog";
+
 import { tailleCapture } from "@/components/landing/captures";
 import Machine from "@/components/landing/Machine";
 import { BlocVente } from "@/components/landing/blocsVente";
 import { BandeFinale, CtaPrincipal, Rassurances } from "@/components/landing/morceaux";
-import { CochePleine, Croix, Fleche, MaquetteQuiz } from "@/components/landing/pieces";
+import { CochePleine, Croix, Fleche } from "@/components/landing/pieces";
 import Temoignages from "@/components/landing/Temoignages";
 import { AnimVente } from "@/components/landing/anims";
 import AnimTag from "@/components/landing/AnimTag";
 import DeclencheurAnims from "@/components/landing/DeclencheurAnims";
 
 const LIEN_INSCRIPTION = "/signup";
+
+/**
+ * LES TROIS DERNIERS ARTICLES NE SONT PAS CEUX DU DÉPLOIEMENT.
+ *
+ * Béné, 9 septembre 2026 : "Ajoute export const revalidate = 3600 sinon
+ * les 'trois derniers' resteront ceux du build."
+ *
+ * CE QUI EST MESURÉ, ET IL FAUT LE DIRE DANS CE SENS LÀ : aujourd'hui
+ * cette ligne ne change rien. La page lit `searchParams` (l'affordance
+ * `?lang=` de la relecture), et la doc de cette version de Next range
+ * `searchParams` dans les "Request-time APIs", celles qui font basculer
+ * un composant en rendu DYNAMIQUE (`node_modules/next/dist/docs/01-app/
+ * 04-glossary.md`). Le sommaire du blog est donc relu à chaque visite,
+ * ce qui est plus frais encore que la revalidation.
+ *
+ * Elle est posée quand même, et ce n'est pas décoratif : le jour où la
+ * page prend l'adresse `/` et perd son `?lang=`, elle redevient
+ * statique, et c'est CE jour là que les trois derniers articles se
+ * figeraient au déploiement. Une ligne posée après coup est une ligne
+ * qu'on oublie.
+ */
+export const revalidate = 3600;
 
 type PageProps = { searchParams?: Promise<{ lang?: string }> };
 
@@ -129,6 +159,19 @@ function CaptureEtape({ capture }: { capture: import("@/lib/site/landing").Etape
 export default async function AccueilPage({ searchParams }: PageProps) {
   const langue = await resoudreLangue(searchParams);
   const t = contenuLanding(langue);
+  // LA LANGUE DES DEUX LISTES, ET CE N'EST PAS LA MÊME QUESTION.
+  //
+  // `langue` est la locale d'INTERFACE (sept valeurs) ; le site public
+  // n'en sert que deux. Le quiz du hero, les liens du générateur et le
+  // blog se lisent donc sur `languePublique`, qui retombe sur l'anglais
+  // et jamais sur le français : un lecteur espagnol lit l'anglais, il ne
+  // se retrouve pas devant du français.
+  const languePublique = languePubliqueDuTexte(langue);
+  const modeles = quizHero(languePublique).profils;
+  // LES TROIS DERNIERS ARTICLES, DANS SA LANGUE. Aucun repli sur une
+  // autre : proposer trois articles français à un lecteur anglais est
+  // pire que ne rien proposer.
+  const articles = listerArticles(languePublique).slice(0, 3);
   // LES DEUX TÉMOIGNAGES QUI SE RESSEMBLENT NE SONT JAMAIS SUR LE MÊME
   // ÉCRAN (sa règle du 6 septembre). Gwenn et Eric Legrigeois partagent
   // une suite de 21 mots d'affilée, mesurée : `sansDoublons` garde le
@@ -190,55 +233,52 @@ export default async function AccueilPage({ searchParams }: PageProps) {
       <section className="tql-sec tql-hero">
         <span aria-hidden className="tql-blob tql-blob-a" />
         <span aria-hidden className="tql-blob tql-blob-b" />
-        <div className="tql-large tql-hero-grille">
-          <div>
-            <p className="tql-surtitre">{t.etiquette}</p>
-            {/* SON TITRE, EN DEUX LIGNES : la première TOURNE en fondu
-                enchaîné (trois angles), la seconde ne bouge pas. Le
-                premier mot est rendu par le serveur : c'est lui que lit
-                un moteur, et celui qui n'a pas de JavaScript. */}
-            <h1 className="tql-h1">
-              <Machine mots={t.titreDefilant} />
-              <span className="tql-h1-l2">{t.motCle}</span>
-            </h1>
-            <p className="tql-accroche">{t.accroche}</p>
-            <div className="tql-boutons">
-              <Link href={LIEN_INSCRIPTION} className="tql-cta">
-                {t.ctaPrincipal}
-                <Fleche />
-              </Link>
-              {/* LE BOUTON SECONDAIRE RESTE SUR LA PAGE : la démo est
-                  au cinquième écran, une ancre y descend. Un lien qui
-                  part est un visiteur qui ne revient pas. */}
-              <a href="#demo" className="tql-cta-2">
-                {t.ctaSecondaire}
-              </a>
-            </div>
-            {/* ELLE SUIT SON BOUTON, ET C'EST LA CORRECTION DU
-                7 SEPTEMBRE. Béné : "le 'gratuit sans carte bancaire'
-                n'est pas centré." Il ne l'était pas : il portait
-                `tql-mid-r`, qui CENTRE sans condition, sous une rangée
-                de boutons alignée à gauche. Le commentaire de la règle
-                disait déjà "elle suit l'alignement de sa rangée de
-                boutons" : une règle écrite en commentaire n'est pas une
-                règle, c'est la sixième fois que ce dépôt le paie. */}
-            <p className="tql-sous-cta">{t.sousCta}</p>
-            <Rassurances items={t.rassurances} />
+        {/* UNE SEULE COLONNE, CENTRÉE, ET LE VRAI QUIZ DEDANS.
 
+            Béné, 9 septembre 2026 : "Le hero est centré, une seule
+            colonne. Pas de mise en page deux colonnes." Et : "Le quiz
+            du hero doit tenir au-dessus de la ligne de flottaison sur
+            un écran de 1440x800 : pas de scroll pour voir la première
+            question et ses options."
+
+            La maquette DESSINÉE a fait son travail : elle montrait à
+            quoi ressemble un quiz. Le vrai quiz le montre en le
+            faisant, et il rend en plus les deux premières marches du
+            parcours mesurables (`quiz_demarre`, `quiz_termine`, les
+            deux seuls des cinq événements qui n'existaient nulle part).
+
+            IL N'Y A PLUS DE BOUTON DANS LE HAUT DE PAGE, et c'est sa
+            maquette : le geste du hero EST le quiz. Un bouton posé à
+            côté lui prendrait l'attention, et le premier "Créer mon
+            quiz gratuitement" arrive plus bas, une fois l'argument
+            posé. Reste un lien discret, pour qui sait déjà quoi créer. */}
+        <div className="tql-large tql-hero-centre">
+          <p className="tql-surtitre">{t.etiquette}</p>
+          {/* SON TITRE, EN DEUX LIGNES : la première TOURNE en fondu
+              enchaîné (trois angles), la seconde ne bouge pas. Le
+              premier mot est rendu par le serveur : c'est lui que lit
+              un moteur, et celui qui n'a pas de JavaScript. */}
+          <h1 className="tql-h1">
+            <Machine mots={t.titreDefilant} />
+            <span className="tql-h1-l2">{t.motCle}</span>
+          </h1>
+          <p className="tql-accroche">{t.accroche}</p>
+
+          <QuizHero langue={languePublique} />
+
+          <div className="tql-hero-sous">
+            <Rassurances items={t.rassurances} />
             <p className="tql-preuve">
               <CochePleine />
               <span className="tql-preuve-t">{t.preuve}</span>
             </p>
+            {/* LE LIEN PASSE PAR `hrefPourLangue`, jamais par un `/en/`
+                écrit à la main : il refuse de préfixer une page qui n'a
+                pas la langue, donc il ne peut pas fabriquer un 404. */}
+            <a className="tql-hero-direct" href={hrefPourLangue("/generateur-de-quiz", languePublique)}>
+              {t.heroDirect}
+            </a>
           </div>
-
-          {/* 🚨 LE VISUEL ATTENDU EST UNE VIDÉO, ET ELLE N'EXISTE PAS
-              ENCORE. Béné : "une boucle vidéo silencieuse de 8 s
-              montrant le générateur en train d'écrire un quiz (prompt à
-              gauche, questions qui apparaissent à droite). En attendant
-              la vidéo, garde la maquette de quiz actuelle."
-              La maquette est DESSINÉE : traduite avec le reste, nette à
-              toutes les densités, et elle ne pèse rien. */}
-          <MaquetteQuiz m={t.maquette} />
         </div>
       </section>
 
@@ -425,6 +465,57 @@ export default async function AccueilPage({ searchParams }: PageProps) {
         </div>
       </section>
 
+      {/* ── LES SIX QUIZ DÉJÀ ÉCRITS ───────────────────────────── */}
+      {/* Béné, 9 septembre 2026 : "Les six cartes 'Six quiz prêts à
+          générer' aussi", à propos du sujet, de l'audience et de
+          l'objectif dans l'URL.
+
+          LE BRIEF NE VIT PAS ICI. Les six couples (sujet, audience,
+          objectif) sont ceux du quiz du hero, dans `lib/site/quizHero.ts`,
+          et les deux écrans lisent la MÊME table. Dans sa maquette ils
+          sont écrits deux fois, une fois dans le bouton du résultat et
+          une fois dans le `href` de la carte : les recopier ici les
+          laisserait diverger, et le générateur s'ouvrirait un jour avec
+          un sujet que la carte n'annonçait pas.
+
+          LA SOURCE DIFFÈRE, ELLE, ET C'EST TOUT L'INTÉRÊT : ces cartes
+          portent `source=modeles`, le résultat du quiz porte
+          `source=hero` plus son profil. C'est ce qui dit laquelle des
+          deux portes amène vraiment des générations. */}
+      <section className="tql-sec">
+        <div className="tql-large">
+          <div className="tql-intro">
+            <h2 className="tql-h2">
+              {t.modelesTitre} <span className="tql-surb">{t.modelesMotCle}</span>
+            </h2>
+            <p className="tql-p">{t.modelesCorps}</p>
+          </div>
+          <div className="tql-mgrid">
+            {PROFILS_HERO.map((cle) => (
+              <article className="tql-m" key={cle}>
+                <span className="tql-m-pour">{modeles[cle].pour}</span>
+                <b>{modeles[cle].idee}</b>
+                <p>{modeles[cle].carte}</p>
+                <a className="tql-m-lien" href={lienDeLaCarte(cle, languePublique)}>
+                  {t.modelesBouton}
+                </a>
+              </article>
+            ))}
+          </div>
+          {/* LE COMPTE VIENT DU CATALOGUE. Sa maquette annonce
+              "21 modèles par métier" ; mesuré, il y en a 15, et les six
+              autres sont les six cartes ci dessus. Sa propre section
+              "Un quiz, ce n'est que le début" le dit d'ailleurs juste :
+              "Quinze modèles métier et six modèles phares". */}
+          <p className="tql-m-note">
+            {noteDesModeles(t)}{" "}
+            <a className="tql-m-note-lien" href={hrefPourLangue("/templates", languePublique)}>
+              {t.modelesVoirTout}
+            </a>
+          </p>
+        </div>
+      </section>
+
       {/* ── 5. LE PRODUIT SE DÉMONTRE TOUT SEUL ────────────────── */}
       {/* La vidéo montre l'expérience, le quiz la fait vivre : les deux
           collés font l'enchaînement le plus fort de la page.
@@ -551,6 +642,43 @@ export default async function AccueilPage({ searchParams }: PageProps) {
           <CtaPrincipal t={t} />
         </div>
       </section>
+
+      {/* ── LES TROIS DERNIERS ARTICLES ────────────────────────── */}
+      {/* Béné, 9 septembre 2026 : "La section blog affiche les trois
+          derniers articles publiés, filtrés sur la locale, et disparaît
+          entièrement (return null) s'il n'y en a aucun. Ajoute
+          export const revalidate = 3600 sinon les 'trois derniers'
+          resteront ceux du build."
+
+          LES DEUX MOITIÉS COMPTENT. Une section de blog vide, avec son
+          titre et sa phrase et rien dessous, se lit comme une panne :
+          elle ne s'affiche donc pas du tout. Et sans la revalidation,
+          "les trois derniers" seraient figés au déploiement, ce qui est
+          faux dès le quatrième article. */}
+      {articles.length > 0 && (
+        <section className="tql-sec">
+          <div className="tql-large">
+            <div className="tql-intro">
+              <h2 className="tql-h2">
+                {t.blogTitre} <span className="tql-surb">{t.blogMotCle}</span>
+              </h2>
+              <p className="tql-p">{t.blogCorps}</p>
+            </div>
+            <div className="tql-bgrid">
+              {articles.map((a) => (
+                <article className="tql-b" key={a.slug}>
+                  <span className="tql-b-cat">{t.blogEtiquette}</span>
+                  <b>{a.titre}</b>
+                  <p>{a.description}</p>
+                  <a className="tql-b-lien" href={cheminArticle(a.slug, languePublique)}>
+                    {t.blogLire}
+                  </a>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <BandeFinale t={t} />
     </main>

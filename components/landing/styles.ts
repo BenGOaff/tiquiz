@@ -45,6 +45,7 @@
 // page de vente. Ce fichier n'en recopie AUCUNE : il les lit.
 
 import { CSS_ILES_ANIMEES } from "./cssIles";
+import { CSS_QUIZ_HERO } from "./cssQuizHero";
 
 export const CSS = `
 .tql{--e:var(--tq-encre);--c:var(--tq-encre-douce);--b:var(--tq-bleu);--cy:var(--tq-cyan);
@@ -783,7 +784,13 @@ export const CSS = `
      .tql-p : mesure du 7 septembre a 390 px, la legende du chiffre,
      sa source et le texte du bandeau de fin rendaient 3 et 4 lignes
      centrees. */
-  .tql-p,.tql-legende,.tql-chiffre-leg,.tql-chiffre-src,.tql-bande p{text-align:left}
+  /* LA NOTE DES MODÈLES EN FAIT PARTIE, et c'est le filet qui l'a
+     trouvée : mesurée à 358 px, elle rendait TROIS lignes centrées.
+     Sa règle du 4 septembre ne souffre pas d'exception ("tout ce qui
+     fait plus de trois lignes doit être en texte aligné à gauche"), et
+     le contrôle qui la tient refuse dès DEUX. */
+  .tql-p,.tql-legende,.tql-chiffre-leg,.tql-chiffre-src,.tql-bande p,
+  .tql-m-note{text-align:left}
 
   .tql-h2{font-size:28px}
   .tql-bande h2{font-size:28px}
@@ -814,5 +821,101 @@ export const CSS = `
    Toute regle ajoutee en fin de cette feuille aurait subi la meme
    chose. Le test compare desormais ce que la feuille DECLARE a ce que
    le navigateur APPLIQUE. */
+
+/* CE QUI SE CENTRE QUAND IL TIENT, ET SEULEMENT LA.
+   Mobile d'abord : a gauche par defaut, donc l'ordre des regles ne peut
+   plus decider a notre place (mesure : la note etait declaree APRES la
+   requete max-width:900px, donc elle gagnait dessus). */
+@media (min-width:901px){
+  .tql-hero-centre .tql-accroche,
+  .tql-hero-centre .tql-preuve,
+  .tql-m-note{text-align:center}
+}
+
+/* ── LES SIX MODÈLES DÉJÀ ÉCRITS ─────────────────────────────────────
+   Trois colonnes au dessus de 980 px, deux au dessus de 640, une en
+   dessous. align-items:start : deux cartes de hauteurs différentes ne
+   s'étirent pas l'une sur l'autre (règle des images de réponse,
+   4 août). */
+/* LE BOUTON DU GÉNÉRATEUR A SA PROPRE CLASSE, ET CE N'EST PAS DU
+   RANGEMENT. Deux actions, deux promesses : .tql-cta crée un compte,
+   .tql-cta-gen ouvre le générateur avec un brief déjà rempli. Sa
+   règle du 6 septembre interdit treize libellés pour UNE action, pas
+   un libellé par action ; nommer les deux séparément est ce qui permet
+   au garde de vérifier que chacun lit son propre champ. */
+.tql-cta-gen{display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  background:var(--b);color:#fff;font-weight:700;font-size:.95rem;
+  padding:12px 20px;border-radius:999px;text-decoration:none;
+  transition:background .16s ease,transform .16s ease}
+.tql-cta-gen:hover{background:var(--tq-bleu-fonce);transform:translateY(-1px)}
+@media (prefers-reduced-motion:reduce){.tql-cta-gen{transition:none}.tql-cta-gen:hover{transform:none}}
+
+.tql-mgrid{display:grid;grid-template-columns:1fr;gap:16px;align-items:start;margin-top:30px}
+@media (min-width:640px){.tql-mgrid{grid-template-columns:1fr 1fr}}
+@media (min-width:980px){.tql-mgrid{grid-template-columns:repeat(3,1fr)}}
+.tql-m{display:flex;flex-direction:column;gap:8px;background:#fff;
+  border:1px solid var(--bord);border-radius:16px;padding:18px 18px 16px;height:100%}
+.tql-m-pour{font-size:.72rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;
+  color:var(--b)}
+.tql-m b{font-size:1.02rem;font-weight:800;line-height:1.3;color:var(--e)}
+.tql-m p{font-size:.9rem;line-height:1.5;color:var(--c);margin:0;flex:1}
+/* La classe monte la specificite au dessus de .tql a (0,1,1), qui
+   pose la couleur des liens d'article. Sans elle le libelle repartait
+   a l'encre du corps : c'est l'arithmetique du bouton bleu sur bleu du
+   30 aout, quatrieme fois. */
+.tql-m-lien{align-self:flex-start;font-weight:700;font-size:.9rem;
+  color:var(--b);text-decoration:none;margin-top:2px}
+.tql-m-lien:hover{text-decoration:underline}
+.tql-m-note{margin-top:22px;font-size:.88rem;color:var(--c)}
+.tql-m-note-lien{color:var(--b);font-weight:700;text-decoration:none}
+.tql-m-note-lien:hover{text-decoration:underline}
+
+/* ── LES TROIS DERNIERS ARTICLES ─────────────────────────────────── */
+.tql-bgrid{display:grid;grid-template-columns:1fr;gap:16px;align-items:start;margin-top:30px}
+@media (min-width:760px){.tql-bgrid{grid-template-columns:repeat(3,1fr)}}
+.tql-b{display:flex;flex-direction:column;gap:8px;background:#fff;
+  border:1px solid var(--bord);border-radius:16px;padding:18px;height:100%}
+.tql-b-cat{font-size:.72rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--b)}
+.tql-b b{font-size:1rem;font-weight:800;line-height:1.32;color:var(--e)}
+.tql-b p{font-size:.88rem;line-height:1.5;color:var(--c);margin:0;flex:1}
+.tql-b-lien{align-self:flex-start;font-weight:700;font-size:.9rem;color:var(--b);text-decoration:none}
+.tql-b-lien:hover{text-decoration:underline}
+
+/* ── LE HAUT DE PAGE EST CENTRÉ, UNE SEULE COLONNE ────────────────
+   Béné, 9 septembre : "Le hero est centré, une seule colonne. Pas de
+   mise en page deux colonnes." Le quiz prend la place de la maquette,
+   et la hauteur se gagne sur les marges : la premiere question et ses
+   options doivent tenir sans scroll a 1440x800. */
+.tql-hero-centre{display:flex;flex-direction:column;align-items:center;
+  gap:12px;max-width:860px;margin:0 auto}
+/* LE CENTRAGE PORTE SUR LES TITRES, PAS SUR TOUT LE BLOC.
+
+   Un text-align:center posé sur le conteneur descend sur l'accroche
+   et sur la ligne de preuve, qui rendent QUATRE et TROIS lignes sur un
+   telephone : c'est exactement ce que sa regle du 7 septembre interdit
+   ("tout ce qui fait plus de deux lignes doit etre en texte aligne a
+   gauche"), et c'est le filet qui l'a trouve, pas l'oeil.
+
+   Les titres restent centres : sa regle parle du TEXTE, et sa propre
+   page centre ses H1. */
+.tql-hero-centre .tql-surtitre,
+.tql-hero-centre .tql-h1{text-align:center}
+.tql-hero-centre .tql-h1{margin:0}
+.tql-hero-centre .tql-accroche{margin:0;max-width:680px}
+.tql-hero-sous{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:16px}
+.tql-hero-direct{font-weight:700;font-size:.9rem;color:var(--b);text-decoration:none}
+.tql-hero-direct:hover{text-decoration:underline}
+/* LA HAUTEUR SE GAGNE SUR LES ESPACES, JAMAIS SUR LE TEXTE.
+   Sa contrainte est "pas de scroll pour voir la premiere question et
+   ses options" a 1440x800. Mesure boite par boite : l'en-tete du site
+   prend 120 px, la section 100 px de marge haute (sa regle, elle ne
+   bouge pas), et il restait 11 px a trouver. Ils viennent des espaces
+   entre les blocs, pas de la taille d'une option : un quiz qu'on lit a
+   la loupe ne se passe pas. */
+@media (min-width:900px){
+  .tql-hero-centre{gap:12px}
+}
+
 ${CSS_ILES_ANIMEES}
+${CSS_QUIZ_HERO}
 `;

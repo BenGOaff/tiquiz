@@ -34,7 +34,7 @@ export function TemplatesChrome({
 
       <footer className="border-t border-border/40 mt-12">
         <div className="max-w-[1100px] mx-auto w-full px-4 sm:px-6 py-8 text-sm text-muted-foreground flex flex-wrap items-center justify-between gap-3">
-          <span>Tiquiz — le quiz lead-magnet le plus simple à créer.</span>
+          <span>Tiquiz, le quiz lead-magnet le plus simple à créer.</span>
           <Link href="/templates" className="hover:text-foreground">
             Tous les modèles
           </Link>

@@ -50,6 +50,7 @@ import {
   AVANTAGES_PLUS,
 } from "@/lib/checkout/avantages";
 import { FREE_LIMITS } from "@/lib/planLimits";
+import { listTemplates } from "@/lib/templates/catalog";
 import { TYPEFORM_PLUS_PAR_MOIS_USD, ZAPIER_PRO_PAR_MOIS_USD } from "@/lib/blog/liensIntegrations";
 
 export interface Etape {
@@ -296,6 +297,29 @@ export interface ContenuLanding {
   /** À QUI ça s'adresse, dit dans le haut de page. Un visiteur doit
    *  savoir en dix secondes si la page parle de lui. */
   pourQui: string;
+
+  /** LE LIEN DISCRET DU HAUT DE PAGE, pour qui sait déjà quoi créer.
+   *  Ce n'est pas un deuxième bouton : le geste du hero est le quiz, et
+   *  deux boutons côte à côte partagent l'attention au lieu de la
+   *  porter. */
+  heroDirect: string;
+
+  /** LES SIX MODÈLES DÉJÀ ÉCRITS. */
+  modelesTitre: string;
+  modelesMotCle: string;
+  modelesCorps: string;
+  /** `{metier}` vient du CATALOGUE, jamais écrit à la main. */
+  modelesNote: string;
+  modelesVoirTout: string;
+  /** Le libellé des six boutons de carte, et du bouton de résultat. */
+  modelesBouton: string;
+
+  /** LES TROIS DERNIERS ARTICLES. */
+  blogTitre: string;
+  blogMotCle: string;
+  blogCorps: string;
+  blogEtiquette: string;
+  blogLire: string;
   /** Le bouton du champ de lien. Il affichait "Étape" : j'avais passé
    *  la mauvaise chaîne, et ça ne se voit qu'à l'écran. */
   copier: string;
@@ -1136,6 +1160,28 @@ export function preuvePrecoce(
  */
 
 /** Le popquiz de démonstration, celui qu'elle m'a donné. */
+/**
+ * LE NOMBRE DE MODÈLES SE LIT, IL NE S'ÉCRIT PAS.
+ *
+ * Sa maquette annonce « 21 modèles par métier ». Mesuré dans
+ * `lib/templates/catalog.ts` : il y en a 15, et les 6 autres sont les
+ * six modèles phares de la section juste au dessus. Sa propre section
+ * « Un quiz, ce n'est que le début » le dit d'ailleurs juste : « Quinze
+ * modèles métier et six modèles phares ».
+ *
+ * Le compte vient donc du CATALOGUE. Un nombre recopié est un nombre
+ * faux au premier modèle ajouté, et il vit ici à l'endroit exact où un
+ * lecteur le vérifie : il lui suffit d'ouvrir /templates et de compter.
+ */
+export function nombreDeModelesMetier(): number {
+  return listTemplates().length;
+}
+
+/** La note sous les six cartes, avec le compte réel dedans. */
+export function noteDesModeles(t: ContenuLanding): string {
+  return t.modelesNote.replace("{metier}", String(nombreDeModelesMetier()));
+}
+
 export const DEMO_POPQUIZ = "https://quiz.tipote.com/embed/p/0a7d8f50-f329-48e5-b5af-36c642f00c7c";
 
 /**
@@ -1380,6 +1426,22 @@ const fr: ContenuLanding = {
   ],
   preuve: "Plus de 200 solopreneurs ont créé leur compte Tiquiz",
   copier: "Copier",
+
+  heroDirect: "Je sais déjà quoi créer, je vais direct au générateur →",
+  modelesTitre: "Six quiz déjà écrits,",
+  modelesMotCle: "prêts à générer",
+  modelesCorps:
+    "Tu cliques, le générateur s'ouvre avec le sujet et l'audience déjà remplis, et l'IA écrit le quiz. Tu n'as pas une ligne à taper.",
+  modelesNote:
+    "Et {metier} modèles par métier dans ton compte, accessibles dès le palier gratuit.",
+  modelesVoirTout: "Voir tous les modèles →",
+  modelesBouton: "Générer ce quiz →",
+
+  blogTitre: "Pour aller",
+  blogMotCle: "plus loin",
+  blogCorps: "Les trois derniers articles publiés, la méthode et les cas concrets.",
+  blogEtiquette: "Article récent",
+  blogLire: "Lire →",
 
   problemeTitre: "Chaque visiteur qui repart sans te laisser son email est",
   problemeMotCle: "un client perdu",
@@ -1859,6 +1921,22 @@ const en: ContenuLanding = {
   ],
   preuve: "More than 200 solopreneurs have created their Tiquiz account",
   copier: "Copy",
+
+  heroDirect: "I already know what to build, take me to the generator →",
+  modelesTitre: "Six quizzes already written,",
+  modelesMotCle: "ready to generate",
+  modelesCorps:
+    "You click, the generator opens with the subject and the audience already filled in, and the AI writes the quiz. You do not type a single line.",
+  modelesNote:
+    "Plus {metier} templates by trade inside your account, available from the free plan.",
+  modelesVoirTout: "See every template →",
+  modelesBouton: "Generate this quiz →",
+
+  blogTitre: "Going",
+  blogMotCle: "further",
+  blogCorps: "The three latest articles: the method, and real cases.",
+  blogEtiquette: "Recent article",
+  blogLire: "Read →",
 
   problemeTitre: "Every visitor who leaves without their email is a lost customer",
   problemeMotCle: "a lost customer",
