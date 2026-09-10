@@ -86,6 +86,15 @@ panne de base, parce que le code lisait "je n'ai pas pu vérifier" comme
 
 ### a) Relever la médiane AVANT le chantier 3, et ça ne peut pas attendre
 
+🚨 **Le chantier 3 est livré le 10 septembre SANS que ce chiffre ait pu
+être relevé d'ici** : aucune base n'est joignable depuis
+l'environnement de travail, et la médiane vit dans `/admin`. Ce que la
+migration du 9 septembre garantit, c'est que les lignes d'AVANT le
+déploiement gardent leur `duree_ms` : le chiffre "avant" se lit donc
+encore après coup, dans `/admin`, tant qu'on borne la période à avant
+la date du déploiement. Ce n'est plus "impossible pour toujours", c'est
+"à lire en filtrant la période".
+
 Elle veut "la durée médiane de génération mesurée **avant et après** le
 chantier 3". **Le chiffre "avant" n'existe pas encore** : aucune
 génération ne portait de durée avant le 9 septembre, et la médiane rend
@@ -98,9 +107,17 @@ chantier 3 d'abord rend la comparaison impossible pour toujours.
 
 ### b) Chantier 3 : le streaming de la génération
 
+🚨 **FAIT le 10 septembre**, et cette section disait qu'il restait à
+faire. Le détail vit dans `AGENTS.md` (section « Le quiz s'affiche
+pendant qu'il s'écrit ») : `stream: true` dans la requête,
+`lib/embed/fluxGeneration.ts` (pur) pour ce qui est déjà complet,
+`components/embed/QuizEnCours.tsx` pour l'écran d'attente, et la tâche
+#55 fermée dans le même passage (`lib/embed/echecGenerateur.ts`). Le
+paragraphe suivant décrit l'état d'AVANT, gardé pour la trace.
+
 C'est celui qu'elle appelle "le chantier qui rapporte le plus". Le
-détail complet est dans `CHANTIERS.md`, section 0.3. Ce qu'il faut
-savoir avant d'ouvrir un fichier, et qui est MESURÉ :
+détail complet est dans `CHANTIERS.md`, section 0.3. Ce qu'il fallait
+savoir avant d'ouvrir un fichier, et qui était MESURÉ le 9 :
 
 - la plomberie SSE vers le navigateur **existe déjà**
   (`app/api/embed/quiz/generate/route.ts`) ;
@@ -208,9 +225,13 @@ anglophone lit du français au moment exact où quelque chose échoue.
 
 C'est la règle du 3 septembre, déjà appliquée aux onze autres chemins
 IA : **le serveur rend une RAISON, l'écran la traduit** (`lib/ia/
-echecIa.ts`, `hooks/useEchecIa.ts`, namespace `erreursIa`). Ce chemin là
-n'a jamais été repris. À faire en même temps que le chantier 3, qui
-touche exactement ce fichier.
+echecIa.ts`, `hooks/useEchecIa.ts`, namespace `erreursIa`).
+
+🚨 **FAIT le 10 septembre, avec le chantier 3** : la route rend `reason`
+sur ses douze sorties, `lib/embed/echecGenerateur.ts` traduit dans la
+langue de la PROP de l'écran (pas d'un cookie), et un test exige que les
+phrases de l'embed restent identiques à `erreursIa`. Le paragraphe du
+dessus décrit l'état d'avant.
 
 ---
 

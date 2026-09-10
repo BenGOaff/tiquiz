@@ -11,6 +11,26 @@
 //   - Returns the generated quiz AND a session_token the embed reuses
 //     for /save and /claim. We never expose the DB row id.
 //   - Stream is SSE so the embed can show a "live writing" effect.
+//
+// LE QUIZ S'AFFICHE PENDANT QU'IL S'ÉCRIT (chantier 3, 10 septembre 2026).
+//
+// Jusqu'ici l'appel à Anthropic n'était PAS streamé (`stream: true`
+// absent) : la route attendait la réponse entière puis rendait tout
+// d'un coup, et le "live writing" du commentaire ci dessus n'était
+// qu'un spinner d'une minute. La route consomme maintenant le flux du
+// modèle, et envoie au navigateur le titre, puis CHAQUE question dès
+// que son objet est fermé, puis chaque profil (événements `titre`,
+// `question`, `resultat`). Les décisions vivent dans
+// `lib/embed/fluxGeneration.ts`, pur et testé.
+//
+// LE SERVEUR REND UNE RAISON, JAMAIS UNE PHRASE (tâche #55, même jour).
+//
+// Dix sorties d'erreur portaient une phrase FRANÇAISE, et le client
+// l'affichait telle quelle : sur `/en/generateur-de-quiz`, un visiteur
+// anglophone lisait "L'IA a mis trop de temps. Réessaie." C'est la
+// règle du 3 septembre (`lib/ia/echecIa.ts`), qui n'avait jamais été
+// reprise sur ce chemin. Chaque sortie porte `reason`, l'écran traduit
+// (`lib/embed/echecGenerateur.ts` + `components/embed/embed-i18n.ts`).
 
 import { NextRequest } from "next/server";
 import { buildQuizGenerationPrompt, QUIZ_GENERATION_MAX_TOKENS } from "@/lib/prompts/quiz/system";
@@ -22,6 +42,16 @@ import { FENETRE_HEURES, LIMITE_PAR_EMAIL, LIMITE_PAR_IP } from "@/lib/embed/lim
 import { modeleGenerationQuiz } from "@/lib/quiz/modeleGeneration";
 import { fetchAnthropic } from "@/lib/aiRetry";
 import { cleAnthropic } from "@/lib/ai/cleAnthropic";
+import { classifyThrown, classifyUpstream } from "@/lib/aiFailure";
+import type { RaisonIa } from "@/lib/ia/echecIa";
+import {
+  LecteurSseAnthropic,
+  PROGRESSION_VIDE,
+  nouveautes,
+  progressionDuFlux,
+  type Progression,
+} from "@/lib/embed/fluxGeneration";
+import type { RaisonGenerateur } from "@/lib/embed/echecGenerateur";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,12 +59,34 @@ export const maxDuration = 300;
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
+// LE BUDGET DE TEMPS COUVRE TOUT LE FLUX, pas seulement les en-têtes.
+//
+// Avant le streaming, le minuteur de 120 s ne bornait que l'attente des
+// en-têtes : `res.json()` venait APRÈS `clearTimeout`, donc la lecture
+// du corps n'était bornée par rien. Ici le même signal borne la lecture
+// du flux (un `reader.read()` sur un corps abandonné lève `AbortError`).
+// 180 s et pas 120 : un quiz long (8 questions, 5 profils) approche les
+// 100 s d'écriture, et pendant tout ce temps le visiteur VOIT les
+// questions arriver, donc l'attente n'a plus le même prix.
+const BUDGET_FLUX_MS = 180_000;
+
 // The embed exposes generator knobs in step 1 (matches /quiz/new).
 // Defaults are applied in the request handler when the visitor leaves
 // a field at zero. Token cap stays low — even a 10-question quiz with
 // 5 profiles fits comfortably.
 
 
+
+// Un refus AVANT le flux : JSON, `Content-Type: application/json`, et
+// une raison. Le client discrimine sur le Content-Type (`lireEchecIa`),
+// pas sur le statut : un 200 avec ce corps est un refus comme un 429.
+function refus(
+  reason: RaisonGenerateur,
+  extra: Record<string, unknown>,
+  init: ResponseInit,
+): Response {
+  return Response.json({ ok: false, reason, ...extra }, init);
+}
 
 function getClaudeModel(): string {
   // LE MÊME DÉFAUT QUE L'ÉDITEUR DERRIÈRE CONNEXION, et c'est ce qui
@@ -81,14 +133,14 @@ export async function POST(req: NextRequest) {
     // 200 delibere : Cloudflare remplace le corps d'un 5xx, donc la
     // raison n'arrivait jamais (mesure du 31 aout). Le client discrimine
     // sur le Content-Type, pas sur le statut.
-    return Response.json({ ok: false, error: "Server is not configured for AI generation." }, { headers });
+    return refus("not_configured", {}, { headers });
   }
 
   let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch {
-    return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400, headers });
+    return refus("unreadable", {}, { status: 400, headers });
   }
 
   // Email is OPTIONAL at this step now: the new funnel asks for it
@@ -135,29 +187,31 @@ export async function POST(req: NextRequest) {
   const tone = ALLOWED_TONES.has(toneRaw) ? toneRaw : "inspirant";
   const addressForm = body.addressForm === "vous" ? "vous" : "tu";
 
+  // Les refus de VALIDATION gardent leur 4xx (ils passent intacts à
+  // travers Cloudflare) et portent une raison que l'écran traduit.
   if (topic.length < 3 || topic.length > 200) {
-    return Response.json({ ok: false, error: "Le sujet doit faire entre 3 et 200 caractères." }, { status: 400, headers });
+    return refus("sujet", {}, { status: 400, headers });
   }
   if (audience.length < 2 || audience.length > 200) {
-    return Response.json({ ok: false, error: "Précise ton audience (2 à 200 caractères)." }, { status: 400, headers });
+    return refus("audience", {}, { status: 400, headers });
   }
   if (!EMBED_OBJECTIVES.has(objective)) {
-    return Response.json({ ok: false, error: "Objectif inconnu." }, { status: 400, headers });
+    return refus("objectif", {}, { status: 400, headers });
   }
 
   const ipHash = hashIp(clientIp(req));
   const rate = await checkRateLimit({ email, ipHash });
   if (!rate.ok) {
-    return Response.json(
+    // Les bornes sont LUES, jamais recopiées : la fenêtre est passée de
+    // 1 h à 24 h le 8 septembre, et deux phrases annonçaient encore une
+    // heure. L'écran écrit la phrase dans SA langue avec ces nombres.
+    return refus(
+      "rate_limited",
       {
-        ok: false,
-        // La fenêtre est LUE, jamais recopiée : elle est passée de 1 h à
-        // 24 h le 8 septembre, et ces deux phrases annonçaient encore
-        // une heure. Un message qui dit un délai plus court que le vrai
-        // fait revenir quelqu'un pour rien.
-        error: rate.reason === "email"
-          ? `Tu as déjà généré ${LIMITE_PAR_EMAIL} quiz avec cette adresse. Reviens dans ${FENETRE_HEURES} h, ou crée ton compte Tiquiz pour des quiz illimités.`
-          : `Tu as déjà généré ${LIMITE_PAR_IP} quiz depuis ce réseau. Reviens dans ${FENETRE_HEURES} h, ou crée ton compte Tiquiz pour des quiz illimités.`,
+        limite: rate.reason === "email" ? "email" : "ip",
+        parLimite: rate.reason === "email" ? LIMITE_PAR_EMAIL : LIMITE_PAR_IP,
+        fenetreHeures: FENETRE_HEURES,
+        retryAfterSec: rate.retryAfterSec,
       },
       { status: 429, headers: { ...headers, "Retry-After": String(rate.retryAfterSec) } },
     );
@@ -179,18 +233,18 @@ export async function POST(req: NextRequest) {
 
   if (insertErr || !sessionRow) {
     console.error("[embed/generate] failed to create session:", insertErr);
-    // Surface the actual Postgres error in the body so deployment
-    // problems (table missing → "relation … does not exist", NOT NULL
-    // violations on a stale schema, etc.) are diagnosable from the
-    // browser console instead of being lost in the server logs.
+    // Le détail Postgres reste dans le corps (`detail`) pour qu'un
+    // problème de déploiement se lise dans la console du navigateur ;
+    // l'ÉCRAN, lui, n'affiche que la phrase traduite de `generic`.
     const detail = insertErr?.message
       || insertErr?.hint
-      || (typeof insertErr === "string" ? insertErr : "Insertion impossible.");
+      || (typeof insertErr === "string" ? insertErr : "insertion impossible");
     const isMissingTable = /relation .*embed_quiz_sessions.* does not exist/i.test(detail);
-    const userMsg = isMissingTable
-      ? "Tiquiz n'a pas encore appliqué la migration de l'embed. Demande à ton admin de pousser supabase/migrations/023 + 024."
-      : "Impossible d'initialiser la session : " + detail;
-    return Response.json({ ok: false, error: userMsg }, { headers });
+    return refus(
+      "generic",
+      { detail: isMissingTable ? "migration embed_quiz_sessions absente (023 + 024)" : detail },
+      { headers },
+    );
   }
   const sessionToken = sessionRow.id as string;
 
@@ -228,47 +282,113 @@ export async function POST(req: NextRequest) {
 
       try {
         sse("session", { session_token: sessionToken });
-        sse("progress", { step: "Ton quiz se construit…" });
+        // Une ÉTAPE, pas une phrase : l'écran la dit dans sa langue.
+        sse("progress", { step: "writing" });
 
         const abort = new AbortController();
-        const timer = setTimeout(() => abort.abort(), 120_000);
+        const timer = setTimeout(() => abort.abort(), BUDGET_FLUX_MS);
 
-        let res: Response;
+        // Ce que le flux nous apprend, et qu'on écrit en base à la fin
+        // MÊME si le quiz n'aboutit pas : une réponse coupée a coûté
+        // exactement les mêmes jetons qu'une réponse complète.
+        let brut = "";
+        let modele: string | null = null;
+        let jetonsEntree: number | null = null;
+        let jetonsSortie: number | null = null;
+        let stopReason: string | null = null;
+        let erreurDuFlux: string | null = null;
+        let coupure: RaisonIa | null = null;
+        let progression: Progression = PROGRESSION_VIDE;
+
         try {
-          res = await fetchAnthropic(CLAUDE_API_URL, {
-            method: "POST",
-            headers: {
-              "content-type": "application/json",
-              "x-api-key": apiKey,
-              "anthropic-version": "2023-06-01",
-            },
-            signal: abort.signal,
-            body: JSON.stringify({
-              model: getClaudeModel(),
-              max_tokens: QUIZ_GENERATION_MAX_TOKENS,
-              temperature: 0.7,
-              system: prompts.system,
-              messages: [{ role: "user", content: prompts.user }],
-            }),
-          });
-        } catch (err) {
-          if ((err as Error)?.name === "AbortError") {
-            sse("error", { ok: false, error: "L'IA a mis trop de temps. Réessaie." });
+          let res: Response;
+          try {
+            res = await fetchAnthropic(CLAUDE_API_URL, {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+                "x-api-key": apiKey,
+                "anthropic-version": "2023-06-01",
+              },
+              signal: abort.signal,
+              body: JSON.stringify({
+                model: getClaudeModel(),
+                max_tokens: QUIZ_GENERATION_MAX_TOKENS,
+                temperature: 0.7,
+                stream: true,
+                system: prompts.system,
+                messages: [{ role: "user", content: prompts.user }],
+              }),
+            });
+          } catch (err) {
+            // `too_long` sur notre propre minuteur, `unreachable` sur une
+            // panne réseau : les deux appellent une relance, mais pas la
+            // même phrase.
+            sse("error", { ok: false, reason: classifyThrown(err) });
             return;
           }
-          throw err;
+
+          if (!res.ok) {
+            const t = await res.text().catch(() => "");
+            console.error("[embed/generate] Claude error", res.status, t.slice(0, 300));
+            sse("error", { ok: false, reason: classifyUpstream(res.status) });
+            return;
+          }
+          if (!res.body) {
+            sse("error", { ok: false, reason: "empty" });
+            return;
+          }
+
+          // LE FLUX, MORCEAU PAR MORCEAU. Chaque texte reçu est ajouté
+          // au brut ; ce qui vient de devenir COMPLET (le titre, une
+          // question fermée, un profil fermé) part tout de suite au
+          // navigateur, dans l'ordre d'écriture.
+          const lecteur = new LecteurSseAnthropic();
+          const decodeur = new TextDecoder();
+          const reader = res.body.getReader();
+          const traiter = (ev: ReturnType<LecteurSseAnthropic["alimenter"]>[number]) => {
+            if (ev.type === "debut") {
+              modele = ev.modele;
+              jetonsEntree = ev.jetonsEntree;
+            } else if (ev.type === "texte") {
+              brut += ev.texte;
+              const apres = progressionDuFlux(brut, locale);
+              for (const n of nouveautes(progression, apres)) sse(n.type, n);
+              progression = apres;
+            } else if (ev.type === "fin") {
+              stopReason = ev.stopReason;
+              jetonsSortie = ev.jetonsSortie;
+            } else if (ev.type === "erreur") {
+              erreurDuFlux = ev.genre ?? "error";
+              console.error("[embed/generate] erreur dans le flux", ev.genre, ev.message);
+            }
+          };
+          try {
+            for (;;) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              for (const ev of lecteur.alimenter(decodeur.decode(value, { stream: true }))) traiter(ev);
+            }
+            for (const ev of lecteur.terminer()) traiter(ev);
+          } catch (err) {
+            coupure = classifyThrown(err);
+            console.error("[embed/generate] flux interrompu", coupure);
+          }
         } finally {
           clearTimeout(timer);
         }
 
-        if (!res.ok) {
-          const t = await res.text().catch(() => "");
-          console.error("[embed/generate] Claude error", res.status, t.slice(0, 300));
-          sse("error", { ok: false, error: "L'IA est momentanément indisponible. Réessaie dans quelques secondes." });
-          return;
+        // LA MÊME FORME QU'UNE RÉPONSE NON STREAMÉE, pour `enregistrerUsage`
+        // et pour le test de troncature : le modèle, l'usage, la raison
+        // d'arrêt et le texte. `usage` n'existe que si le flux l'a dit.
+        const json: Record<string, unknown> = {
+          model: modele,
+          stop_reason: stopReason,
+          content: [{ type: "text", text: brut }],
+        };
+        if (jetonsEntree !== null || jetonsSortie !== null) {
+          json.usage = { input_tokens: jetonsEntree, output_tokens: jetonsSortie };
         }
-
-        const json = await res.json() as Record<string, unknown>;
 
         // CE QUE CETTE GÉNÉRATION A COÛTÉ, ÉCRIT AVANT TOUT LE RESTE.
         //
@@ -289,6 +409,18 @@ export async function POST(req: NextRequest) {
         // mesure, jamais le livrable.
         await enregistrerUsage(sessionToken, json, Date.now() - debut);
 
+        // Le coût est écrit ; MAINTENANT on peut dire que ça a raté.
+        // Une surcharge annoncée DANS le flux (`overloaded_error`) se
+        // relance ; toute autre erreur du modèle est un refus.
+        if (erreurDuFlux) {
+          sse("error", { ok: false, reason: /overloaded|rate_limit/i.test(erreurDuFlux) ? "busy" : "refused" });
+          return;
+        }
+        if (coupure) {
+          sse("error", { ok: false, reason: coupure });
+          return;
+        }
+
         const parts = Array.isArray(json?.content) ? json.content : [];
         const raw = (parts as Record<string, unknown>[])
           .map((p) => (p?.type === "text" ? String(p?.text ?? "") : ""))
@@ -296,7 +428,7 @@ export async function POST(req: NextRequest) {
           .trim();
 
         if (!raw) {
-          sse("error", { ok: false, error: "Réponse IA vide. Réessaie." });
+          sse("error", { ok: false, reason: "empty" });
           return;
         }
 
@@ -311,7 +443,7 @@ export async function POST(req: NextRequest) {
         // Le budget est désormais partagé (QUIZ_GENERATION_MAX_TOKENS),
         // et le cas restant DIT quoi faire au lieu d'accuser le format.
         if (json?.stop_reason === "max_tokens") {
-          sse("error", { ok: false, error: "Ton quiz était trop long à écrire. Réessaie avec moins de questions." });
+          sse("error", { ok: false, reason: "too_long" });
           return;
         }
 
@@ -328,7 +460,7 @@ export async function POST(req: NextRequest) {
               : JSON.parse(raw);
           }
         } catch {
-          sse("error", { ok: false, error: "JSON IA invalide. Réessaie." });
+          sse("error", { ok: false, reason: "unreadable" });
           return;
         }
 
@@ -364,7 +496,7 @@ export async function POST(req: NextRequest) {
           .eq("embed_session_id", sessionToken);
         if (prevDelErr) {
           console.error("[embed/generate] stale-quiz delete failed:", prevDelErr.message);
-          sse("error", { ok: false, error: "Création du quiz impossible." });
+          sse("error", { ok: false, reason: "generic" });
           return;
         }
 
@@ -395,7 +527,7 @@ export async function POST(req: NextRequest) {
 
         if (quizInsertErr || !quizRow) {
           console.error("[embed/generate] quiz materialization failed:", quizInsertErr);
-          sse("error", { ok: false, error: "Création du quiz impossible." });
+          sse("error", { ok: false, reason: "generic" });
           return;
         }
 
@@ -420,7 +552,7 @@ export async function POST(req: NextRequest) {
           if (qInsErr) {
             console.error("[embed/generate] questions insert failed:", qInsErr.message);
             await supabaseAdmin.from("quizzes").delete().eq("id", quizRow.id);
-            sse("error", { ok: false, error: "Création du quiz impossible." });
+            sse("error", { ok: false, reason: "generic" });
             return;
           }
         }
@@ -442,7 +574,7 @@ export async function POST(req: NextRequest) {
             // Cascade clears quiz_questions via FK, then drop the quiz row.
             await supabaseAdmin.from("quiz_questions").delete().eq("quiz_id", quizRow.id);
             await supabaseAdmin.from("quizzes").delete().eq("id", quizRow.id);
-            sse("error", { ok: false, error: "Création du quiz impossible." });
+            sse("error", { ok: false, reason: "generic" });
             return;
           }
         }
@@ -463,7 +595,9 @@ export async function POST(req: NextRequest) {
         });
       } catch (e) {
         console.error("[embed/generate] stream error:", e);
-        sse("error", { ok: false, error: e instanceof Error ? e.message : "Erreur inconnue" });
+        // Une exception n'est jamais la phrase que lit le visiteur : le
+        // détail est dans le journal, l'écran dit `generic` dans sa langue.
+        sse("error", { ok: false, reason: "generic" });
       } finally {
         clearInterval(heartbeat);
         controller.close();
