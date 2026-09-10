@@ -13,6 +13,9 @@ import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import EmbedForm from "./EmbedForm";
 import { getEmbedStrings } from "./embed-i18n";
+import QuizEnCours from "./QuizEnCours";
+import { phraseDEchec } from "@/lib/embed/echecGenerateur";
+import { PROGRESSION_VIDE, type Progression } from "@/lib/embed/fluxGeneration";
 import type {
   EmbedInputs, EmbedLocale, EmbedPhase,
 } from "./embed-types";
@@ -28,6 +31,7 @@ import {
   evenementGenerationLancee,
   evenementGenerationReussie,
   parcoursDeLAdresse,
+  type ReponseSystemeIo,
 } from "@/lib/analytics/parcours";
 
 // QuizDetailClient is heavy (drag-and-drop, dnd-kit, recharts in some
@@ -85,6 +89,12 @@ export default function EmbedPreviewClient({
   const [inputs, setInputs] = useState<EmbedInputs>(DEFAULT_INPUTS);
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
+  // CE QUI EST DÉJÀ ÉCRIT (chantier 3) : le titre, les questions, les
+  // profils, tels que la route les envoie dès qu'ils sont complets.
+  const [apercu, setApercu] = useState<Progression>(PROGRESSION_VIDE);
+  // La réponse à "tu utilises Systeme.io ?", gardée d'un essai à
+  // l'autre : on ne repose pas une question à quelqu'un qui a répondu.
+  const [systemeio, setSystemeio] = useState<ReponseSystemeIo | null>(null);
   // ── LE CHRONO DE `generation_reussie` ─────────────────────────────
   //
   // Béné : "Ajoute aussi la durée médiane de generation_reussie : c'est
@@ -291,6 +301,7 @@ export default function EmbedPreviewClient({
       return setError(t.errAudience);
     }
     setError("");
+    setApercu(PROGRESSION_VIDE);
     setPhase("generating");
     setProgress(t.genConnect);
 
@@ -339,15 +350,18 @@ export default function EmbedPreviewClient({
       // Un echec repond 200 + application/json (le flux, lui, repond du
       // text/event-stream) : sans ce test, un 200 d'erreur passait pour un
       // flux et le visiteur attendait un quiz qui n'arrivait jamais.
+      //
+      // LE CORPS PORTE UNE RAISON, JAMAIS UNE PHRASE (tache #55) : on ne
+      // recopie plus `error` a l'ecran, c'est ce qui affichait du
+      // francais sur `/en/`. `phraseDEchec` traduit dans la langue de CET
+      // ecran, et un corps illisible retombe sur la phrase generique.
       const typeReponse = res.headers.get("content-type") ?? "";
       if (!res.ok || !res.body || typeReponse.includes("application/json")) {
-        const text = await res.text().catch(() => "");
-        let msg = text || `HTTP ${res.status}`;
-        try {
-          const j = JSON.parse(text);
-          if (j?.error) msg = String(j.error);
-        } catch { /* not JSON */ }
-        throw new Error(msg);
+        let corps: unknown = null;
+        try { corps = await res.json(); } catch { corps = null; }
+        setError(phraseDEchec(corps, t));
+        setPhase("form");
+        return;
       }
       const reader = res.body.getReader();
       const decoder = new TextDecoder("utf-8");
@@ -377,7 +391,31 @@ export default function EmbedPreviewClient({
             setSessionToken(token);
             try { localStorage.setItem(STORAGE_KEY, token); } catch { /* private mode */ }
           } else if (ev === "progress" && typeof payload.step === "string") {
-            setProgress(payload.step);
+            // Une ETAPE, traduite ici : le serveur n'envoie plus de phrase.
+            setProgress(payload.step === "writing" ? t.genStep : t.genConnect);
+          } else if (ev === "titre" && typeof payload.titre === "string") {
+            const titre = payload.titre;
+            setApercu((a) => ({ ...a, titre }));
+          } else if (ev === "question" && typeof payload.index === "number" && typeof payload.texte === "string") {
+            // Par INDEX, dans l'ordre d'ecriture : rien a trier ici.
+            const index = payload.index;
+            const q = {
+              texte: payload.texte,
+              options: Array.isArray(payload.options) ? payload.options.filter((o): o is string => typeof o === "string") : [],
+            };
+            setApercu((a) => {
+              const questions = a.questions.slice();
+              questions[index] = q;
+              return { ...a, questions };
+            });
+          } else if (ev === "resultat" && typeof payload.index === "number" && typeof payload.titre === "string") {
+            const index = payload.index;
+            const titre = payload.titre;
+            setApercu((a) => {
+              const resultats = a.resultats.slice();
+              resultats[index] = titre;
+              return { ...a, resultats };
+            });
           } else if (ev === "result" && typeof payload.quiz_id === "string") {
             // The route now materializes a real anonymous quiz row
             // and returns its id; we mount QuizDetailClient against
@@ -398,6 +436,9 @@ export default function EmbedPreviewClient({
                     : Date.now() - departGeneration.current,
                 source: parcours.source,
                 profil: parcours.profil,
+                // La reponse a "tu utilises Systeme.io ?", sous la cle
+                // `systemeio` ; omise quand personne n'a repondu.
+                systemeio,
               }),
             );
             departGeneration.current = null;
@@ -408,7 +449,9 @@ export default function EmbedPreviewClient({
             setPhase("edit");
             return;
           } else if (ev === "error") {
-            setError(typeof payload.error === "string" ? payload.error : t.errGeneric);
+            // JAMAIS un ecran blanc : la phrase traduite s'affiche au
+            // dessus du formulaire, deja rempli, et son bouton relance.
+            setError(phraseDEchec(payload, t));
             setPhase("form");
             return;
           }
@@ -418,7 +461,10 @@ export default function EmbedPreviewClient({
       setError(t.errGeneric);
       setPhase("form");
     } catch (err) {
-      setError(err instanceof Error ? err.message : t.errGeneric);
+      // Une exception ici, c'est le reseau (coupure, onglet en arriere
+      // plan) : on le dit comme tel, jamais avec le texte de l'exception.
+      console.error("[embed] generation interrompue", err);
+      setError(phraseDEchec({ reason: "unreachable" }, t));
       setPhase("form");
     }
   }
@@ -503,11 +549,13 @@ export default function EmbedPreviewClient({
         )}
 
         {phase === "generating" && (
-          <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
-            <Loader2 className="size-10 text-primary animate-spin mb-4" />
-            <p className="font-semibold">{progress || t.genStep}</p>
-            <p className="text-sm text-muted-foreground mt-1 max-w-md">{t.genSub}</p>
-          </div>
+          <QuizEnCours
+            t={t}
+            etape={progress || t.genStep}
+            apercu={apercu}
+            systemeio={systemeio}
+            onSystemeio={setSystemeio}
+          />
         )}
       </div>
     </div>

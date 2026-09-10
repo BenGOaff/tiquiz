@@ -373,7 +373,13 @@ test("les bornes annoncées au visiteur sont celles qui s'appliquent", () => {
     !/dans 1h|dans 1 h/.test(route),
     "un refus annonce encore une heure : la fenetre est de 24 h",
   );
-  assert.match(route, /\$\{FENETRE_HEURES\}/, "le delai est recopie au lieu d'etre lu");
+  // LE FAIT, PAS LA FORMULATION : depuis le 10 septembre la route ne rend
+  // plus de phrase (tache #55), elle rend les bornes en DONNEES et l'ecran
+  // ecrit la phrase dans sa langue. Ce qui compte : les nombres viennent
+  // du module `lib/embed/limites.ts`, jamais d'un chiffre ecrit ici.
+  assert.match(route, /fenetreHeures:\s*FENETRE_HEURES/, "le delai est recopie au lieu d'etre lu");
+  assert.match(route, /LIMITE_PAR_EMAIL/, "la borne par adresse n'est plus lue dans le module");
+  assert.match(route, /LIMITE_PAR_IP/, "la borne par reseau n'est plus lue dans le module");
 });
 
 // ─────────────────────────────────────────────────────────────────────

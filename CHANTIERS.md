@@ -84,10 +84,19 @@ npm run check:vitesse-quiz -- https://quiz.tipote.com/q/rps
 La ligne « la charge du quiz voyage avec le HTML » dira **oui** une fois
 déployé. C'est la preuve que le déploiement a pris.
 
-### 3. Les questions qui s'écrivent au fur et à mesure : LE SUIVANT
+### 3. Les questions qui s'écrivent au fur et à mesure ✅ FAIT le 10 septembre
 
-Elle l'appelle "le chantier qui rapporte le plus". Aujourd'hui : 20 à
-25 secondes avec un spinner.
+Elle l'appelle "le chantier qui rapporte le plus". Avant : 20 à
+25 secondes avec un spinner. Maintenant : le titre, puis chaque question
+dès que son objet est fermé, puis chaque profil, pendant que le modèle
+écrit. Le détail vit dans `AGENTS.md` (section « Le quiz s'affiche
+pendant qu'il s'écrit »). À retenir sans l'ouvrir : la route demande le
+flux à Anthropic (`stream: true`), `lib/embed/fluxGeneration.ts` (pur)
+dit ce qui est déjà COMPLET, et le serveur rend une RAISON à la place
+des dix phrases françaises (tâche #55, fermée dans le même passage).
+
+Ce qui suit est le brief tel qu'il a été écrit le 9 septembre, gardé
+pour la trace.
 
 **Ce qu'elle demande :** streamer l'appel, rendre chaque question dès
 qu'elle est complète, dans l'ordre, avec une apparition douce. Le titre
@@ -110,7 +119,7 @@ la connexion par clé API ; sinon -> l'export. Elle part dans
 `generation_reussie` sous la clé `systemeio` (le constructeur
 d'événement l'accepte déjà et l'omet quand elle est absente).
 
-**MESURÉ le 9 septembre, et ça change le travail :** la plomberie SSE
+**MESURÉ le 9 septembre (les trois morceaux sont FAITS le 10) :** la plomberie SSE
 vers le navigateur EXISTE déjà dans
 `app/api/embed/quiz/generate/route.ts` (heartbeat toutes les 5 s,
 événements `session`, `progress`, `result`, `error`). Ce qui manque est
