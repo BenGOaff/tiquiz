@@ -28,7 +28,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
     whoFor:
       "Coachs business, mentors et accompagnateurs d'entrepreneurs qui veulent qualifier leurs prospects avant le premier appel.",
     whyItWorks:
-      "Tes prospects adorent se situer. En découvrant leur profil, ils se reconnaissent — et tu sais exactement quel message leur envoyer ensuite.",
+      "Tes prospects adorent se situer. En découvrant leur profil, ils se reconnaissent : et tu sais exactement quel message leur envoyer ensuite.",
     estimatedMinutes: 2,
     payload: {
       title: "Quel entrepreneur es-tu vraiment ?",
@@ -101,7 +101,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu réfléchis avant d'agir et tu détestes l'improvisation. Ta force : tu construis des bases solides. Ton piège : tu peux rester bloqué en mode 'préparation' pendant des mois.",
           insight:
-            "Ton plan est probablement déjà très bon. Ce qui te manque, ce n'est pas une meilleure stratégie — c'est une première action imparfaite, lancée cette semaine.",
+            "Ton plan est probablement déjà très bon. Ce qui te manque, ce n'est pas une meilleure stratégie : c'est une première action imparfaite, lancée cette semaine.",
           projection:
             "Imagine arrêter de peaufiner et publier ta première offre dans les 7 jours. C'est exactement le déclic qu'on travaille ensemble.",
           cta_text: "Passer à l'action avec moi",
@@ -111,7 +111,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu testes vite, tu apprends vite. Ta force : tu n'as pas peur de te lancer. Ton piège : tu commences dix choses et tu en finis une.",
           insight:
-            "Ton énergie est ton meilleur atout — mais sans focus, elle se disperse. Le vrai levier pour toi : choisir UNE offre et la pousser jusqu'au bout.",
+            "Ton énergie est ton meilleur atout : mais sans focus, elle se disperse. Le vrai levier pour toi : choisir UNE offre et la pousser jusqu'au bout.",
           projection:
             "Imagine concentrer toute ton énergie sur un seul projet rentable au lieu de cinq à moitié faits. C'est là qu'on débloque ton chiffre.",
           cta_text: "Trouver mon focus",
@@ -121,7 +121,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu places l'humain avant tout. Ta force : tes clients t'adorent et te recommandent. Ton piège : tu doutes de ta valeur et tu sous-factures.",
           insight:
-            "Ta légitimité n'est pas un problème de compétence — c'est un problème de posture. Tes résultats clients parlent déjà pour toi.",
+            "Ta légitimité n'est pas un problème de compétence : c'est un problème de posture. Tes résultats clients parlent déjà pour toi.",
           projection:
             "Imagine vendre tes accompagnements au juste prix, sans cette petite boule au ventre. C'est le premier chantier qu'on attaque.",
           cta_text: "Assumer ma valeur",
@@ -131,7 +131,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu avances à 200 à l'heure. Ta force : tu obtiens des résultats que les autres n'osent même pas viser. Ton piège : tu confonds vitesse et précipitation, et tu frôles le burn-out.",
           insight:
-            "Tu n'as pas besoin de travailler plus — tu as besoin de travailler sur les bons leviers. Ton énergie mérite d'être canalisée, pas grillée.",
+            "Tu n'as pas besoin de travailler plus : tu as besoin de travailler sur les bons leviers. Ton énergie mérite d'être canalisée, pas grillée.",
           projection:
             "Imagine garder ton rythme mais avec un cap clair, sans t'éparpiller ni t'épuiser. C'est ce qu'on construit ensemble.",
           cta_text: "Canaliser mon énergie",
@@ -152,12 +152,12 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
     whoFor:
       "Coachs de vie, en développement personnel ou en transition professionnelle qui veulent créer un premier point de contact bienveillant.",
     whyItWorks:
-      "Les gens cherchent à se comprendre. Un quiz introspectif crée un moment de prise de conscience — et c'est exactement à ce moment qu'ils ont envie d'être accompagnés.",
+      "Les gens cherchent à se comprendre. Un quiz introspectif crée un moment de prise de conscience : et c'est exactement à ce moment qu'ils ont envie d'être accompagnés.",
     estimatedMinutes: 3,
     payload: {
       title: "Quel est ton moteur intérieur ?",
       introduction:
-        "On avance tous pour une raison différente. En quelques questions, découvre ce qui te met vraiment en mouvement — et ce qui te freine sans que tu t'en rendes compte.",
+        "On avance tous pour une raison différente. En quelques questions, découvre ce qui te met vraiment en mouvement : et ce qui te freine sans que tu t'en rendes compte.",
       cta_text: "Découvrir mon moteur",
       share_message:
         "Je viens de découvrir mon moteur intérieur 🧭 Ça m'a fait réfléchir. Et toi ?",
@@ -226,7 +226,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu avances par et pour les autres. Ton empathie est un cadeau. Mais à force de prendre soin de tout le monde, tu t'oublies souvent toi.",
           insight:
-            "Prendre soin de toi n'est pas de l'égoïsme — c'est ce qui te permet de continuer à donner sans te vider.",
+            "Prendre soin de toi n'est pas de l'égoïsme : c'est ce qui te permet de continuer à donner sans te vider.",
           projection:
             "Imagine poser des limites sans culpabiliser, et te sentir enfin légitime à recevoir aussi. On peut y arriver ensemble.",
           cta_text: "Apprendre à me recentrer",
@@ -236,7 +236,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu as besoin que les choses aient une raison d'être. C'est ce qui te rend profond et aligné. Mais la quête de sens peut aussi te paralyser.",
           insight:
-            "Le sens ne se trouve pas seulement en réfléchissant — il se construit aussi en agissant. Parfois, il faut avancer pour y voir clair.",
+            "Le sens ne se trouve pas seulement en réfléchissant : il se construit aussi en agissant. Parfois, il faut avancer pour y voir clair.",
           projection:
             "Imagine arrêter de tout questionner et te sentir enfin à ta place, dans une voie qui te ressemble vraiment.",
           cta_text: "Clarifier ma direction",
@@ -246,7 +246,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu as besoin d'espace pour respirer. Ton indépendance est précieuse. Mais la peur d'être enfermé peut t'empêcher de t'engager pleinement.",
           insight:
-            "La vraie liberté, ce n'est pas l'absence de cadre — c'est de choisir le tien. Et ça change tout dans la façon dont tu construis ta vie.",
+            "La vraie liberté, ce n'est pas l'absence de cadre : c'est de choisir le tien. Et ça change tout dans la façon dont tu construis ta vie.",
           projection:
             "Imagine t'engager dans un projet ou une relation sans avoir l'impression de perdre ta liberté. C'est exactement ce qu'on explore.",
           cta_text: "Trouver mon équilibre",
@@ -267,7 +267,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
     whoFor:
       "Profs de yoga, studios et professeurs de bien-être qui veulent attirer des élèves alignés avec leur pratique.",
     whyItWorks:
-      "Un débutant ne sait jamais quel yoga choisir. Tu lèves son hésitation, tu le rassures — et il s'inscrit naturellement à TON cours.",
+      "Un débutant ne sait jamais quel yoga choisir. Tu lèves son hésitation, tu le rassures : et il s'inscrit naturellement à TON cours.",
     estimatedMinutes: 2,
     payload: {
       title: "Quel style de yoga est fait pour toi ?",
@@ -382,7 +382,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
     whoFor:
       "Naturopathes, praticiens en santé naturelle et nutrithérapeutes qui veulent un premier diagnostic engageant.",
     whyItWorks:
-      "Les gens veulent comprendre leur corps. Ce mini-bilan leur donne une piste concrète — et la suite logique, c'est une consultation avec toi.",
+      "Les gens veulent comprendre leur corps. Ce mini-bilan leur donne une piste concrète : et la suite logique, c'est une consultation avec toi.",
     estimatedMinutes: 3,
     payload: {
       title: "Quel est ton terrain naturo ?",
@@ -446,7 +446,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Ton corps tourne en réserve. Tu compenses avec des stimulants, mais le fond de batterie reste bas. Bonne nouvelle : c'est très réversible.",
           insight:
-            "Le café ne crée pas d'énergie, il l'emprunte à demain. Ton premier levier, c'est de reconstruire de vraies réserves — pas d'en tirer toujours plus.",
+            "Le café ne crée pas d'énergie, il l'emprunte à demain. Ton premier levier, c'est de reconstruire de vraies réserves : pas d'en tirer toujours plus.",
           projection:
             "Imagine te réveiller reposé·e et tenir la journée sans coup de barre. C'est le premier objectif qu'on fixerait ensemble.",
           cta_text: "Faire mon bilan vitalité",
@@ -456,7 +456,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Ton système nerveux est en hypervigilance. Mental qui tourne, tensions, sommeil difficile : ton corps a besoin qu'on lui réapprenne à relâcher.",
           insight:
-            "Ton stress n'est pas 'dans ta tête' — il s'inscrit dans ton corps. Et c'est par le corps, autant que par le mental, qu'on le dénoue.",
+            "Ton stress n'est pas 'dans ta tête' : il s'inscrit dans ton corps. Et c'est par le corps, autant que par le mental, qu'on le dénoue.",
           projection:
             "Imagine retrouver un mental calme et un sommeil qui répare vraiment. C'est tout à fait atteignable avec le bon accompagnement.",
           cta_text: "Apaiser mon terrain",
@@ -466,7 +466,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Ta digestion est ton point sensible. Ballonnements, repas trop rapides, réveils nocturnes : ton système digestif te lance des signaux.",
           insight:
-            "On dit que la santé commence dans l'intestin — et dans ton cas, c'est clairement la porte d'entrée pour retrouver de l'aisance au quotidien.",
+            "On dit que la santé commence dans l'intestin : et dans ton cas, c'est clairement la porte d'entrée pour retrouver de l'aisance au quotidien.",
           projection:
             "Imagine des repas qui te font du bien, un ventre léger et plus d'énergie. C'est par là qu'on commencerait ton rééquilibrage.",
           cta_text: "Rééquilibrer ma digestion",
@@ -476,7 +476,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu attrapes tout ce qui passe et tu mets du temps à récupérer. Tes défenses naturelles ont besoin d'un coup de pouce de fond.",
           insight:
-            "Une immunité solide ne se construit pas en avalant des vitamines au hasard — elle se cultive avec un terrain global équilibré.",
+            "Une immunité solide ne se construit pas en avalant des vitamines au hasard : elle se cultive avec un terrain global équilibré.",
           projection:
             "Imagine passer un hiver sans enchaîner les rhumes, avec un corps qui se défend tout seul. C'est l'objectif d'un accompagnement sur-mesure.",
           cta_text: "Renforcer mon terrain",
@@ -497,7 +497,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
     whoFor:
       "Formateurs, infopreneurs et coachs qui aident d'autres à créer et vendre leur formation en ligne.",
     whyItWorks:
-      "Ton prospect hésite à se lancer. Tu lui montres précisément où il en est et ce qui lui manque — et ton offre devient la suite évidente.",
+      "Ton prospect hésite à se lancer. Tu lui montres précisément où il en est et ce qui lui manque : et ton offre devient la suite évidente.",
     estimatedMinutes: 2,
     payload: {
       title: "Es-tu prêt à lancer ta formation en ligne ?",
@@ -580,7 +580,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Ton idée prend forme et ton audience démarre. Ce qui te manque, c'est de la méthode pour ne pas t'éparpiller et avancer dans le bon ordre.",
           insight:
-            "Ton problème n'est pas le manque d'idées — c'est l'absence de cadre. Une bonne structure te ferait gagner des mois.",
+            "Ton problème n'est pas le manque d'idées : c'est l'absence de cadre. Une bonne structure te ferait gagner des mois.",
           projection:
             "Imagine un plan d'action clair, étape par étape, sans te disperser. C'est ce qu'on met en place dès le début.",
           cta_text: "Structurer mon projet",
@@ -590,7 +590,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu as le sujet, l'audience et l'expérience. Il te manque surtout une vraie méthode de lancement pour vendre sans te brader.",
           insight:
-            "À ton stade, la différence entre un flop et un succès, ce n'est pas le contenu — c'est la stratégie de vente. Et ça s'apprend.",
+            "À ton stade, la différence entre un flop et un succès, ce n'est pas le contenu : c'est la stratégie de vente. Et ça s'apprend.",
           projection:
             "Imagine ton premier lancement qui cartonne au lieu de partir dans le vide. C'est précisément ce que je t'aide à orchestrer.",
           cta_text: "Réussir mon lancement",
@@ -626,7 +626,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
     payload: {
       title: "Quel levier va débloquer ta croissance ?",
       introduction:
-        "Quand la croissance stagne, c'est rarement par manque de travail — c'est qu'on pousse le mauvais levier. En 6 questions, identifie le tien.",
+        "Quand la croissance stagne, c'est rarement par manque de travail : c'est qu'on pousse le mauvais levier. En 6 questions, identifie le tien.",
       cta_text: "Trouver mon levier",
       share_message:
         "J'ai identifié le levier qui bloque ma croissance 📈 Ça remet les idées en place !",
@@ -714,7 +714,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu attires et tu captures, mais ça coince au moment d'acheter. Le problème est souvent dans l'offre, le message ou le tunnel de vente.",
           insight:
-            "Quand les prospects s'intéressent sans acheter, ce n'est pas un problème de produit — c'est un problème de désir et de confiance.",
+            "Quand les prospects s'intéressent sans acheter, ce n'est pas un problème de produit : c'est un problème de désir et de confiance.",
           projection:
             "Imagine doubler ton taux de conversion sans une seule visite de plus. C'est souvent le levier le plus rentable et le plus rapide.",
           cta_text: "Booster mes ventes",
@@ -724,7 +724,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu sais vendre, mais tes clients ne reviennent pas. Or acquérir coûte cher : c'est en les gardant que tu construis une vraie rentabilité.",
           insight:
-            "Augmenter ta rétention de quelques points peut faire plus pour ton chiffre que doubler ton acquisition — et coûte bien moins cher.",
+            "Augmenter ta rétention de quelques points peut faire plus pour ton chiffre que doubler ton acquisition : et coûte bien moins cher.",
           projection:
             "Imagine des clients qui rachètent et te recommandent, au lieu de repartir après un seul achat. C'est là qu'on va chercher ta croissance durable.",
           cta_text: "Fidéliser mes clients",
@@ -745,7 +745,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
     whoFor:
       "Photographes (mariage, portrait, famille, branding) qui veulent attirer des clients alignés avec leur esthétique.",
     whyItWorks:
-      "Un futur client veut des photos qui lui ressemblent. En l'aidant à nommer son style, tu attires exactement les bonnes personnes — celles qui aimeront ton travail.",
+      "Un futur client veut des photos qui lui ressemblent. En l'aidant à nommer son style, tu attires exactement les bonnes personnes : celles qui aimeront ton travail.",
     estimatedMinutes: 2,
     payload: {
       title: "Quel style photo te ressemble ?",
@@ -819,7 +819,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu es attiré·e par la douceur, la lumière naturelle et les ambiances apaisantes. Tu veux des images qui respirent et qui ne se démodent pas.",
           insight:
-            "Ton œil cherche la sérénité. La lumière naturelle et les tons doux, c'est ce qui rend une photo intemporelle — et c'est ma signature.",
+            "Ton œil cherche la sérénité. La lumière naturelle et les tons doux, c'est ce qui rend une photo intemporelle : et c'est ma signature.",
           projection:
             "Imagine des images douces et lumineuses que tu aimeras encore dans 20 ans. C'est ce que je crée pour mes clients.",
           cta_text: "Voir mon univers",
@@ -829,7 +829,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu n'aimes pas faire comme tout le monde. Tu veux des images qui ont du caractère, qui osent, qui te ressemblent vraiment dans ce que tu as d'unique.",
           insight:
-            "Les photos classiques t'ennuient. Tu as besoin d'un photographe qui prend des risques créatifs — et ça, c'est exactement mon terrain de jeu.",
+            "Les photos classiques t'ennuient. Tu as besoin d'un photographe qui prend des risques créatifs : et ça, c'est exactement mon terrain de jeu.",
           projection:
             "Imagine des photos dont tout le monde te parle parce qu'elles sortent du lot. C'est ce que j'adore créer.",
           cta_text: "Voir mes créations",
@@ -837,7 +837,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
         {
           title: "Style Élégant / Intemporel",
           description:
-            "Tu recherches le raffinement et la justesse. Tu veux des portraits soignés, élégants, dont tu seras fier·e longtemps — rien de criard, tout dans la classe.",
+            "Tu recherches le raffinement et la justesse. Tu veux des portraits soignés, élégants, dont tu seras fier·e longtemps : rien de criard, tout dans la classe.",
           insight:
             "Pour toi, une belle photo est une photo maîtrisée. La lumière, la pose, le cadre : chaque détail compte, et c'est précisément mon exigence.",
           projection:
@@ -860,7 +860,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
     whoFor:
       "Agents immobiliers, courtiers et conseillers qui veulent capter des primo-accédants en amont de leur projet.",
     whyItWorks:
-      "Un futur acheteur a mille questions et peu de réponses. Tu le rassures, tu le situes — et tu deviens le pro vers qui il se tourne naturellement.",
+      "Un futur acheteur a mille questions et peu de réponses. Tu le rassures, tu le situes : et tu deviens le pro vers qui il se tourne naturellement.",
     estimatedMinutes: 2,
     payload: {
       title: "Es-tu prêt à acheter ton premier bien ?",
@@ -933,7 +933,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Ton projet est encore une envie, pas un plan. Et c'est très bien : tout le monde commence là. La clé, c'est de transformer ce rêve en premières étapes concrètes.",
           insight:
-            "La première marche n'est pas de chercher des biens — c'est de comprendre ce que tu peux vraiment financer. Ça change tout le reste.",
+            "La première marche n'est pas de chercher des biens : c'est de comprendre ce que tu peux vraiment financer. Ça change tout le reste.",
           projection:
             "Imagine y voir clair sur ton budget réel en un seul rendez-vous, sans aucun engagement. C'est par là qu'on commence.",
           cta_text: "Faire le point avec moi",
@@ -943,7 +943,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu y penses sérieusement et tu commences à bouger. Il te manque surtout des repères pour avancer sans te disperser ni te tromper.",
           insight:
-            "À ton stade, la peur de mal faire est normale — elle vient d'un manque d'infos, pas d'un manque de capacité. On comble ce vide ensemble.",
+            "À ton stade, la peur de mal faire est normale : elle vient d'un manque d'infos, pas d'un manque de capacité. On comble ce vide ensemble.",
           projection:
             "Imagine avancer étape par étape, accompagné·e, sans cette boule au ventre. C'est exactement mon rôle à tes côtés.",
           cta_text: "Être accompagné·e",
@@ -989,7 +989,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
     payload: {
       title: "Quelle croyance limitante te freine vraiment ?",
       introduction:
-        "En 6 questions honnêtes, on identifie la petite voix qui te freine au quotidien — et la façon de la calmer. Pas de blabla psy, juste ce qui est vrai pour toi.",
+        "En 6 questions honnêtes, on identifie la petite voix qui te freine au quotidien : et la façon de la calmer. Pas de blabla psy, juste ce qui est vrai pour toi.",
       cta_text: "Identifier ma croyance",
       share_message:
         "Je viens d'identifier la croyance qui me bloquait depuis des années 🧠 Et toi, c'est quoi la tienne ?",
@@ -1057,7 +1057,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu fais souvent semblant d'être à ta place, en attendant qu'on te démasque. Tu as l'impression de te faire passer pour quelqu'un de plus compétent que tu n'es. Cette voix est si forte qu'elle peut t'empêcher de candidater, oser, parler.",
           insight:
-            "Le syndrome de l'imposteur ne disparaît pas parce qu'on accumule des diplômes — il disparaît quand on apprend à reconnaître ses vraies compétences. Tu sais probablement bien plus que tu ne te le permets.",
+            "Le syndrome de l'imposteur ne disparaît pas parce qu'on accumule des diplômes : il disparaît quand on apprend à reconnaître ses vraies compétences. Tu sais probablement bien plus que tu ne te le permets.",
           projection:
             "Imagine te lever le matin sans cette boule au ventre, en sachant que ta place est exactement là où tu es. C'est ce qu'on installe ensemble.",
           cta_text: "M'autoriser à exister",
@@ -1067,7 +1067,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu portes les autres avant toi, tout le temps. Tu sens que si tu ne tiens pas la barre, tout va s'effondrer. Résultat : tu t'épuises et tu n'avances jamais sur tes propres projets.",
           insight:
-            "Ce n'est pas de l'altruisme — c'est une croyance que ta valeur dépend de ce que tu donnes. Mais quand on donne sans frein, on finit par ne plus rien avoir à donner.",
+            "Ce n'est pas de l'altruisme : c'est une croyance que ta valeur dépend de ce que tu donnes. Mais quand on donne sans frein, on finit par ne plus rien avoir à donner.",
           projection:
             "Imagine poser un cadre clair sur ce que tu prends en charge et ce que tu laisses aux autres. Et te sentir libre, pas coupable.",
           cta_text: "Apprendre à dire non",
@@ -1077,7 +1077,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu te coupes l'élan dès que tu approches du succès. Comme si tu n'avais pas le droit de réussir alors que d'autres autour de toi galèrent. Cette loyauté invisible te ramène toujours au point de départ.",
           insight:
-            "Tu n'as PAS à porter la culpabilité de réussir. Ton succès n'enlève rien à personne — au contraire, il peut inspirer ceux que tu aimes.",
+            "Tu n'as PAS à porter la culpabilité de réussir. Ton succès n'enlève rien à personne : au contraire, il peut inspirer ceux que tu aimes.",
           projection:
             "Imagine atteindre tes objectifs sans cette petite voix qui te chuchote « tu ne mérites pas ». C'est exactement ce qu'on déconstruit ensemble.",
           cta_text: "Briser mon plafond",
@@ -1087,7 +1087,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu portes en permanence le poids de ce que les gens vont penser. Tu modères tes prises de parole, tu refuses des opportunités visibles, tu restes dans l'ombre par sécurité. Et ça te ronge.",
           insight:
-            "La peur du regard n'a pas besoin d'être éliminée — elle a juste besoin d'être plus petite que ton envie d'avancer. Et ça se travaille très concrètement.",
+            "La peur du regard n'a pas besoin d'être éliminée : elle a juste besoin d'être plus petite que ton envie d'avancer. Et ça se travaille très concrètement.",
           projection:
             "Imagine prendre la parole sans trembler, publier sans relire 10 fois, vivre ta vie sans te demander ce qu'on va en dire. C'est possible.",
           cta_text: "Reprendre ma place",
@@ -1179,9 +1179,9 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
         {
           title: "La gestionnaire (contrôle)",
           description:
-            "Tu es dans la maîtrise. Tu connais probablement les calories de tes aliments par cœur. Cette stratégie t'a tenue debout, mais elle te coûte une charge mentale énorme — et elle finit par craquer.",
+            "Tu es dans la maîtrise. Tu connais probablement les calories de tes aliments par cœur. Cette stratégie t'a tenue debout, mais elle te coûte une charge mentale énorme : et elle finit par craquer.",
           insight:
-            "Le contrôle alimentaire ressemble à de la volonté, mais c'est en réalité une cage qui se resserre à chaque écart. La sortie n'est pas dans plus de contrôle — elle est ailleurs.",
+            "Le contrôle alimentaire ressemble à de la volonté, mais c'est en réalité une cage qui se resserre à chaque écart. La sortie n'est pas dans plus de contrôle : elle est ailleurs.",
           projection:
             "Imagine manger sans calculer, sans surveiller, et te sentir EN PAIX devant ton assiette. C'est exactement le voyage qu'on fait ensemble.",
           cta_text: "Sortir du contrôle",
@@ -1191,7 +1191,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu manges plus par habitude que par faim. Tu peux finir un paquet sans t'en rendre compte. Ton corps t'envoie des signaux mais ils n'arrivent plus jusqu'à ta conscience.",
           insight:
-            "Tu n'es pas « sans volonté » — tu es juste coupé·e de tes sensations. C'est un mécanisme de protection qui s'est installé pour de très bonnes raisons. Et qui se déprogramme.",
+            "Tu n'es pas « sans volonté » : tu es juste coupé·e de tes sensations. C'est un mécanisme de protection qui s'est installé pour de très bonnes raisons. Et qui se déprogramme.",
           projection:
             "Imagine retrouver les sensations de faim et de satiété, et qu'elles te guident naturellement. Ton corps redevient ton allié.",
           cta_text: "Me reconnecter à mon corps",
@@ -1199,7 +1199,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
         {
           title: "L'émotionnelle (réconfort)",
           description:
-            "Tu manges pour combler autre chose que la faim — un stress, une tristesse, un vide. La nourriture est devenue ta réponse à tout ce qui te traverse. Ça t'apaise sur le moment, et te culpabilise après.",
+            "Tu manges pour combler autre chose que la faim : un stress, une tristesse, un vide. La nourriture est devenue ta réponse à tout ce qui te traverse. Ça t'apaise sur le moment, et te culpabilise après.",
           insight:
             "Il n'y a RIEN de mal à chercher du réconfort. Le souci n'est pas que tu manges tes émotions, c'est que tu n'as pas d'autres outils pour les accueillir. On peut en installer.",
           projection:
@@ -1211,7 +1211,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu as essayé tellement de choses que tu ne sais plus où tu en es. Tu navigues entre régimes, craquages, culpabilité et reprises. Tu en as marre, vraiment marre, de cette relation conflictuelle.",
           insight:
-            "L'épuisement est le signe que tu as suffisamment cherché toute seule. Tu n'as pas besoin d'une méthode de plus — tu as besoin de quelqu'un qui regarde TON cas en particulier.",
+            "L'épuisement est le signe que tu as suffisamment cherché toute seule. Tu n'as pas besoin d'une méthode de plus : tu as besoin de quelqu'un qui regarde TON cas en particulier.",
           projection:
             "Imagine sortir de cette spirale, pas avec une énième promesse miracle, mais avec un accompagnement qui regarde VRAIMENT ce qui se joue chez toi.",
           cta_text: "Trouver ma sortie",
@@ -1232,7 +1232,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
     whoFor:
       "Coachs énergie, naturopathes spécialisé·es sommeil/fatigue, sophrologues. Pour qualifier des prospects qui se disent « épuisé·es sans raison ».",
     whyItWorks:
-      "« Je suis fatigué·e » est trop vague. En identifiant LA VRAIE source de fatigue (physique, mentale, émotionnelle, relationnelle), ton prospect comprend qu'il faut une approche ciblée — pas un café de plus.",
+      "« Je suis fatigué·e » est trop vague. En identifiant LA VRAIE source de fatigue (physique, mentale, émotionnelle, relationnelle), ton prospect comprend qu'il faut une approche ciblée : pas un café de plus.",
     estimatedMinutes: 2,
     payload: {
       title: "Où sont tes vraies fuites d'énergie ?",
@@ -1305,7 +1305,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Ton corps porte des années de surcharge. Tu dors peut-être bien sur le papier mais tu ne récupères plus. Tes signaux : douleurs chroniques, infections à répétition, sensation de batterie à plat dès le matin.",
           insight:
-            "Le sommeil seul ne suffit plus à compenser. Ton corps a besoin d'un protocole spécifique pour relancer ses mécanismes de récupération — pas juste « se reposer plus ».",
+            "Le sommeil seul ne suffit plus à compenser. Ton corps a besoin d'un protocole spécifique pour relancer ses mécanismes de récupération : pas juste « se reposer plus ».",
           projection:
             "Imagine te lever en te sentant vraiment reposé·e, avec un corps qui répond. C'est exactement le chemin qu'on fait ensemble.",
           cta_text: "Récupérer ma vitalité",
@@ -1313,7 +1313,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
         {
           title: "Fuite mentale",
           description:
-            "Ton cerveau ne s'arrête jamais. Tu rumines la nuit, tu fais 10 choses en parallèle, tu ne sais plus prioriser. Ce n'est pas de la fatigue physique — c'est une saturation cognitive.",
+            "Ton cerveau ne s'arrête jamais. Tu rumines la nuit, tu fais 10 choses en parallèle, tu ne sais plus prioriser. Ce n'est pas de la fatigue physique : c'est une saturation cognitive.",
           insight:
             "Tu ne peux pas penser pour te sortir d'une fatigue mentale (sinon tu y serais déjà arrivé·e). Il faut une approche par le corps et le souffle pour calmer le système nerveux.",
           projection:
@@ -1325,7 +1325,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu portes tout, tout le temps, et tu n'as plus de place pour toi. Tu absorbes les émotions des autres, tu anticipes leurs besoins, et personne ne remarque que tu craques toi-même.",
           insight:
-            "Ton hyper-empathie est un super-pouvoir mal protégé. Il ne s'agit pas de l'éteindre — il s'agit de te donner des frontières pour qu'elle ne te vide pas.",
+            "Ton hyper-empathie est un super-pouvoir mal protégé. Il ne s'agit pas de l'éteindre : il s'agit de te donner des frontières pour qu'elle ne te vide pas.",
           projection:
             "Imagine continuer à aimer les gens autour de toi, mais en ayant gardé suffisamment d'énergie pour TOI aussi. C'est possible.",
           cta_text: "Protéger mon énergie",
@@ -1335,7 +1335,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Certaines personnes te vident à chaque interaction. Tu sors d'un repas de famille comme d'un marathon, d'une réunion comme d'une bataille. Tu confonds peut-être obligation et choix.",
           insight:
-            "Ce n'est pas toi qui as un problème — ce sont certaines relations qui drainent disproportionnellement. Identifier précisément lesquelles change tout.",
+            "Ce n'est pas toi qui as un problème : ce sont certaines relations qui drainent disproportionnellement. Identifier précisément lesquelles change tout.",
           projection:
             "Imagine sortir de tes interactions sans cette sensation d'avoir été vidé·e. Avec des limites claires, posées sans culpabilité.",
           cta_text: "Reprendre le contrôle",
@@ -1356,7 +1356,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
     whoFor:
       "Coachs en parentalité positive, accompagnant·es des parents, thérapeutes familiaux. Pour qualifier des prospects qui veulent comprendre leur fonctionnement parental.",
     whyItWorks:
-      "Tout parent doute. Le quiz pose un cadre rassurant (« il n'y a pas de mauvaise réponse ») qui les met immédiatement à l'aise — et te positionne comme un·e allié·e, pas un·e juge.",
+      "Tout parent doute. Le quiz pose un cadre rassurant (« il n'y a pas de mauvaise réponse ») qui les met immédiatement à l'aise : et te positionne comme un·e allié·e, pas un·e juge.",
     estimatedMinutes: 2,
     payload: {
       title: "Quel parent es-tu vraiment ?",
@@ -1429,7 +1429,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu poses des règles claires et tu y tiens. Ta force : ton enfant sait à quoi s'attendre. Ton piège : tu peux confondre fermeté et sévérité, et louper les besoins émotionnels qui se cachent derrière les comportements.",
           insight:
-            "Un cadre solide est essentiel — mais sans accueil de l'émotion, il devient un mur. Apprendre à dire OUI aux émotions tout en disant NON au comportement, c'est le vrai art.",
+            "Un cadre solide est essentiel : mais sans accueil de l'émotion, il devient un mur. Apprendre à dire OUI aux émotions tout en disant NON au comportement, c'est le vrai art.",
           projection:
             "Imagine garder ton cadre clair tout en accueillant ce que ton enfant traverse vraiment. Sans crier, sans céder.",
           cta_text: "Allier cadre et bienveillance",
@@ -1449,7 +1449,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu détestes voir ton enfant en colère ou triste, alors tu cèdes pour préserver l'harmonie. Ta force : il sent ton amour inconditionnel. Ton piège : sans cadre, il navigue dans le flou et finit par tester les limites de plus en plus loin.",
           insight:
-            "Dire NON n'est pas un manque d'amour — c'est l'inverse. Un enfant a besoin de buter contre des limites pour se construire en sécurité.",
+            "Dire NON n'est pas un manque d'amour : c'est l'inverse. Un enfant a besoin de buter contre des limites pour se construire en sécurité.",
           projection:
             "Imagine poser un NON ferme et bienveillant sans culpabiliser, et voir ton enfant grandir plus apaisé. C'est ce qu'on installe.",
           cta_text: "Apprendre à dire non",
@@ -1459,7 +1459,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu navigues entre amour et colère, patience et explosion. Ta force : tu n'es pas dans le contrôle, tu es authentique. Ton piège : ton enfant ne sait jamais sur quel pied danser, et toi tu culpabilises après chaque réaction.",
           insight:
-            "Ce n'est pas une question de volonté — c'est un système nerveux qui sature. La parentalité positive ne se gagne pas par effort, elle s'installe par des outils CONCRETS pour ne plus exploser.",
+            "Ce n'est pas une question de volonté : c'est un système nerveux qui sature. La parentalité positive ne se gagne pas par effort, elle s'installe par des outils CONCRETS pour ne plus exploser.",
           projection:
             "Imagine garder ton calme dans les situations qui te déclenchent aujourd'hui. Sans masquer, juste avec d'autres outils.",
           cta_text: "Sortir du cycle",
@@ -1485,7 +1485,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
     payload: {
       title: "Quel est ton schéma amoureux dominant ?",
       introduction:
-        "En 6 questions honnêtes, on identifie ce qui se rejoue à chaque histoire — et le déclic qui peut tout changer dans ta prochaine relation.",
+        "En 6 questions honnêtes, on identifie ce qui se rejoue à chaque histoire : et le déclic qui peut tout changer dans ta prochaine relation.",
       cta_text: "Identifier mon schéma",
       share_message:
         "Je viens d'identifier mon schéma amoureux 💞 Et toi, tu te reconnais dans lequel ?",
@@ -1553,7 +1553,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu donnes beaucoup, tu attends beaucoup, et tu paniques dès que l'autre s'éloigne. Tes histoires sont intenses au début et te laissent vidé·e à la fin. Tu confonds parfois amour et peur de l'abandon.",
           insight:
-            "Tu n'es pas « trop » — tu as juste un système d'alerte sur-actif. Ça se calme avec les bons outils, et ça change radicalement la qualité de tes relations.",
+            "Tu n'es pas « trop » : tu as juste un système d'alerte sur-actif. Ça se calme avec les bons outils, et ça change radicalement la qualité de tes relations.",
           projection:
             "Imagine vivre une relation où tu n'as plus besoin de réclamer, parce que tu te sens enfin solide à l'intérieur. C'est le travail qu'on fait ensemble.",
           cta_text: "Apaiser mon anxiété",
@@ -1561,7 +1561,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
         {
           title: "L'évitement protecteur",
           description:
-            "Tu testes, tu observes, tu protèges ton cœur. Tu te dis souvent que les gens finissent toujours par décevoir. Ta carapace t'a sauvé·e — mais elle t'empêche aujourd'hui de vivre ce que tu mérites.",
+            "Tu testes, tu observes, tu protèges ton cœur. Tu te dis souvent que les gens finissent toujours par décevoir. Ta carapace t'a sauvé·e : mais elle t'empêche aujourd'hui de vivre ce que tu mérites.",
           insight:
             "La méfiance n'est pas un défaut, c'est une compétence de survie. Mais quand elle s'applique aux mauvaises personnes, elle te coupe d'amours qui auraient pu être bons.",
           projection:
@@ -1573,7 +1573,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu aimes ton autonomie plus que tout. Tu fuis dès que ça devient « sérieux » sans toujours comprendre pourquoi. Tu enchaînes des histoires qui ressemblent à des promesses non tenues.",
           insight:
-            "Aimer profondément ne veut pas dire perdre qui tu es. Ce que tu fuis n'est pas l'engagement — c'est la peur de te diluer. Et ça se déconstruit.",
+            "Aimer profondément ne veut pas dire perdre qui tu es. Ce que tu fuis n'est pas l'engagement : c'est la peur de te diluer. Et ça se déconstruit.",
           projection:
             "Imagine pouvoir t'engager pleinement tout en gardant ton espace, ton identité, tes passions. Ce n'est pas l'un ou l'autre.",
           cta_text: "Apprendre à m'engager",
@@ -1583,9 +1583,9 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tes relations sont des montagnes russes. Tu t'attaches à des gens compliqués, tu vis intensément, tu te déchires, tu reviens. Tu confonds passion et chaos.",
           insight:
-            "L'intensité n'est pas la profondeur. Une relation saine peut être TOUT AUSSI vibrante — sans les déchirures. Ça nécessite de comprendre ce qui te scotche au tumulte.",
+            "L'intensité n'est pas la profondeur. Une relation saine peut être TOUT AUSSI vibrante : sans les déchirures. Ça nécessite de comprendre ce qui te scotche au tumulte.",
           projection:
-            "Imagine vivre un amour à la fois intense ET paisible. Pas plat — paisible. C'est très différent, et c'est accessible.",
+            "Imagine vivre un amour à la fois intense ET paisible. Pas plat : paisible. C'est très différent, et c'est accessible.",
           cta_text: "Sortir du tumulte",
         },
       ],
@@ -1604,7 +1604,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
     whoFor:
       "Coachs en reconversion professionnelle, bilans de compétences, accompagnant·es de transition. Pour qualifier des prospects qui pensent à changer depuis des mois sans passer à l'action.",
     whyItWorks:
-      "Tout le monde se dit « bloqué par le temps ou l'argent ». La vraie cause est presque toujours ailleurs (peur, identité, légitimité). Le quiz fait émerger cette vraie cause — et te place comme la personne qui peut aider.",
+      "Tout le monde se dit « bloqué par le temps ou l'argent ». La vraie cause est presque toujours ailleurs (peur, identité, légitimité). Le quiz fait émerger cette vraie cause : et te place comme la personne qui peut aider.",
     estimatedMinutes: 2,
     payload: {
       title: "Qu'est-ce qui te bloque vraiment dans ta reconversion ?",
@@ -1675,9 +1675,9 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
         {
           title: "Le blocage sens",
           description:
-            "Tu sens que ton travail actuel ne te correspond plus, mais tu manques d'un cap clair vers où aller. Tu n'es pas paresseux/se — tu es en quête. Et chaque journée sans direction te pèse de plus en plus.",
+            "Tu sens que ton travail actuel ne te correspond plus, mais tu manques d'un cap clair vers où aller. Tu n'es pas paresseux/se : tu es en quête. Et chaque journée sans direction te pèse de plus en plus.",
           insight:
-            "Le sens ne se découvre pas par la réflexion seule — il émerge en confrontant tes valeurs profondes à des projets concrets. C'est exactement ce sur quoi on travaille en accompagnement.",
+            "Le sens ne se découvre pas par la réflexion seule : il émerge en confrontant tes valeurs profondes à des projets concrets. C'est exactement ce sur quoi on travaille en accompagnement.",
           projection:
             "Imagine te lever le matin en sachant POURQUOI tu fais ce que tu fais. Sans plus jamais ce vide qui te ronge.",
           cta_text: "Trouver mon cap",
@@ -1687,7 +1687,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu rêves de changer mais l'argent te tient en otage. Tu fais des simulations Excel à n'en plus finir, tu compares les scénarios, et tu finis toujours par te dire « pas maintenant ». Tu confonds prudence et paralysie.",
           insight:
-            "La sécurité financière ne se gagne pas en restant à son poste — elle se construit AVEC une stratégie de transition adaptée. Et ça, c'est planifiable concrètement.",
+            "La sécurité financière ne se gagne pas en restant à son poste : elle se construit AVEC une stratégie de transition adaptée. Et ça, c'est planifiable concrètement.",
           projection:
             "Imagine avancer vers ta nouvelle vie SANS sacrifier ta sécurité. C'est exactement la roadmap qu'on construit ensemble.",
           cta_text: "Sécuriser ma transition",
@@ -1699,7 +1699,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           insight:
             "La clarté ne vient pas en lisant 30 articles « top métiers ». Elle vient en explorant ta singularité avec quelqu'un qui te pose les bonnes questions.",
           projection:
-            "Imagine voir clairement le chemin qui te correspond — pas un métier abstrait, mais TON projet précis et incarné.",
+            "Imagine voir clairement le chemin qui te correspond : pas un métier abstrait, mais TON projet précis et incarné.",
           cta_text: "Y voir clair",
         },
         {
@@ -1733,7 +1733,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
     payload: {
       title: "Quel est ton vrai rapport à l'argent ?",
       introduction:
-        "En 6 questions honnêtes, on identifie ce qui se joue quand tu gères ton argent — et le déclic qui peut tout changer.",
+        "En 6 questions honnêtes, on identifie ce qui se joue quand tu gères ton argent : et le déclic qui peut tout changer.",
       cta_text: "Découvrir mon profil",
       share_message:
         "Je viens enfin de comprendre mon rapport à l'argent 💸 Et toi, tu te reconnais dans lequel ?",
@@ -1801,7 +1801,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu as grandi avec l'idée que l'argent était difficile, qu'il fallait se battre, que ça finit toujours par manquer. Aujourd'hui, même quand tu en as, tu vis comme si tu en manquais.",
           insight:
-            "Tes croyances sur l'argent ne sont PAS tes croyances — ce sont celles de la génération d'avant, héritées sans qu'on te demande ton avis. Et elles se déconstruisent.",
+            "Tes croyances sur l'argent ne sont PAS tes croyances : ce sont celles de la génération d'avant, héritées sans qu'on te demande ton avis. Et elles se déconstruisent.",
           projection:
             "Imagine te sentir en paix avec ton argent, sans cette boule au ventre familiale. Et transmettre autre chose à tes enfants que ce que tu as reçu.",
           cta_text: "Libérer mes croyances",
@@ -1811,7 +1811,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu mets tout de côté, tu te prives sur tes plaisirs, tu vis avec une épargne « au cas où ». Tu confonds gestion saine et privation chronique. Tu protèges si fort que tu en oublies de vivre.",
           insight:
-            "L'argent qu'on amasse sans jamais utiliser n'est pas une protection — c'est une cage dorée. La sécurité véritable n'est pas dans le montant, elle est dans ta capacité à FAIRE confiance.",
+            "L'argent qu'on amasse sans jamais utiliser n'est pas une protection : c'est une cage dorée. La sécurité véritable n'est pas dans le montant, elle est dans ta capacité à FAIRE confiance.",
           projection:
             "Imagine te faire plaisir SANS culpabilité, tout en gardant une vraie sécurité financière. C'est ce qu'on construit ensemble.",
           cta_text: "Sortir de la privation",
@@ -1821,7 +1821,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
           description:
             "Tu vis pleinement, tu te fais plaisir, tu détestes les calculs. Ta force : tu profites de la vie. Ton piège : tu finis le mois en stress, tu accumules les petites dettes, et tu n'as aucune visibilité long terme.",
           insight:
-            "Le plaisir n'est pas l'ennemi de la rigueur financière. Tu peux garder ta joie de vivre tout en construisant une vraie tranquillité — il faut juste les bons outils, pas des restrictions punitives.",
+            "Le plaisir n'est pas l'ennemi de la rigueur financière. Tu peux garder ta joie de vivre tout en construisant une vraie tranquillité : il faut juste les bons outils, pas des restrictions punitives.",
           projection:
             "Imagine continuer à profiter sans le stress de fin de mois, et voir ta sécurité grandir doucement en parallèle.",
           cta_text: "Concilier plaisir et tranquillité",
@@ -1829,7 +1829,7 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
         {
           title: "L'évitante",
           description:
-            "Tu détestes regarder ton compte. Tu ouvres les enveloppes en travers, tu fermes les apps quand ça t'inquiète. L'argent te met mal à l'aise, alors tu détournes les yeux — mais ça ne disparaît pas.",
+            "Tu détestes regarder ton compte. Tu ouvres les enveloppes en travers, tu fermes les apps quand ça t'inquiète. L'argent te met mal à l'aise, alors tu détournes les yeux : mais ça ne disparaît pas.",
           insight:
             "L'évitement est une protection émotionnelle, pas une stratégie financière. Et la bonne nouvelle, c'est qu'on peut reprendre le contrôle SANS devoir devenir un·e expert·e des chiffres.",
           projection:

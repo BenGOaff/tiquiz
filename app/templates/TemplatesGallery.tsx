@@ -38,7 +38,7 @@ export default function TemplatesGallery({
           </h1>
           <p className="mt-3 text-muted-foreground text-lg">
             Choisis un modèle, personnalise-le à ta sauce, publie-le. Tes
-            questions, tes résultats et tes textes sont déjà rédigés — tu n&apos;as
+            questions, tes résultats et tes textes sont déjà rédigés, tu n&apos;as
             plus qu&apos;à les rendre tiens.
           </p>
         </div>

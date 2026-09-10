@@ -154,7 +154,24 @@ export default async function Page({ searchParams }: PageProps) {
               // panne que ce chantier existe pour fermer, et elle ne se
               // verrait sur aucun écran français.
               locale={langue}
-              source={sp?.source ?? SOURCE_GENERATEUR}
+              // LA PORTE EST DÉCIDÉE PAR LA ROUTE, JAMAIS PAR L'URL.
+              //
+              // Ce `source` là est la PORTE (quelle surface héberge le
+              // générateur) : il est écrit dans `embed_quiz_sessions`, et
+              // `construireEntonnoirGenerateur` ne compte QUE les lignes
+              // qui portent `page-generateur`.
+              //
+              // Il portait `sp?.source ?? …`, et la landing de Béné pose
+              // maintenant `?source=modeles` sur ses six cartes : chacune
+              // aurait écrit `modeles` dans cette colonne, donc TOUTES ces
+              // générations auraient disparu de son entonnoir pendant que
+              // les vues de la page, elles, restaient. Le seul ratio
+              // qu'elle lit se serait effondré sans que rien ne casse.
+              //
+              // Le PARCOURS (`hero` / `modeles` / `direct`), lui, se lit
+              // sur l'adresse côté client et part dans GA4. Deux questions
+              // différentes, deux lectures qui ne se croisent plus.
+              source={SOURCE_GENERATEUR}
               // Le repli du bon de commande n'est jamais lu ici : c'est
               // la page hôte d'une iframe qui s'en sert, et il n'y a pas
               // d'iframe. Il reste passé parce que la prop est requise.

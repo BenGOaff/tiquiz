@@ -618,8 +618,49 @@ describe("un seul libellé de bouton, et il est partout", () => {
       );
     }
     // Et il y en a VRAIMENT, sinon ce test ne peut plus échouer.
-    const n = (PAGE_CODE.match(/className="(tql-cta|tql-bande-cta)"/g) ?? []).length;
+    //
+    // ON COMPTE LES DEUX FORMES, et c'est la correction du 10 septembre.
+    // Le compte ne portait que sur les boutons ÉCRITS À LA MAIN, et le
+    // haut de page en avait un : il est parti le jour où le quiz a pris
+    // sa place (sa maquette du 9 septembre, "le hero est centré, une
+    // seule colonne"). Le garde est alors sorti rouge sur une
+    // correction juste, pour la dixième fois de la série. Un bouton
+    // posé par <CtaPrincipal> est un bouton principal aussi : il lit le
+    // même champ, dans le même fichier de morceaux.
+    const n =
+      (PAGE_CODE.match(/className="(tql-cta|tql-bande-cta)"/g) ?? []).length +
+      (PAGE_CODE.match(/<CtaPrincipal\b/g) ?? []).length;
     assert.ok(n >= 3, `seulement ${n} boutons principaux dans les trois fichiers`);
+  });
+
+  test("le bouton du générateur porte SON libellé, et un seul", () => {
+    // DEUX ACTIONS, DEUX PROMESSES, ET C'EST SA MAQUETTE.
+    //
+    // Sa page porte "Créer mon quiz gratuitement" (créer un compte) ET
+    // "Générer ce quiz" (ouvrir le générateur avec un brief). Sa règle
+    // du 6 septembre interdit treize libellés pour UNE action ; elle
+    // n'interdit pas un libellé par action, et confondre les deux
+    // ferait promettre la création d'un compte au bout d'un lien qui
+    // n'en demande aucun.
+    //
+    // Ce qui compte, c'est qu'aucun des deux ne soit écrit à la main.
+    const QUIZ_HERO = racine("components/landing/QuizHero.tsx");
+    const source = `${PAGE_ACCUEIL}\n${QUIZ_HERO}`;
+    const boutons = [...source.matchAll(/className="tql-cta-gen"[^>]*>([\s\S]{0,120}?)</g)];
+    assert.ok(boutons.length >= 1, "aucun bouton de génération : le quiz du hero n'en pose plus");
+    for (const b of boutons) {
+      assert.match(
+        b[1],
+        /\{t\.(modelesBouton|boutonGenerer)\}/,
+        `un bouton de génération n'affiche pas son champ : "${b[1].trim().slice(0, 40)}"`,
+      );
+    }
+    // Et les six cartes lisent le MÊME champ que lui.
+    assert.match(
+      PAGE_ACCUEIL,
+      /className="tql-m-lien"[^>]*>\s*\{t\.modelesBouton\}/,
+      "les six cartes n'affichent pas t.modelesBouton",
+    );
   });
 
   test("le bouton revient plusieurs fois sur la landing", () => {
@@ -898,6 +939,7 @@ describe("la règle qui héberge ses îles vit à UN endroit", () => {
       "components/landing/styles.ts",
       "components/fonctionnalites/styles.ts",
       "components/landing/cssIles.ts",
+      "components/landing/cssQuizHero.ts",
     ]) {
       const gabarit = racine(f).replace(/\/\*[\s\S]*?\*\//g, " ");
       const guillemets = (gabarit.match(/"/g) || []).length;
@@ -908,6 +950,21 @@ describe("la règle qui héberge ses îles vit à UN endroit", () => {
       );
     }
   });
+
+  // 🚨 UN GARDE SUR L'ACCENT GRAVE A ÉTÉ ÉCRIT ICI, PUIS RETIRÉ.
+  //
+  // La faute est réelle et elle est sortie douze fois : un accent grave
+  // dans un commentaire CSS, à l'intérieur du littéral de gabarit,
+  // TERMINE le littéral. Mais un contrôle qui va du premier au dernier
+  // accent grave du fichier traverse PLUSIEURS gabarits, donc il
+  // rougit sur `styles.ts`, qui en porte quatre et qui est parfaitement
+  // correct. Un test qui crie sur un fichier juste est pire que pas de
+  // test, et c'est la treizième fois de la série qu'un contrôle ne
+  // distingue pas ce qu'il est censé distinguer.
+  //
+  // Ce qui attrape vraiment cette faute, à tous les coups et sans faux
+  // positif, c'est `npx tsc --noEmit` : le fichier devient du
+  // TypeScript invalide. Il n'y a rien à ajouter ici.
 });
 
 describe("le bloc des autres outils ne promet aucune connexion qui n'existe pas", () => {

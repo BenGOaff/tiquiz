@@ -21,8 +21,8 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const tpl = getTemplateBySlug(slug);
-  if (!tpl) return { title: "Modèle introuvable — Tiquiz" };
-  const title = `${tpl.cardTitle} — Modèle de quiz ${tpl.metier} | Tiquiz`;
+  if (!tpl) return { title: "Modèle introuvable" };
+  const title = `${tpl.cardTitle}, modèle de quiz ${tpl.metier}`;
   const description = `${tpl.tagline} ${tpl.whoFor} Modèle prêt à l'emploi, personnalisable en quelques minutes.`;
   return {
     title,

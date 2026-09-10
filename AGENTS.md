@@ -13396,3 +13396,452 @@ recompose à la main, la page qui passe une session donc sert un
 brouillon, la route qui reconstruit la charge, le strip de `user_id` /
 `project_id` retiré, le registre de domaines illisible relu comme
 "pas de domaine perso") : les sept rougissent.
+
+## Le contrat d'URL du générateur, et la porte qu'il allait casser (9 septembre 2026)
+
+Béné, chantier 4 : « /generateur-de-quiz ne lit aucun paramètre
+aujourd'hui. Sans ça, les six boutons "Générer ce quiz" de la landing et
+ceux du quiz du hero ne mènent nulle part. »
+
+### CE QUI ÉTAIT VRAI AVANT D'ÉCRIRE UNE LIGNE
+
+| | mesuré le 9 septembre |
+|---|---|
+| `lib/generateur/prefillUrl.ts` | **n'existait pas** |
+| le type de la page | `{ session?, source?, lang? }` : tout autre paramètre jeté par le type |
+| `EmbedPreviewClient` | **aucun lecteur d'adresse au montage** |
+
+Un lien qui portait un brief atterrissait donc sur un formulaire VIDE, et
+le visiteur ne voyait pas que quelque chose s'était perdu.
+
+### 🚨 CE QUE LE CHANTIER ALLAIT CASSER, ET C'EST LA VRAIE TROUVAILLE
+
+**Le mot `source` désignait DEUX choses différentes, et elles lisaient la
+même clé d'URL.**
+
+| | ce que ça veut dire | qui le lit |
+|---|---|---|
+| la PORTE | quelle surface héberge le générateur (`page-generateur`, `tiquiz-fr`) | écrite dans `embed_quiz_sessions.source`, et `construireEntonnoirGenerateur` ne compte QUE `page-generateur` |
+| le PARCOURS | d'où vient le visiteur (`hero`, `modeles`, `direct`) | `parcoursDeLAdresse`, envoyé à GA4 |
+
+Or la page faisait `source={sp?.source ?? SOURCE_GENERATEUR}`. Ses six
+cartes portent `?source=modeles` : **chacune aurait écrit `modeles` dans
+la colonne de la porte, donc toutes ces générations auraient disparu de
+son entonnoir** pendant que les vues de la page, elles, restaient. Le
+seul ratio qu'elle lit se serait effondré, et rien n'aurait cassé.
+
+**Règle : la PORTE est décidée par la ROUTE, jamais par un paramètre.**
+`source={SOURCE_GENERATEUR}`, point. Le parcours se lit sur l'adresse
+côté client et ne touche que GA4. Mesuré au passage : **aucun lien du
+dépôt** ne posait `?source=` sur cette page, donc l'ancienne surcharge ne
+protégeait rien et laissait n'importe qui écrire dans cette colonne.
+
+C'est la règle du 7 septembre ("le numérateur et le dénominateur parlent
+de la même page"), qui allait se faire casser par l'autre bout.
+
+### SA TABLE D'OBJECTIFS VISAIT LES LIBELLÉS, PAS LES CLÉS
+
+Elle l'avait écrit elle même : « Vérifie les deux dernières entrées
+contre les libellés réels de ta liste déroulante "Ton objectif" et
+corrige si besoin. » La correction est plus profonde que ses deux
+dernières entrées : sa table pointait vers des LIBELLÉS français
+("Qualifier mes prospects"), alors que le formulaire stocke une CLÉ
+(`objective: "qualifier"`) dont le libellé est traduit par l'écran.
+**Viser le libellé aurait donné un champ vide sur `/en/`**, sans que rien
+ne le dise.
+
+| son slug | notre clé | pourquoi |
+|---|---|---|
+| `qualifier` | `qualifier` | même mot |
+| `orienter` | `orienter` | « aider mon audience à choisir » |
+| `faire-decouvrir` | `decouvrir` | « me faire découvrir » |
+| `capturer` | `qualifier` | « capturer des leads QUALIFIÉS », ses mots |
+
+Les **huit clés réelles** passent aussi, telles quelles : un lien écrit
+demain avec `objectif=diagnostiquer` marche sans revenir dans ce fichier.
+
+### UN LANCEMENT AUTOMATIQUE NE PEUT PAS SE FAIRE REJETER
+
+C'est sa phrase, « un clic rejeté sur Générer fait partir des gens »,
+appliquée au clic qu'on donne à sa place.
+
+- `pret` est **plus exigeant** que la validation du formulaire (3 et 3,
+  contre 3 et 2) : un lancement automatique ne peut donc jamais tomber
+  sur son propre message d'erreur. Le test lit les DEUX seuils dans la
+  source et refuse qu'ils se croisent ;
+- le lancement **dépend de l'état du formulaire**, jamais d'un délai.
+  `setInputs` ne se voit pas dans le rendu qui l'écrit : lancer dans le
+  même effet enverrait le formulaire VIDE. Un `setTimeout` de 80 ms
+  marcherait la plupart du temps, et c'est exactement ce qui définit une
+  course.
+
+### ET IL NE PART QUE D'UNE NAVIGATION DEPUIS CHEZ NOUS
+
+Béné : « La page est publique, un robot peut lancer autant d'appels IA
+qu'il veut et la facture est pour nous. »
+
+Un robot qui rend le JavaScript et qui suit les six liens de la landing
+ferait partir six générations PAYANTES (le générateur public écrit avec
+le modèle de l'éditeur payant depuis le 8 septembre), et il gonflerait
+`generation_lancee` avec des gens qui n'existent pas.
+`lancementAutomatiqueAutorise` exige donc un referrer de chez nous.
+
+**Le sens de l'erreur est sûr** : un referrer absent ou étranger (un lien
+partagé sur un réseau, une adresse collée à la main) coûte UN CLIC sur un
+formulaire déjà rempli et déjà valide. Jamais un écran vide, jamais un
+refus.
+
+**Ce que je n'ai PAS mesuré, et qui se dit :** le comportement réel d'un
+robot qui rend le JavaScript sur cette page. C'est un garde contre un
+risque identifié, pas contre un fait observé.
+
+### MESURÉ DANS UN NAVIGATEUR, LES DEUX CHEMINS
+
+| | referrer | le formulaire | appels à `/api/embed/quiz/generate` |
+|---|---|---|---|
+| arrivée directe | vide | rempli, objectif « Faire découvrir un sujet » | **0** |
+| vrai clic depuis une de nos pages | notre page | rempli | **1** |
+
+Un vert local ne prouve rien sur un rendu (leçon `pdf-parse`, 7 août) :
+celui là est mesuré, avec les deux étoiles et la légende à l'écran.
+
+### LES DEUX CHAMPS OBLIGATOIRES SE DISENT AVANT LE CLIC
+
+« Le champ "À qui s'adresse-t-il ?" est obligatoire sans que rien ne le
+dise. » Mesuré : le SUJET portait le même défaut, et les deux étaient
+validés au clic depuis le début. Les deux portent maintenant leur étoile,
+`aria-required`, et une légende sous le titre du formulaire, en français
+comme en anglais.
+
+### CE QUI RESTE À FAIRE, ET C'EST LE CHANTIER 6
+
+**Ses douze liens ne portent NI `source` NI `profil`** (mesuré dans
+`copywriting-claude/tiquiz-landing.html` : `sujet`, `audience`,
+`objectif`, et rien d'autre). Portés tels quels, toutes les générations
+de la landing sortiraient en `source: "direct"` et le profil du quiz du
+hero serait perdu, c'est à dire que le chantier 1 ne mesurerait plus rien
+de ce que le chantier 6 apporte. `lienGenerateur` exige donc `source` par
+le compilateur : les six cartes sont `"modeles"`, les six boutons de
+résultat `"hero"` avec leur profil.
+
+**Endroits à respecter :** `lib/generateur/prefillUrl.ts` (pur, il écrit
+le lien ET le relit : deux orthographes rendraient le formulaire vide et
+la mesure aveugle, en silence), `components/embed/EmbedPreviewClient.tsx`
+(la lecture du navigateur, aucune décision),
+`components/embed/EmbedForm.tsx`,
+`app/(site-langues)/generateur-de-quiz/page.tsx`.
+Test : `tests/logic/prefill-generateur.test.mts`, vérifié en rejouant SIX
+versions fautives (la porte relue dans l'URL, `pret` plus permissif que
+le formulaire, le lancement autorisé pour tout le monde, sa table qui
+vise les libellés, les champs qui ne disent plus qu'ils sont
+obligatoires, un `setTimeout` à la place de l'état) : les six rougissent.
+
+**Le débit reste à 2 par 24 h et par IP** (`lib/embed/limites.ts`).
+Tranché par Béné le 9 septembre : son brief demandait 3 par heure, ce qui
+est **plus généreux** que ce qui tourne (72 par jour contre 2), et elle a
+gardé le chiffre en place.
+
+## Le quiz gardé 7 jours, et il n'était perdu qu'à un cheveu près (9 septembre 2026)
+
+Béné, chantier 5 : « Aujourd'hui, quelqu'un qui génère un quiz et ferme
+l'onglet est perdu pour toujours. »
+
+**Mesuré : le quiz ne l'était pas.** `EmbedPreviewClient` ÉCRIT déjà le
+jeton de session dans `localStorage` (clé `tiquiz_embed_session`), la
+ligne est en base, et aucun cron ne purge `embed_quiz_sessions`. Mais
+**personne ne relisait ce jeton sur le générateur** : seul
+`EmbedAutoClaim`, sur le tableau de bord, s'en servait après une
+inscription. Il ne manquait que la porte de retour.
+
+### ON GARDE L'ADRESSE DU QUIZ, PAS LE QUIZ
+
+Le brouillon porte le JETON, pas le contenu. Recopier le quiz dans le
+navigateur donnerait deux versions de la même chose : celle du serveur,
+que l'éditeur modifie à chaque frappe, et une photo prise au moment de
+la génération. **La photo gagnerait à la réouverture et effacerait tout
+ce qui a été corrigé depuis**, sans que rien ne le dise.
+
+### CINQ DÉCISIONS, ET AUCUNE N'EST DÉCORATIVE
+
+1. **Une horloge qui recule ne jette PAS le travail de quelqu'un.** Un
+   changement d'heure ou une machine remise à l'heure met l'horodatage
+   dans le futur ; le périmer perdrait un brouillon vivant, et personne
+   ne saurait pourquoi. Perdre le travail de quelqu'un coûte plus cher
+   que de garder un brouillon un jour de trop.
+2. **Le brouillon est écrit quand le quiz EXISTE**, sur l'événement
+   `result`, jamais au démarrage de la génération : le bandeau de retour
+   rouvrirait sinon un jeton mort.
+3. **« En créer un nouveau » OUBLIE, il ne masque pas.** Un bandeau
+   simplement caché reviendrait au rechargement suivant, et elle aurait
+   à refuser la même proposition tous les jours pendant une semaine.
+4. **Un brouillon COUPE le lancement automatique du chantier 4.** Écrire
+   un deuxième quiz, donc payer, pendant qu'un bandeau annonce que le
+   premier attend, c'est retirer une décision à quelqu'un qui l'a sous
+   les yeux. Le formulaire reste rempli : il reste un clic, de chaque
+   côté.
+5. **Une inscription emporte le brouillon avec le jeton**
+   (`EmbedAutoClaim`). Le quiz est dans son compte : le laisser ferait
+   réapparaître « Ton quiz t'attend. » pendant une semaine, pour un quiz
+   qu'elle a déjà.
+
+### « JAMAIS UNE FENÊTRE MODALE »
+
+C'est en majuscules dans son brief. La sortie est une LIGNE, sous le
+bandeau, qui ne prend le geste de personne. Elle ne part que par le
+HAUT (`sortieParLeHaut`) : le bas c'est la barre des tâches, le côté un
+deuxième écran, et un `relatedTarget` non nul veut dire que la souris
+est simplement passée sur un autre élément.
+
+**Le repli d'un `sessionStorage` qui lève est « déjà vue »**, donc rien
+ne s'affiche. Une ligne qui se réafficherait à chaque mouvement de
+souris serait pire que pas de ligne du tout.
+
+### LES ACCÈS AU NAVIGATEUR SONT TOUS DANS UN TRY/CATCH
+
+« En navigation privée, l'accès peut lever une exception et ça ne doit
+rien casser. » Les décisions vivent dans `lib/generateur/brouillon.ts`,
+pur (il prend la chaîne et l'HEURE, pas `window` ni `Date.now()` : un
+test qui dépend de l'horloge clignote). Le test se sert de Node comme
+fixture : cet environnement n'a ni `localStorage` ni `sessionStorage`,
+donc l'accès y LÈVE vraiment, et c'est la seule façon honnête de
+mesurer ce cas d'ici.
+
+### MESURÉ DANS UN NAVIGATEUR
+
+| | |
+|---|---|
+| brouillon frais | bandeau, titre du quiz, les deux boutons |
+| brouillon de 8 jours | rien du tout |
+| vrai clic depuis chez nous, SANS brouillon | 1 appel IA |
+| vrai clic depuis chez nous, AVEC brouillon | **0 appel** |
+| un vrai mouvement de souris dans la page | ne consomme PAS la ligne de sortie |
+| une sortie par le haut | la ligne s'affiche, une seule fois |
+| « En créer un nouveau » | bandeau parti ET la clé effacée |
+
+**Et ma première sonde a dit « la ligne ne s'affiche pas », à tort :**
+elle dispatchait l'événement avant que l'effet React ne soit attaché.
+Une seconde d'attente en plus, et le comportement était là. **Une sonde
+qui mesure un GESTE doit d'abord attendre que le geste soit
+écoutable** ; sans la refaire, j'allais aller réparer du code qui
+marchait.
+
+### MA FAUTE, ET C'EST LA VINGT ET UNIÈME DE LA SÉRIE
+
+Trois de mes neuf rejeux de versions fautives sont d'abord ressortis
+VERTS. Deux parce que mon `sed` visait une indentation que j'avais
+INVENTÉE (quatre espaces là où le fichier en porte deux) : le motif ne
+trouvait rien, donc rien n'était modifié, donc le test passait sur du
+code intact. **Un rejeu qui ne trouve pas sa cible ne mesure rien**, et
+il ment dans le sens le plus dangereux, celui qui rassure. Chaque
+mutation passe désormais par un `assert s.count(old) == 1`.
+
+Le troisième est pire, parce qu'il visait un vrai bug : mon cas
+« l'horloge recule » posait un brouillon **trois jours** dans le futur,
+c'est à dire DANS la fenêtre de sept jours. Une valeur absolue rendait
+donc exactement le même résultat, et le garde restait vert en ne
+distinguant rien. Le cas couvre maintenant trois jours ET trente.
+
+**Endroits à respecter :** `lib/generateur/brouillon.ts` (pur, les
+décisions), `components/embed/EmbedPreviewClient.tsx` (le bandeau, la
+ligne, l'écriture sur `result`),
+`components/dashboard/EmbedAutoClaim.tsx` (l'oubli après inscription).
+Test : `tests/logic/brouillon-generateur.test.mts`, vérifié en rejouant
+NEUF versions fautives (aucune péremption, le futur périmé, le repli
+non sûr, le bandeau masqué au lieu d'être oublié, le brouillon écrit au
+démarrage, le lancement non coupé, une deuxième hydratation, une
+inscription qui n'oublie pas, une sortie par le bas) : les neuf
+rougissent.
+
+## Le quiz du haut de page, et les six briefs qu'il partage (Béné, 9 septembre 2026)
+
+Chantier 6 : « Reprends-le, ne le réinvente pas », à propos de
+`copywriting-claude/tiquiz-landing.html`. Sa maquette porte quatorze
+sections ; ses onze points de vigilance, eux, ne nomment que ce qui
+n'existait nulle part : le quiz du hero, les six cartes, la section
+blog. C'est donc ça le chantier, et le reste de sa page vit déjà sur
+`/fonctionnalites/<slug>` depuis sa décision du 6 septembre (« rien
+n'est à jeter, tout est à déplacer »).
+
+### UN SEUL TABLEAU DE BRIEFS, DEUX RENDUS
+
+Dans sa maquette, chaque brief est écrit DEUX fois : dans `PROFILS[].u`
+(le bouton du résultat) et dans le `href` de la carte. Mesuré : les six
+couples (sujet, audience, objectif) sont identiques des deux côtés.
+
+Les recopier les laisserait diverger, et le symptôme serait muet : le
+générateur s'ouvrirait avec un sujet que la carte n'annonçait pas.
+`BRIEFS` (`lib/site/quizHero.ts`) est la seule source, et les deux
+écrans la lisent.
+
+**Ce qui DIFFÈRE, c'est la porte, et c'est tout l'intérêt** : le
+résultat porte `source=hero` PLUS le profil obtenu, les six cartes
+portent `source=modeles`. Sans ça, les douze liens de sa maquette
+seraient sortis en `"direct"` et le seul ratio qu'elle lit ne dirait
+plus d'où viennent les gens.
+
+**Les sujets sont écrits EN CLAIR.** Les siens sont déjà encodés
+(`%C3%AA`) : recopiés tels quels, `lienGenerateur` les encoderait une
+seconde fois et la créatrice lirait `%C3%AA` dans son formulaire.
+
+### LES SIX PROFILS SONT TOUS ATTEIGNABLES, ET C'EST MESURÉ
+
+C'est le contrôle de Véronique (1er août) : en mode profils, un résultat
+que le barème ne peut jamais attribuer est un résultat que personne ne
+verra. Les 320 combinaisons ont été jouées :
+
+| acc | for | aff | cre | ven | dem |
+|---|---|---|---|---|---|
+| 18,1 % | 24,1 % | 11,2 % | 14,4 % | 10,9 % | 21,2 % |
+
+Son barème est sain. Le test rejoue les 320 parties, avec des bornes
+LOIN des valeurs mesurées (8 % et 30 %) : il attrape un profil devenu
+inatteignable, il n'arbitre pas à la limite.
+
+**Et le barème anglais est le MÊME que le français**, gain par gain :
+sans ça, deux visiteurs qui cliquent la même chose obtiendraient deux
+profils différents, et personne ne le verrait.
+
+### CE QUI A ÉTÉ MESURÉ DANS UN NAVIGATEUR
+
+Ses trois contraintes de forme, sur la page servie :
+
+| Sa contrainte | Mesuré |
+|---|---|
+| « pas de scroll pour voir la première question et ses options » à 1440x800 | bas des options à **791 px** sur 800 |
+| « le hero est centré, une seule colonne » | une colonne, `tql-hero-centre` |
+| « deux colonnes au-dessus de 660 px, une seule en dessous » | **2 colonnes à 661 px, 1 à 659 px** |
+| aucun débordement horizontal | 0 px à 1440, 900, 700, 661, 659, 390 et 320 |
+
+Et le geste, joué pour de vrai : quatre questions (5, 4, 4, 4 options),
+résultat « L'accompagnateur », bouton vers
+`/generateur-de-quiz?sujet=…&audience=…&objectif=qualifier&source=hero&profil=acc`,
+« Recommencer » qui remet à zéro. Les deux événements partent :
+
+```
+event quiz_demarre  {}
+event quiz_termine  {"profil":"acc"}
+```
+
+`quiz_demarre` part UNE fois pour quatre clics : il marque « quelqu'un a
+commencé », pas « quelqu'un a cliqué ». Le poser à chaque réponse le
+rendrait quatre fois plus gros que le nombre de personnes, dans le sens
+flatteur.
+
+### 🚨 CE GESTE NE SE MESURE PAS EN DÉVELOPPEMENT, ET ON SAIT ENFIN POURQUOI
+
+La note du 8 septembre disait : « le formulaire du générateur ne
+s'hydrate pas dans ce conteneur, c'est identique sur /embed/preview qui
+est en production depuis des mois, je ne sais pas si c'est
+l'environnement ou un vrai bug ». **C'est l'environnement, et c'est
+mesuré.**
+
+| | fibers React sur la page |
+|---|---|
+| `next dev` | **1 / 1030** (le seul est l'overlay de Next) |
+| `next build` puis `next start` | **813 / 1030** |
+
+Le HTML servi par le dev porte pourtant ses 54 poussées `__next_f` : la
+charge RSC est bien émise, c'est le navigateur qui ne l'exécute pas ici.
+Les mêmes 1 fiber sortent sur `/tarifs` et sur `/generateur-de-quiz`,
+deux pages qui tournent en production depuis des semaines.
+
+**Règle : un geste se mesure sur un build de production.** Un
+`next dev` de ce conteneur ne dit rien de l'interactivité, ni en bien ni
+en mal, et un test qui ne distingue pas ce qu'il est censé distinguer
+est pire qu'un test absent.
+
+Le build a demandé un `.env.local` de mesure (trois valeurs bidon) parce
+que `supabaseAdmin` LÈVE au chargement sans variables : il est
+`.gitignore` et il a été SUPPRIMÉ après la mesure.
+
+### CE QUE LA MESURE A CORRIGÉ DANS SA MAQUETTE
+
+**« Et 21 modèles par métier dans ton compte » : il y en a 15.** Compté
+dans `lib/templates/catalog.ts`. Les six autres sont les six cartes
+juste au dessus, et sa propre section « Un quiz, ce n'est que le début »
+le dit d'ailleurs juste : « Quinze modèles métier et six modèles
+phares ». Le compte vient donc du CATALOGUE
+(`nombreDeModelesMetier()`) : un nombre recopié est faux au premier
+modèle ajouté, et il vit à l'endroit exact où un lecteur le vérifie, il
+lui suffit d'ouvrir `/templates` et de compter.
+
+**Ses dix-neuf `href="#"` ne sont pas portés.** Dix-neuf liens morts sur
+la page qui vend.
+
+### 🚨 ET `/templates` SERVAIT 70 TIRETS CADRATINS
+
+Trouvé en allant vérifier le compte. Mesuré EN PRODUCTION, avec l'agent
+de Googlebot :
+
+| | |
+|---|---|
+| `tiquiz.fr/templates` | **200**, 455 mots, `lang="fr"` |
+| son `<title>` | `Modèles de quiz prêts à l'emploi par métier — Tiquiz · Tiquiz` |
+| tirets cadratins dans le HTML servi | **70** |
+
+Deux choses, et la seconde est la plus chère.
+
+**Le titre porte le nom DEUX fois et un tiret cadratin entre les deux**,
+dans la ligne exacte que Google affiche : le gabarit du site ajoute déjà
+` · Tiquiz` (`app/layout.tsx`). Retiré des deux pages de modèles.
+
+**Et 64 tirets cadratins vivaient dans `lib/templates/catalog.ts`**,
+tous dans la forme ` — `, **aucun dans un commentaire** : c'est du texte
+de quiz, servi aux visiteurs des quiz de vraies clientes. Sa règle du
+7 juin est absolue et ce fichier ne l'avait jamais vue.
+
+**Le mot qui suit décide la ponctuation**, parce qu'un `-` simple
+donnerait « stratégie - c'est une première action », qui ne se lit pas :
+
+| ce qui suit | ce qu'on écrit |
+|---|---|
+| `et`, `mais`, `pas`, `sans`, `rien` | `, ` (il coordonne ou il oppose) |
+| tout le reste | ` : ` (il annonce ce qui suit) |
+
+Relu : « Ta force : tu construis des bases solides », « Tu n'as pas
+besoin de travailler plus : tu as besoin de travailler sur le bon
+levier », « Ton succès n'enlève rien à personne, au contraire ». Les
+1950 `─` du fichier sont des séparateurs de commentaire, pas des tirets
+cadratins : `grep -c` comptait des LIGNES, pas des caractères.
+
+### CE QUI A ÉTÉ VÉRIFIÉ ET QUI N'AVAIT RIEN
+
+**J'ai d'abord lu le middleware et conclu que `/templates` était derrière
+`/login`.** C'était faux : mesuré en production, la page répond **200** à
+un navigateur ET à Googlebot. Une lecture de code n'est pas une mesure,
+et cette conclusion aurait envoyé Béné valider un correctif qui ne
+corrigeait rien.
+
+**Le lien du centre d'aide suit déjà la locale.** Sa consigne écrit
+`https://app.tipote.com/support/tiquiz?lang=${locale}` : c'est
+EXACTEMENT ce que rend `helpUrl(locale)` (`lib/help.ts`), branché sur
+les trois écrans qui connaissent la langue. Les deux formes répondent
+200, vérifié.
+
+Le seul `lang=fr` écrit en dur qui reste est `LIEN_SUPPORT`
+(`lib/checkout/brand.ts`), sur la page de retour du bon de commande. Et
+ce n'est pas une fuite de langue : cette page est écrite **entièrement
+en français en dur**, zéro `getTranslations`. Quelqu'un qui achète en
+anglais y lit du français de bout en bout. C'est un autre chantier, il
+est nommé ici pour ne pas être découvert par une cliente.
+
+### CE QUI RESTE DE SA MAQUETTE, ET CE N'EST PAS UN OUBLI
+
+Trois sections de sa page ne sont pas portées : « D'où vient le
+trafic », « Pourquoi Tiquiz et pas un autre outil », « Un quiz, ce n'est
+que le début ». Leur contenu vit sur `/fonctionnalites/<slug>` depuis le
+6 septembre, et le ramener sur la landing déferait sa propre décision
+(« la page actuelle fait 5 000 mots, un visiteur froid décroche au
+troisième écran »). À trancher par elle, pas par du code.
+
+**Endroits à respecter :** `lib/site/quizHero.ts` (pur : les questions,
+les profils, les briefs, le barème), `components/landing/QuizHero.tsx`
+(le rendu et les deux événements, aucune décision),
+`components/landing/cssQuizHero.ts`,
+`app/(site)/apercu-landing-8f2c9d41/page.tsx`.
+Test : `tests/logic/quiz-du-hero.test.mts` (16 cas), vérifié en rejouant
+NEUF versions fautives (le profil retiré du bouton de résultat, un gain
+anglais différent, `dem` rendu inatteignable, un sujet recopié déjà
+encodé, la grille à deux colonnes revenue, une adresse de générateur en
+dur, la section blog non gardée, `revalidate` retiré, un nombre de
+modèles écrit à la main) : les neuf rougissent.

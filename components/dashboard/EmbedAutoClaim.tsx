@@ -39,6 +39,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { PARAM_REPRISE } from "@/lib/embed/reprise";
+import { oublierBrouillon } from "@/lib/generateur/brouillon";
 
 const STORAGE_KEY = "tiquiz_embed_session";
 // Le nom du paramètre est écrit UNE fois, dans le module pur.
@@ -76,6 +77,10 @@ export default function EmbedAutoClaim() {
         // Always clear the bookkeeping so a refresh doesn't loop. Even
         // a 409 ("already claimed") means we're done with this token.
         try { localStorage.removeItem(STORAGE_KEY); } catch { /* noop */ }
+        // ET LE BROUILLON PART AVEC. Le quiz est dans son compte : le
+        // laisser ferait réapparaître « Ton quiz t'attend. » sur le
+        // générateur pendant une semaine, pour un quiz qu'elle a déjà.
+        oublierBrouillon();
         if (fromUrl) {
           const params = new URLSearchParams(searchParams.toString());
           params.delete(URL_PARAM);

@@ -79,28 +79,35 @@ export default function EmbedForm({ locale, inputs, onChange, onSubmit, error }:
           {t.formTitle}
         </h2>
         <p className="text-muted-foreground mt-1">{t.formLead}</p>
+        <p className="text-xs text-muted-foreground mt-2">{t.reqLegend}</p>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="tq-topic">{t.lblTopic}</Label>
+        <Label htmlFor="tq-topic">
+          {t.lblTopic}<span aria-hidden className="text-destructive"> *</span>
+        </Label>
         <Input
           id="tq-topic"
           value={inputs.topic}
           onChange={(e) => onChange({ topic: e.target.value })}
           placeholder={t.phTopic}
           maxLength={200}
+          aria-required
         />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="tq-audience">{t.lblAudience}</Label>
+          <Label htmlFor="tq-audience">
+            {t.lblAudience}<span aria-hidden className="text-destructive"> *</span>
+          </Label>
           <Input
             id="tq-audience"
             value={inputs.audience}
             onChange={(e) => onChange({ audience: e.target.value })}
             placeholder={t.phAudience}
             maxLength={200}
+            aria-required
           />
         </div>
         <div className="space-y-2">

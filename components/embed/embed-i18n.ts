@@ -10,6 +10,22 @@ type Strings = Record<string, string>;
 const FR: Strings = {
   formTitle: "Crée ton premier quiz en 30 secondes ✨",
   formLead: "Dis-nous l'essentiel, l'IA fait le reste. Tu pourras tout modifier ensuite.",
+  // LES DEUX CHAMPS OBLIGATOIRES SONT ANNONCÉS AVANT LE CLIC.
+  // Béné, 9 septembre : « Le champ "À qui s'adresse-t-il ?" est
+  // obligatoire sans que rien ne le dise. […] Un clic rejeté sur
+  // "Générer" fait partir des gens. » Le sujet portait le même
+  // défaut : les deux sont validés au clic depuis le début.
+  // LE QUIZ GARDÉ 7 JOURS. Ses mots, repris tels quels.
+  //
+  // L'espace insécable devant le "?" est sa règle du 9 septembre. Le
+  // reste de ce fichier est antérieur et n'en porte aucune : ces deux
+  // phrases sont les premières, ce n'est pas un oubli ailleurs.
+  brouillonTitre: "Ton quiz t'attend.",
+  brouillonQuel: "Ton dernier quiz : {titre}",
+  brouillonReprendre: "Le reprendre",
+  brouillonNouveau: "En créer un nouveau",
+  brouillonSortie: "Tu pars ? Ton quiz reste enregistré sur cet appareil pendant 7 jours.",
+  reqLegend: "Les champs marqués d'une étoile sont obligatoires.",
   lblTopic: "Sujet de ton quiz",
   phTopic: "Ex : la productivité pour entrepreneurs débordés",
   lblAudience: "À qui s'adresse-t-il ?",
@@ -106,6 +122,12 @@ const FR: Strings = {
 const EN: Strings = {
   formTitle: "Build your first quiz in 30 seconds ✨",
   formLead: "Tell us the basics, the AI does the rest. You can edit everything afterwards.",
+  brouillonTitre: "Your quiz is waiting.",
+  brouillonQuel: "Your last quiz: {titre}",
+  brouillonReprendre: "Pick it back up",
+  brouillonNouveau: "Start a new one",
+  brouillonSortie: "Leaving? Your quiz stays saved on this device for 7 days.",
+  reqLegend: "Fields marked with a star are required.",
   lblTopic: "Quiz topic",
   phTopic: "E.g. productivity for overwhelmed entrepreneurs",
   lblAudience: "Who is it for?",
