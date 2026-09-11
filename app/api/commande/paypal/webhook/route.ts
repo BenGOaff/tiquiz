@@ -35,6 +35,8 @@ import { rejouerCommissionsEnAttente } from "@/lib/affiliate/filetCommissionStor
 
 import { annulerCommissionVente, commissionnerVente } from "@/lib/affiliate/ownerSale";
 import { alerterVenteEncaissee } from "@/lib/email/venteEncaisseeAlerte";
+import { alerterAccesIncomplet } from "@/lib/email/accesAlerte";
+import { etatOctroiTiquiz } from "@/lib/checkout/etatOctroi";
 import { findOwnerProduct } from "@/lib/checkout/catalog";
 import { downgradeToFreeByEmail, grantPlanByEmail } from "@/lib/checkout/grantPlan";
 import {
@@ -594,6 +596,12 @@ async function traiterEvenement(
     console.error(
       `[commande/paypal/webhook] plan NON ouvert pour ${abo.email} (${octroi.reason ?? "inconnu"})`,
     );
+    // Béné le sait AVANT le 502 (11 septembre) : PayPal réessaie, puis
+    // s'arrête, et quelqu'un a payé sans accès.
+    await alerterAccesIncomplet({
+      moyen: "paypal", email: abo.email, produit: product.label, reference: abonnementId,
+      octroi: etatOctroiTiquiz(octroi),
+    });
     return NextResponse.json({ ok: false, reason: octroi.reason ?? "grant_failed" }, { status: 502 });
   }
 
@@ -616,6 +624,10 @@ async function traiterEvenement(
     `[commande/paypal/webhook] plan ouvert pour ${abo.email} : ${product.id} (${product.plan}), ` +
       `compte ${octroi.created ? "cree" : "existant"}, confirmation ${octroi.loginLinkSent ? "envoyee" : "NON ENVOYEE"}`,
   );
+  await alerterAccesIncomplet({
+    moyen: "paypal", email: abo.email, produit: product.label, reference: abonnementId,
+    octroi: etatOctroiTiquiz(octroi),
+  });
 
   // ── LE MOIS OFFERT EST CONSOMMÉ ──
   //

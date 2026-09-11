@@ -50,6 +50,8 @@ import { recordChurn } from "@/lib/checkout/churn";
 import { rememberStripeCustomer } from "@/lib/checkout/customerLink";
 import { annulerCommissionVente, commissionnerVente } from "@/lib/affiliate/ownerSale";
 import { alerterVenteEncaissee } from "@/lib/email/venteEncaisseeAlerte";
+import { alerterAccesIncomplet } from "@/lib/email/accesAlerte";
+import { etatOctroiTiquiz } from "@/lib/checkout/etatOctroi";
 import { natureDeLaFactureStripe } from "@/lib/ventes/alerteVente";
 import { marquerMoisOffertConsomme } from "@/lib/trial/moisOffertCheckout";
 import { ouvertureDemandee, type OuvertureDemandee } from "@/lib/checkout/planChange";
@@ -313,6 +315,13 @@ async function traiterEvenement(
     console.error(
       `[commande/webhook] plan NON ouvert pour ${vente.email} (${octroi.reason ?? "raison inconnue"})`,
     );
+    // ET BÉNÉ LE SAIT (11 septembre) : quand Stripe aura fini de
+    // réessayer, quelqu'un aura payé sans accès, et le journal ne
+    // prévient personne. Best-effort, AVANT le 502.
+    await alerterAccesIncomplet({
+      moyen: "stripe", email: vente.email, produit: product.label, reference: sessionId,
+      octroi: etatOctroiTiquiz(octroi),
+    });
     // 502 : on VEUT que Stripe réessaie, parce qu'un client a payé.
     return NextResponse.json({ ok: false, reason: octroi.reason ?? "grant_failed" }, { status: 502 });
   }
@@ -342,6 +351,13 @@ async function traiterEvenement(
     `[commande/webhook] plan ouvert pour ${vente.email} : ${product.id} (${product.plan}), ` +
       `compte ${octroi.created ? "cree" : "existant"}, lien de connexion ${octroi.loginLinkSent ? "envoye" : "NON ENVOYE"}`,
   );
+  // L'accès est ouvert ; si l'email d'entrée ou le tag n'est pas passé,
+  // la personne a payé sans le savoir, ou sans recevoir une seule
+  // séquence. `alerterAccesIncomplet` se tait quand tout est passé.
+  await alerterAccesIncomplet({
+    moyen: "stripe", email: vente.email, produit: product.label, reference: sessionId,
+    octroi: etatOctroiTiquiz(octroi),
+  });
 
   // ── LE MOIS OFFERT EST CONSOMMÉ ──
   //
@@ -748,6 +764,10 @@ async function surAbonnement(
           `[commande/webhook] palier ${ouverture.produit} NON ouvert pour ${email} ` +
             `(${grant.reason ?? "raison inconnue"}) : il a paye la difference.`,
         );
+        await alerterAccesIncomplet({
+          moyen: "stripe", email, produit: ouverture.label, reference: subId,
+          octroi: etatOctroiTiquiz(grant),
+        });
         // 502 : on VEUT que Stripe reessaie. Il a paye une montee qu'il
         // n'a pas recue, et le silence coute plus cher que le bug.
         return NextResponse.json({ ok: false, reason: grant.reason ?? "grant_failed" }, { status: 502 });
@@ -755,6 +775,10 @@ async function surAbonnement(
       console.log(
         `[commande/webhook] abonnement ${subId} : ${email} passe en ${ouverture.plan}`,
       );
+      await alerterAccesIncomplet({
+        moyen: "stripe", email, produit: ouverture.label, reference: subId,
+        octroi: etatOctroiTiquiz(grant),
+      });
       return NextResponse.json({ ok: true, subscription: "plan_changed", plan: ouverture.plan });
     }
 

@@ -14317,3 +14317,50 @@ versions fautives (l'annulation sans filet, le rejeu hors `after`, un
 comme échéance, la relivraison qui remplace l'origine, un échec de
 paiement compté, le script mort sur Node 20, le select sans `status`, et
 deux côté Atelier) : toutes rougissent.
+
+## Un paiement sans accès prévient Béné, un accès à moitié ouvert aussi (11 septembre 2026, suite)
+
+Béné : "continue la suite logique, je veux un système ultra fiable de
+l'arrivée sur le site à la commande, en passant par les accès, les
+paiements et l'affiliation."
+
+La règle du 7 août dit « il a payé le client, il doit recevoir ses
+accès, point barre ». Le code la tenait, et il se taisait : un octroi
+raté répond 502 (le fournisseur réessaie), puis Stripe ou PayPal
+s'arrêtent, et personne ne sait que quelqu'un a payé devant une porte
+fermée. Et quand l'accès s'ouvrait mais que l'email de confirmation ne
+partait pas, ou que le tag Systeme.io n'était pas posé, la personne
+avait payé sans le savoir, ou sans jamais recevoir une séquence. Les
+deux vivaient dans `pm2 logs`.
+
+**Règle : `lib/ventes/alerteAcces.ts` décide (faut-il alerter, quoi
+dire), identique à l'octet près dans les deux dépôts qui encaissent :**
+
+```bash
+cmp lib/ventes/alerteAcces.ts ../formaquiz/lib/ventes/alerteAcces.ts
+```
+
+`lib/email/accesAlerte.ts` l'envoie. Les DEUX webhooks (Stripe, PayPal)
+l'appellent AVANT chaque 502 d'octroi et APRÈS chaque octroi réussi,
+sur l'achat, l'abonnement et la montée de palier.
+
+**On alerte sur un échec CONSTATÉ, jamais sur un doute.** `null` veut
+dire « on ne sait pas » : l'Atelier ne dit pas si son email d'accès est
+parti, et Tiquiz rend `tagClientPose: null` quand aucun tag client ne
+s'applique au plan. « Ne s'applique pas » n'est pas « a raté » ; lire ce
+`null` comme un échec ferait crier l'alerte sur chaque vente, et une
+alerte qui crie pour rien finit dans un filtre. `etatOctroiTiquiz`
+(`lib/checkout/etatOctroi.ts`, pur) fait cette traduction.
+
+**Chaque email dit QUOI FAIRE** : ouvrir l'accès à la main si le 502
+revient, renvoyer un lien de connexion depuis la fiche, poser le tag
+dans Systeme.io. Un email d'alerte lu sans savoir quoi faire est un
+email remis à plus tard.
+
+**Ce qui n'est pas mesuré :** aucune de ces alertes n'a été envoyée
+depuis ce dépôt (ni clé Resend ni paiement possible ici). Ce qui est
+vérifié : la décision dans ses cinq cas, le contenu échappé sans tiret
+cadratin, et les deux versions fautives rejouées (un 502 sans alerte,
+le garde du lot retiré côté Tipote) rougissent.
+
+Test : `tests/logic/alerte-acces.test.mts`, ici et dans l'Atelier.
