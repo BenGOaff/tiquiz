@@ -14289,10 +14289,17 @@ et le filet d'ici rejoue. Détail dans l'`AGENTS.md` de Tipote.
   `affiliate.tipote.com/admin/versements`, à cliquer avant de construire
   le lot du mois. Ce n'est pas un bug, c'est le process : à faire entre
   le 10 et le 13.
-- **Le cron du barème (`recompense-affilies`, Tipote) n'a de crontab
-  écrit nulle part** dans les trois dépôts. S'il ne tourne pas, un
-  affilié à 11 filleuls reste à 40 % au lieu de 50 %, sans erreur. À
-  vérifier sur le serveur : `crontab -l`.
+- 🚨 **Cette ligne disait que le cron du barème (`recompense-affilies`,
+  Tipote) n'avait de crontab nulle part. C'EST PÉRIMÉ, mesuré le jour
+  même** : Béné a collé son `crontab -l`, et il y est, le 2 de chaque
+  mois à 3 h (`0 3 2 * *`), suivi de `remise-affilies` à 3 h 05. Ce que
+  les trois dépôts ne portent pas, c'est la LIGNE de crontab ; le
+  serveur, lui, la porte. « Je n'ai pas trouvé » n'est pas « il n'y a
+  rien » (règle du 22 août), et je l'ai refaite ici.
+- **`rejouer-commissions` n'a PAS de ligne de crontab** au 11 septembre :
+  le rejeu ne part donc qu'après une vente. La ligne à poser est dans le
+  message du jour ; sans elle, une annulation en attente peut arriver
+  après que la commission a mûri.
 - **Une commission déjà versée qu'un remboursement annule (`trop-tard`)
   ne vit que dans `pm2 logs`** de Tipote : c'est un cas pour un humain
   (compenser au lot suivant), et il faut lire le journal pour le savoir.
