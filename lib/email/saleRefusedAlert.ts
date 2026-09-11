@@ -24,7 +24,7 @@
 // réponse au webhook, sinon Systeme.io rejouerait l'événement en boucle.
 
 import "server-only";
-import { ADMIN_EMAILS } from "@/lib/adminEmails";
+import { ADMIN_ALERT_EMAILS } from "@/lib/adminEmails";
 import { resolveAppUrl } from "@/lib/authLinks";
 import { adresseExpediteur, tiquizFrom } from "./tiquizShell";
 
@@ -107,7 +107,7 @@ export async function sendSaleRefusedAlert(args: SaleRefusedArgs): Promise<boole
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from: tiquizFrom(process.env, "Tiquiz"),
-        to: [...ADMIN_EMAILS],
+        to: [...ADMIN_ALERT_EMAILS],
         subject: args.grantedPlan
           ? `Bon de commande inconnu (accès ouvert en ${args.grantedPlan}) : ${args.email}`
           : `Vente encaissée sans accès : ${args.email}`,
