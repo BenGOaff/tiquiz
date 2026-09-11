@@ -13,7 +13,7 @@
 
 import "server-only";
 
-import { ADMIN_EMAILS } from "@/lib/adminEmails";
+import { ADMIN_ALERT_EMAILS } from "@/lib/adminEmails";
 import { resolveAppUrl } from "@/lib/authLinks";
 import { renderTiquizMessage, tiquizFrom } from "./tiquizShell";
 
@@ -33,7 +33,7 @@ export async function sendSupportAlert(args: SupportAlertArgs): Promise<boolean>
     console.warn("[supportAlert] RESEND_API_KEY manquante : Béné n'est pas prévenue.");
     return false;
   }
-  if (ADMIN_EMAILS.length === 0) return false;
+  if (ADMIN_ALERT_EMAILS.length === 0) return false;
 
   const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
   const qui = [args.name, args.email].filter(Boolean).join(" - ");
@@ -58,7 +58,7 @@ export async function sendSupportAlert(args: SupportAlertArgs): Promise<boolean>
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from: tiquizFrom(),
-        to: [...ADMIN_EMAILS],
+        to: [...ADMIN_ALERT_EMAILS],
         // La cliente en copie cachée ? NON. Cet email contient un lien
         // vers son propre dossier admin : il ne sort pas de chez nous.
         reply_to: args.email,

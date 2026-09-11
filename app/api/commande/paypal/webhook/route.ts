@@ -33,6 +33,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { annulerCommissionVente, commissionnerVente } from "@/lib/affiliate/ownerSale";
+import { alerterVenteEncaissee } from "@/lib/email/venteEncaisseeAlerte";
 import { findOwnerProduct } from "@/lib/checkout/catalog";
 import { downgradeToFreeByEmail, grantPlanByEmail } from "@/lib/checkout/grantPlan";
 import {
@@ -521,6 +522,24 @@ async function traiterEvenement(
           product: { id: produit.id, label: produit.label },
         });
       }
+    }
+
+    // ── ET BÉNÉ L'APPREND, EN DERNIER (11 septembre 2026) ──
+    //
+    // PayPal ne dit pas si cette échéance est la première ou un
+    // renouvellement : la nature est `inconnue`, et l'email le dit au
+    // lieu de deviner. Le montant est celui de la vente PayPal.
+    if (encaissement) {
+      await alerterVenteEncaissee({
+        moyen: "paypal",
+        nature: "inconnue",
+        email: abo.email,
+        produit: findOwnerProduct(abo.productId)?.label ?? `abonnement ${abo.productId}`,
+        montantCents: encaissement.totalCents,
+        devise: encaissement.currency,
+        reference: encaissement.saleRef,
+        compteCree: null,
+      });
     }
     return NextResponse.json({ ok: true, reason: "echeance" });
   }

@@ -32,7 +32,7 @@
 
 import "server-only";
 
-import { ADMIN_EMAILS } from "@/lib/adminEmails";
+import { ADMIN_ALERT_EMAILS } from "@/lib/adminEmails";
 import { resolveAppUrl } from "@/lib/authLinks";
 import {
   PHRASE_MOTIF,
@@ -60,7 +60,7 @@ export async function envoyerAlerteCommentaire(a: AlerteCommentaireArgs): Promis
     console.warn("[commentaireBlog] RESEND_API_KEY manquante : Béné n'est pas prévenue.");
     return false;
   }
-  if (ADMIN_EMAILS.length === 0) return false;
+  if (ADMIN_ALERT_EMAILS.length === 0) return false;
 
   const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
   const objet = objetAlerte(a);
@@ -92,7 +92,7 @@ export async function envoyerAlerteCommentaire(a: AlerteCommentaireArgs): Promis
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from: tiquizFrom(),
-        to: [...ADMIN_EMAILS],
+        to: [...ADMIN_ALERT_EMAILS],
         // La lectrice en `reply_to` quand elle a laissé son adresse :
         // répondre à un commentaire est la meilleure façon de faire
         // revenir quelqu'un, et chercher son adresse dans l'admin est
