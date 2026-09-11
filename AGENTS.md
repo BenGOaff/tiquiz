@@ -13845,3 +13845,164 @@ anglais différent, `dem` rendu inatteignable, un sujet recopié déjà
 encodé, la grille à deux colonnes revenue, une adresse de générateur en
 dur, la section blog non gardée, `revalidate` retiré, un nombre de
 modèles écrit à la main) : les neuf rougissent.
+
+## Le quiz s'affiche pendant qu'il s'écrit, et la route rend une RAISON (chantier 3 + tâche #55, 10 septembre 2026)
+
+Béné : "le streaming de la génération, c'est le chantier qui rapporte
+le plus". Et dans la même mission : sur `/en/generateur-de-quiz`, un
+visiteur anglophone lisait "L'IA a mis trop de temps. Réessaie." Les
+deux vivaient dans `app/api/embed/quiz/generate/route.ts`, donc ils se
+corrigent dans le même passage.
+
+### CE QUI ÉTAIT VRAI AVANT D'ÉCRIRE UNE LIGNE
+
+| | mesuré le 9 et le 10 septembre |
+|---|---|
+| la plomberie SSE vers le navigateur | existait (heartbeat 5 s, `session`, `progress`, `result`, `error`) |
+| l'appel à Anthropic | **pas streamé**, `stream: true` absent, `res.json()` d'un coup |
+| ce que l'écran affichait avant `result` | un spinner, et la phrase `progress` du serveur, en FRANÇAIS |
+| les sorties d'erreur de la route | dix, six phrases françaises distinctes, plus `e.message` brut |
+| l'écran | `setError(payload.error)` et `err.message`, recopiés tels quels |
+| le minuteur de 120 s | ne bornait que les EN-TÊTES : `res.json()` venait après `clearTimeout` |
+
+La dernière ligne n'était pas dans le brief. Un corps qui traînait
+n'était borné par rien, et personne ne l'aurait vu.
+
+### LA STRUCTURE : un module pur décide, la route relaie, l'écran rend
+
+| Le fichier | Ce qu'il fait |
+|---|---|
+| `lib/embed/fluxGeneration.ts` (pur) | lit le flux d'Anthropic morceau par morceau (`LecteurSseAnthropic`), dit ce qui est déjà COMPLET dans le JSON en cours (`progressionDuFlux`), et ce qui est NOUVEAU depuis la dernière lecture (`nouveautes`) |
+| `lib/embed/echecGenerateur.ts` (pur) | traduit une raison en clé du dictionnaire de l'embed, la phrase du quota avec les nombres de la route |
+| `lib/embed/attente.ts` (pur) | les trois cartes (toutes les 4 s), la question Systeme.io et ce qu'on met en avant après la réponse |
+| `components/embed/QuizEnCours.tsx` | l'écran d'attente : aucune décision, il rend |
+| `components/embed/EmbedPreviewClient.tsx` | écoute `titre`, `question`, `resultat`, range par INDEX, traduit les raisons |
+
+**Une question ne part que quand son OBJET est fermé**, jamais à moitié
+écrite : une phrase coupée au milieu d'un mot se lit comme une panne.
+Le titre part dès que sa chaîne est fermée. L'ordre de sortie est
+l'ordre d'écriture, et le client range par index : rien à trier.
+
+**On relit tout le texte accumulé à chaque morceau, et le coût est
+MESURÉ** : un quiz de 10 questions et 5 profils fait 17,9 Ko, relu tous
+les 50 caractères ça fait 358 lectures pour 172 ms de processeur en
+tout. Un lecteur incrémental serait plus difficile à prouver juste pour
+un gain que personne ne verra.
+
+**Ce qui s'affiche est du texte PROPRE, dans la langue du QUIZ** :
+`sanitizeAiText` (le tiret cadratin) puis `applyFrenchTypography`
+(l'espace insécable devant `?`), sur l'aperçu comme sur le quiz final.
+La règle du 7 juin vaut aussi pour les dix secondes d'attente, et
+`locale` est un paramètre OBLIGATOIRE de `progressionDuFlux` : deviner
+la langue ferait afficher "es-tu?" à un visiteur français.
+
+### CE QUI NE BOUGE PAS, ET POURQUOI C'EST TESTÉ
+
+- **`enregistrerUsage` reçoit LA MÊME FORME qu'avant** : la route
+  reconstruit `{ model, usage, stop_reason, content }` depuis les
+  événements `message_start` et `message_delta`. `duree_ms` est écrit
+  même quand le flux se coupe, et AVANT qu'on dise que ça a raté : une
+  génération interrompue a coûté le même temps et les mêmes jetons
+  qu'une génération réussie (règle du 9 septembre).
+- **Le chrono démarre toujours à l'entrée du POST**, et le test de
+  troncature (`stop_reason === "max_tokens"` avant `JSON.parse`) tient
+  toujours.
+- **Le minuteur couvre maintenant la LECTURE** (180 s, `BUDGET_FLUX_MS`)
+  : un `reader.read()` sur un corps abandonné lève `AbortError`, classé
+  `too_long`. 180 et pas 120, parce que pendant tout ce temps le
+  visiteur VOIT les questions arriver.
+- **Une erreur DANS le flux** (`overloaded_error` en cours de route) est
+  lue, journalisée, et rend `busy`.
+
+### LES RAISONS, ET POURQUOI ELLES VIVENT DANS LE DICTIONNAIRE DE L'EMBED
+
+Chaque sortie de la route porte `reason`, jamais une phrase : les neuf
+de `RaisonIa`, plus `sujet`, `audience`, `objectif` pour les refus de
+VALIDATION (qui gardent leur 400 : ils passent intacts à travers
+Cloudflare et disent la bonne chose). Le quota rend `rate_limited` avec
+`parLimite` et `fenetreHeures` en DONNÉES, et l'écran écrit la phrase
+dans sa langue avec ces nombres.
+
+**Pourquoi pas `useEchecIa` et `erreursIa` directement :** ce hook lit
+next-intl, dont la langue vient du cookie ou de l'adresse. Le générateur
+reçoit sa langue en PROP (dans une iframe, c'est la page hôte qui la
+donne). Deux sources de langue sur un même écran, c'est un message
+d'erreur en français sous un formulaire anglais. Les phrases sont donc
+dans `embed-i18n.ts`, et **un test exige qu'elles restent identiques à
+`messages/{fr,en}.json`** : deux copies qui ne peuvent pas diverger.
+
+Au passage, `errGeneric` de l'embed disait "Une erreur est survenue.
+Réessaie." Il dit maintenant la phrase de `erreursIa`, la même que
+partout ailleurs.
+
+### LA QUESTION SYSTEME.IO NE BLOQUE RIEN, ET SA RÉPONSE PART DANS GA4
+
+Oui / Non / Pas encore, sous le quiz qui s'écrit. La réponse est gardée
+d'un essai à l'autre (on ne repose pas une question à quelqu'un qui a
+répondu) et part dans `generation_reussie` sous la clé `systemeio`,
+omise quand personne n'a répondu. "Oui" met en avant la connexion par
+clé API, les deux autres l'export CSV : c'est une LIGNE sous les
+boutons, pas une bascule dans l'éditeur. L'éditeur est
+`QuizDetailClient`, partagé avec l'app, et il n'a pas été touché.
+
+### MESURÉ DANS UN NAVIGATEUR, SUR UN BUILD DE PRODUCTION
+
+Un `next dev` de ce conteneur n'hydrate rien (règle du 9 septembre),
+donc `next build` puis `next start`, avec un mock qui STREAME dans le
+temps sur la même origine (un `route.fulfill` livre tout d'un coup, et
+un `route.continue({ url })` vers une autre origine n'a jamais atteint
+le mock : la première mesure a rendu "unreachable", ce qui est d'ailleurs
+la preuve que ce chemin-là marche).
+
+| t | ce que la page montre |
+|---|---|
+| 0,6 s | la carte 1, la phrase d'attente, aucun blanc |
+| 1,1 s | le titre |
+| 2,1 s puis 3,6 s puis 4,6 s | les questions 1, 2, 3, avec leurs options |
+| 4,1 s | la carte 2 (puis la 3 à 8,2 s : toutes les 4 s) |
+| 5,7 s puis 6,7 s | les profils 1 et 2 |
+
+Clic sur "Oui" : `aria-pressed`, et la ligne sur la clé API. Animation
+du titre : `enter` en temps normal, **`none` sous
+`prefers-reduced-motion`** (c'est `motion-safe:` qui décide). Une erreur
+dans le flux sur `/embed/preview?locale=en` : la phrase ANGLAISE, le
+formulaire toujours là avec le sujet saisi, le bouton "Generate my quiz
+with AI" : jamais un écran blanc. Un 429 avant le flux : "You have
+already generated 2 quizzes... Come back in 24 h", les nombres venus de
+la route.
+
+**CE QUE CETTE MESURE NE DIT PAS, et il faut le dire dans ce sens là :**
+les temps du tableau sont ceux du MOCK, pas ceux d'Anthropic. Ce qui est
+mesuré, c'est que l'écran affiche chaque morceau dès qu'il arrive ; à
+quelle vitesse le modèle écrit, ça se lit dans `/admin` (la médiane de
+`duree_ms`), et le flux réel n'a pas pu être exercé d'ici, faute de clé.
+La médiane d'AVANT n'a pas pu être relevée non plus (aucune base
+joignable) : elle se lit après coup en bornant la période à avant le
+déploiement, les lignes d'avant gardent leur `duree_ms`.
+
+### MES FAUTES DE CE PASSAGE
+
+1. **`pkill -x node -f`, puis un `pgrep -f "next start -p 3000"` dont
+   le motif était DANS ma propre ligne de commande** : deux fois la
+   sortie 144, deux fois le shell tué. La règle est écrite depuis le
+   4 septembre. On tue par PID lu au lancement (`$!`), jamais par un
+   motif qui peut matcher la commande qui le lance.
+2. **Deux gardes sont restés VERTS sur une version fautive** avant d'être
+   resserrés : `stream: true` cherché dans tout le fichier tombait sur
+   `decode(value, { stream: true })` ; `systemeio` cherché après l'appel
+   tombait sur `onSystemeio=` du rendu. Les douze rejeux rougissent
+   maintenant, et c'est le rejeu qui l'a dit, jamais la relecture.
+3. **Mon premier attendu de test portait l'espace ORDINAIRE** devant
+   `?`, donc il a rougi sur une typographie française JUSTE.
+
+Test : `tests/logic/flux-generation.test.mts` (22 cas), vérifié en
+rejouant DOUZE versions fautives (le `stream: true` retiré de la
+requête, une phrase à la place d'une raison, le minuteur retiré avant la
+lecture, la phrase de progression en français, une chaîne ouverte
+acceptée comme titre, l'aperçu sans typographie, `payload.error`
+recopié, `systemeio` oublié, une apparition sans `motion-safe:`, les
+cartes toutes les 3 s, une carte réécrite, une raison inconnue
+recopiée) : les douze rougissent.
+
+**Ce chantier n'a PAS de jumeau chez Tipote** : aucune
+`embed_quiz_sessions` là-bas, vérifié le 9 septembre.
