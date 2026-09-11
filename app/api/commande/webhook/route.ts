@@ -23,7 +23,8 @@
 // et écarté déclencherait des réessais en boucle. On ne renvoie une
 // erreur que sur une VRAIE panne, où le réessai est ce qu'on veut.
 
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
+import { rejouerCommissionsEnAttente } from "@/lib/affiliate/filetCommissionStore";
 
 import { findOwnerProduct } from "@/lib/checkout/catalog";
 import { downgradeToFreeByEmail, grantPlanByEmail } from "@/lib/checkout/grantPlan";
@@ -152,6 +153,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
   const reussi = reponse.status >= 200 && reponse.status < 300;
   await marquerTraite(SOURCE, eventId, reussi ? "processed" : "error", reussi ? null : `HTTP ${reponse.status}`);
+  // LE REJEU DES COMMISSIONS EN ATTENTE, APRES la reponse (11 septembre
+  // 2026). `after` tourne une fois la reponse partie : le fournisseur ne
+  // l'attend pas, et un rejeu qui echoue ne touche pas a cet evenement.
+  // Sans cron sur le serveur, c'est ce qui garantit qu'une commission
+  // mise en attente repart des la vente suivante.
+  after(async () => {
+    const bilan = await rejouerCommissionsEnAttente({});
+    if (bilan.rejouees || bilan.echecs) {
+      console.log(`[commande/webhook] commissions en attente : ${bilan.rejouees} rejouee(s), ${bilan.echecs} echec(s), ${bilan.restantes} restante(s)`);
+    }
+  });
   return reponse;
 }
 
@@ -918,7 +930,15 @@ async function commissionnerEcheance(
   }
 
   const email = String(facture.customer_email ?? "").trim();
-  if (!email) return;
+  if (!email) {
+    // Une sortie MUETTE ici est une commission perdue sans trace (audit
+    // du 11 septembre) : Stripe recopie l'adresse sur chaque facture,
+    // donc son absence est une anomalie qui se dit.
+    console.error(
+      `[commande/webhook] echeance ${factureId} encaissee sans adresse sur la facture : commission NON creee.`,
+    );
+    return;
+  }
 
   await commissionnerVente({
     moyen: "stripe",

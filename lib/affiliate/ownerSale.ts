@@ -60,9 +60,10 @@ import "server-only";
 import { commissionBaseCents } from "@/lib/checkout/commissionBase";
 import { readSa } from "./sa";
 import { readRef as readRefCode } from "./refLien";
+import { marquerEnvoyee, mettreEnAttente } from "./filetCommissionStore";
+import { posterVersTipote } from "./posterTipote";
 
 /** L'endroit où Tipote centralise les commissions. */
-const ENDPOINT_PAR_DEFAUT = "https://app.tipote.com/api/affiliate/attribute-sale";
 
 export interface VenteACommissionner {
   email: string | null;
@@ -128,17 +129,6 @@ export interface VenteACommissionner {
 
 export async function commissionnerVente(vente: VenteACommissionner): Promise<void> {
   try {
-    const secret = process.env.AFFILIATE_INTERNAL_SECRET?.trim();
-    if (!secret) {
-      // L'ABSENCE FERME, mais elle ne se tait pas : sans ce secret,
-      // AUCUNE vente ne paie personne, et rien d'autre ne le dirait.
-      console.error(
-        "[commission] AFFILIATE_INTERNAL_SECRET absente du serveur Tiquiz : " +
-          "aucune commission ne peut etre creee.",
-      );
-      return;
-    }
-
     const email = (vente.email ?? "").trim();
     const reference = (vente.reference ?? "").trim();
     if (!email || !reference) {
@@ -166,58 +156,47 @@ export async function commissionnerVente(vente: VenteACommissionner): Promise<vo
     // serait alors silencieusement traitee comme un doublon.
     const ref = `${vente.moyen}:${reference}`;
 
-    const url = process.env.TIPOTE_AFFILIATE_ENDPOINT?.trim() || ENDPOINT_PAR_DEFAUT;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Affiliate-Secret": secret },
-      // UN APPEL SANS DÉLAI MAXIMUM BLOQUE LE WEBHOOK QUI L'APPELLE.
-      //
-      // Cette fonction tourne DANS le webhook de paiement. Si Tipote ne
-      // répond pas, la requête reste ouverte jusqu'à ce que la
-      // plateforme la tue, et le fournisseur ne reçoit jamais sa
-      // réponse. La commission peut attendre ; l'accès du client, non.
-      // (Audit du 24 août : `proprietaireDuLien` avait son délai, pas
-      // celui ci.)
-      signal: AbortSignal.timeout(8000),
-      body: JSON.stringify({
-        customer_email: email,
-        sale_amount_cents: base,
-        currency: "EUR",
-        source_app: "tiquiz",
-        sio_order_id: ref,
-        // `null` est le cas COURANT pour les deux : sans lien
-        // d'affiliation, l'attribution retombe sur la conversion par
-        // email.
-        // ON DIT SUR QUOI ON PAIE. `commissionBaseCents` a deja retire
-        // la TVA : sans ce champ, Tipote lisait le montant comme du TTC
-        // et le rabotait une deuxieme fois (audit du 26 aout).
-        base: "ht",
-        // ET QUI PAIE. Cette vente est prise sur NOTRE bon de commande,
-        // donc c'est nous qui versons la commission. Une vente passee
-        // par un tunnel Systeme.io est versee par EUX, et n'entre donc
-        // pas dans nos lots : sans ce champ, le premier lot aurait vire
-        // une deuxieme fois ce qu'ils ont deja paye.
-        regle_par: "nous",
-        affiliate_ref: readSa(vente.affiliateRef),
-        affiliate_code: readRefCode(vente.affiliateCode),
-        product_name: vente.product.label,
-        sale_at: new Date().toISOString(),
-        raw_payload: { source: `${vente.moyen}_encaissement`, product: vente.product.id, reference },
-      }),
-    });
+    const corps = {
+      customer_email: email,
+      sale_amount_cents: base,
+      currency: "EUR",
+      source_app: "tiquiz",
+      sio_order_id: ref,
+      // `null` est le cas COURANT pour les deux : sans lien
+      // d'affiliation, l'attribution retombe sur la conversion par
+      // email.
+      // ON DIT SUR QUOI ON PAIE. `commissionBaseCents` a deja retire
+      // la TVA : sans ce champ, Tipote lisait le montant comme du TTC
+      // et le rabotait une deuxieme fois (audit du 26 aout).
+      base: "ht",
+      // ET QUI PAIE. Cette vente est prise sur NOTRE bon de commande,
+      // donc c'est nous qui versons la commission. Une vente passee
+      // par un tunnel Systeme.io est versee par EUX, et n'entre donc
+      // pas dans nos lots : sans ce champ, le premier lot aurait vire
+      // une deuxieme fois ce qu'ils ont deja paye.
+      regle_par: "nous",
+      affiliate_ref: readSa(vente.affiliateRef),
+      affiliate_code: readRefCode(vente.affiliateCode),
+      product_name: vente.product.label,
+      sale_at: new Date().toISOString(),
+      raw_payload: { source: `${vente.moyen}_encaissement`, product: vente.product.id, reference },
+    };
 
-    if (!res.ok) {
-      const corps = await res.text().catch(() => "");
+    const reponse = await posterVersTipote("attribuer", corps);
+
+    if (!reponse.ok) {
+      // ON NE PERD PLUS LA COMMISSION (11 septembre 2026). L'appel est
+      // range tel quel et rejoue plus tard : Tipote repond `duplicate`
+      // sur une cle deja connue, donc le rejeu ne paie jamais deux fois.
       console.error(
-        `[commission] Tipote a refuse (${res.status}) sur ${ref} : ${corps.slice(0, 200)}`,
+        `[commission] Tipote n'a pas pris ${ref} (${reponse.statut ?? "reseau"}) : ${reponse.detail}`,
       );
+      await mettreEnAttente({ action: "attribuer", reference: ref, corps, statut: reponse.statut, detail: reponse.detail });
       return;
     }
+    await marquerEnvoyee("attribuer", ref);
 
-    const json = (await res.json().catch(() => ({}))) as {
-      result?: { status?: string; commission_cents?: number; sa?: string };
-    };
-    const r = json.result ?? {};
+    const r = (reponse.json.result ?? {}) as { status?: string; commission_cents?: number; sa?: string };
     if (r.status === "attributed") {
       console.log(
         `[commission] ${r.commission_cents} c pour ${r.sa} sur ${ref} ` +
@@ -282,67 +261,45 @@ export async function annulerCommissionVente(args: {
   references: readonly (string | null | undefined)[];
   motif: "remboursement" | "impaye" | "fraude";
 }): Promise<void> {
-  const secret = process.env.AFFILIATE_INTERNAL_SECRET?.trim();
   const cles = args.references
     .map((r) => (r ?? "").trim())
     .filter((r) => r.length > 0);
 
-  if (!secret || cles.length === 0) {
+  if (cles.length === 0) {
     console.error(
-      `[commission] annulation impossible (${!secret ? "secret absent" : "aucune reference"}) : ` +
+      `[commission] annulation impossible (aucune reference) : ` +
         `une commission peut partir sur une vente ${args.motif}.`,
     );
     return;
   }
 
-  const url = (process.env.TIPOTE_AFFILIATE_ENDPOINT?.trim() || ENDPOINT_PAR_DEFAUT).replace(
-    /\/attribute-sale$/,
-    "/cancel-sale",
-  );
-
   let annulees = 0;
   for (const cle of cles) {
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Affiliate-Secret": secret },
-        // Même délai que l'attribution : cette fonction tourne DANS le
-        // webhook de paiement, et l'accès du client ne doit pas attendre
-        // que Tipote réponde.
-        signal: AbortSignal.timeout(8000),
-        body: JSON.stringify({
-          source_app: "tiquiz",
-          sio_order_id: cle,
-          motif: args.motif,
-        }),
-      });
-
-      if (!res.ok) {
-        const corps = await res.text().catch(() => "");
-        console.error(
-          `[commission] annulation REFUSEE (${res.status}) sur ${cle} : ${corps.slice(0, 200)}. ` +
-            `La commission va murir et partir au prochain lot.`,
-        );
-        continue;
-      }
-
-      const json = (await res.json().catch(() => ({}))) as {
-        resultat?: { annulees?: number; tropTard?: number; tropTardCents?: number };
-      };
-      const r = json.resultat ?? {};
-      annulees += r.annulees ?? 0;
-      if ((r.tropTard ?? 0) > 0) {
-        // DÉJÀ VERSÉE : ce n'est pas rattrapable par du code. L'argent
-        // est parti et la facture d'autofacturation qui le justifie a
-        // été remise à un comptable.
-        console.error(
-          `[commission] ${cle} (${args.motif}) : ${r.tropTard} commission(s) DEJA VERSEE(S) ` +
-            `(${r.tropTardCents ?? 0} c). A recuperer a la main.`,
-        );
-      }
-    } catch (e) {
+    const corps = { source_app: "tiquiz", sio_order_id: cle, motif: args.motif };
+    const reponse = await posterVersTipote("annuler", corps);
+    if (!reponse.ok) {
+      // MEME FILET QUE L'ATTRIBUTION : une annulation qui ne passe pas
+      // laisserait la commission murir et partir au lot. Elle attend, et
+      // elle est rejouee avant la maturation (30 jours), tant que Tipote
+      // finit par repondre.
       console.error(
-        `[commission] annulation impossible sur ${cle} : ${e instanceof Error ? e.message : String(e)}`,
+        `[commission] annulation NON prise (${reponse.statut ?? "reseau"}) sur ${cle} : ${reponse.detail}. ` +
+          `Mise en attente : sans rejeu, la commission murit et part au prochain lot.`,
+      );
+      await mettreEnAttente({ action: "annuler", reference: cle, corps, statut: reponse.statut, detail: reponse.detail });
+      continue;
+    }
+    await marquerEnvoyee("annuler", cle);
+
+    const r = (reponse.json.resultat ?? {}) as { annulees?: number; tropTard?: number; tropTardCents?: number };
+    annulees += r.annulees ?? 0;
+    if ((r.tropTard ?? 0) > 0) {
+      // DÉJÀ VERSÉE : ce n'est pas rattrapable par du code. L'argent
+      // est parti et la facture d'autofacturation qui le justifie a
+      // été remise à un comptable.
+      console.error(
+        `[commission] ${cle} (${args.motif}) : ${r.tropTard} commission(s) DEJA VERSEE(S) ` +
+          `(${r.tropTardCents ?? 0} c). A recuperer a la main.`,
       );
     }
   }
