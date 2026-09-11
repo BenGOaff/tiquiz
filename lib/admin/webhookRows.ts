@@ -63,7 +63,15 @@ export type CallVerdict =
   /** Une vraie erreur de notre côté. */
   | "panne"
   /** Rien à dire : cet appel ne passe pas par le routage. */
-  | "sans-objet";
+  | "sans-objet"
+  /**
+   * Systeme.io a rejoué un appel déjà traité (même commande), et on l'a
+   * écarté. Journalisé depuis le 11 septembre 2026 : avant, un appel
+   * écarté ne laissait AUCUNE ligne, donc un renouvellement d'abonnement
+   * qui porterait le même identifiant de commande que la vente d'origine
+   * disparaissait sans trace, et l'écran répondait "jamais reçu".
+   */
+  | "doublon";
 
 export interface CallRow {
   source: string | null;
@@ -117,6 +125,7 @@ export function readCallVerdict(row: CallRow): CallVerdict {
   const status = String(row.status ?? "").trim().toLowerCase();
 
   if (status === "error") return "panne";
+  if (status === "duplicate") return "doublon";
   if (status === "transient_failure" || estEchecDePaiement(row.eventType)) {
     return "paiement-echoue";
   }
@@ -195,4 +204,9 @@ export const LIBELLE_VERDICT: Readonly<
   },
   panne: { mot: "panne", aide: "On a planté sur cet appel.", ton: "alerte" },
   "sans-objet": { mot: "traité", aide: "", ton: "ok" },
+  doublon: {
+    mot: "doublon écarté",
+    aide: "Systeme.io a rejoué un appel sur une commande déjà traitée. Si c'est une échéance d'abonnement qui devrait compter comme une vente, c'est ici qu'elle se voit.",
+    ton: "info",
+  },
 };

@@ -14006,3 +14006,141 @@ recopiée) : les douze rougissent.
 
 **Ce chantier n'a PAS de jumeau chez Tipote** : aucune
 `embed_quiz_sessions` là-bas, vérifié le 9 septembre.
+
+## Une vente encaissée chez nous prévient Béné par email (11 septembre 2026)
+
+Béné : "il me faut aussi une alerte quand je fais une nouvelle vente via
+notre système, par email."
+
+Systeme.io la prévenait de chaque vente faite sur ses tunnels. Depuis que
+le bon de commande est chez nous, une vente ouvrait l'accès, émettait la
+facture, commissionnait l'affilié... et personne ne le lui disait. Elle
+le découvrait dans l'admin, ou pas.
+
+### Le contenu est PUR et jumeau, l'envoi est local
+
+`lib/ventes/alerteVente.ts` décide de l'objet et du corps, et de rien
+d'autre : pas de Resend, pas de `process.env`. Il est identique à
+l'octet près dans les deux dépôts qui encaissent :
+
+```bash
+cmp lib/ventes/alerteVente.ts ../formaquiz/lib/ventes/alerteVente.ts
+```
+
+`lib/email/venteEncaisseeAlerte.ts` le branche sur Tiquiz (le nom, la
+fiche client dans l'admin) et passe par `alerterAdmins`.
+
+### LA NATURE EST UN PARAMÈTRE OBLIGATOIRE
+
+| Nature | Quand | L'objet commence par |
+|---|---|---|
+| `premiere` | achat unique, ou première facture d'un abonnement | « Nouvelle vente Tiquiz » |
+| `echeance` | un renouvellement (`subscription_cycle`, `subscription_update`) | « Échéance encaissée Tiquiz » |
+| `essai` | première facture à ZÉRO : un mois offert démarre | « Nouvel essai Tiquiz » |
+| `inconnue` | PayPal, qui ne distingue pas la première échéance des suivantes | « Encaissement Tiquiz » |
+
+Côté Stripe, `natureDeLaFactureStripe(billing_reason, amount_paid)`
+décide. Côté PayPal, on DIT qu'on ne sait pas au lieu de deviner : une
+première annoncée à tort ferait ouvrir chaque renouvellement comme une
+nouveauté (règle du 1er août, la mécanique est un paramètre).
+
+### Trois points d'encaissement, une alerte chacun, et jamais deux
+
+| Où | Quoi |
+|---|---|
+| Stripe `checkout.session.completed` | UNIQUEMENT un produit sans échéance (`product.interval === null`) |
+| Stripe `invoice.paid` | chaque facture d'abonnement, la première et le mois offert compris |
+| PayPal `PAYMENT.SALE.COMPLETED` | chaque échéance |
+
+Un abonnement n'est PAS annoncé au checkout : sa première facture arrive
+juste derrière sur `invoice.paid`, et l'annoncer aux deux endroits ferait
+deux emails pour une seule vente. **Le montant est celui qui a vraiment
+été encaissé** (la session, la facture, la vente PayPal), jamais le prix
+du catalogue : une remise, un prorata ou un mois offert changent la
+somme.
+
+L'alerte part EN DERNIER, après l'accès, la facture et la commission,
+et ne lève jamais : un échec d'envoi ne change pas la réponse au
+webhook.
+
+### Et les trois alertes existantes partaient en double
+
+`saleRefusedAlert`, `supportAlertEmail` et `commentaireBlogAlerte`
+envoyaient à `[...ADMIN_EMAILS]`, deux adresses qui arrivent dans la
+même boîte : le double que Béné a fait retirer côté Atelier le 25 août
+("je reçois toujours ce genre de mails en double c'est normal ?"). Un
+garde-fou qui ne protège qu'un des jumeaux ne protège personne.
+`ADMIN_ALERT_EMAILS` (une adresse) et `alerterAdmins()` (UN envoi, pas
+de boucle possible) sont portés de l'Atelier, et les quatre alertes
+passent par cette liste.
+
+### Ce qui n'est PAS mesuré, et qui se dit
+
+Aucun de ces emails n'a été envoyé depuis ce dépôt : il n'y a ni clé
+Resend ni vente possible dans cet environnement. Ce qui est vérifié : le
+contenu des quatre natures, l'échappement d'un nom saisi au paiement,
+l'ordre à chacun des trois points, et six versions fautives rejouées qui
+rougissent (l'alerte avant la commission, une nature écrite en dur, une
+première annoncée par PayPal, le retour aux deux adresses, le doublon
+Systeme.io non journalisé, le nom non échappé). La première vraie vente
+dira le reste.
+
+Test : `tests/logic/alerte-vente-encaissee.test.mts`.
+
+## Deux ventes Systeme.io absentes du tableau de bord : ce qui est établi, ce qui ne l'est pas (11 septembre 2026)
+
+Béné, capture de Systeme.io à l'appui : la facture #2036 (Ivan
+Pellegry, 07/09, 17,00 €) et la #2037 (Fatima Mouradi, 10/09, 17,00 €),
+offre « NV tiquiz mensuel », **n'apparaissent pas** dans « Encaissé jour
+par jour » ni dans « Dernières ventes ».
+
+### Ce qui est MESURÉ d'ici
+
+- « NV tiquiz mensuel » est le plan tarifaire **3375217** de son compte
+  (lu par l'API le 11 septembre), c'est à dire le plan de la vente
+  d'Ivan du 7 août. Il est dans `OFFER_TO_PLAN` ET dans `PRICE_PLANS`
+  depuis le 7 août : le routage le connaît, et le tableau de bord
+  saurait le nommer.
+- Le tableau de bord ne compte une ligne de `webhook_logs` que si son
+  type d'événement passe `isConfirmedSaleEvent` (`SALE|ORDER|PURCHASE|
+  VENTE|COMMANDE`). Le seul type de vente jamais OBSERVÉ dans le journal
+  est `customer.sale.completed` (Ivan, 7 août). **Le type d'un
+  RENOUVELLEMENT n'a jamais été observé** : s'il s'appelle
+  `subscription.payment.succeeded` ou approchant, il est journalisé mais
+  jamais compté comme une vente.
+- L'idempotence du webhook Systeme.io est sur `sio_order_<order.id>`.
+  Si un renouvellement porte le MÊME identifiant de commande que la
+  vente d'origine, il était écarté comme « Duplicate retry » **sans
+  laisser AUCUNE ligne** : `check:ventes-sio` et l'écran d'admin
+  répondaient alors « jamais reçu » à un appel bel et bien reçu.
+
+### Ce qui est CORRIGÉ, quelle que soit la cause
+
+Le doublon se journalise (`status: "duplicate"`, verdict « doublon
+écarté » dans le pilotage, ton info, aucune action demandée). "Je n'ai
+pas pu regarder" et "il n'y a rien" sont deux réponses différentes
+(règle du 23 août), et un appel écarté sans trace confondait les deux.
+
+### Ce qui n'est PAS établi, et où ça se tranche
+
+**Je ne sais pas laquelle des deux hypothèses est la bonne, ni si c'en
+est une troisième** (le webhook n'a pas tiré, un type d'événement
+inconnu). Une cause plausible n'est pas une cause (règle du 2
+septembre). Ça se tranche sur le serveur, où vit le journal :
+
+```bash
+npm run check:ventes-sio
+```
+
+dit chaque appel reçu avec son type ; et le journal du processus dit
+ceux qui ont été écartés avant le 11 septembre :
+
+```bash
+pm2 logs tiquiz-prod --nostream --lines 5000 | grep "Tiquiz webhook"
+```
+
+**Ne pas changer la clé d'idempotence ni élargir `isConfirmedSaleEvent`
+avant d'avoir LU le type d'un renouvellement** : c'est le webhook qui
+ouvre les accès et qui fait payer les affiliés, et une règle écrite sur
+une forme supposée de payload est mot pour mot la faute d'Ivan (7
+août).

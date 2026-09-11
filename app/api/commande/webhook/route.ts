@@ -48,6 +48,8 @@ import {
 import { recordChurn } from "@/lib/checkout/churn";
 import { rememberStripeCustomer } from "@/lib/checkout/customerLink";
 import { annulerCommissionVente, commissionnerVente } from "@/lib/affiliate/ownerSale";
+import { alerterVenteEncaissee } from "@/lib/email/venteEncaisseeAlerte";
+import { natureDeLaFactureStripe } from "@/lib/ventes/alerteVente";
 import { marquerMoisOffertConsomme } from "@/lib/trial/moisOffertCheckout";
 import { ouvertureDemandee, type OuvertureDemandee } from "@/lib/checkout/planChange";
 import { estPlanAVie } from "@/lib/checkout/plansAVie";
@@ -369,6 +371,27 @@ async function traiterEvenement(
       amountTaxCents: vente.amountTaxCents,
       product,
     });
+
+    // ── ET BÉNÉ L'APPREND, EN DERNIER ──
+    //
+    // Béné, 11 septembre : "il me faut aussi une alerte quand je fais
+    // une nouvelle vente via notre système, par email."
+    //
+    // UNIQUEMENT ici pour un achat sans échéance : un abonnement est
+    // annoncé facture par facture, sur `invoice.paid`, là où la
+    // première échéance et un mois offert se distinguent. L'annoncer
+    // ici EN PLUS ferait deux emails pour une seule vente.
+    await alerterVenteEncaissee({
+      moyen: "stripe",
+      nature: "premiere",
+      email: vente.email,
+      nom: vente.name ?? null,
+      produit: product.label,
+      montantCents: vente.amountTotalCents,
+      devise: product.currency,
+      reference: vente.paymentRef ?? sessionId,
+      compteCree: octroi.created,
+    });
   }
 
   return NextResponse.json({ ok: true, granted: true });
@@ -681,6 +704,9 @@ async function surAbonnement(
   // en crée une.
   if (eventType === "invoice.paid") {
     await commissionnerEcheance(abonnement, objet);
+    // En dernier, best-effort : Béné apprend chaque échéance encaissée,
+    // et un mois offert qui démarre.
+    await alerterEcheance(abonnement, objet);
   }
 
   if (lecture.outcome !== "revoke") {
@@ -797,6 +823,54 @@ async function lireOuverture(
  *   * la MONTÉE DE PALIER : la facture suivante porte le nouveau
  *     montant, donc la commission suit toute seule.
  */
+/**
+ * Les métadonnées d'une échéance : celles de l'abonnement RELU (elles
+ * suivent une montée de palier), sinon celles que Stripe recopie sur la
+ * facture. Une seule lecture, pour la commission ET l'alerte : deux
+ * lectures écrites séparément finiraient par nommer deux produits.
+ */
+function metaDeLEcheance(
+  abonnement: RawSubscription | null,
+  facture: Record<string, unknown>,
+): Record<string, unknown> {
+  const surAbo = (abonnement as { metadata?: Record<string, unknown> } | null)?.metadata ?? {};
+  return Object.keys(surAbo).length > 0 ? surAbo : metaAbonnementDeLaFacture(facture);
+}
+
+/**
+ * Béné apprend chaque échéance par email (11 septembre 2026).
+ *
+ * `billing_reason` dit si c'est la PREMIÈRE facture de l'abonnement ou
+ * un renouvellement, et un montant à zéro sur la première est un mois
+ * offert : trois emails différents, parce que ce sont trois nouvelles
+ * différentes. Le montant est celui de la facture, jamais le prix du
+ * catalogue.
+ *
+ * Après la commission, jamais avant, et sans jamais lever.
+ */
+async function alerterEcheance(
+  abonnement: RawSubscription | null,
+  facture: Record<string, unknown>,
+): Promise<void> {
+  const email = String(facture.customer_email ?? "").trim();
+  const factureId = String(facture.id ?? "").trim();
+  if (!email || !factureId) return;
+  const paye = Math.round(Number(facture.amount_paid ?? 0)) || 0;
+  const meta = metaDeLEcheance(abonnement, facture);
+  const produit = findOwnerProduct(String(meta.product ?? ""));
+  await alerterVenteEncaissee({
+    moyen: "stripe",
+    nature: natureDeLaFactureStripe(facture.billing_reason, paye),
+    email,
+    nom: typeof facture.customer_name === "string" ? facture.customer_name : null,
+    produit: produit?.label ?? `abonnement ${String(meta.product ?? "inconnu")}`,
+    montantCents: paye,
+    devise: String(facture.currency ?? produit?.currency ?? "eur"),
+    reference: factureId,
+    compteCree: null,
+  });
+}
+
 async function commissionnerEcheance(
   abonnement: RawSubscription | null,
   facture: Record<string, unknown>,
@@ -833,8 +907,7 @@ async function commissionnerEcheance(
   // seconde d'API indisponible faisait disparaître le mois de l'affilié,
   // en silence, et le réessai de Stripe n'y changeait rien puisque le
   // webhook avait répondu 200.
-  const surAbo = (abonnement as { metadata?: Record<string, unknown> } | null)?.metadata ?? {};
-  const meta = Object.keys(surAbo).length > 0 ? surAbo : metaAbonnementDeLaFacture(facture);
+  const meta = metaDeLEcheance(abonnement, facture);
   const produit = findOwnerProduct(String(meta.product ?? ""));
   if (!produit) {
     console.error(

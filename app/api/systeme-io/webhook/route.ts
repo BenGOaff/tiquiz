@@ -201,7 +201,17 @@ export async function POST(req: NextRequest) {
         .limit(1)
         .maybeSingle();
       if (dup) {
-        console.log(`[Tiquiz webhook] Duplicate retry event=${eventId} — skipping`);
+        // ON LE JOURNALISE, ON NE LE JETTE PLUS EN SILENCE (11 septembre
+        // 2026). Deux ventes Systeme.io (une echeance d'Ivan le 7, une
+        // vente le 10) etaient absentes du tableau de bord, et rien ne
+        // pouvait dire si elles etaient arrivees : un appel ecarte ici ne
+        // laissait AUCUNE ligne, donc `check:ventes-sio` et l'ecran
+        // d'admin repondaient "jamais recu" a un appel bel et bien recu.
+        // "Je n'ai pas pu regarder" et "il n'y a rien" sont deux reponses
+        // differentes (regle du 23 aout). La ligne porte le statut
+        // `duplicate`, jamais `processed` : elle ne verrouille rien.
+        console.log(`[Tiquiz webhook] Duplicate retry event=${eventId} type=${eventType} — skipping`);
+        await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "duplicate", error: "duplicate_retry" });
         return NextResponse.json({ ok: true, duplicate: true, event_id: eventId });
       }
     }
