@@ -150,7 +150,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       .from("webhook_logs")
       // `created_at:received_at` : l'alias PostgREST evite de faire
       // porter a la fonction pure une difference de nom de colonne.
-      .select("source, event_id, event_type, payload, created_at:received_at")
+      .select("source, event_id, event_type, payload, status, created_at:received_at")
       // SYSTEME.IO EST DANS LA LISTE, et c'est le point qui rend l'ecran
       // fiable : c'est de la que viennent tous les clients payants
       // d'aujourd'hui.

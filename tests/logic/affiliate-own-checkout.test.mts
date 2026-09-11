@@ -202,13 +202,16 @@ test("la reference de commission porte son moyen de paiement", () => {
 test("sans secret partage, on le DIT au lieu de se taire", () => {
   // L'absence ferme, mais elle ne se tait pas : sans ce secret AUCUNE
   // vente ne paie personne, et rien d'autre ne le signalerait.
-  const src = fs.readFileSync(path.join(process.cwd(), "lib/affiliate/ownerSale.ts"), "utf8");
-  const i = src.indexOf("AFFILIATE_INTERNAL_SECRET");
+  // Depuis le 11 septembre l'appel vit dans `posterTipote.ts` (une seule
+  // porte pour le webhook et le rejeu) : il rend un ECHEC qui nomme le
+  // secret, et `ownerSale` l'imprime en erreur. Le fait tenu est le
+  // meme, l'emplacement a bouge.
+  const poste = fs.readFileSync(path.join(process.cwd(), "lib/affiliate/posterTipote.ts"), "utf8");
+  const i = poste.indexOf("AFFILIATE_INTERNAL_SECRET");
   assert.ok(i > 0, "le secret n'est plus lu");
-  assert.ok(
-    src.slice(i, i + 700).includes("console.error"),
-    "un secret manquant passerait en silence",
-  );
+  assert.match(poste.slice(i, i + 400), /ok: false[\s\S]*?AFFILIATE_INTERNAL_SECRET absente/);
+  const src = fs.readFileSync(path.join(process.cwd(), "lib/affiliate/ownerSale.ts"), "utf8");
+  assert.match(src, /if \(!reponse\.ok\) \{[\s\S]*?console\.error\([\s\S]*?reponse\.detail/);
 });
 
 test("aucun taux de commission n'est ecrit en dur ici", () => {

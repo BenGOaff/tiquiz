@@ -40,6 +40,13 @@ export interface EventRow {
   created_at: string;
   /** L'identifiant de l'evenement chez le fournisseur, quand il existe. */
   event_id?: string | null;
+  /**
+   * Le statut que le webhook a pose sur la ligne (`processed`,
+   * `duplicate`, `refused`...). Optionnel : un lecteur qui ne le demande
+   * pas dans son select continue de marcher, et une ligne d'avant le
+   * 11 septembre n'a jamais porte `duplicate`.
+   */
+  status?: string | null;
 }
 
 /**
@@ -92,6 +99,26 @@ export interface Sale {
   currency: string;
   paidAt: string;
   refundedAt: string | null;
+  /**
+   * CE QUE CET ENCAISSEMENT EST.
+   *
+   * `"echeance"` : le renouvellement d'un abonnement deja ouvert (une
+   * facture Stripe apres la premiere, une relivraison Systeme.io pour une
+   * commande deja traitee). Absent : on ne s'est pas prononce, et l'ecran
+   * n'ecrit rien. Une echeance est une vraie vente dans le chiffre
+   * d'affaires ; ce champ sert a la NOMMER, jamais a la retirer.
+   */
+  nature?: "premiere" | "echeance";
+}
+
+/**
+ * Une facture Stripe est une premiere ou une echeance selon son
+ * `billing_reason`. Une raison inconnue ne se prononce pas.
+ */
+function natureFactureStripe(raison: string | null): Sale["nature"] {
+  if (raison === "subscription_cycle" || raison === "subscription_update") return "echeance";
+  if (raison === "subscription_create") return "premiere";
+  return undefined;
 }
 
 function lire(o: unknown): Record<string, unknown> {
@@ -259,6 +286,10 @@ export function buildSales(rows: readonly EventRow[]): Sale[] {
           email: texte(objet.customer_email) ?? texte(lire(objet.customer_details).email),
           name: texte(objet.customer_name) ?? texte(lire(objet.customer_details).name),
           productId: texte(lire(objet.metadata).product) ?? productIdDeLaFacture(objet),
+          // La MEME lecture que l'alerte email (`natureDeLaFactureStripe`) :
+          // `subscription_cycle` et `subscription_update` sont des
+          // echeances, `subscription_create` la premiere facture.
+          nature: natureFactureStripe(texte(objet.billing_reason)),
           // `amount_paid` : ce qui a VRAIMENT été encaissé sur cette
           // échéance, remise comprise.
           amountCents: Number(objet.amount_paid ?? 0) || 0,

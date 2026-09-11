@@ -123,6 +123,12 @@ export function buildSioSales(rows: EventRow[]): Sale[] {
 
   for (const row of rows) {
     if (String(row.source ?? "").trim() !== "systeme_io") continue;
+    // Les relivraisons sont lues a part, APRES : voir `echeancesSio`.
+    // Les laisser ici ferait gagner la plus recente sur la vente
+    // d'origine (les lignes arrivent de la plus recente a la plus
+    // ancienne, et la cle est l'identifiant de commande) : la vente
+    // changerait de date au lieu de compter deux fois.
+    if (estUneRelivraison(row)) continue;
 
     const type = row.event_type ?? null;
     // Les optins gratuits, les échecs de paiement et les annulations
@@ -198,8 +204,115 @@ export function buildSioSales(rows: EventRow[]): Sale[] {
       paidAt: row.created_at,
       // On n'invente pas un remboursement qu'on n'a jamais observe.
       refundedAt: null,
+      nature: "premiere",
     });
   }
 
-  return ventes;
+  return [...ventes, ...echeancesSio(rows, ventes)];
+}
+
+// ── LES ÉCHÉANCES SYSTEME.IO ───────────────────────────────────────────
+//
+// Béné, 11 septembre : "peut-être que le webhook n'est pas appelé parce
+// que c'est pas une nouvelle vente mais un abonnement qui se continue ?
+// Il faut le traquer aussi. Je veux savoir ce que je gagne, d'où ça
+// vient, les nouvelles ventes, les abonnements récurrents."
+//
+// LU DANS LE JOURNAL DU SERVEUR, pas déduit : Systeme.io rappelle le
+// webhook pour une commande DÉJÀ traitée, avec le MÊME identifiant de
+// commande (`sio_order_11771832` cinq fois, `sio_order_11953332` juste
+// après une vente du 10 septembre). Le webhook les écartait comme des
+// relivraisons, sans trace jusqu'au 11 septembre ; il les journalise
+// depuis, statut `duplicate`, payload et type compris.
+//
+// CE QU'ON NE SAIT PAS, ET QU'ON DIT : le TYPE d'événement d'un
+// renouvellement n'a jamais été lu (l'ancien journal ne l'imprimait
+// pas). On ne l'exige donc pas. Ce qui distingue une échéance d'une
+// vraie relivraison, c'est le TEMPS : une relivraison suit son original
+// de quelques minutes ou de quelques heures, une échéance tombe un mois
+// ou un an après. Le seuil est posé LOIN des deux groupes.
+//
+// Ce lecteur ne touche à rien qui OUVRE un accès ou qui PAIE quelqu'un :
+// il nomme, dans le tableau de bord, ce que le webhook a déjà reçu.
+
+/**
+ * Le nombre de jours en dessous duquel un rappel pour la même commande
+ * est une relivraison, et pas une échéance.
+ *
+ * 20 : loin des relivraisons (des minutes, des heures) et loin des
+ * échéances (28 à 31 jours pour un mensuel, 365 pour un annuel). Un
+ * seuil qui départage à la limite finit par crier sur du travail juste.
+ */
+export const ECART_MIN_JOURS_ECHEANCE = 20;
+
+const JOUR_MS = 24 * 60 * 60 * 1000;
+
+/** Un échec de paiement, une annulation, un remboursement : rien n'est encaissé. */
+const PAS_UN_ENCAISSEMENT = /FAIL|DECLIN|DISPUT|CANCEL|REFUND|EXPIR|CHARGEBACK|ANNUL|REMBOURS/i;
+
+function estUneRelivraison(row: EventRow): boolean {
+  return String(row.status ?? "").trim().toLowerCase() === "duplicate";
+}
+
+/**
+ * Les rappels pour une commande déjà traitée qui tombent au moins
+ * `ECART_MIN_JOURS_ECHEANCE` jours après le dernier encaissement compté
+ * pour cette commande.
+ *
+ * `dejaComptees` : les ventes d'origine, pour dater le dernier
+ * encaissement de chaque commande. Sans origine dans la fenêtre lue
+ * (une vente d'avant le journal), on COMPTE : le cas qui gonflerait,
+ * la relivraison, a toujours son original à quelques minutes, donc dans
+ * la fenêtre.
+ */
+export function echeancesSio(rows: readonly EventRow[], dejaComptees: readonly Sale[]): Sale[] {
+  const dernierEncaissement = new Map<string, number>();
+  for (const v of dejaComptees) {
+    if (v.provider !== "systeme_io") continue;
+    const t = Date.parse(v.paidAt);
+    if (!Number.isFinite(t)) continue;
+    const cle = v.ref;
+    dernierEncaissement.set(cle, Math.max(dernierEncaissement.get(cle) ?? 0, t));
+  }
+
+  const rappels = rows
+    .filter((r) => String(r.source ?? "").trim() === "systeme_io" && estUneRelivraison(r))
+    .filter((r) => String(r.event_id ?? "").trim() !== "")
+    .filter((r) => !PAS_UN_ENCAISSEMENT.test(String(r.event_type ?? "")))
+    // Du plus ancien au plus récent : chaque échéance comptée devient
+    // la référence de la suivante.
+    .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
+
+  const echeances: Sale[] = [];
+  for (const row of rappels) {
+    const commande = String(row.event_id).trim();
+    const t = Date.parse(row.created_at);
+    if (!Number.isFinite(t)) continue;
+    const precedent = dernierEncaissement.get(commande);
+    if (precedent != null && t - precedent < ECART_MIN_JOURS_ECHEANCE * JOUR_MS) continue;
+    dernierEncaissement.set(commande, t);
+
+    const payload = row.payload;
+    const offre = extractStr(payload, OFFER_ID_PATHS);
+    const plan =
+      inferPlanFromOfferId(offre) ?? inferPlanFromAmount(extractStr(payload, AMOUNT_PATHS));
+    const duPayload = readSioAmountCents(extractStr(payload, PAID_AMOUNT_PATHS));
+    const tarif = readPricePlan(offre);
+    echeances.push({
+      // La commande ET la date : deux échéances de la même commande sont
+      // deux lignes, et aucune ne se confond avec la vente d'origine.
+      ref: `${commande}|${row.created_at}`,
+      provider: "systeme_io",
+      email: extractStr(payload, EMAIL_PATHS)?.toLowerCase() ?? null,
+      name: extractStr(payload, NAME_PATHS),
+      productId: plan ?? (tarif ? String(offre) : "inconnu"),
+      amountCents: duPayload ?? tarif?.montantCents ?? 0,
+      amountSource: duPayload != null ? "payload" : tarif ? "plan" : "inconnu",
+      currency: tarif?.devise ?? "eur",
+      paidAt: row.created_at,
+      refundedAt: null,
+      nature: "echeance",
+    });
+  }
+  return echeances;
 }
