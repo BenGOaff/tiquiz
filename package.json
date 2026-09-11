@@ -25,7 +25,7 @@
     "test:e2e:install": "playwright install --with-deps chromium",
     "audit:stats": "node scripts/audit-stats.mjs",
     "test:logic": "node --test --experimental-strip-types --import ./tests/logic/register-alias.mjs \"tests/logic/*.test.mts\"",
-    "check:cta-affilie": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --experimental-strip-types --import ./tests/logic/register-alias.mjs scripts/check-cta-affilie.mts",
+    "check:cta-affilie": "tsx scripts/check-cta-affilie.mts",
     "test:visual": "playwright test -c playwright.visual.config.ts",
     "test:visual:update": "playwright test -c playwright.visual.config.ts --update-snapshots",
     "check:caddy": "node scripts/check-caddy-hosts.mjs",
@@ -38,7 +38,7 @@
     "blog:verifier": "node --experimental-strip-types scripts/reparer-blog.mjs --verifie",
     "blog:epingles": "node scripts/construire-epingles.mjs",
     "check:resend": "node scripts/check-resend.mjs",
-    "check:ventes-sio": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --experimental-strip-types --import ./tests/logic/register-alias.mjs scripts/check-ventes-sio.mts",
+    "check:ventes-sio": "tsx scripts/check-ventes-sio.mts",
     "vente:v2": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --experimental-strip-types --import ./tests/logic/register-alias.mjs scripts/construire-page-vente-v2.mjs",
     "vente:fonds": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --experimental-strip-types --import ./tests/logic/register-alias.mjs scripts/convertir-fonds-vente.mjs",
     "vente:images": "node scripts/reduire-images-vente.mjs",
@@ -97,6 +97,7 @@
     "eslint-config-next": "16.2.3",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.23.13",
     "typescript": "^5"
   }
 }

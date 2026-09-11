@@ -206,7 +206,7 @@ export const LIBELLE_VERDICT: Readonly<
   "sans-objet": { mot: "traité", aide: "", ton: "ok" },
   doublon: {
     mot: "doublon écarté",
-    aide: "Systeme.io a rejoué un appel sur une commande déjà traitée. Si c'est une échéance d'abonnement qui devrait compter comme une vente, c'est ici qu'elle se voit.",
+    aide: "Systeme.io a rappelé le webhook pour une commande déjà traitée : une échéance d'abonnement, ou une relivraison. L'onglet Ventes le compte comme une échéance quand il tombe au moins 20 jours après le dernier encaissement de cette commande.",
     ton: "info",
   },
 };

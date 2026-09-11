@@ -162,7 +162,11 @@ test("aucun appel cross-app ne peut bloquer un webhook", () => {
   // maximum, une panne de Tipote garde la requete ouverte jusqu'a ce que
   // la plateforme la tue, et le fournisseur ne recoit jamais sa reponse.
   // La commission peut attendre ; l'acces du client, non.
-  for (const f of ["lib/affiliate/ownerSale.ts", "lib/trial/proprietaireDuLien.ts"]) {
+  // L'appel de `ownerSale` vit dans `posterTipote.ts` depuis le
+  // 11 septembre (une seule porte pour le webhook et le rejeu) : c'est
+  // le fichier qui fait le `fetch` qui doit porter le delai.
+  for (const f of ["lib/affiliate/posterTipote.ts", "lib/trial/proprietaireDuLien.ts"]) {
     assert.match(lire(f), /AbortSignal\.timeout\(/, `${f} : appel sans delai maximum`);
   }
+  assert.doesNotMatch(lire("lib/affiliate/ownerSale.ts"), /\bfetch\(/, "ownerSale ne doit pas rouvrir un appel sans passer par posterTipote");
 });

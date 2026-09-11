@@ -61,8 +61,13 @@ describe("Une vente qui tombe ne paie personne", () => {
     // l'inverse ferait rejouer le remboursement en boucle.
     const bloc = ownerSale.slice(ownerSale.indexOf("export async function annulerCommissionVente"));
     assert.match(bloc, /Promise<void>/);
-    assert.match(bloc, /catch \(e\)/);
-    assert.match(bloc, /AbortSignal\.timeout\(8000\)/);
+    // Depuis le 11 septembre l'appel passe par `posterVersTipote`, qui
+    // ne jette JAMAIS (son propre try/catch) et porte le delai : c'est
+    // la ou vit le fait, `ownerSale` n'a plus de fetch a lui.
+    assert.match(bloc, /posterVersTipote\("annuler"/);
+    const poste = lire("lib/affiliate/posterTipote.ts");
+    assert.match(poste, /catch \(e\)/);
+    assert.match(poste, /AbortSignal\.timeout\(8000\)/);
   });
 
   test("UNE COMMISSION DÉJÀ VERSÉE EST SIGNALÉE, pas réécrite", () => {

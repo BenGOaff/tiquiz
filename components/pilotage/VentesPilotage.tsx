@@ -202,6 +202,15 @@ export function VentesPilotage({
                             <span className="text-primary">via {via}</span>
                           </>
                         )}
+                        {l.vente.nature === "echeance" && (
+                          // Un renouvellement, pas une nouvelle personne :
+                          // c'est ce qu'elle a demandé à distinguer ("les
+                          // nouvelles ventes, les abonnements récurrents").
+                          <>
+                            <span>·</span>
+                            <span>échéance</span>
+                          </>
+                        )}
                         {l.vente.amountSource === "plan" && (
                           // Le montant vient du TARIF du plan, pas de la
                           // somme encaissée : une remise ne serait pas

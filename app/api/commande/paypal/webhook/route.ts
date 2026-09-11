@@ -30,7 +30,8 @@
 // On répond 200 même quand on n'a rien fait : un 500 sur un cas compris
 // et écarté déclencherait des réessais en boucle.
 
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
+import { rejouerCommissionsEnAttente } from "@/lib/affiliate/filetCommissionStore";
 
 import { annulerCommissionVente, commissionnerVente } from "@/lib/affiliate/ownerSale";
 import { alerterVenteEncaissee } from "@/lib/email/venteEncaisseeAlerte";
@@ -160,6 +161,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
   const reussi = reponse.status >= 200 && reponse.status < 300;
   await marquerTraite(SOURCE, eventId, reussi ? "processed" : "error", reussi ? null : `HTTP ${reponse.status}`);
+  // LE REJEU DES COMMISSIONS EN ATTENTE, APRES la reponse (11 septembre
+  // 2026). `after` tourne une fois la reponse partie : le fournisseur ne
+  // l'attend pas, et un rejeu qui echoue ne touche pas a cet evenement.
+  // Sans cron sur le serveur, c'est ce qui garantit qu'une commission
+  // mise en attente repart des la vente suivante.
+  after(async () => {
+    const bilan = await rejouerCommissionsEnAttente({});
+    if (bilan.rejouees || bilan.echecs) {
+      console.log(`[commande/paypal/webhook] commissions en attente : ${bilan.rejouees} rejouee(s), ${bilan.echecs} echec(s), ${bilan.restantes} restante(s)`);
+    }
+  });
   return reponse;
 }
 
@@ -521,6 +533,14 @@ async function traiterEvenement(
           amountTaxCents: taxe,
           product: { id: produit.id, label: produit.label },
         });
+      } else {
+        // La branche Stripe le disait deja ; celle ci se taisait (audit
+        // du 11 septembre). Un produit inconnu sur un encaissement, c'est
+        // une commission qui ne naitra pas : ca se dit.
+        console.error(
+          `[commande/paypal/webhook] vente ${encaissement.saleRef} encaissee mais produit inconnu ` +
+            `(${abo.productId}) : commission NON creee.`,
+        );
       }
     }
 

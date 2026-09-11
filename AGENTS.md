@@ -14144,3 +14144,169 @@ avant d'avoir LU le type d'un renouvellement** : c'est le webhook qui
 ouvre les accès et qui fait payer les affiliés, et une règle écrite sur
 une forme supposée de payload est mot pour mot la faute d'Ivan (7
 août).
+
+### LU LE MÊME JOUR, dans le journal du serveur (Béné l'a collé)
+
+`pm2 logs tiquiz-prod` tranche la première hypothèse : **Systeme.io
+rappelle le webhook pour une commande DÉJÀ traitée, avec le MÊME
+identifiant de commande.** `sio_order_11771832` cinq fois,
+`sio_order_11953332` juste après la vente de Fatima du 10 septembre.
+Chacun était écarté comme « Duplicate retry » sans une ligne en base :
+les échéances des abonnements Systeme.io étaient invisibles, et rien ne
+le disait.
+
+Ce que le journal NE dit PAS, et qu'on ne devine toujours pas : le TYPE
+d'événement d'un renouvellement (l'ancienne ligne de journal ne
+l'imprimait pas). La règle ci dessus tient donc : la clé d'idempotence et
+`isConfirmedSaleEvent` ne bougent pas. **Ce qui distingue une échéance
+d'une relivraison, c'est le TEMPS**, et c'est le tableau de bord qui le
+lit, pas le webhook.
+
+**Règle : `echeancesSio()` (`lib/admin/sioSales.ts`).** Un rappel
+journalisé en `duplicate`, qui ne dit ni échec ni annulation, et qui
+tombe au moins `ECART_MIN_JOURS_ECHEANCE` (20) jours après le dernier
+encaissement compté pour cette commande, est une **échéance** : une
+vraie vente dans le chiffre d'affaires, nommée « échéance » dans
+l'onglet Ventes. Le seuil est LOIN des deux groupes (des minutes pour
+une relivraison, 28 jours au moins pour un renouvellement). Les factures
+Stripe portent le même nom (`billing_reason`), pour que « nouvelles
+ventes » et « abonnements récurrents » se lisent pareil quel que soit le
+moyen.
+
+**Le piège que le journalisage du 11 septembre avait créé** : la clé de
+dédoublonnage était l'identifiant de commande et la ligne la plus
+récente gagnait. Une relivraison journalisée aurait donc DÉPLACÉ la vente
+à sa propre date, sans la compter deux fois. Les relivraisons sont lues
+À PART, et la vente d'origine garde sa date (testé).
+
+**Ce qui reste vrai, et qui n'est pas de l'argent perdu** : ces
+échéances ne sont PAS remontées au registre d'affiliés de Tipote. Le
+webhook n'y envoie que la vente d'origine, avec `regle_par:
+"systeme_io"` : c'est Systeme.io qui paie ses affiliés sur ses tunnels,
+pas nous. Un affilié voit donc une seule ligne pour un abonné Systeme.io
+dans son tableau de bord, et son argent arrive quand même. Le jour où
+Béné voudra la ligne par échéance là bas, il faudra une clé par échéance
+chez Tipote (aujourd'hui `(source_app, sio_order_id)` est unique).
+
+**Pourquoi Fatima (10 septembre) restait absente n'est PAS établi
+d'ici.** Son appel a été traité (`plan=monthly order=12384179`), donc sa
+ligne devrait être dans `webhook_logs`. Le script qui le dit ne démarrait
+pas sur le serveur : voir la section suivante.
+
+### `check:ventes-sio` mourait sur le Node 20 du serveur
+
+`node: bad option: --experimental-strip-types` : ce drapeau n'existe qu'à
+partir de Node 22.6, et le serveur est en Node 20. Tous les scripts
+`.mts` destinés au SERVEUR passent par `tsx`, qui est une dépendance
+(installée par `npm ci`, jamais un `npx` qui va sur le réseau). Le
+runner de tests garde `--experimental-strip-types` : il ne tourne
+jamais sur le serveur. Le test refuse le drapeau sur tout script
+`check:`, dans les DEUX dépôts (Tipote porte `check:cta-affilie`).
+
+## L'audit du 11 septembre : « est-ce que je peux envoyer mes affiliés dessus sans risque ? »
+
+Béné : "je veux aussi que tu fasses un audit complet de notre système
+de vente et affiliation : est-ce que je peux envoyer mes affiliés
+dessus sans risque ? Tout va fonctionner correctement ?"
+
+La chaîne a été relue de bout en bout, fichier par fichier, dans les
+trois dépôts : le lien `?ref=` -> le cookie d'un an -> le bon de commande
+-> les metadata Stripe et le `custom_id` PayPal -> les deux webhooks ->
+`commissionnerVente` -> `attribute-sale` chez Tipote -> la maturation à
+J+30 -> le lot -> le fichier SEPA et l'autofacture. **Tout existe, et
+chaque maillon est tenu par un test.** Ce qui manquait n'était pas une
+rupture : c'était des PERTES SILENCIEUSES, et la plus chère est fermée.
+
+### 1. UNE PANNE DE TIPOTE PERDAIT LA COMMISSION POUR TOUJOURS
+
+`commissionnerVente` tourne DANS le webhook de paiement, et il ne doit
+jamais bloquer l'accès du client. Quand Tipote ne répondait pas (panne,
+déploiement, secret manquant, délai dépassé), il écrivait une ligne dans
+le journal et rendait la main. Le webhook répondait 200, la ligne passait
+`processed`, et **aucun réessai ne repassait jamais**. Même chose pour
+l'annulation sur un remboursement : la commission mûrissait et partait au
+lot.
+
+**Règle : `lib/affiliate/filetCommission.ts` décide,
+`filetCommissionStore.ts` écrit, `posterTipote.ts` parle au réseau.**
+Un appel qui échoue est rangé TEL QUEL dans `commissions_en_attente`
+(action, corps, statut de l'échec) et rejoué :
+
+- **après chaque webhook de paiement** (`after()` de Next, une fois la
+  réponse partie) : sans cron sur le serveur, une commission en attente
+  repart dès la vente suivante ;
+- **par `POST /api/cron/rejouer-commissions`** (`X-Cron-Secret`), pour
+  le cas où il n'y a pas de vente pendant que Tipote revient : une
+  ANNULATION en attente doit repasser avant que la commission ne mûrisse.
+
+Le rejeu est SANS DANGER : Tipote répond `duplicate` sur une clé déjà
+connue, donc une commission ne naît jamais deux fois. Ce qui se rejoue
+et ce qui attend un humain est une décision PURE (`classerEchec`) : un
+400 ne se rejoue pas (le même corps échouera pareil), tout le reste oui,
+dix minutes d'écart, 500 essais au plus. Une seule alerte email par ligne
+mise en attente, jamais une par essai.
+
+**Le webhook et le rejeu frappent la MÊME porte** (`posterVersTipote`) :
+deux constructions d'adresse finiraient par diverger, et un rejeu qui
+frappe une autre porte ne rattrape rien. `ownerSale.ts` n'a plus de
+`fetch` à lui, et trois tests qui figeaient cet emplacement ont été
+remis sur le fait.
+
+Le filet vit aussi dans l'Atelier (`formaquiz`), qui poste vers le même
+registre : un garde-fou qui ne protège qu'un des jumeaux ne protège
+personne. Le module pur y est identique à l'octet près.
+
+🚨 Migration : `supabase/migrations/20260911_commissions_en_attente.sql`,
+sur les Supabase de **TIQUIZ** et de **L'ATELIER**. Sans elle le filet
+crie dans le journal avec le corps de l'appel, et rien d'autre ne casse.
+
+### 2. Côté Tipote, une lecture ratée faisait payer quelqu'un d'autre
+
+`lireLigneAffilie` ignorait l'erreur de ses deux selects : une lecture
+qui ratait rendait `null`, donc l'affilié passait pour INCONNU, donc
+`attributeSale` passait au candidat suivant. Et la route répondait 200
+sur un `status: "error"`, donc l'appelant croyait la commission prise.
+Le registre lève maintenant (`RegistreIllisible`), la route répond 503,
+et le filet d'ici rejoue. Détail dans l'`AGENTS.md` de Tipote.
+
+### 3. Ce qui est VÉRIFIÉ et qui n'avait rien
+
+- le cookie dure un an, `?sa=` (anciens liens) marche encore ;
+- l'URL gagne sur le cookie au bon de commande ;
+- les metadata Stripe suivent l'abonnement, y compris à travers un
+  changement de palier (calendrier) ; PayPal recopie le code à la montée ;
+- chaque `invoice.paid` commissionne (récurrent), sur le HT, avec la
+  taxe de la facture ; PayPal pareil, depuis la facture qu'on émet ;
+- un remboursement ou un impayé annule la commission de l'échéance ;
+- l'inscription gratuite rattache à vie, le premier rattachement gagne ;
+- les verrous des deux webhooks laissent repasser un réessai ;
+- les secrets sont comparés en temps constant partout.
+
+### 4. Ce qui reste, et qui n'est PAS du code
+
+- **Aucun cron ne fait mûrir les commissions (`pending` ->
+  `approved`).** C'est le bouton « Approuver » de
+  `affiliate.tipote.com/admin/versements`, à cliquer avant de construire
+  le lot du mois. Ce n'est pas un bug, c'est le process : à faire entre
+  le 10 et le 13.
+- **Le cron du barème (`recompense-affilies`, Tipote) n'a de crontab
+  écrit nulle part** dans les trois dépôts. S'il ne tourne pas, un
+  affilié à 11 filleuls reste à 40 % au lieu de 50 %, sans erreur. À
+  vérifier sur le serveur : `crontab -l`.
+- **Une commission déjà versée qu'un remboursement annule (`trop-tard`)
+  ne vit que dans `pm2 logs`** de Tipote : c'est un cas pour un humain
+  (compenser au lot suivant), et il faut lire le journal pour le savoir.
+- **Une commission en devise étrangère est écartée du lot** (raison
+  `devise`), affichée, jamais convertie : les trois plans en dollars
+  chez Systeme.io restent chez Systeme.io.
+
+Les deux sorties muettes trouvées (une échéance Stripe sans adresse, un
+produit PayPal inconnu) crient maintenant dans le journal.
+
+Tests : `tests/logic/filet-commission.test.mts` (ici et dans l'Atelier),
+`tests/logic/echeances-systeme-io.test.mts`, vérifiés en rejouant onze
+versions fautives (l'annulation sans filet, le rejeu hors `after`, un
+400 rejoué en boucle, le store qui décide seul, une relivraison comptée
+comme échéance, la relivraison qui remplace l'origine, un échec de
+paiement compté, le script mort sur Node 20, le select sans `status`, et
+deux côté Atelier) : toutes rougissent.
