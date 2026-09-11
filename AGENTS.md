@@ -323,6 +323,23 @@ grep -c '^CRON_SECRET=' ~/tiquiz-app/.env      # 1 = présente
 raison dans un terminal qui servira ensuite à un `npm run build` ou à un
 `pm2 restart --update-env`.
 
+**ET JAMAIS `. .env` DANS UNE CRONTAB (mesuré le 11 septembre 2026).**
+La crontab tourne sous `sh`, pas sous bash, et `sh` ne cherche pas
+`.env` dans le dossier courant : `/bin/sh: 1: .: .env: not found`. Les
+lignes écrites ainsi (`affiliate-trial-expiry`, `reseller-invoices`,
+`churn-ask`, `remise-affilies`, `rejouer-commissions`) n'avaient JAMAIS
+tourné. Les commentaires de ces routes montraient cette forme : ils
+sont périmés, la crontab du serveur a été réécrite. Une ligne lit la
+SEULE clé dont elle a besoin, dans l'ordre que Next utilise :
+
+```bash
+curl -fsS -H "Authorization: Bearer $(grep -m1 -h '^CRON_SECRET=' /home/tipote/tiquiz-app/.env.local /home/tipote/tiquiz-app/.env 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"\r')" https://quiz.tipote.com/api/cron/...
+```
+
+Le serveur de Tiquiz porte AUSSI un `.env.local` (sans `CRON_SECRET`,
+mais avec d'autres clés qui passent devant `.env`). Aucun secret ne
+s'écrit en clair dans la crontab.
+
 ## Workflow Git — RÈGLE ABSOLUE
 
 **Avant TOUT push, lire `CLAUDE_WORKFLOW.md`.**
