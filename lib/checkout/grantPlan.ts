@@ -51,8 +51,12 @@ export interface GrantPlanResult {
   loginLinkSent?: boolean;
   /** Le tag de palier Systeme.io a-t-il été posé ? */
   tagPose?: boolean;
-  /** Le tag `tiquiz-clients`, celui qui déclenche sa séquence. */
-  tagClientPose?: boolean;
+  /**
+   * Le tag `tiquiz-clients`, celui qui déclenche sa séquence. `null`
+   * quand aucun tag client ne s'applique à ce plan : « ne s'applique
+   * pas » n'est pas « a raté », et l'alerte d'accès lit la différence.
+   */
+  tagClientPose?: boolean | null;
 }
 
 async function findUserByEmail(email: string): Promise<{ id: string } | null> {
@@ -223,7 +227,7 @@ export async function grantPlanByEmail(args: {
   // est quand même posé. Les enchaîner ferait perdre les deux pour une
   // seule panne.
   const tagClient = readSioClientTag(args.plan);
-  let tagClientPose = false;
+  let tagClientPose: boolean | null = null;
   if (tagClient) {
     tagClientPose = await poserTagParNom(email, tagClient, {
       locale: args.locale ?? null,

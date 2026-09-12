@@ -323,6 +323,23 @@ grep -c '^CRON_SECRET=' ~/tiquiz-app/.env      # 1 = présente
 raison dans un terminal qui servira ensuite à un `npm run build` ou à un
 `pm2 restart --update-env`.
 
+**ET JAMAIS `. .env` DANS UNE CRONTAB (mesuré le 11 septembre 2026).**
+La crontab tourne sous `sh`, pas sous bash, et `sh` ne cherche pas
+`.env` dans le dossier courant : `/bin/sh: 1: .: .env: not found`. Les
+lignes écrites ainsi (`affiliate-trial-expiry`, `reseller-invoices`,
+`churn-ask`, `remise-affilies`, `rejouer-commissions`) n'avaient JAMAIS
+tourné. Les commentaires de ces routes montraient cette forme : ils
+sont périmés, la crontab du serveur a été réécrite. Une ligne lit la
+SEULE clé dont elle a besoin, dans l'ordre que Next utilise :
+
+```bash
+curl -fsS -H "Authorization: Bearer $(grep -m1 -h '^CRON_SECRET=' /home/tipote/tiquiz-app/.env.local /home/tipote/tiquiz-app/.env 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"\r')" https://quiz.tipote.com/api/cron/...
+```
+
+Le serveur de Tiquiz porte AUSSI un `.env.local` (sans `CRON_SECRET`,
+mais avec d'autres clés qui passent devant `.env`). Aucun secret ne
+s'écrit en clair dans la crontab.
+
 ## Workflow Git — RÈGLE ABSOLUE
 
 **Avant TOUT push, lire `CLAUDE_WORKFLOW.md`.**
@@ -14289,10 +14306,17 @@ et le filet d'ici rejoue. Détail dans l'`AGENTS.md` de Tipote.
   `affiliate.tipote.com/admin/versements`, à cliquer avant de construire
   le lot du mois. Ce n'est pas un bug, c'est le process : à faire entre
   le 10 et le 13.
-- **Le cron du barème (`recompense-affilies`, Tipote) n'a de crontab
-  écrit nulle part** dans les trois dépôts. S'il ne tourne pas, un
-  affilié à 11 filleuls reste à 40 % au lieu de 50 %, sans erreur. À
-  vérifier sur le serveur : `crontab -l`.
+- 🚨 **Cette ligne disait que le cron du barème (`recompense-affilies`,
+  Tipote) n'avait de crontab nulle part. C'EST PÉRIMÉ, mesuré le jour
+  même** : Béné a collé son `crontab -l`, et il y est, le 2 de chaque
+  mois à 3 h (`0 3 2 * *`), suivi de `remise-affilies` à 3 h 05. Ce que
+  les trois dépôts ne portent pas, c'est la LIGNE de crontab ; le
+  serveur, lui, la porte. « Je n'ai pas trouvé » n'est pas « il n'y a
+  rien » (règle du 22 août), et je l'ai refaite ici.
+- **`rejouer-commissions` n'a PAS de ligne de crontab** au 11 septembre :
+  le rejeu ne part donc qu'après une vente. La ligne à poser est dans le
+  message du jour ; sans elle, une annulation en attente peut arriver
+  après que la commission a mûri.
 - **Une commission déjà versée qu'un remboursement annule (`trop-tard`)
   ne vit que dans `pm2 logs`** de Tipote : c'est un cas pour un humain
   (compenser au lot suivant), et il faut lire le journal pour le savoir.
@@ -14310,3 +14334,50 @@ versions fautives (l'annulation sans filet, le rejeu hors `after`, un
 comme échéance, la relivraison qui remplace l'origine, un échec de
 paiement compté, le script mort sur Node 20, le select sans `status`, et
 deux côté Atelier) : toutes rougissent.
+
+## Un paiement sans accès prévient Béné, un accès à moitié ouvert aussi (11 septembre 2026, suite)
+
+Béné : "continue la suite logique, je veux un système ultra fiable de
+l'arrivée sur le site à la commande, en passant par les accès, les
+paiements et l'affiliation."
+
+La règle du 7 août dit « il a payé le client, il doit recevoir ses
+accès, point barre ». Le code la tenait, et il se taisait : un octroi
+raté répond 502 (le fournisseur réessaie), puis Stripe ou PayPal
+s'arrêtent, et personne ne sait que quelqu'un a payé devant une porte
+fermée. Et quand l'accès s'ouvrait mais que l'email de confirmation ne
+partait pas, ou que le tag Systeme.io n'était pas posé, la personne
+avait payé sans le savoir, ou sans jamais recevoir une séquence. Les
+deux vivaient dans `pm2 logs`.
+
+**Règle : `lib/ventes/alerteAcces.ts` décide (faut-il alerter, quoi
+dire), identique à l'octet près dans les deux dépôts qui encaissent :**
+
+```bash
+cmp lib/ventes/alerteAcces.ts ../formaquiz/lib/ventes/alerteAcces.ts
+```
+
+`lib/email/accesAlerte.ts` l'envoie. Les DEUX webhooks (Stripe, PayPal)
+l'appellent AVANT chaque 502 d'octroi et APRÈS chaque octroi réussi,
+sur l'achat, l'abonnement et la montée de palier.
+
+**On alerte sur un échec CONSTATÉ, jamais sur un doute.** `null` veut
+dire « on ne sait pas » : l'Atelier ne dit pas si son email d'accès est
+parti, et Tiquiz rend `tagClientPose: null` quand aucun tag client ne
+s'applique au plan. « Ne s'applique pas » n'est pas « a raté » ; lire ce
+`null` comme un échec ferait crier l'alerte sur chaque vente, et une
+alerte qui crie pour rien finit dans un filtre. `etatOctroiTiquiz`
+(`lib/checkout/etatOctroi.ts`, pur) fait cette traduction.
+
+**Chaque email dit QUOI FAIRE** : ouvrir l'accès à la main si le 502
+revient, renvoyer un lien de connexion depuis la fiche, poser le tag
+dans Systeme.io. Un email d'alerte lu sans savoir quoi faire est un
+email remis à plus tard.
+
+**Ce qui n'est pas mesuré :** aucune de ces alertes n'a été envoyée
+depuis ce dépôt (ni clé Resend ni paiement possible ici). Ce qui est
+vérifié : la décision dans ses cinq cas, le contenu échappé sans tiret
+cadratin, et les deux versions fautives rejouées (un 502 sans alerte,
+le garde du lot retiré côté Tipote) rougissent.
+
+Test : `tests/logic/alerte-acces.test.mts`, ici et dans l'Atelier.
