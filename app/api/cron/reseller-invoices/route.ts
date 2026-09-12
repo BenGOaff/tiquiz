@@ -7,7 +7,11 @@
 // seule facture par revendeur et par mois grâce à l'index unique).
 //
 // Crontab VPS (pattern maison, cf. affiliate-trial-expiry) :
-//   0 6 1 * * cd /home/tipote/tiquiz-app && set -a; . .env; set +a; curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://quiz.tipote.com/api/cron/reseller-invoices >> /tmp/reseller-invoices.log 2>&1
+//   0 6 1 * * curl -fsS -H "Authorization: Bearer $(grep -m1 -h '^CRON_SECRET=' /home/tipote/tiquiz-app/.env.local /home/tipote/tiquiz-app/.env 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"\r')" https://quiz.tipote.com/api/cron/reseller-invoices >> /tmp/reseller-invoices.log 2>&1
+//
+// (forme de la crontab du serveur depuis le 11 septembre 2026 : elle
+// tourne sous `sh`, qui ne sait pas faire `. .env`, et elle ne lit que
+// la seule cle dont elle a besoin, `.env.local` devant `.env` comme Next.)
 //
 // Vérif que c'est bien planifié : `crontab -l | grep reseller-invoices`
 // Test manuel :

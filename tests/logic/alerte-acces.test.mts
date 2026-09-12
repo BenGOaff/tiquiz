@@ -18,6 +18,14 @@ import path from "node:path";
 import test from "node:test";
 
 import { etatOctroiTiquiz } from "@/lib/checkout/etatOctroi";
+import type { EtatOctroi } from "@/lib/ventes/alerteAcces";
+
+// Le type est une union : on ne lit `tagsPoses` qu'apres avoir prouve
+// que l'octroi est passe, sinon `tsc` refuse (et il a raison).
+function ouvert(e: EtatOctroi): Extract<EtatOctroi, { ok: true }> {
+  assert.equal(e.ok, true);
+  return e as Extract<EtatOctroi, { ok: true }>;
+}
 import { alerteAccesNecessaire, contenuAlerteAcces } from "@/lib/ventes/alerteAcces";
 import { sansCommentaires } from "./aide/sansCommentaires.mts";
 
@@ -53,11 +61,11 @@ test("etatOctroiTiquiz : un tag qui ne s'applique pas n'est pas un tag raté", (
     ok: true, compteCree: true, emailAccesEnvoye: true, tagsPoses: true,
   });
   // Le tag client a raté : ça se dit.
-  assert.equal(etatOctroiTiquiz({ ...base, tagPose: true, tagClientPose: false }).tagsPoses, false);
+  assert.equal(ouvert(etatOctroiTiquiz({ ...base, tagPose: true, tagClientPose: false })).tagsPoses, false);
   // Aucun des deux n'est renseigné : on ne sait pas.
-  assert.equal(etatOctroiTiquiz({ ...base }).tagsPoses, null);
+  assert.equal(ouvert(etatOctroiTiquiz({ ...base })).tagsPoses, null);
   // L'email n'est pas parti : ça se dit.
-  assert.equal(etatOctroiTiquiz({ ...base, loginLinkSent: false }).emailAccesEnvoye, false);
+  assert.equal(ouvert(etatOctroiTiquiz({ ...base, loginLinkSent: false })).emailAccesEnvoye, false);
   assert.deepEqual(etatOctroiTiquiz({ ok: false, created: false, previousPlan: null, reason: "upsert:x" }), {
     ok: false, raison: "upsert:x",
   });
