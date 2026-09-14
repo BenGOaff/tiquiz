@@ -346,7 +346,7 @@ export default function GoHighLevelManager({
         {oauthDisponible ? (
           <div className="rounded-lg border p-3 bg-muted/30 space-y-2">
             <Button asChild className="rounded-full">
-              <a href="/api/connexions/gohighlevel/oauth">{t("oauthBouton")}</a>
+              <a href="/api/connexions/crm-oauth/oauth">{t("oauthBouton")}</a>
             </Button>
             <p className="text-xs text-muted-foreground">{t("oauthAide")}</p>
           </div>

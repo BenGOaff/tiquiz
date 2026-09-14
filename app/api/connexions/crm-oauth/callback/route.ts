@@ -1,4 +1,4 @@
-// app/api/connexions/gohighlevel/callback/route.ts
+// app/api/connexions/crm-oauth/callback/route.ts
 //
 // LE RETOUR DE GOHIGHLEVEL, après que la personne a choisi son
 // sous-compte ou son agence.
@@ -31,7 +31,7 @@ function retour(req: NextRequest, mot: string, extra?: Record<string, string>): 
   url.searchParams.set("ghl", mot);
   for (const [k, v] of Object.entries(extra ?? {})) url.searchParams.set(k, v);
   const res = NextResponse.redirect(url);
-  res.cookies.set(COOKIE_ETAT_GHL, "", { path: "/api/connexions/gohighlevel", maxAge: 0 });
+  res.cookies.set(COOKIE_ETAT_GHL, "", { path: "/api/connexions/crm-oauth", maxAge: 0 });
   return res;
 }
 

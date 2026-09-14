@@ -1,11 +1,11 @@
-// app/api/connexions/gohighlevel/oauth/route.ts
+// app/api/connexions/crm-oauth/oauth/route.ts
 //
 // LE BOUTON "CONNECTER AVEC GOHIGHLEVEL" (Béné, 14 septembre 2026 :
 // "on va faire comme eux", en montrant le parcours de Quizify).
 //
 // Ce que GoHighLevel fait de son côté : il affiche ses permissions, la
 // personne choisit son sous-compte (ou son agence), et il revient sur
-// `/api/connexions/gohighlevel/callback` avec un code. Le code s'échange
+// `/api/connexions/crm-oauth/callback` avec un code. Le code s'échange
 // contre un jeton d'accès et un jeton de rafraîchissement, rangés
 // chiffrés (`lib/integrations/store.ts`).
 //
@@ -14,7 +14,7 @@
 // Une app déclarée sur leur Marketplace (Developer), avec :
 //   - les scopes : contacts.readonly, contacts.write, locations.readonly,
 //     locations/tags.readonly ;
-//   - l'adresse de retour EXACTE : <app>/api/connexions/gohighlevel/callback ;
+//   - l'adresse de retour EXACTE : <app>/api/connexions/crm-oauth/callback ;
 //   - son Client ID et son Client Secret, posés dans le `.env` en
 //     GHL_CLIENT_ID et GHL_CLIENT_SECRET (et GHL_APP_ID pour lister les
 //     sous-comptes d'une agence).
@@ -22,6 +22,15 @@
 // `oauth.gohighlevel` sur GET /api/connexions) : un bouton qui mène à
 // une page d'erreur de GoHighLevel serait pire qu'un bouton absent. Le
 // jeton privé collé à la main marche, lui, sans rien déclarer.
+//
+// -- POURQUOI `crm-oauth` ET PAS `gohighlevel` DANS L'ADRESSE ----------
+//
+// Mesuré le 14 septembre sur leur Marketplace : "The redirect uri
+// contains a Highlevel reference. Please remove any Highlevel references
+// to save." Une app white-label ne peut porter le nom de GoHighLevel ni
+// dans sa fiche ni dans son adresse de retour. Le dossier s'appelle donc
+// `crm-oauth` ; le fournisseur, lui, reste `gohighlevel` partout ailleurs
+// (le catalogue, la table, la page d'aide), c'est un nom interne.
 //
 // -- LE `state` EST UN SECRET À USAGE UNIQUE ---------------------------
 //
@@ -44,7 +53,7 @@ export const GHL_OAUTH_SCOPES = "contacts.readonly contacts.write locations.read
 export const COOKIE_ETAT_GHL = "tq_ghl_state";
 
 export function adresseDeRetourGhl(req: NextRequest): string {
-  return `${resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL, req.nextUrl.origin)}/api/connexions/gohighlevel/callback`;
+  return `${resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL, req.nextUrl.origin)}/api/connexions/crm-oauth/callback`;
 }
 
 export async function GET(req: NextRequest) {
@@ -68,7 +77,7 @@ export async function GET(req: NextRequest) {
     httpOnly: true,
     sameSite: "lax",
     secure: req.nextUrl.protocol === "https:",
-    path: "/api/connexions/gohighlevel",
+    path: "/api/connexions/crm-oauth",
     maxAge: 10 * 60,
   });
   return res;

@@ -14460,7 +14460,7 @@ d'intégration privée collé à la main (marche aujourd'hui), ou le bouton
 OAuth de la Marketplace (le parcours de Quizify : Connect, autoriser,
 choisir le sous-compte, revenir). Le second exige une app déclarée chez
 eux (`GHL_CLIENT_ID`, `GHL_CLIENT_SECRET`, `GHL_APP_ID`, retour
-`/api/connexions/gohighlevel/callback`) : sans ces variables, le bouton
+`/api/connexions/crm-oauth/callback`) : sans ces variables, le bouton
 le DIT au lieu d'échouer en silence. Une AGENCE importe ses sous-comptes
 d'un coup (`/locations/search`, ou `/oauth/installedLocations` en OAuth).
 
