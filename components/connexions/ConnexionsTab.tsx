@@ -53,6 +53,10 @@ export default function ConnexionsTab() {
   const [cles, setCles] = useState<CleSio[]>([]);
   const [oauthGhl, setOauthGhl] = useState(false);
   const [version, setVersion] = useState(0);
+  // Une installation lancee chez GoHighLevel attend UN clic ici avant
+  // d'ecrire quoi que ce soit (`lib/integrations/retourOauth.ts`).
+  const [aConfirmer, setAConfirmer] = useState(false);
+  const [relie, setRelie] = useState(false);
 
   useEffect(() => {
     let vivant = true;
@@ -78,14 +82,39 @@ export default function ConnexionsTab() {
   useEffect(() => {
     const ghl = searchParams.get("ghl");
     if (!ghl) return;
-    const n = Number(searchParams.get("n") ?? "1") || 1;
-    const cles = ["ok", "refuse", "etat", "erreur", "deja", "aucun_sous_compte", "non_configure"] as const;
-    const cle = (cles as readonly string[]).includes(ghl) ? ghl : "erreur";
-    if (cle === "ok") toast.success(t(`ghl.retour.${cle}`, { n }));
-    else toast.error(t(`ghl.retour.${cle}`, { n }));
     setOuvert("gohighlevel");
+    if (ghl === "confirmer") {
+      setAConfirmer(true);
+      return;
+    }
+    const n = Number(searchParams.get("n") ?? "1") || 1;
+    toastRetourGhl(ghl, n);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const MOTS_RETOUR = ["ok", "refuse", "etat", "erreur", "deja", "aucun_sous_compte", "non_configure", "expire"] as const;
+  function toastRetourGhl(mot: string, n: number) {
+    const cle = (MOTS_RETOUR as readonly string[]).includes(mot) ? mot : "erreur";
+    if (cle === "ok") toast.success(t(`ghl.retour.${cle}`, { n }));
+    else toast.error(t(`ghl.retour.${cle}`, { n }));
+  }
+
+  // LE CLIC "RELIER" : le code attend dans un cookie, l'echange ne se
+  // fait que sur ce POST venu de notre page (jamais sur le GET du retour).
+  async function relier() {
+    setRelie(true);
+    try {
+      const r = await fetch("/api/connexions/crm-oauth/callback", { method: "POST" });
+      const j = (await r.json().catch(() => null)) as { mot?: string; n?: number } | null;
+      toastRetourGhl(j?.mot ?? "erreur", Number(j?.n ?? 1) || 1);
+      setVersion((v) => v + 1);
+    } catch {
+      toastRetourGhl("erreur", 1);
+    } finally {
+      setRelie(false);
+      setAConfirmer(false);
+    }
+  }
 
   const compte = useMemo(() => {
     const parOutil: Record<string, { n: number; pause: number; deconnecte: number }> = {};
@@ -181,6 +210,20 @@ export default function ConnexionsTab() {
           );
         })}
       </div>
+
+      {aConfirmer && (
+        <div className="rounded-lg border border-primary/40 bg-primary/5 p-4 space-y-3" role="status">
+          <p className="text-sm">{t("ghl.confirmer.texte")}</p>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" className="rounded-full" disabled={relie} onClick={relier}>
+              {t("ghl.confirmer.bouton")}
+            </Button>
+            <Button size="sm" variant="outline" className="rounded-full" disabled={relie} onClick={() => setAConfirmer(false)}>
+              {t("ghl.confirmer.annuler")}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {ouvert === "systemeio" && <SioApiKeysManager />}
       {ouvert === "gohighlevel" && (

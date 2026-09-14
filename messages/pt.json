@@ -1074,7 +1074,7 @@
     "logout": "Terminar sessão",
     "menu": {
       "settings": "Definições",
-      "systemeio": "Chave Systeme.io",
+      "connections": "Ligações",
       "account": "A minha conta",
       "branding": "Branding",
       "domain": "Domínio",
@@ -3555,7 +3555,13 @@
         "erreur": "Ocorreu um erro durante a ligação.",
         "deja": "Esta ligação já existe.",
         "aucun_sous_compte": "Nenhuma subconta encontrada nesta agência.",
-        "non_configure": "O botão de ligação direta não está ativado neste servidor."
+        "non_configure": "O botão de ligação direta não está ativado neste servidor.",
+        "expire": "O código do GoHighLevel expirou. Volta a iniciar a instalação a partir do GoHighLevel."
+      },
+      "confirmer": {
+        "texte": "O GoHighLevel envia-te para aqui para ligar uma subconta à tua conta Tiquiz. Confirma para que os leads sigam para lá.",
+        "bouton": "Ligar esta subconta",
+        "annuler": "Cancelar"
       }
     },
     "sio": {
