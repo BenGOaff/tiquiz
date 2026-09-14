@@ -1063,7 +1063,8 @@
     "downgradeBody": "Hoje nada é cobrado e você mantém seu plano atual até {date}. A partir dessa data você passa para {plan} e paga {ensuite} por período.",
     "downgradeScheduled": "A mudança para um plano mais barato está agendada para {date}. Até lá nada muda.",
     "downgradeKeep": "Cancelar esta mudança",
-    "downgradeCancelled": "Mudança cancelada. Você mantém seu plano atual."
+    "downgradeCancelled": "Mudança cancelada. Você mantém seu plano atual.",
+    "tabConnections": "Conexões"
   },
   "languageSwitcher": {
     "label": "Idioma"
@@ -2068,7 +2069,14 @@
       "optionDefaultNamed": "Minha chave padrão ({name})",
       "hint": "Você pode trocar a qualquer momento.",
       "toastUpdated": "Chave do quiz atualizada.",
-      "toastUpdateError": "Não foi possível atualizar."
+      "toastUpdateError": "Não foi possível atualizar.",
+      "destTitle": "Destino dos leads deste quiz",
+      "destDescription": "Para onde vão os contatos capturados: uma chave Systeme.io, ou uma conexão (GoHighLevel...).",
+      "groupeSio": "Systeme.io",
+      "groupeCrm": "Conexões",
+      "optionAuto": "Automático (a conexão padrão do projeto)",
+      "destPause": "(em pausa)",
+      "destDeconnecte": "(desconectada)"
     }
   },
   "popquizList": {
@@ -3189,7 +3197,17 @@
         "titre": "Nada a criar para esses perfis",
         "aide": "Você vinculou um curso ou uma comunidade. O Tiquiz abre o acesso sozinho, e uma regra a mais abriria duas vezes."
       }
-    }
+    },
+    "titreGhl": "Automatizar o pós-quiz no GoHighLevel",
+    "introGhl": "O Tiquiz coloca uma tag no contato GoHighLevel de cada pessoa que responde. Aqui estão, para ESTE quiz, os workflows a criar para que essas tags façam algo de verdade.",
+    "ouvrirGhl": "Abrir meus workflows GoHighLevel",
+    "recetteAideGhl": "Três cliques no GoHighLevel, a repetir uma vez por tag da lista abaixo.",
+    "recetteGhl1": "Crie um workflow (Automations, Workflows) e dê a ele o nome da tag.",
+    "recetteGhl2": "Gatilho: « Contact Tag », filtro « Tag Added », depois escolha esta tag.",
+    "recetteGhl3": "Ação: « Send Email » ou « Add to Campaign », depois escolha o que a pessoa deve receber.",
+    "videTexteGhl": "Adicione uma tag aos seus perfis de resultado, na aba Criar. Ela será colocada no contato GoHighLevel.",
+    "pauseConnexion": "A conexão deste quiz está em pausa: nada sai até você retomá-la (Configurações, Conexões).",
+    "deconnecteConnexion": "A conexão deste quiz está desconectada: reconecte-a em Configurações, Conexões."
   },
   "generateurs": {
     "titre": "Geradores",
@@ -3458,5 +3476,93 @@
     "rate_limited": "Você gerou bastante nos últimos minutos. Volte daqui a pouco, seu trabalho fica salvo.",
     "not_configured": "A IA não está disponível no momento. Já fomos avisados.",
     "generic": "Não foi concluído. Tente de novo, o resto do seu trabalho fica salvo."
+  },
+  "connexions": {
+    "title": "Conexões",
+    "intro": "Escolha para onde vão os leads dos seus quizzes. Cada ferramenta se conecta uma vez aqui, e depois cada quiz escolhe seu destino na aba Criar.",
+    "alerteNote": "Se uma ferramenta recusar o token, você recebe um email, uma única vez, e a sincronização retoma assim que você reconectar.",
+    "connecteN": "{n, plural, one {# conexão} other {# conexões}}",
+    "nonConnecte": "Ainda não conectado",
+    "bientot": "Em breve",
+    "boutonConnecter": "Conectar",
+    "boutonGerer": "Gerenciar",
+    "guide": "Guia",
+    "pauseBadge": "Em pausa",
+    "deconnecteBadge": "Desconectado",
+    "desc": {
+      "systemeio": "Seus funis, emails e contatos. O lead chega com suas tags, e suas regras de automação assumem.",
+      "gohighlevel": "O CRM das agências. O contato é criado ou atualizado na subconta escolhida, com suas tags, e seus workflows começam.",
+      "brevo": "Emails e automações. O contato chegará na lista escolhida, com seus atributos.",
+      "clickfunnels": "Funis e contatos. O contato chegará com suas tags.",
+      "podia": "Cursos e comunidade. O contato entrará na sua audiência."
+    },
+    "ghl": {
+      "titre": "Conexões GoHighLevel",
+      "desc": "Uma conexão por subconta. Uma agência pode conectar várias de uma vez.",
+      "oauthBouton": "Conectar com o GoHighLevel",
+      "oauthAide": "O GoHighLevel pede sua autorização, você escolhe a subconta e volta para cá. Nenhum token para copiar.",
+      "oauthAbsent": "O botão de conexão direta ainda não está ativado neste servidor. O token privado já funciona.",
+      "ouJeton": "Ou com um token privado",
+      "modeSousCompte": "Uma subconta",
+      "modeAgence": "Uma agência e todas as suas subcontas",
+      "nomLabel": "Nome (memo)",
+      "nomPh": "Ex.: Cliente Silva",
+      "jetonLabel": "Token Private Integration",
+      "jetonAide": "No GoHighLevel: Settings, Private Integrations, Create. Permissões a marcar: contacts (leitura e escrita), locations (leitura), tags (leitura). Cole o token aqui, ele é criptografado do nosso lado e nunca mais é exibido.",
+      "locationLabel": "Identificador da subconta (Location ID)",
+      "locationAide": "Na subconta: Settings, Business Profile, Location ID.",
+      "companyLabel": "Identificador da agência (Company ID)",
+      "companyAide": "Na agência: Settings, Company. O token precisa ter sido criado no nível da agência, senão as subcontas não são listadas.",
+      "ajouter": "Conectar",
+      "importer": "Importar as subcontas",
+      "annuler": "Cancelar",
+      "vide": "Nenhuma conexão GoHighLevel por enquanto.",
+      "chargement": "Carregando…",
+      "defaut": "Padrão",
+      "definirDefaut": "Definir como padrão",
+      "tester": "Testar",
+      "supprimer": "Excluir",
+      "renommer": "Renomear",
+      "nouveauJeton": "Colar um novo token",
+      "syncActive": "Sincronização ativa",
+      "syncPause": "Sincronização em pausa",
+      "etatOk": "Conectado",
+      "etatDeconnecte": "Desconectado",
+      "modeOauth": "via GoHighLevel",
+      "modeJeton": "token privado",
+      "confirmSuppr": "Excluir « {nom} »? Os quizzes que a usavam passam para a conexão padrão.",
+      "toastCree": "Conexão validada e salva.",
+      "toastImport": "{n, plural, one {# subconta conectada} other {# subcontas conectadas}}.",
+      "toastRefuses": "Recusadas: {liste}",
+      "toastMaj": "Conexão atualizada.",
+      "toastSuppr": "Conexão excluída.",
+      "toastTestOk": "Responde: a conexão está ativa.",
+      "toastTestKo": "O token foi recusado. Cole um novo token.",
+      "toastTestIndispo": "O GoHighLevel não responde no momento. Tente de novo em alguns minutos.",
+      "erreurs": {
+        "JETON_REFUSE": "Token recusado pelo GoHighLevel. Verifique se vem da subconta certa e se tem as permissões de contatos.",
+        "SOUS_COMPTE_INCONNU": "Identificador de subconta desconhecido para este token.",
+        "OUTIL_INDISPONIBLE": "O GoHighLevel não responde no momento. Tente de novo em alguns minutos.",
+        "NOM_PRIS": "Você já tem uma conexão com este nome.",
+        "REFUSE": "O GoHighLevel recusou o pedido.",
+        "COMPANY_ID_REQUIS": "Informe o identificador da agência.",
+        "generic": "Ocorreu um erro."
+      },
+      "retour": {
+        "ok": "{n, plural, one {GoHighLevel conectado} other {GoHighLevel conectado: # subcontas}}.",
+        "refuse": "O GoHighLevel recusou a conexão. Tente de novo, ou use um token privado.",
+        "etat": "A conexão expirou no caminho. Tente de novo.",
+        "erreur": "Ocorreu um erro durante a conexão.",
+        "deja": "Esta conexão já existe.",
+        "aucun_sous_compte": "Nenhuma subconta encontrada nesta agência.",
+        "non_configure": "O botão de conexão direta não está ativado neste servidor."
+      }
+    },
+    "sio": {
+      "syncActive": "Sincronização ativa",
+      "syncPause": "Sincronização em pausa",
+      "toastPause": "Sincronização em pausa: nada mais sai para esta chave.",
+      "toastReprise": "Sincronização retomada."
+    }
   }
 }

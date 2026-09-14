@@ -1,5 +1,7 @@
 // app/api/quiz/[quizId]/sync-systeme/route.ts
-// Sync quiz leads to Systeme.io.
+// Renvoie des leads vers la DESTINATION du quiz (Systeme.io, ou une
+// connexion CRM comme GoHighLevel, 14 septembre 2026). Le nom de la
+// route date d'avant : les écrans l'appellent, on ne le change pas.
 // Supports two modes:
 //   1. Bulk with tag: { tagName: "..." } — syncs ALL leads and applies tag (from QuizDetailClient)
 //   2. Individual leads: { lead_ids: ["uuid",...] } — syncs specific leads using their result's tag (from LeadsShell)
@@ -11,8 +13,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { sioUserRequest } from "@/lib/sio/userApiClient";
-import { resolveApiKey } from "@/lib/sio/resolveApiKey";
+import { resoudreDestination } from "@/lib/integrations/store";
+import { envoyerLead } from "@/lib/integrations/envoyer";
 import { computeLockedLeadIds } from "@/lib/leadLock";
 import { isPaidPlan } from "@/lib/planLimits";
 
@@ -41,23 +43,29 @@ export async function POST(req: NextRequest, context: RouteContext) {
     // different Systeme.io workspace.
     const { data: quizRow } = await supabaseAdmin
       .from("quizzes")
-      .select("sio_api_key_id, project_id")
+      .select("sio_api_key_id, connexion_id, project_id")
       .eq("id", quizId)
       .eq("user_id", user.id)
       .maybeSingle();
 
     const typedQuizRow = quizRow as {
       sio_api_key_id?: string | null;
+      connexion_id?: string | null;
       project_id?: string | null;
     } | null;
-    const resolved = await resolveApiKey(user.id, {
-      explicitKeyId: typedQuizRow?.sio_api_key_id ?? null,
+    // LA MÊME destination que la capture : un renvoi depuis Mes leads
+    // part là où le lead serait parti tout seul.
+    const destination = await resoudreDestination(user.id, {
+      connexionId: typedQuizRow?.connexion_id ?? null,
+      sioKeyId: typedQuizRow?.sio_api_key_id ?? null,
       projectId: typedQuizRow?.project_id ?? null,
     });
-    if (!resolved) {
+    if (!destination) {
       return NextResponse.json({ ok: false, error: "No Systeme.io API key configured" }, { status: 400 });
     }
-    const apiKey = resolved.apiKey;
+    if (destination.type === "pause") {
+      return NextResponse.json({ ok: false, error: "CONNEXION_EN_PAUSE" }, { status: 409 });
+    }
 
     // Determine which leads to sync
     let leadsQuery = supabaseAdmin
@@ -123,6 +131,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     let synced = 0;
     let errors = 0;
+    let fournisseur: string | null = null;
     const errorDetails: string[] = [];
     const syncedLeadIds: string[] = [];
 
@@ -139,55 +148,28 @@ export async function POST(req: NextRequest, context: RouteContext) {
           continue;
         }
 
-        // Find or create each tag in Systeme.io.
-        const tagIds: number[] = [];
-        for (const effectiveTag of effectiveTags) {
-          let tagId: number | null = null;
-          const searchRes = await sioUserRequest<{ items: { id: number; name: string }[] }>(apiKey, `/tags?query=${encodeURIComponent(effectiveTag)}&limit=100`);
-          if (searchRes.ok && searchRes.data?.items) {
-            const match = searchRes.data.items.find((t) => t.name.toLowerCase() === effectiveTag.toLowerCase());
-            if (match) tagId = match.id;
-          }
-          if (!tagId) {
-            const createRes = await sioUserRequest<{ id: number }>(apiKey, "/tags", { method: "POST", body: { name: effectiveTag } });
-            if (createRes.ok && createRes.data) tagId = createRes.data.id;
-          }
-          if (tagId) tagIds.push(tagId);
-        }
-        if (tagIds.length === 0) {
-          errors++;
-          if (errorDetails.length < 10) errorDetails.push(`Failed to create tag for ${lead.email}`);
-          continue;
-        }
-
-        // Find or create contact
-        const findRes = await sioUserRequest<{ items: { id: number }[] }>(apiKey, `/contacts?email=${encodeURIComponent(lead.email)}&limit=10`);
-        let contactId: number | null = null;
-
-        if (findRes.ok && findRes.data?.items?.length) {
-          contactId = findRes.data.items[0].id;
-        } else {
-          const fields: { slug: string; value: string }[] = [];
-          if (lead.first_name) fields.push({ slug: "first_name", value: lead.first_name });
-          if (lead.last_name) fields.push({ slug: "surname", value: lead.last_name });
-          if (lead.phone) fields.push({ slug: "phone_number", value: lead.phone });
-
-          const createRes = await sioUserRequest<{ id: number }>(apiKey, "/contacts", {
-            method: "POST",
-            body: { email: lead.email, locale: "fr", ...(fields.length ? { fields } : {}) },
-          });
-          if (createRes.ok && createRes.data) contactId = createRes.data.id;
-        }
-
-        if (contactId) {
-          for (const tagId of tagIds) {
-            await sioUserRequest(apiKey, `/contacts/${contactId}/tags`, { method: "POST", body: { tagId } });
-          }
+        const envoi = await envoyerLead(
+          destination,
+          {
+            email: lead.email,
+            prenom: lead.first_name ?? null,
+            nom: lead.last_name ?? null,
+            telephone: lead.phone ?? null,
+            pays: lead.country ?? null,
+            tags: effectiveTags,
+          },
+          user.id,
+        );
+        if (envoi?.ok) {
           synced++;
           syncedLeadIds.push(lead.id);
+          fournisseur = envoi.fournisseur;
         } else {
           errors++;
-          if (errorDetails.length < 10) errorDetails.push(`No contact created for ${lead.email}`);
+          if (errorDetails.length < 10) errorDetails.push(`${lead.email}: ${envoi?.erreur ?? "envoi impossible"}`);
+          // Un jeton refusé ne se réessaie pas sur les leads suivants :
+          // ils échoueraient tous pareil, et chacun rappellerait l'outil.
+          if (envoi && "deconnecte" in envoi) break;
         }
 
         // Small delay to avoid rate limiting
@@ -206,6 +188,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
           sio_synced: true,
           sio_synced_at: new Date().toISOString(),
           sio_tag_applied: tagName || null,
+          sync_fournisseur: fournisseur,
         })
         .in("id", syncedLeadIds);
     }

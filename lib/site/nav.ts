@@ -194,6 +194,7 @@ export const PIED: readonly ColonnePied[] = [
       { href: "/integrations/google-forms-systeme-io", libelle: "Google Forms et Systeme.io", en: "Google Forms and Systeme.io" },
       { href: "/integrations/interact-systeme-io", libelle: "Interact et Systeme.io", en: "Interact and Systeme.io" },
       { href: "/integrations/jotform-systeme-io", libelle: "Jotform et Systeme.io", en: "Jotform and Systeme.io" },
+      { href: "/integrations/gohighlevel", libelle: "Tiquiz et GoHighLevel", en: "Tiquiz and GoHighLevel" },
     ],
   },
   {

@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Loader2, Plus, Star, StarOff, Trash2, KeyRound, ShieldCheck, ShieldAlert, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,10 +28,12 @@ interface SioKey {
   last_validated_at: string | null;
   validation_status: string | null;
   created_at: string;
+  actif?: boolean;
 }
 
 export default function SioApiKeysManager() {
   const t = useTranslations("sio.keysManager");
+  const tc = useTranslations("connexions.sio");
   const [keys, setKeys] = useState<SioKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -105,6 +108,25 @@ export default function SioApiKeysManager() {
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
       toast.success(t("toastSetDefault"));
+      await load();
+    } catch {
+      toast.error(t("errorGeneric"));
+    }
+  }
+
+  // PAUSE DE LA SYNCHRO (onglet Connexions, 14 septembre 2026). La clé
+  // reste, les quiz qui la visent gardent leur réglage, et rien ne part
+  // tant que c'est en pause. Ce n'est PAS "envoyer ailleurs".
+  async function handleActif(id: string, actif: boolean) {
+    try {
+      const res = await fetch(`/api/sio-api-keys/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actif }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      toast.success(actif ? tc("toastReprise") : tc("toastPause"));
       await load();
     } catch {
       toast.error(t("errorGeneric"));
@@ -219,6 +241,14 @@ export default function SioApiKeysManager() {
                 </div>
                 {editingId !== k.id && (
                   <div className="flex items-center gap-1 shrink-0">
+                    <label className="inline-flex items-center gap-1.5 mr-1 text-[11px] text-muted-foreground cursor-pointer">
+                      <Switch
+                        checked={k.actif !== false}
+                        onCheckedChange={(v) => handleActif(k.id, v)}
+                        aria-label={k.actif !== false ? tc("syncActive") : tc("syncPause")}
+                      />
+                      <span className="hidden sm:inline">{k.actif !== false ? tc("syncActive") : tc("syncPause")}</span>
+                    </label>
                     {!k.is_default && (
                       <Button
                         size="icon"

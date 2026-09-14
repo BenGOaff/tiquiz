@@ -24,6 +24,14 @@ export interface ResolvedKey {
   apiKey: string;
   keyId: string | null;       // null if it came from the legacy profile column
   source: "explicit" | "default" | "any" | "legacy";
+  /**
+   * La synchro de cette clé est-elle en PAUSE (onglet Connexions,
+   * 14 septembre 2026) ? `false` veut dire "ne rien envoyer" : la
+   * cascade ne retombe PAS sur la clé suivante, sinon "pause" enverrait
+   * les leads ailleurs sans que personne ne le voie. La colonne
+   * historique n'a pas de pause : `true`.
+   */
+  actif: boolean;
 }
 
 export interface ResolveApiKeyOpts {
@@ -39,6 +47,11 @@ export interface ResolveApiKeyOpts {
   projectId?: string | null;
 }
 
+/** Seul un `false` explicite met en pause : colonne absente ou nulle = actif. */
+function lireActif(row: unknown): boolean {
+  return (row as { actif?: boolean | null } | null)?.actif !== false;
+}
+
 export async function resolveApiKey(
   userId: string,
   opts: ResolveApiKeyOpts = {},
@@ -52,14 +65,14 @@ export async function resolveApiKey(
   if (explicit) {
     const { data } = await supabaseAdmin
       .from("sio_api_keys")
-      .select("id, api_key_encrypted")
+      .select("id, api_key_encrypted, actif")
       .eq("user_id", userId)
       .eq("id", explicit)
       .maybeSingle();
     const env = (data as { api_key_encrypted?: string } | null)?.api_key_encrypted;
     if (env) {
       try {
-        return { apiKey: decryptApiKey(env), keyId: explicit, source: "explicit" };
+        return { apiKey: decryptApiKey(env), keyId: explicit, source: "explicit", actif: lireActif(data) };
       } catch {
         // Fall through to next strategies if the explicit key is corrupted.
       }
@@ -70,7 +83,7 @@ export async function resolveApiKey(
   {
     let query = supabaseAdmin
       .from("sio_api_keys")
-      .select("id, api_key_encrypted")
+      .select("id, api_key_encrypted, actif")
       .eq("user_id", userId)
       .eq("is_default", true);
     if (projectId) query = query.eq("project_id", projectId);
@@ -78,7 +91,7 @@ export async function resolveApiKey(
     const row = data as { id?: string; api_key_encrypted?: string } | null;
     if (row?.api_key_encrypted) {
       try {
-        return { apiKey: decryptApiKey(row.api_key_encrypted), keyId: row.id ?? null, source: "default" };
+        return { apiKey: decryptApiKey(row.api_key_encrypted), keyId: row.id ?? null, source: "default", actif: lireActif(row) };
       } catch { /* fall through */ }
     }
   }
@@ -87,7 +100,7 @@ export async function resolveApiKey(
   {
     let query = supabaseAdmin
       .from("sio_api_keys")
-      .select("id, api_key_encrypted")
+      .select("id, api_key_encrypted, actif")
       .eq("user_id", userId)
       .order("created_at", { ascending: true })
       .limit(1);
@@ -96,7 +109,7 @@ export async function resolveApiKey(
     const row = data as { id?: string; api_key_encrypted?: string } | null;
     if (row?.api_key_encrypted) {
       try {
-        return { apiKey: decryptApiKey(row.api_key_encrypted), keyId: row.id ?? null, source: "any" };
+        return { apiKey: decryptApiKey(row.api_key_encrypted), keyId: row.id ?? null, source: "any", actif: lireActif(row) };
       } catch { /* fall through */ }
     }
   }
@@ -110,7 +123,7 @@ export async function resolveApiKey(
       .maybeSingle();
     const legacy = String((data as { sio_user_api_key?: string } | null)?.sio_user_api_key ?? "").trim();
     if (legacy) {
-      return { apiKey: legacy, keyId: null, source: "legacy" };
+      return { apiKey: legacy, keyId: null, source: "legacy", actif: true };
     }
   }
 

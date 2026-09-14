@@ -30,7 +30,7 @@ import { LanguageCombobox } from "@/components/quiz/LanguageCombobox";
 import { prepareUpload } from "@/lib/images/compress";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import SetPasswordForm from "@/components/auth/SetPasswordForm";
-import SioApiKeysManager from "@/components/sio/SioApiKeysManager";
+import ConnexionsTab from "@/components/connexions/ConnexionsTab";
 import { formatCents } from "@/lib/checkout/catalog";
 import { monteeVersProduit, type EtatAbonnement } from "@/lib/checkout/planChange";
 import { PageBanner } from "@/components/ui/page-banner";
@@ -158,7 +158,11 @@ export default function SettingsClient() {
   const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get("tab") || "general";
+  // L'onglet Systeme.io est devenu Connexions (14 septembre 2026) : les
+  // liens `?tab=systemeio` déjà collés dans des articles et des emails
+  // continuent d'y atterrir.
+  const tabDemande = searchParams.get("tab") || "general";
+  const initialTab = tabDemande === "systemeio" ? "connections" : tabDemande;
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
@@ -694,7 +698,7 @@ export default function SettingsClient() {
           <TabsTrigger value="general" className="gap-1.5 px-4 py-2"><Settings className="h-4 w-4" />{t("tabGeneral")}</TabsTrigger>
           <TabsTrigger value="branding" className="gap-1.5 px-4 py-2"><Palette className="h-4 w-4" />{t("tabBranding")}</TabsTrigger>
           <TabsTrigger value="domain" className="gap-1.5 px-4 py-2"><Globe className="h-4 w-4" />{t("tabDomain")}</TabsTrigger>
-          <TabsTrigger value="systemeio" className="gap-1.5 px-4 py-2"><Key className="h-4 w-4" />{t("tabSystemeio")}</TabsTrigger>
+          <TabsTrigger value="connections" className="gap-1.5 px-4 py-2"><Key className="h-4 w-4" />{t("tabConnections")}</TabsTrigger>
           <TabsTrigger value="tracking" className="gap-1.5 px-4 py-2"><BarChart3 className="h-4 w-4" />{t("tabTracking")}</TabsTrigger>
           <TabsTrigger value="account" className="gap-1.5 px-4 py-2"><CreditCard className="h-4 w-4" />{t("tabAccount")}</TabsTrigger>
         </TabsList>
@@ -958,8 +962,8 @@ export default function SettingsClient() {
           <CustomDomainsTab isPaid={isPaidPlan(profile?.plan)} />
         </TabsContent>
 
-        <TabsContent value="systemeio" className="space-y-4">
-          <SioApiKeysManager />
+        <TabsContent value="connections" className="space-y-4">
+          <ConnexionsTab />
 
           {/* Bloc affilié Tipote — sous la clé SIO car c'est dans le
               même contexte mental "compte Systeme.io". L'ID affilié

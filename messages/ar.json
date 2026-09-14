@@ -1063,7 +1063,8 @@
     "downgradeBody": "لا يتم خصم أي مبلغ اليوم، وتحتفظ بخطتك الحالية حتى {date}. من ذلك التاريخ تنتقل إلى {plan} وتدفع {ensuite} لكل فترة.",
     "downgradeScheduled": "تم تحديد موعد انتقالك إلى خطة أقل تكلفة في {date}. لا شيء يتغير حتى ذلك الحين.",
     "downgradeKeep": "إلغاء هذا التغيير",
-    "downgradeCancelled": "تم إلغاء التغيير. تحتفظ بخطتك الحالية."
+    "downgradeCancelled": "تم إلغاء التغيير. تحتفظ بخطتك الحالية.",
+    "tabConnections": "الاتصالات"
   },
   "languageSwitcher": {
     "label": "اللغة"
@@ -2068,7 +2069,14 @@
       "optionDefaultNamed": "مفتاحي الافتراضي ({name})",
       "hint": "يمكنك تغييره في أي وقت.",
       "toastUpdated": "تم تحديث مفتاح الاختبار.",
-      "toastUpdateError": "تعذّر التحديث."
+      "toastUpdateError": "تعذّر التحديث.",
+      "destTitle": "وجهة جهات اتصال هذا الاختبار",
+      "destDescription": "إلى أين تُرسل جهات الاتصال المجمّعة: مفتاح Systeme.io، أو اتصال (GoHighLevel...).",
+      "groupeSio": "Systeme.io",
+      "groupeCrm": "الاتصالات",
+      "optionAuto": "تلقائي (الاتصال الافتراضي للمشروع)",
+      "destPause": "(متوقف مؤقتًا)",
+      "destDeconnecte": "(مقطوع)"
     }
   },
   "popquizList": {
@@ -3189,7 +3197,17 @@
         "titre": "لا شيء لإنشائه لهذه الملفات",
         "aide": "لقد ربطت تكوينا أو مجتمعا. يفتح Tiquiz الوصول وحده، وقاعدة إضافية ستفتحه مرتين."
       }
-    }
+    },
+    "titreGhl": "أتمتة ما بعد الاختبار في GoHighLevel",
+    "introGhl": "يضع Tiquiz وسمًا على جهة اتصال GoHighLevel لكل شخص يجيب. إليك، لهذا الاختبار، سير العمل الذي يجب إنشاؤه حتى تُحدث هذه الوسوم شيئًا فعلًا.",
+    "ouvrirGhl": "فتح سير العمل في GoHighLevel",
+    "recetteAideGhl": "ثلاث نقرات في GoHighLevel، تُكرر مرة لكل وسم في القائمة أدناه.",
+    "recetteGhl1": "أنشئ سير عمل (Automations، Workflows) وسمّه باسم الوسم.",
+    "recetteGhl2": "المُشغّل: « Contact Tag »، المرشّح « Tag Added »، ثم اختر هذا الوسم.",
+    "recetteGhl3": "الإجراء: « Send Email » أو « Add to Campaign »، ثم اختر ما يجب أن يستلمه الشخص.",
+    "videTexteGhl": "أضف وسمًا إلى ملفات النتائج، في تبويب الإنشاء. سيوضع على جهة اتصال GoHighLevel.",
+    "pauseConnexion": "اتصال هذا الاختبار متوقف مؤقتًا: لا يُرسل شيء حتى تستأنفه (الإعدادات، الاتصالات).",
+    "deconnecteConnexion": "اتصال هذا الاختبار مقطوع: أعد ربطه في الإعدادات، الاتصالات."
   },
   "generateurs": {
     "titre": "المولدات",
@@ -3458,5 +3476,93 @@
     "rate_limited": "أنشأت الكثير في الدقائق الأخيرة. عد بعد قليل، عملك محفوظ.",
     "not_configured": "الذكاء الاصطناعي غير متاح حاليًا. تم إبلاغنا.",
     "generic": "لم يكتمل. أعد المحاولة، بقية عملك محفوظة."
+  },
+  "connexions": {
+    "title": "الاتصالات",
+    "intro": "اختر إلى أين تذهب جهات اتصال اختباراتك. تُربط كل أداة مرة واحدة هنا، ثم يختار كل اختبار وجهته في تبويب الإنشاء.",
+    "alerteNote": "إذا رفضت أداة الرمز، تصلك رسالة بريد واحدة فقط، وتُستأنف المزامنة فور إعادة الربط.",
+    "connecteN": "{n, plural, one {اتصال واحد} other {# اتصالات}}",
+    "nonConnecte": "غير مربوط بعد",
+    "bientot": "قريبًا",
+    "boutonConnecter": "ربط",
+    "boutonGerer": "إدارة",
+    "guide": "الدليل",
+    "pauseBadge": "متوقف مؤقتًا",
+    "deconnecteBadge": "مقطوع",
+    "desc": {
+      "systemeio": "قنواتك ورسائلك وجهات اتصالك. تصل جهة الاتصال مع وسومها، وتتولى قواعد الأتمتة الباقي.",
+      "gohighlevel": "نظام CRM للوكالات. تُنشأ جهة الاتصال أو تُحدّث في الحساب الفرعي المختار، مع وسومها، ويبدأ سير العمل.",
+      "brevo": "رسائل وأتمتة. ستصل جهة الاتصال إلى القائمة المختارة مع سماتها.",
+      "clickfunnels": "قنوات وجهات اتصال. ستصل جهة الاتصال مع وسومها.",
+      "podia": "دورات ومجتمع. ستنضم جهة الاتصال إلى جمهورك."
+    },
+    "ghl": {
+      "titre": "اتصالات GoHighLevel",
+      "desc": "اتصال واحد لكل حساب فرعي. يمكن للوكالة ربط عدة حسابات دفعة واحدة.",
+      "oauthBouton": "الربط عبر GoHighLevel",
+      "oauthAide": "يطلب GoHighLevel إذنك، تختار الحساب الفرعي، وتعود إلى هنا. لا رمز لنسخه.",
+      "oauthAbsent": "زر الربط المباشر غير مفعّل بعد على هذا الخادم. الرمز الخاص يعمل الآن.",
+      "ouJeton": "أو برمز خاص",
+      "modeSousCompte": "حساب فرعي واحد",
+      "modeAgence": "وكالة وجميع حساباتها الفرعية",
+      "nomLabel": "الاسم (تذكير)",
+      "nomPh": "مثال: العميل أحمد",
+      "jetonLabel": "رمز Private Integration",
+      "jetonAide": "في GoHighLevel: Settings، Private Integrations، Create. الصلاحيات: contacts (قراءة وكتابة)، locations (قراءة)، tags (قراءة). الصق الرمز هنا، يُشفّر عندنا ولا يُعرض مجددًا.",
+      "locationLabel": "معرّف الحساب الفرعي (Location ID)",
+      "locationAide": "في الحساب الفرعي: Settings، Business Profile، Location ID.",
+      "companyLabel": "معرّف الوكالة (Company ID)",
+      "companyAide": "في الوكالة: Settings، Company. يجب أن يكون الرمز منشأً على مستوى الوكالة، وإلا لن تُدرج الحسابات الفرعية.",
+      "ajouter": "ربط",
+      "importer": "استيراد الحسابات الفرعية",
+      "annuler": "إلغاء",
+      "vide": "لا يوجد اتصال GoHighLevel حاليًا.",
+      "chargement": "جارٍ التحميل…",
+      "defaut": "افتراضي",
+      "definirDefaut": "تعيين كافتراضي",
+      "tester": "اختبار",
+      "supprimer": "حذف",
+      "renommer": "إعادة تسمية",
+      "nouveauJeton": "لصق رمز جديد",
+      "syncActive": "المزامنة نشطة",
+      "syncPause": "المزامنة متوقفة مؤقتًا",
+      "etatOk": "مربوط",
+      "etatDeconnecte": "مقطوع",
+      "modeOauth": "عبر GoHighLevel",
+      "modeJeton": "رمز خاص",
+      "confirmSuppr": "حذف « {nom} »؟ ستنتقل الاختبارات التي كانت تستخدمه إلى الاتصال الافتراضي.",
+      "toastCree": "تم التحقق من الاتصال وحفظه.",
+      "toastImport": "{n, plural, one {تم ربط حساب فرعي واحد} other {تم ربط # حسابات فرعية}}.",
+      "toastRefuses": "مرفوض: {liste}",
+      "toastMaj": "تم تحديث الاتصال.",
+      "toastSuppr": "تم حذف الاتصال.",
+      "toastTestOk": "يستجيب: الاتصال نشط.",
+      "toastTestKo": "الرمز مرفوض. الصق رمزًا جديدًا.",
+      "toastTestIndispo": "GoHighLevel لا يستجيب حاليًا. حاول مجددًا بعد دقائق.",
+      "erreurs": {
+        "JETON_REFUSE": "رفض GoHighLevel الرمز. تحقق من أنه من الحساب الفرعي الصحيح وأنه يملك صلاحيات جهات الاتصال.",
+        "SOUS_COMPTE_INCONNU": "معرّف الحساب الفرعي غير معروف لهذا الرمز.",
+        "OUTIL_INDISPONIBLE": "GoHighLevel لا يستجيب حاليًا. حاول مجددًا بعد دقائق.",
+        "NOM_PRIS": "لديك اتصال بهذا الاسم بالفعل.",
+        "REFUSE": "رفض GoHighLevel الطلب.",
+        "COMPANY_ID_REQUIS": "أدخل معرّف الوكالة.",
+        "generic": "حدث خطأ."
+      },
+      "retour": {
+        "ok": "{n, plural, one {تم ربط GoHighLevel} other {تم ربط GoHighLevel: # حسابات فرعية}}.",
+        "refuse": "رفض GoHighLevel الربط. حاول مجددًا أو استخدم رمزًا خاصًا.",
+        "etat": "انتهت صلاحية الربط في الطريق. حاول مجددًا.",
+        "erreur": "حدث خطأ أثناء الربط.",
+        "deja": "هذا الاتصال موجود بالفعل.",
+        "aucun_sous_compte": "لم يُعثر على أي حساب فرعي في هذه الوكالة.",
+        "non_configure": "زر الربط المباشر غير مفعّل على هذا الخادم."
+      }
+    },
+    "sio": {
+      "syncActive": "المزامنة نشطة",
+      "syncPause": "المزامنة متوقفة مؤقتًا",
+      "toastPause": "توقفت المزامنة: لن يُرسل شيء إلى هذا المفتاح بعد الآن.",
+      "toastReprise": "استُؤنفت المزامنة."
+    }
   }
 }

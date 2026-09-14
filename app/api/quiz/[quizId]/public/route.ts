@@ -17,7 +17,10 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { assetProxyEnabled, proxyAssetsDeep } from "@/lib/assetProxy";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { resolveQuizBranding } from "@/lib/quizBranding";
-import { resolveApiKey } from "@/lib/sio/resolveApiKey";
+import { resoudreDestination } from "@/lib/integrations/store";
+import { envoyerLead } from "@/lib/integrations/envoyer";
+import { fusionnerTags } from "@/lib/integrations/charge";
+import { ficheFournisseur } from "@/lib/integrations/fournisseurs";
 import { isNewLeadLocked } from "@/lib/leadLock";
 import { isPaidPlan } from "@/lib/planLimits";
 import { applyFrenchTypography, isFrenchLocale } from "@/lib/frenchTypography";
@@ -55,161 +58,13 @@ export const maxDuration = 30;
 
 type RouteContext = { params: Promise<{ quizId: string }> };
 
-const SIO_BASE = "https://api.systeme.io/api";
+// Les fonctions Systeme.io (sioFetch, ensureSioTag, ensureSioContact,
+// enrichSioContact, enrollInSioCourse, addToSioCommunity) vivaient ici
+// jusqu'au 14 septembre 2026. Elles sont dans
+// `lib/integrations/adaptateurs/systemeio.ts`, telles quelles : un
+// deuxième outil (GoHighLevel) vit à côté sans recopier cette route.
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-
-async function sioFetch(
-  apiKey: string,
-  path: string,
-  opts: { method?: string; body?: unknown } = {},
-): Promise<{ ok: boolean; status: number; data: unknown }> {
-  const method = opts.method ?? "GET";
-  const headers: Record<string, string> = {
-    "X-API-Key": apiKey,
-    Accept: "application/json",
-  };
-  let payload: string | undefined;
-  if (opts.body !== undefined) {
-    headers["Content-Type"] = "application/json";
-    payload = JSON.stringify(opts.body);
-  }
-  const res = await fetch(`${SIO_BASE}${path}`, { method, headers, body: payload });
-  const text = await res.text();
-  let data: unknown = null;
-  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
-  return { ok: res.ok, status: res.status, data };
-}
-
-async function ensureSioTag(apiKey: string, tagName: string): Promise<number | null> {
-  const search = await sioFetch(apiKey, `/tags?query=${encodeURIComponent(tagName)}&limit=100`);
-  if (search.ok && Array.isArray((search.data as Record<string, unknown>)?.items)) {
-    const items = (search.data as Record<string, unknown[]>).items as Record<string, unknown>[];
-    const match = items.find((t) => String(t.name).toLowerCase() === tagName.toLowerCase());
-    if (match?.id) return Number(match.id);
-  }
-  const create = await sioFetch(apiKey, "/tags", { method: "POST", body: { name: tagName } });
-  if (create.ok && (create.data as Record<string, unknown>)?.id) return Number((create.data as Record<string, unknown>).id);
-  if (create.status === 422) {
-    const retry = await sioFetch(apiKey, `/tags?query=${encodeURIComponent(tagName)}&limit=100`);
-    if (retry.ok && Array.isArray((retry.data as Record<string, unknown>)?.items)) {
-      const items = (retry.data as Record<string, unknown[]>).items as Record<string, unknown>[];
-      const match = items.find((t) => String(t.name).toLowerCase() === tagName.toLowerCase());
-      if (match?.id) return Number(match.id);
-    }
-  }
-  return null;
-}
-
-// Label lisible d'une URL (hostname sans www) — sert de texte de footer
-// par défaut quand seule l'URL du branding est fournie.
-
-function buildSioFields(
-  fields: { firstName?: string; surname?: string; phoneNumber?: string; country?: string } | undefined,
-  includeCountry: boolean,
-): { slug: string; value: string }[] {
-  if (!fields) return [];
-  const out: { slug: string; value: string }[] = [];
-  if (fields.firstName) out.push({ slug: "first_name", value: fields.firstName });
-  if (fields.surname) out.push({ slug: "surname", value: fields.surname });
-  if (fields.phoneNumber) out.push({ slug: "phone_number", value: fields.phoneNumber });
-  if (includeCountry && fields.country) out.push({ slug: "country", value: fields.country });
-  return out;
-}
-
-async function ensureSioContact(
-  apiKey: string,
-  email: string,
-  fields?: { firstName?: string; surname?: string; phoneNumber?: string; country?: string },
-): Promise<number | null> {
-  const search = await sioFetch(apiKey, `/contacts?email=${encodeURIComponent(email)}&limit=10`);
-  if (search.ok && Array.isArray((search.data as Record<string, unknown>)?.items)) {
-    const items = (search.data as Record<string, unknown[]>).items as Record<string, unknown>[];
-    if (items.length > 0) {
-      const existingId = Number(items[0].id);
-      if (fields && Object.values(fields).some(Boolean)) {
-        const patchFields = buildSioFields(fields, true);
-        if (patchFields.length > 0) {
-          const patchRes = await sioFetch(apiKey, `/contacts/${existingId}`, { method: "PATCH", body: { fields: patchFields } });
-          if (!patchRes.ok && fields.country) {
-            const fallback = buildSioFields(fields, false);
-            if (fallback.length > 0) await sioFetch(apiKey, `/contacts/${existingId}`, { method: "PATCH", body: { fields: fallback } });
-          }
-        }
-      }
-      return existingId;
-    }
-  }
-
-  const contactBody: Record<string, unknown> = { email, locale: "fr" };
-  const sioFields = buildSioFields(fields, true);
-  if (sioFields.length > 0) contactBody.fields = sioFields;
-  const create = await sioFetch(apiKey, "/contacts", { method: "POST", body: contactBody });
-  if (create.ok && (create.data as Record<string, unknown>)?.id) return Number((create.data as Record<string, unknown>).id);
-
-  if (create.status === 422) {
-    const retrySearch = await sioFetch(apiKey, `/contacts?email=${encodeURIComponent(email)}&limit=10`);
-    if (retrySearch.ok && Array.isArray((retrySearch.data as Record<string, unknown>)?.items)) {
-      const items = (retrySearch.data as Record<string, unknown[]>).items as Record<string, unknown>[];
-      if (items.length > 0) return Number(items[0].id);
-    }
-    if (fields?.country) {
-      const fallbackBody: Record<string, unknown> = { email, locale: "fr" };
-      const fallbackFields = buildSioFields(fields, false);
-      if (fallbackFields.length > 0) fallbackBody.fields = fallbackFields;
-      const retryCreate = await sioFetch(apiKey, "/contacts", { method: "POST", body: fallbackBody });
-      if (retryCreate.ok && (retryCreate.data as Record<string, unknown>)?.id) return Number((retryCreate.data as Record<string, unknown>).id);
-    }
-  }
-  return null;
-}
-
-async function applyTagToContact(
-  apiKey: string,
-  email: string,
-  tagName: string,
-  fields?: { firstName?: string; surname?: string; phoneNumber?: string; country?: string },
-): Promise<number | null> {
-  try {
-    const tagId = await ensureSioTag(apiKey, tagName);
-    if (!tagId) return null;
-    const contactId = await ensureSioContact(apiKey, email, fields);
-    if (!contactId) return null;
-    await sioFetch(apiKey, `/contacts/${contactId}/tags`, { method: "POST", body: { tagId } });
-    return contactId;
-  } catch (e) {
-    console.error("[Systeme.io auto-tag] Error:", e);
-    return null;
-  }
-}
-
-async function enrichSioContact(apiKey: string, contactId: number, quizResultTitle: string) {
-  try {
-    await sioFetch(apiKey, `/contacts/${contactId}`, {
-      method: "PATCH",
-      body: { fields: [{ slug: "tiquiz_result", value: quizResultTitle }] },
-    });
-  } catch (e) {
-    console.error("[Systeme.io enrich] Error:", e);
-  }
-}
-
-async function enrollInSioCourse(apiKey: string, courseId: string, contactId: number) {
-  try {
-    await sioFetch(apiKey, `/school/courses/${courseId}/enrollments`, { method: "POST", body: { contactId } });
-  } catch (e) {
-    console.error("[Systeme.io course enrollment] Error:", e);
-  }
-}
-
-async function addToSioCommunity(apiKey: string, communityId: string, contactId: number) {
-  try {
-    await sioFetch(apiKey, `/community/communities/${communityId}/memberships`, { method: "POST", body: { contactId } });
-  } catch (e) {
-    console.error("[Systeme.io community add] Error:", e);
-  }
-}
 
 // ── GET — public quiz data ───────────────────────────────────────
 
@@ -343,7 +198,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     // aussi capture_enabled pour valider la branche anonyme.
     const { data: quiz } = await admin
       .from("quizzes")
-      .select("id, user_id, title, sio_api_key_id, meta_pixel_id, mode, capture_enabled, project_id, sio_capture_tag, sio_score_tags, scoring_axes, score_labels, locale")
+      .select("id, user_id, title, sio_api_key_id, connexion_id, meta_pixel_id, mode, capture_enabled, project_id, sio_capture_tag, sio_score_tags, scoring_axes, score_labels, locale")
       .eq("id", quizId)
       .maybeSingle();
 
@@ -514,6 +369,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
       const leadId = lead.id;
       const quizUserId = quiz.user_id;
       const quizSioApiKeyId = (quiz as { sio_api_key_id?: string | null }).sio_api_key_id ?? null;
+      const quizConnexionId = (quiz as { connexion_id?: string | null }).connexion_id ?? null;
       const quizProjectId = (quiz as { project_id?: string | null }).project_id ?? null;
       // Tags par tranche de score (Véronique juillet 2026, opt-in
       // quizzes.sio_score_tags) : "score-bas", "sommeil-eleve"... pour
@@ -566,18 +422,31 @@ export async function POST(req: NextRequest, context: RouteContext) {
             }
           }
 
-          // Cascade: explicit quiz key → DEFAULT DU PROJET DU QUIZ →
-          // any key DU PROJET → legacy plaintext. Le projectId scope
-          // les étapes default/any sur le bon projet (Phase 6 multiprofils).
-          // La résolution par explicitKeyId reste cross-project pour
-          // préserver les quizzes en ligne qui pointent vers une clé
-          // spécifique (sans coupure des sync existants).
-          const resolved = await resolveApiKey(quizUserId, {
-            explicitKeyId: quizSioApiKeyId,
+          // VERS OÙ PART CE LEAD (14 septembre 2026) : la connexion choisie
+          // sur le quiz (GoHighLevel...), sinon la connexion par défaut du
+          // projet, sinon la cascade Systeme.io d'avant (clé du quiz,
+          // défaut du projet, clé du projet, colonne historique). La
+          // décision est dans `lib/integrations/decision.ts`, pure.
+          //
+          // Une destination en PAUSE ne retombe sur rien : "en pause" veut
+          // dire "ne rien envoyer". On le journalise sur le lead pour que
+          // Mes leads le montre au lieu d'un "non synchronisé" muet.
+          const destination = await resoudreDestination(quizUserId, {
+            connexionId: quizConnexionId,
+            sioKeyId: quizSioApiKeyId,
             projectId: quizProjectId,
           });
-          if (!resolved) return;
-          const apiKey = resolved.apiKey;
+          if (!destination) return;
+          if (destination.type === "pause") {
+            await admin
+              .from("quiz_leads")
+              .update({
+                sio_last_attempt_at: new Date().toISOString(),
+                sio_last_error: `connexion ${destination.fournisseur} en pause`,
+              })
+              .eq("id", leadId);
+            return;
+          }
 
           let resultTags: string[] = [];
           let courseId = "";
@@ -602,14 +471,6 @@ export async function POST(req: NextRequest, context: RouteContext) {
             communityId = String((result as Record<string, unknown>)?.sio_community_id ?? "").trim();
             resultTitle = String((result as Record<string, unknown>)?.title ?? "").trim();
           }
-
-          const sioContactId = await ensureSioContact(apiKey, email, {
-            firstName: firstName || undefined,
-            surname: lastName || undefined,
-            phoneNumber: phone || undefined,
-            country: country || undefined,
-          });
-          if (!sioContactId) return;
 
           // Sondage : pas de resultat, donc on applique le tag de capture
           // defini au niveau du sondage (quizzes.sio_capture_tag). Les quiz
@@ -659,24 +520,39 @@ export async function POST(req: NextRequest, context: RouteContext) {
             }
           }
 
-          const tagsToApply = [...resultTags, surveyCaptureTag, ...answerTags, ...scoreTags]
-            .map((t) => t.trim())
-            .filter((t, i, arr) => t && arr.findIndex((x) => x.toLowerCase() === t.toLowerCase()) === i);
+          // L'ORDRE DES FAMILLES est celui du parcours (profil, capture du
+          // sondage, réponses, scores), et c'est celui que l'onglet
+          // Automatiser annonce. `fusionnerTags` retire les doublons sans
+          // tenir compte de la casse : "Coach" et "coach" sont le même tag
+          // chez tous ces outils.
+          const tagsToApply = fusionnerTags(resultTags, [surveyCaptureTag], answerTags, scoreTags);
 
-          for (const tagName of tagsToApply) {
-            try {
-              const tagId = await ensureSioTag(apiKey, tagName);
-              if (!tagId) continue;
-              await sioFetch(apiKey, `/contacts/${sioContactId}/tags`, {
-                method: "POST",
-                body: { tagId },
-              });
-            } catch (e) {
-              console.error("[Systeme.io tag apply] Error:", e);
-            }
+          const envoi = await envoyerLead(
+            destination,
+            {
+              email,
+              prenom: firstName || null,
+              nom: lastName || null,
+              telephone: phone || null,
+              pays: country || null,
+              tags: tagsToApply,
+              profilTitre: resultTitle || null,
+              courseId: courseId || null,
+              communityId: communityId || null,
+              source: `Tiquiz : ${String(quiz.title ?? "").replace(/<[^>]*>/g, "").trim() || "quiz"}`.slice(0, 120),
+            },
+            quizUserId,
+          );
+          if (!envoi || !envoi.ok) {
+            await admin
+              .from("quiz_leads")
+              .update({
+                sio_last_attempt_at: new Date().toISOString(),
+                sio_last_error: (envoi?.erreur ?? "envoi impossible").slice(0, 500),
+              })
+              .eq("id", leadId);
+            return;
           }
-
-          if (resultTitle) await enrichSioContact(apiKey, sioContactId, resultTitle);
           // ON N'ÉCRIT PAS L'AFFILIÉ SUR LA FICHE CONTACT, et c'est une
           // correction (Béné, 27 août 2026).
           //
@@ -692,17 +568,19 @@ export async function POST(req: NextRequest, context: RouteContext) {
           // atterrisse sur LEUR page avec l'identifiant : c'est le rôle de
           // `attacherAffiliate` sur le bouton de fin de quiz. Nos colonnes
           // `affiliate_*` servent NOS statistiques, rien d'autre.
-          if (courseId) await enrollInSioCourse(apiKey, courseId, sioContactId);
-          if (communityId) await addToSioCommunity(apiKey, communityId, sioContactId);
+          // La formation et la communauté Systeme.io sont ouvertes par
+          // l'adaptateur (`envoyerVersSystemeio`), dans le même ordre
+          // qu'avant.
 
           await admin
             .from("quiz_leads")
             .update({
               sio_synced: true,
               sio_synced_at: new Date().toISOString(),
-              sio_tag_applied: tagsToApply.join(",") || null,
+              sio_tag_applied: envoi.tagsPoses.join(",") || null,
               sio_last_attempt_at: new Date().toISOString(),
               sio_last_error: null,
+              sync_fournisseur: envoi.fournisseur,
             })
             .eq("id", leadId);
         } catch (e) {
@@ -810,7 +688,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     // workspace as the lead's original capture sync.
     const { data: quiz } = await admin
       .from("quizzes")
-      .select("sio_share_tag_name, user_id, sio_api_key_id, project_id")
+      .select("sio_share_tag_name, user_id, sio_api_key_id, connexion_id, project_id")
       .eq("id", quizId)
       .maybeSingle();
 
@@ -827,6 +705,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         sio_share_tag_name?: string | null;
         user_id?: string;
         sio_api_key_id?: string | null;
+        connexion_id?: string | null;
         project_id?: string | null;
       };
 
@@ -845,18 +724,25 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       const shareTagName = String(quizRow.sio_share_tag_name ?? "").trim();
       const quizUserId = quizRow.user_id;
       const quizSioApiKeyId = quizRow.sio_api_key_id ?? null;
+      const quizConnexionId = quizRow.connexion_id ?? null;
       const quizProjectId = quizRow.project_id ?? null;
 
       if (shareTagName && quizUserId) {
         (async () => {
           try {
-            // Même cascade que POST avec scope projet (Phase 6).
-            const resolved = await resolveApiKey(quizUserId, {
-              explicitKeyId: quizSioApiKeyId,
+            // La MÊME destination que la capture (14 septembre 2026) : le
+            // tag de partage part là où le lead est parti, sinon un quiz
+            // relié à GoHighLevel poserait son tag de partage chez
+            // Systeme.io, et la créatrice ne le verrait jamais.
+            const destination = await resoudreDestination(quizUserId, {
+              connexionId: quizConnexionId,
+              sioKeyId: quizSioApiKeyId,
               projectId: quizProjectId,
             });
-            if (!resolved) return;
-            await applyTagToContact(resolved.apiKey, email, shareTagName);
+            const envoi = await envoyerLead(destination, { email, tags: [shareTagName] }, quizUserId);
+            if (envoi && !envoi.ok) {
+              console.error(`[partage] tag non pose chez ${ficheFournisseur(envoi.fournisseur)?.nom ?? envoi.fournisseur} : ${envoi.erreur}`);
+            }
           } catch (e) {
             console.error("[Systeme.io auto-tag PATCH] Error:", e);
           }

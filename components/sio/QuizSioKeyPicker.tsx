@@ -1,11 +1,13 @@
 "use client";
 
-// Per-quiz Systeme.io key picker. Self-contained: fetches the user's keys
-// + the quiz's current sio_api_key_id, lets the creator pick which key
-// this quiz will sync to, and PATCHes /api/quiz/[quizId] directly. No
-// changes to the parent editor required.
+// LA DESTINATION DES LEADS D'UN QUIZ (14 septembre 2026) : une clé
+// Systeme.io, OU une connexion CRM (GoHighLevel...). Un seul menu, deux
+// groupes. La valeur porte sa famille (`sio:<id>` / `cx:<id>`) : deviner
+// la table à la forme de l'identifiant marcherait aujourd'hui, les deux
+// sont des UUID, et personne ne le verrait casser.
 //
-// Strings hardcoded FR for now — i18n later under quizSioKey.* namespace.
+// Il PATCHe /api/quiz/[quizId] avec les DEUX colonnes, l'une posée et
+// l'autre mise à null : un quiz ne peut pas viser deux destinations.
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -19,7 +21,20 @@ interface SioKey {
   name: string;
   is_default: boolean;
   last4: string | null;
+  actif?: boolean;
 }
+
+interface Connexion {
+  id: string;
+  fournisseur: string;
+  nom: string;
+  last4: string | null;
+  actif: boolean;
+  est_defaut: boolean;
+  etat: "ok" | "deconnecte";
+}
+
+const NOMS_OUTILS: Record<string, string> = { gohighlevel: "GoHighLevel", brevo: "Brevo", clickfunnels: "ClickFunnels", podia: "Podia" };
 
 interface Props {
   quizId: string;
@@ -50,9 +65,9 @@ function EnTeteColonne({ t }: { t: (cle: string) => string }) {
     <div>
       <h3 className="text-sm font-semibold inline-flex items-center gap-1.5">
         <KeyRound className="h-3.5 w-3.5 text-primary" />
-        {t("title")}
+        {t("destTitle")}
       </h3>
-      <p className="text-[11px] text-muted-foreground leading-snug">{t("description")}</p>
+      <p className="text-[11px] text-muted-foreground leading-snug">{t("destDescription")}</p>
     </div>
   );
 }
@@ -60,19 +75,23 @@ function EnTeteColonne({ t }: { t: (cle: string) => string }) {
 export default function QuizSioKeyPicker({ quizId, variante = "carte" }: Props) {
   const t = useTranslations("sio.keyPicker");
   const [keys, setKeys] = useState<SioKey[]>([]);
+  const [connexions, setConnexions] = useState<Connexion[]>([]);
   const [selectedId, setSelectedId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/sio-api-keys").then((r) => r.json()),
+      fetch("/api/sio-api-keys").then((r) => r.json()).catch(() => null),
+      fetch("/api/connexions").then((r) => r.json()).catch(() => null),
       fetch(`/api/quiz/${quizId}`).then((r) => r.json()),
     ])
-      .then(([keysRes, quizRes]) => {
-        if (keysRes.ok) setKeys(keysRes.keys ?? []);
+      .then(([keysRes, cxRes, quizRes]) => {
+        if (keysRes?.ok) setKeys(keysRes.keys ?? []);
+        if (cxRes?.ok) setConnexions(cxRes.connexions ?? []);
         if (quizRes.ok && quizRes.quiz) {
-          setSelectedId(quizRes.quiz.sio_api_key_id ?? "");
+          const q = quizRes.quiz as { sio_api_key_id?: string | null; connexion_id?: string | null };
+          setSelectedId(q.connexion_id ? `cx:${q.connexion_id}` : q.sio_api_key_id ? `sio:${q.sio_api_key_id}` : "");
         }
       })
       .catch(() => { /* silent */ })
@@ -80,14 +99,18 @@ export default function QuizSioKeyPicker({ quizId, variante = "carte" }: Props) 
   }, [quizId]);
 
   async function handleChange(value: string) {
-    const next = value || null;
     setSelectedId(value);
     setSaving(true);
     try {
+      const corps = value.startsWith("cx:")
+        ? { connexion_id: value.slice(3), sio_api_key_id: null }
+        : value.startsWith("sio:")
+          ? { sio_api_key_id: value.slice(4), connexion_id: null }
+          : { sio_api_key_id: null, connexion_id: null };
       const res = await fetch(`/api/quiz/${quizId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sio_api_key_id: next }),
+        body: JSON.stringify(corps),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
@@ -123,13 +146,13 @@ export default function QuizSioKeyPicker({ quizId, variante = "carte" }: Props) 
     );
   }
 
-  if (keys.length === 0) {
+  if (keys.length === 0 && connexions.length === 0) {
     if (colonne) {
       return (
         <section className="space-y-2">
           <EnTeteColonne t={t} />
           <a
-            href="/settings?tab=systemeio"
+            href="/settings?tab=connections"
             className="text-sm text-primary inline-flex items-center gap-1 hover:underline"
           >
             {t("configureFirst")} <ExternalLink className="h-3.5 w-3.5" />
@@ -142,14 +165,14 @@ export default function QuizSioKeyPicker({ quizId, variante = "carte" }: Props) 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <KeyRound className="h-5 w-5 text-primary" />
-            {t("title")}
+            {t("destTitle")}
           </CardTitle>
           <CardDescription>
-            {t("description")}
+            {t("destDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <a href="/settings?tab=systemeio" className="text-sm text-primary inline-flex items-center gap-1 hover:underline">
+          <a href="/settings?tab=connections" className="text-sm text-primary inline-flex items-center gap-1 hover:underline">
             {t("configureFirst")} <ExternalLink className="h-3.5 w-3.5" />
           </a>
         </CardContent>
@@ -158,17 +181,39 @@ export default function QuizSioKeyPicker({ quizId, variante = "carte" }: Props) 
   }
 
   const defaultKey = keys.find((k) => k.is_default);
+  const defaultCx = connexions.find((c) => c.est_defaut);
+  // L'option "automatique" DIT ce qui se passera : la connexion par
+  // défaut du projet gagne sur la clé Systeme.io par défaut (règle de
+  // `choisirDestination`), donc c'est elle qu'on nomme quand elle existe.
+  const auto = defaultCx
+    ? t("optionDefaultNamed", { name: `${NOMS_OUTILS[defaultCx.fournisseur] ?? defaultCx.fournisseur} : ${defaultCx.nom}` })
+    : defaultKey
+      ? t("optionDefaultNamed", { name: defaultKey.name })
+      : t("optionAuto");
+  const etiquetteCx = (c: Connexion) =>
+    `${c.nom}${c.last4 ? ` (••••${c.last4})` : ""}${!c.actif ? ` ${t("destPause")}` : c.etat === "deconnecte" ? ` ${t("destDeconnecte")}` : ""}`;
 
   const options = (
     <>
-      <option value="">
-        {defaultKey ? t("optionDefaultNamed", { name: defaultKey.name }) : t("optionDefault")}
-      </option>
-      {keys.map((k) => (
-        <option key={k.id} value={k.id}>
-          {k.name}{k.last4 ? ` (••••${k.last4})` : ""}
-        </option>
-      ))}
+      <option value="">{auto}</option>
+      {keys.length > 0 && (
+        <optgroup label={t("groupeSio")}>
+          {keys.map((k) => (
+            <option key={k.id} value={`sio:${k.id}`}>
+              {k.name}{k.last4 ? ` (••••${k.last4})` : ""}{k.actif === false ? ` ${t("destPause")}` : ""}
+            </option>
+          ))}
+        </optgroup>
+      )}
+      {connexions.length > 0 && (
+        <optgroup label={t("groupeCrm")}>
+          {connexions.map((c) => (
+            <option key={c.id} value={`cx:${c.id}`}>
+              {NOMS_OUTILS[c.fournisseur] ?? c.fournisseur} : {etiquetteCx(c)}
+            </option>
+          ))}
+        </optgroup>
+      )}
     </>
   );
 
@@ -217,14 +262,7 @@ export default function QuizSioKeyPicker({ quizId, variante = "carte" }: Props) 
             disabled={saving}
             className="flex-1 border border-input rounded-lg px-3 py-2 text-sm bg-background"
           >
-            <option value="">
-              {defaultKey ? t("optionDefaultNamed", { name: defaultKey.name }) : t("optionDefault")}
-            </option>
-            {keys.map((k) => (
-              <option key={k.id} value={k.id}>
-                {k.name}{k.last4 ? ` (••••${k.last4})` : ""}
-              </option>
-            ))}
+            {options}
           </select>
           {saving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         </div>

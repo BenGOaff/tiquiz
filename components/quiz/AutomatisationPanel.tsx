@@ -47,6 +47,9 @@ import {
 } from "@/lib/automatisation/planSysteme";
 
 const URL_REGLES = "https://systeme.io/dashboard/automation-rules";
+// Les workflows GoHighLevel vivent DANS le sous-compte, et son adresse
+// porte son identifiant : on ouvre l'app, pas une adresse inventée.
+const URL_WORKFLOWS_GHL = "https://app.gohighlevel.com/";
 
 /** Le nom du tag, cliquable pour le copier. */
 function Tag({ valeur }: { valeur: string }) {
@@ -226,6 +229,14 @@ export function AutomatisationPanel({
   const bloquant = plan.manques.some((m) => m.bloquant);
   const aFaire = plan.groupes.filter((g) => g.action !== "rien");
 
+  // L'OUTIL DÉCIDE DE LA RECETTE (14 septembre 2026). Un quiz relié à
+  // GoHighLevel n'a rien à créer dans Systeme.io : la recette, le lien
+  // et les phrases d'intro sont ceux de l'outil qui recevra les tags.
+  const ghl = sio?.fournisseur === "gohighlevel";
+  const cles = ghl
+    ? { titre: "titreGhl", intro: "introGhl", recetteAide: "recetteAideGhl", recettes: ["recetteGhl1", "recetteGhl2", "recetteGhl3"], ouvrir: "ouvrirGhl", url: URL_WORKFLOWS_GHL, videTexte: "videTexteGhl" }
+    : { titre: "titre", intro: "intro", recetteAide: "recetteAide", recettes: ["recette1", "recette2", "recette3"], ouvrir: "ouvrirSysteme", url: URL_REGLES, videTexte: "videTexte" };
+
   // LE SCROLL VIT ICI. L'éditeur est en `h-screen ... overflow-hidden` :
   // sans conteneur défilant, tout ce qui dépasse est simplement
   // inatteignable, et c'est exactement ce que Béné a vu.
@@ -233,8 +244,14 @@ export function AutomatisationPanel({
     <div className="flex-1 overflow-y-auto">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-5">
         <div className="space-y-2">
-          <h2 className="text-xl font-bold">{t("titre")}</h2>
-          <p className="text-sm text-muted-foreground">{t("intro")}</p>
+          <h2 className="text-xl font-bold">{t(cles.titre)}</h2>
+          <p className="text-sm text-muted-foreground">{t(cles.intro)}</p>
+          {sio?.pause && (
+            <p className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm">{t("pauseConnexion")}</p>
+          )}
+          {sio?.deconnecte && (
+            <p className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">{t("deconnecteConnexion")}</p>
+          )}
           {/* LA PHRASE QUI MANQUAIT PARTOUT : un tag posé ne déclenche
               rien tant qu'aucune règle ne l'écoute. */}
           <p className="text-sm">{t("pourquoi")}</p>
@@ -253,7 +270,7 @@ export function AutomatisationPanel({
           // n'ai rien à faire ici", et les deux coûtent une créatrice.
           <div className="rounded-lg border border-dashed p-6 text-center space-y-2">
             <p className="font-medium">{t("videTitre")}</p>
-            <p className="text-sm text-muted-foreground">{t("videTexte")}</p>
+            <p className="text-sm text-muted-foreground">{t(cles.videTexte)}</p>
           </div>
         )}
 
@@ -263,10 +280,10 @@ export function AutomatisationPanel({
               <div className="rounded-xl border bg-muted/40 p-4 space-y-3">
                 <div>
                   <h3 className="font-semibold">{t("recetteTitre")}</h3>
-                  <p className="text-sm text-muted-foreground">{t("recetteAide")}</p>
+                  <p className="text-sm text-muted-foreground">{t(cles.recetteAide)}</p>
                 </div>
                 <ol className="space-y-1.5 text-sm">
-                  {["recette1", "recette2", "recette3"].map((cle, i) => (
+                  {cles.recettes.map((cle, i) => (
                     <li key={cle} className="flex gap-2">
                       <span className="text-muted-foreground shrink-0">{i + 1}.</span>
                       <span>{t(cle)}</span>
@@ -274,8 +291,8 @@ export function AutomatisationPanel({
                   ))}
                 </ol>
                 <Button asChild variant="outline" size="sm">
-                  <a href={URL_REGLES} target="_blank" rel="noopener noreferrer">
-                    {t("ouvrirSysteme")} <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
+                  <a href={cles.url} target="_blank" rel="noopener noreferrer">
+                    {t(cles.ouvrir)} <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
                   </a>
                 </Button>
               </div>

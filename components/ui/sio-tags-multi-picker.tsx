@@ -133,7 +133,7 @@ export function SioTagsMultiPicker({ value, onChange, variant = "light", placeho
         <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
         <span>
           {t("sioNoApiKey")}{" "}
-          <a href="/settings?tab=systemeio" className="underline font-medium hover:no-underline">
+          <a href="/settings?tab=connections" className="underline font-medium hover:no-underline">
             {t("sioGoToSettings")}
           </a>
         </span>
