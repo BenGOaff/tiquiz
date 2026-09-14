@@ -14381,3 +14381,147 @@ cadratin, et les deux versions fautives rejouées (un 502 sans alerte,
 le garde du lot retiré côté Tipote) rougissent.
 
 Test : `tests/logic/alerte-acces.test.mts`, ici et dans l'Atelier.
+
+## Les leads partent vers l'outil CHOISI : Systeme.io ou GoHighLevel, et la vente ne bouge pas (Béné, 14 septembre 2026)
+
+"Aujourd'hui j'ai un gros client FR et US qui veut tester, du coup je
+dois connecter gohighlevel pour les automatisations des leads comme
+systemeio. Moi je reste sur systeme io pour les ventes, on ne touche
+surtout pas à ça. Dans la foulée on ajoutera Clickfunnels, Podia,
+Brevo..." Puis : "on doit lui laisser le choix de synchroniser ses leads
+avec l'outil de son choix comme Quizify : dans les paramètres, proposer
+toutes les connexions disponibles, activer ou désactiver synchro, alerte
+mail si déconnecté, pages d'aide", et "une agence et des sous comptes,
+la totale".
+
+### DEUX CHAÎNES, ET ELLES NE SE TOUCHENT PAS
+
+| La chaîne | Ce qu'elle fait | Ce qui a bougé |
+|---|---|---|
+| la VENTE | le bon de commande, les webhooks, `poserTagAchat`, `tiquiz-clients`, le webhook Systeme.io | **rien**, et le test l'exige : ces fichiers n'importent pas `lib/integrations/` |
+| les LEADS | ce qu'un quiz fait de l'adresse qu'il vient de capter | passe par une DESTINATION, qui peut être Systeme.io ou GoHighLevel |
+
+Un client GoHighLevel n'a pas de compte Systeme.io. Ce qui a été
+construit, c'est la couche qui manquait entre le quiz et l'outil, pas un
+deuxième Systeme.io.
+
+### LA DESTINATION EST UNE DÉCISION PURE, ET SON ORDRE NE SE DEVINE PAS
+
+`lib/integrations/decision.ts` (aucune base, aucun réseau) :
+
+1. la connexion CHOISIE sur le quiz (`quizzes.connexion_id`) ;
+2. sinon la connexion PAR DÉFAUT du projet (`connexions_crm.est_defaut`) ;
+3. sinon Systeme.io, par sa cascade historique (`resolveApiKey`), qui
+   n'a pas bougé d'une ligne.
+
+**Une connexion en PAUSE ne retombe sur RIEN.** "En pause" veut dire "ne
+rien envoyer", pas "envoyer ailleurs" : retomber sur Systeme.io
+enverrait les leads d'un client GoHighLevel dans le compte Systeme.io
+de la créatrice, et personne ne le verrait. La route de capture écrit
+`sio_last_error` et rend la main AVANT tout envoi. Une connexion
+DÉCONNECTÉE, elle, est quand même visée : c'est l'envoi qui échouera et
+qui le dira.
+
+**Un 401 / 403 est "déconnecté", et c'est le SEUL cas qui prévient la
+créatrice**, UNE fois par coupure (`alerte_deconnexion_le`), dans sa
+langue, en 7 langues (`lib/integrations/alerteContenu.ts`, pur). Un 5xx,
+un 429 ou une panne réseau sont temporaires : on ne touche pas à l'état,
+parce qu'un email "déconnecté" sur une panne de dix minutes ferait
+ressaisir un jeton valide. Une langue inconnue retombe sur l'ANGLAIS
+(leçon du robot d'aide, 31 août).
+
+### GOHIGHLEVEL : ce qui est MESURÉ, et ce qui ne l'est pas
+
+Mesuré le 14 septembre contre leur API, pas supposé :
+
+| | |
+|---|---|
+| base | `https://services.leadconnectorhq.com` |
+| l'en-tête `Version` | OBLIGATOIRE (`2021-07-28`) : sans lui, 401 |
+| un jeton invalide | 401 "Invalid Private Integration token" |
+
+**LE PIÈGE DE L'UPSERT : `tags` ÉCRASE.** Leur documentation le dit :
+le champ `tags` de `POST /contacts/upsert` remplace tous les tags du
+contact. Un lead qui refait un deuxième quiz PERDRAIT les tags du
+premier, et les automatisations bâties dessus avec. L'adaptateur
+n'envoie donc JAMAIS `tags` dans l'upsert : le contact d'abord, puis
+`POST /contacts/{id}/tags`, qui n'enlève rien. Le test l'exige, et il a
+été vérifié en rejouant la version fautive.
+
+Le téléphone et le pays sont VALIDÉS par leur API (E.164, code pays) :
+une valeur libre peut faire refuser l'upsert entier, donc on retente
+sans eux. Un contact sans téléphone vaut mieux qu'un lead qui n'arrive
+jamais. Le titre du profil part dans un champ personnalisé
+(`tiquiz_resultat`), à part, après les tags, et son échec ne fait que
+journaliser.
+
+**Deux façons de se connecter, et les deux existent :** un jeton
+d'intégration privée collé à la main (marche aujourd'hui), ou le bouton
+OAuth de la Marketplace (le parcours de Quizify : Connect, autoriser,
+choisir le sous-compte, revenir). Le second exige une app déclarée chez
+eux (`GHL_CLIENT_ID`, `GHL_CLIENT_SECRET`, `GHL_APP_ID`, retour
+`/api/connexions/gohighlevel/callback`) : sans ces variables, le bouton
+le DIT au lieu d'échouer en silence. Une AGENCE importe ses sous-comptes
+d'un coup (`/locations/search`, ou `/oauth/installedLocations` en OAuth).
+
+🚨 **CE QUI N'A PAS PU ÊTRE VÉRIFIÉ D'ICI, et qui se tranche sur son
+compte test :** le parcours OAuth de bout en bout (aucune app
+Marketplace n'existe encore), l'ÉCRITURE avec un jeton d'agence
+(`/oauth/locationToken`), et la forme exacte du champ personnalisé
+(`customFields[].key` contre `id`). Le jeton d'intégration privée sur un
+sous-compte est le chemin à tester EN PREMIER.
+
+### CE QUE LES ÉCRANS SAVENT
+
+- **Réglages, onglet Connexions** : une carte par outil du catalogue
+  (`lib/integrations/fournisseurs.ts`). Brevo, ClickFunnels et Podia
+  s'affichent SANS bouton (`disponible: false`) : la carte dit que
+  l'outil arrive, elle ne promet pas une connexion qui n'existe pas. Le
+  garde-fou exige qu'un outil disponible ait une page d'aide qui EXISTE
+  dans le sitemap. L'ancien `?tab=systemeio` ouvre toujours cet onglet.
+- **Le quiz** : le sélecteur de destination écrit les DEUX colonnes
+  (`connexion_id`, `sio_api_key_id`), choisir l'une vide l'autre. Le
+  PATCH refuse une connexion qui n'appartient pas à la personne.
+- **L'onglet Automatiser** écrit la recette GoHighLevel (un workflow par
+  tag) quand la route des tags répond `fournisseur: "gohighlevel"`. Les
+  NOMS de tags restent les mêmes qu'avec Systeme.io : le profil, la
+  capture d'un sondage, la réponse, le score, le partage.
+- **Mes leads, bouton Sync** renvoie vers la destination du quiz et
+  écrit `quiz_leads.sync_fournisseur`.
+- **`/integrations/gohighlevel`**, fr + en, sitemap et pied de page. Ce
+  n'est PAS un enfant du hub (pas un outil de formulaire comparé aux
+  autres) : le test du hub l'exempte parce qu'elle est l'`aide` d'un
+  fournisseur déclaré, et il refuse toute autre page sous `/integrations/`
+  que rien ne nomme.
+
+### DEUX GARDES ONT ROUGI SUR CE CHANTIER, ET ILS AVAIENT RAISON
+
+1. **des chevrons `« »` dans `fr.json`** (la recette GoHighLevel, la
+   confirmation de suppression) : la règle du 7 juin ne vise pas que le
+   tiret cadratin. Remplacés par des guillemets droits, y compris dans
+   l'email d'alerte, dans les six langues qui en portaient ;
+2. **le test du hub comptait `/integrations/gohighlevel` comme un
+   septième enfant.** Il compare maintenant les enfants du hub
+   (`ENFANTS_DU_HUB`) à part, et exige que tout autre chemin sous
+   `/integrations/` soit l'`aide` d'un fournisseur.
+
+🚨 Migration : `supabase/migrations/20260914_connexions_crm.sql`
+(Supabase de TIQUIZ) : la table `connexions_crm`, `quizzes.connexion_id`,
+`quiz_leads.sync_fournisseur`, et `actif` / `deconnecte_le` /
+`alerte_deconnexion_le` sur `sio_api_keys`. Sans elle, l'onglet
+Connexions répond "je n'ai pas pu lire", et la capture Systeme.io
+continue exactement comme avant.
+
+**Tipote n'est PAS porté.** Son module quiz est jumeau, mais sa clé
+Systeme.io vit dans `business_profiles`, pour tout le compte, sans
+table de clés : le chantier y demande une autre plomberie. À faire le
+jour où une créatrice Tipote le demande.
+
+Test : `tests/logic/connexions-crm.test.mts` (22 cas), vérifié en
+rejouant DOUZE versions fautives (la pause qui retombe sur le défaut,
+un 403 lu comme temporaire, l'alerte à chaque lead, `tags` dans
+l'upsert, l'en-tête `Version` retiré, un 401 relu à la main dans
+`envoyer.ts`, le PATCH sans contrôle de propriété, le picker qui garde
+l'ancienne colonne, l'alias `systemeio` retiré, la migration sans
+`connexion_id`, une langue inconnue qui retombe sur le français, un
+chevron remis dans l'alerte) : les douze rougissent.

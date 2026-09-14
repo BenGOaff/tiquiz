@@ -180,7 +180,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     if (auth.mode === "embed") {
       const FORBIDDEN_IN_EMBED = [
-        "status", "slug", "sio_share_tag_name", "sio_api_key_id",
+        "status", "slug", "sio_share_tag_name", "sio_api_key_id", "connexion_id",
         "share_networks", "privacy_url", "consent_text",
       ] as const;
       for (const k of FORBIDDEN_IN_EMBED) delete body[k];
@@ -217,6 +217,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "intro_start_mode",
       "result_insight_heading", "result_projection_heading", "result_bridge_heading",
       "sio_api_key_id",
+      // La connexion CRM du quiz (GoHighLevel...), 14 septembre 2026.
+      "connexion_id",
       "intro_image_url", "intro_image_position", "intro_image_width",
       "background_style", "background_gradient", "background_image_url",
       "intro_layout", "button_shape", "theme_id",
@@ -371,6 +373,31 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           .maybeSingle();
         if (!keyRow) {
           return NextResponse.json({ ok: false, error: "sio_api_key_id not found" }, { status: 400 });
+        }
+      }
+    }
+
+    // La destination CRM du quiz. Même garde que `sio_api_key_id` : elle
+    // doit appartenir à la personne connectée, sinon n'importe qui
+    // pourrait envoyer ses leads dans la connexion d'un autre compte.
+    if ("connexion_id" in patch) {
+      const val = patch.connexion_id;
+      if (val === null || val === "") {
+        patch.connexion_id = null;
+      } else if (typeof val !== "string" || !UUID_RE.test(val)) {
+        return NextResponse.json({ ok: false, error: "Invalid connexion_id" }, { status: 400 });
+      } else {
+        if (auth.mode !== "user") {
+          return NextResponse.json({ ok: false, error: "Forbidden in embed mode" }, { status: 403 });
+        }
+        const { data: cxRow } = await supabase
+          .from("connexions_crm")
+          .select("id")
+          .eq("id", val)
+          .eq("user_id", auth.userId)
+          .maybeSingle();
+        if (!cxRow) {
+          return NextResponse.json({ ok: false, error: "connexion_id not found" }, { status: 400 });
         }
       }
     }

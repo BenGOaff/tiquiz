@@ -182,6 +182,18 @@ const PAGES_ECRITES: readonly PagePublique[] = [
     priorite: 0.6,
   },
   {
+    chemin: "/integrations/gohighlevel",
+    // Pas un outil de formulaire relié à Systeme.io comme ses six
+    // voisines : la page qui dit comment TIQUIZ envoie ses leads dans
+    // GoHighLevel (14 septembre 2026). Elle vit sous le même chemin
+    // parce que c'est là qu'un lecteur cherche "gohighlevel".
+    langues: LANGUES_PUBLIQUES,
+    titre: "Connecter Tiquiz à GoHighLevel",
+    resume:
+      "Envoyer les leads d'un quiz dans un sous-compte GoHighLevel, avec le tag du profil obtenu, sans Zapier : connecter, choisir la destination sur le quiz, un workflow par tag.",
+    priorite: 0.6,
+  },
+  {
     chemin: "/fonctionnalites",
     titre: "Tout ce que Tiquiz sait faire",
     resume:

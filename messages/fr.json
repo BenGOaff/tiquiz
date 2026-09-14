@@ -1063,7 +1063,8 @@
     "downgradeBody": "Rien n'est prélevé aujourd'hui, et tu gardes ta formule actuelle jusqu'au {date}. À partir de cette date, tu passes à {plan} et tu paies {ensuite} par échéance.",
     "downgradeScheduled": "Ton passage à une formule moins chère est programmé pour le {date}. D'ici là, rien ne change.",
     "downgradeKeep": "Annuler ce changement",
-    "downgradeCancelled": "Changement annulé. Tu gardes ta formule actuelle."
+    "downgradeCancelled": "Changement annulé. Tu gardes ta formule actuelle.",
+    "tabConnections": "Connexions"
   },
   "languageSwitcher": {
     "label": "Langue"
@@ -2068,7 +2069,14 @@
       "optionDefaultNamed": "Ma clé par défaut ({name})",
       "hint": "Tu peux changer à tout moment.",
       "toastUpdated": "Clé du quiz mise à jour.",
-      "toastUpdateError": "Impossible de mettre à jour."
+      "toastUpdateError": "Impossible de mettre à jour.",
+      "destTitle": "Destination des leads de ce quiz",
+      "destDescription": "Où partent les contacts capturés : une clé Systeme.io, ou une connexion (GoHighLevel...).",
+      "groupeSio": "Systeme.io",
+      "groupeCrm": "Connexions",
+      "optionAuto": "Automatique (la connexion par défaut du projet)",
+      "destPause": "(en pause)",
+      "destDeconnecte": "(déconnectée)"
     }
   },
   "popquizList": {
@@ -3189,7 +3197,17 @@
         "titre": "Rien à créer pour ces profils",
         "aide": "Tu as relié une formation ou une communauté. Tiquiz ouvre l'accès tout seul, et une règle de plus l'ouvrirait deux fois."
       }
-    }
+    },
+    "titreGhl": "Automatiser l'après-quiz dans GoHighLevel",
+    "introGhl": "Tiquiz pose un tag sur le contact GoHighLevel de chaque personne qui répond. Voici, pour CE quiz, les workflows à créer pour que ces tags déclenchent vraiment quelque chose.",
+    "ouvrirGhl": "Ouvrir mes workflows GoHighLevel",
+    "recetteAideGhl": "Trois clics dans GoHighLevel, à refaire une fois par tag de la liste ci-dessous.",
+    "recetteGhl1": "Crée un workflow (Automations, Workflows) et donne-lui le nom du tag.",
+    "recetteGhl2": "Déclencheur : \"Contact Tag\", filtre \"Tag Added\", puis choisis ce tag.",
+    "recetteGhl3": "Action : \"Send Email\" ou \"Add to Campaign\", puis choisis ce que la personne doit recevoir.",
+    "videTexteGhl": "Ajoute un tag à tes profils de résultat, dans l'onglet Créer. Il sera posé sur le contact GoHighLevel.",
+    "pauseConnexion": "La connexion de ce quiz est en pause : rien ne part tant qu'elle n'est pas reprise (Paramètres, Connexions).",
+    "deconnecteConnexion": "La connexion de ce quiz est déconnectée : reconnecte-la dans Paramètres, Connexions."
   },
   "generateurs": {
     "titre": "Générateurs",
@@ -3458,5 +3476,93 @@
     "rate_limited": "Tu as beaucoup généré ces dernières minutes. Reprends dans un moment, ton travail est gardé.",
     "not_configured": "L'IA n'est pas disponible pour le moment. On est prévenus.",
     "generic": "Ça n'a pas abouti. Relance, le reste de ton travail est gardé."
+  },
+  "connexions": {
+    "title": "Connexions",
+    "intro": "Choisis où partent les leads de tes quiz. Chaque outil se connecte une fois ici, puis chaque quiz choisit sa destination dans l'onglet Créer.",
+    "alerteNote": "Si un outil refuse le jeton, tu reçois un email, une seule fois, et la synchro reprend dès que tu reconnectes.",
+    "connecteN": "{n, plural, one {# connexion} other {# connexions}}",
+    "nonConnecte": "Pas encore connecté",
+    "bientot": "Bientôt disponible",
+    "boutonConnecter": "Connecter",
+    "boutonGerer": "Gérer",
+    "guide": "Guide",
+    "pauseBadge": "En pause",
+    "deconnecteBadge": "Déconnecté",
+    "desc": {
+      "systemeio": "Tes tunnels, tes emails et tes contacts. Le lead arrive avec ses tags, et tes règles d'automatisation prennent le relais.",
+      "gohighlevel": "Le CRM des agences. Le contact est créé ou mis à jour dans le sous-compte choisi, avec ses tags, et tes workflows démarrent.",
+      "brevo": "Emails et automatisations. Le contact arrivera dans la liste choisie, avec ses attributs.",
+      "clickfunnels": "Tunnels et contacts. Le contact arrivera avec ses tags.",
+      "podia": "Formations et communauté. Le contact arrivera dans ton audience."
+    },
+    "ghl": {
+      "titre": "Connexions GoHighLevel",
+      "desc": "Une connexion par sous-compte. Une agence peut en connecter plusieurs d'un coup.",
+      "oauthBouton": "Connecter avec GoHighLevel",
+      "oauthAide": "GoHighLevel te demande l'autorisation, tu choisis le sous-compte, et tu reviens ici. Aucun jeton à copier.",
+      "oauthAbsent": "Le bouton de connexion directe n'est pas encore activé sur ce serveur. Le jeton privé marche dès maintenant.",
+      "ouJeton": "Ou avec un jeton privé",
+      "modeSousCompte": "Un sous-compte",
+      "modeAgence": "Une agence et tous ses sous-comptes",
+      "nomLabel": "Nom (mémo)",
+      "nomPh": "Ex : Client Dupont",
+      "jetonLabel": "Jeton Private Integration",
+      "jetonAide": "Dans GoHighLevel : Settings, Private Integrations, Create. Droits à cocher : contacts (lecture et écriture), locations (lecture), tags (lecture). Colle le jeton ici, il est chiffré chez nous et jamais réaffiché.",
+      "locationLabel": "Identifiant du sous-compte (Location ID)",
+      "locationAide": "Dans le sous-compte : Settings, Business Profile, Location ID.",
+      "companyLabel": "Identifiant de l'agence (Company ID)",
+      "companyAide": "Dans l'agence : Settings, Company. Le jeton doit avoir été créé au niveau de l'agence, sinon les sous-comptes ne se listent pas.",
+      "ajouter": "Connecter",
+      "importer": "Importer les sous-comptes",
+      "annuler": "Annuler",
+      "vide": "Aucune connexion GoHighLevel pour le moment.",
+      "chargement": "Chargement…",
+      "defaut": "Par défaut",
+      "definirDefaut": "Définir par défaut",
+      "tester": "Tester",
+      "supprimer": "Supprimer",
+      "renommer": "Renommer",
+      "nouveauJeton": "Coller un nouveau jeton",
+      "syncActive": "Synchro active",
+      "syncPause": "Synchro en pause",
+      "etatOk": "Connecté",
+      "etatDeconnecte": "Déconnecté",
+      "modeOauth": "via GoHighLevel",
+      "modeJeton": "jeton privé",
+      "confirmSuppr": "Supprimer \"{nom}\" ? Les quiz qui l'utilisaient basculeront sur la connexion par défaut.",
+      "toastCree": "Connexion validée et enregistrée.",
+      "toastImport": "{n, plural, one {# sous-compte connecté} other {# sous-comptes connectés}}.",
+      "toastRefuses": "Refusés : {liste}",
+      "toastMaj": "Connexion mise à jour.",
+      "toastSuppr": "Connexion supprimée.",
+      "toastTestOk": "Ça répond : la connexion est active.",
+      "toastTestKo": "Le jeton est refusé. Colle un nouveau jeton.",
+      "toastTestIndispo": "GoHighLevel ne répond pas pour le moment. Réessaie dans quelques minutes.",
+      "erreurs": {
+        "JETON_REFUSE": "Jeton refusé par GoHighLevel. Vérifie qu'il vient du bon sous-compte et qu'il a les droits contacts.",
+        "SOUS_COMPTE_INCONNU": "Identifiant de sous-compte inconnu pour ce jeton.",
+        "OUTIL_INDISPONIBLE": "GoHighLevel ne répond pas pour le moment. Réessaie dans quelques minutes.",
+        "NOM_PRIS": "Tu as déjà une connexion avec ce nom.",
+        "REFUSE": "GoHighLevel a refusé la demande.",
+        "COMPANY_ID_REQUIS": "Renseigne l'identifiant de l'agence.",
+        "generic": "Une erreur est survenue."
+      },
+      "retour": {
+        "ok": "{n, plural, one {GoHighLevel connecté} other {GoHighLevel connecté : # sous-comptes}}.",
+        "refuse": "GoHighLevel a refusé la connexion. Réessaie, ou utilise un jeton privé.",
+        "etat": "La connexion a expiré en route. Réessaie.",
+        "erreur": "Une erreur est survenue pendant la connexion.",
+        "deja": "Cette connexion existe déjà.",
+        "aucun_sous_compte": "Aucun sous-compte trouvé sur cette agence.",
+        "non_configure": "Le bouton de connexion directe n'est pas activé sur ce serveur."
+      }
+    },
+    "sio": {
+      "syncActive": "Synchro active",
+      "syncPause": "Synchro en pause",
+      "toastPause": "Synchro mise en pause : plus rien ne part vers cette clé.",
+      "toastReprise": "Synchro reprise."
+    }
   }
 }

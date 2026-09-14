@@ -52,12 +52,15 @@ export interface SioApiKeyPublic {
   last_validated_at: string | null;
   validation_status: string | null;
   created_at: string;
+  /** La synchro est-elle active (onglet Connexions, 14 septembre 2026) ? */
+  actif: boolean;
 }
 
 export function toPublic(row: SioApiKeyRow): SioApiKeyPublic {
   return {
     id: row.id,
     name: row.name,
+    actif: (row as { actif?: boolean | null }).actif !== false,
     is_default: row.is_default,
     last4: row.api_key_last4,
     last_validated_at: row.last_validated_at,
@@ -230,7 +233,7 @@ export async function createKey(
 export async function updateKey(
   userId: string,
   keyId: string,
-  patch: { name?: string; isDefault?: boolean },
+  patch: { name?: string; isDefault?: boolean; actif?: boolean },
 ): Promise<SioApiKeyPublic | null> {
   // Le partial unique index est maintenant (user_id, project_id) WHERE
   // is_default=true. Donc le "un-default" doit cibler le MÊME projet
@@ -267,6 +270,9 @@ export async function updateKey(
   }
   if (typeof patch.isDefault === "boolean") {
     updates.is_default = patch.isDefault;
+  }
+  if (typeof patch.actif === "boolean") {
+    updates.actif = patch.actif;
   }
 
   const { data, error } = await supabaseAdmin

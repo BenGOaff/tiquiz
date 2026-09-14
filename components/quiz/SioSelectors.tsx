@@ -60,7 +60,7 @@ export default function SioSelectors({
   if (!hasKey) {
     return (
       <div className="rounded-lg bg-muted/50 border border-border p-3 text-sm text-muted-foreground">
-        {t("sioConfigurePrompt")} <a href="/settings?tab=systemeio" className="text-primary underline">{t("sioSettingsLink")}</a>
+        {t("sioConfigurePrompt")} <a href="/settings?tab=connections" className="text-primary underline">{t("sioSettingsLink")}</a>
       </div>
     );
   }

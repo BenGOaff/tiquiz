@@ -36,6 +36,7 @@ import { PAGES_PUBLIQUES, languesDePage } from "@/lib/site/pagesPubliques";
 import { hrefPourLangue } from "@/lib/site/nav";
 import { OUTILS, outilsPourLangue, ENFANTS_DU_HUB } from "@/lib/site/integrations";
 import { CHEMIN_HUB, contenuHub, chromeIntegrations } from "@/lib/site/hubIntegrations";
+import { FOURNISSEURS } from "@/lib/integrations/fournisseurs";
 
 import { sourcePageDuSite, cheminPageDuSite } from "./aide/pageDuSite.mts";
 import { sansCommentaires } from "./aide/sansCommentaires.mts";
@@ -56,6 +57,9 @@ function tout(langue: (typeof LANGUES_PUBLIQUES)[number]): string {
 function sourcePage(): string {
   return sansCommentaires(sourcePageDuSite(CHEMIN_HUB));
 }
+
+/** Les chemins des VRAIES pages filles du hub (les outils de formulaire + Zapier). */
+const cheminsDuHub = new Set(ENFANTS_DU_HUB.map((e) => `${CHEMIN_HUB}/${e.slug}`));
 
 describe("le hub integrations existe dans les deux langues", () => {
   test("chaque langue publique a son texte, et il est vraiment different", () => {
@@ -139,8 +143,22 @@ describe("le hub integrations existe dans les deux langues", () => {
     // francais sans avoir ete prevenu. Le jour ou les six pages ont
     // leur texte anglais, ce test exige l'inverse, donc il dit lui meme
     // quoi retirer.
-    const filles = PAGES_PUBLIQUES.filter((p) => p.chemin.startsWith(`${CHEMIN_HUB}/`));
+    const sousLeHub = PAGES_PUBLIQUES.filter((p) => p.chemin.startsWith(`${CHEMIN_HUB}/`));
+    const filles = sousLeHub.filter((p) => cheminsDuHub.has(p.chemin));
     assert.equal(filles.length, ENFANTS_DU_HUB.length, "le sitemap et le hub ne comptent pas pareil");
+
+    // DEPUIS LE 14 SEPTEMBRE, `/integrations/` porte aussi les pages
+    // d'aide des DESTINATIONS CRM (GoHighLevel), qui ne sont ni des
+    // outils de formulaire ni des enfants du hub : elles ne sont pas
+    // dans son `ItemList`, et elles vivent sous ce chemin parce que
+    // c'est la que le lecteur cherche. Chacune doit etre l'`aide` d'un
+    // fournisseur declare : une page sous le hub que rien ne nomme est
+    // une page que le hub ignore sans le savoir.
+    const aidesCrm = new Set(FOURNISSEURS.map((f) => f.aide).filter((a): a is string => !!a));
+    for (const p of sousLeHub) {
+      if (cheminsDuHub.has(p.chemin)) continue;
+      assert.ok(aidesCrm.has(p.chemin), `${p.chemin} n'est ni un enfant du hub ni l'aide d'un fournisseur`);
+    }
 
     const traduites = filles.filter((p) => languesDePage(p).includes("en"));
     if (traduites.length === 0) {

@@ -21,11 +21,13 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     if (!user) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
-    const patch: { name?: string; isDefault?: boolean } = {};
+    const patch: { name?: string; isDefault?: boolean; actif?: boolean } = {};
     if (typeof body?.name === "string") patch.name = body.name.slice(0, 80);
     if (typeof body?.isDefault === "boolean") patch.isDefault = body.isDefault;
+    // Pause de la synchro (onglet Connexions, 14 septembre 2026).
+    if (typeof body?.actif === "boolean") patch.actif = body.actif;
 
-    if (patch.name === undefined && patch.isDefault === undefined) {
+    if (patch.name === undefined && patch.isDefault === undefined && patch.actif === undefined) {
       return NextResponse.json({ ok: false, error: "NOTHING_TO_UPDATE" }, { status: 400 });
     }
 
