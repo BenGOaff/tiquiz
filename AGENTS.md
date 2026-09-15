@@ -14734,3 +14734,85 @@ champs y passent.
 
 Test : `tests/logic/consentement-sans-entite.test.mts`, dans les deux
 dépôts, vérifié en rejouant les deux viewers d'avant (il rougit).
+
+## Le guide GoHighLevel est un pas à pas, et l'éditeur ne dit plus "Tag Systeme.io" (Béné, 15 septembre 2026)
+
+Trois retours pendant son test sur son sous-compte GoHighLevel, et le
+test lui même a réussi : le contact arrive avec son tag, un deuxième
+passage AJOUTE un deuxième tag sans effacer le premier (son journal
+d'audit le montre : `CREATED`, `TAG_ADDED`, `UPDATED`, puis `TAG_ADDED`,
+`UPDATED`).
+
+### 1. "j'ai 'tag systemeio' comme label. Faudra corriger tout ça, dans toutes les langues"
+
+Elle a raison : la destination d'un quiz peut être GoHighLevel depuis
+le 14 septembre, et cinq libellés de l'éditeur disaient encore
+"Systeme.io" (le tag d'un profil, d'une réponse de sondage, du partage,
+des tranches de score, l'aide du tag de sondage), plus la colonne du
+CSV. **Le libellé dit le GESTE, pas l'outil** : "Tag à appliquer aux
+personnes qui ont obtenu ce profil", ses mots. Dans les 7 langues,
+"etiqueta" en espagnol (règle du 1er septembre).
+
+**Ce qui garde son mot, et c'est voulu :** `quizForm.sioTagLabel` (le
+formulaire de création, `SioSelectors`) vit dans un bloc qui n'existe
+QUE quand une clé Systeme.io répond, à côté de "ID Formation Systeme.io"
+et "ID Communauté Systeme.io". Un tag "outil neutre" entre deux champs
+qui n'existent que chez Systeme.io serait faux dans l'autre sens. Et
+l'onglet Automatiser avait déjà ses phrases GoHighLevel (`introGhl`,
+`recetteGhl1..3`) depuis le 14 : rien à toucher.
+
+**Tipote n'est PAS touché** : sa seule destination est Systeme.io, sans
+table de connexions, donc "Tag Systeme.io" y est exact.
+
+### 2. "je ne vois aucun bouton tester t'as fumé"
+
+Il existait : une icône seule (`RefreshCw`, `size="icon"`) avec le mot
+dans `title`, donc lisible au survol seulement. Sur l'écran où l'on
+cherche justement à savoir si ça marche, c'est le bouton qu'on ne
+trouve pas. Il porte son mot. Le garde-fou exige `{t("tester")}` DANS
+le bouton, pas dans un attribut.
+
+### 3. "un lien qui s'ouvre dans une nouvelle fenêtre avec le step by step comme Quizify : illustré, guidé à chaque étape"
+
+Le lien existait sur la carte (`Guide`, `target="_blank"`), et la page
+racontait "les trois étapes" en trois paragraphes : juste, et pas
+suivable clic par clic. Le guide de Quizify qu'elle montre fait UNE
+action par étape, dans l'ordre où on la fait, avec l'écran.
+
+**Règle : `lib/site/outils/gohighlevel.ts` porte des `etapes`, et chaque
+étape dit trois choses** : son titre, `ou` (dans Tiquiz ou dans
+GoHighLevel, sa remarque du 15 en testant : "c'est dans marketplace ou
+dans mon compte test highlevel ?"), et `capture` (l'écran à
+photographier, plus l'image quand elle existe). Huit étapes, fr et en,
+même nombre des deux côtés.
+
+**Les captures ne sont PAS posées, et l'écran le DIT.** Aucune ne peut
+être produite d'ici (ni compte GoHighLevel ni base joignable), et une
+capture reconstituée serait un faux. Tant que `capture.image` est null,
+la page affiche l'encadré qui NOMME l'écran, comme les huit pages de
+fonctionnalités depuis le 5 septembre. Le jour où Béné fournit les
+huit captures, chacune se pose avec ses dimensions et son `alt`, et le
+test vérifie que le fichier existe dans `public/integrations/`.
+
+**Trouvé en réécrivant : le guide décrivait encore le jeton privé**
+("Ou avec un jeton privé : Settings, Private Integrations..."), retiré
+de l'écran le matin même. Un guide qui décrit un bouton disparu envoie
+chercher au mauvais endroit. Le test refuse `jeton`, `token` et
+`Private Integrations` dans les deux langues, et les chevrons `« »`
+dans le français (ils y étaient, dans un fichier que le garde des
+`messages/` ne balaie pas).
+
+**Ce qu'on ne dit PAS :** que GoHighLevel crée un tag inconnu à la
+première pose. Ce n'est pas mesuré (elle a testé avec des tags qui
+existaient déjà). Le guide conseille un tag existant, écrit au
+caractère près.
+
+**Et le lien de la carte Systeme.io mène au hub `/integrations`**, qui
+n'est pas un pas à pas de Tiquiz : c'est le prochain guide à écrire
+dans cette forme.
+
+Test : `tests/logic/guide-pas-a-pas-ghl.test.mts` (7 cas), vérifié en
+rejouant QUATRE versions fautives (l'ancien module en trois paragraphes
+avec le jeton et les chevrons, le bouton Tester en icône seule, les
+libellés Systeme.io dans `fr.json`, le lien du guide sans nouvel
+onglet) : les quatre rougissent.
