@@ -213,8 +213,14 @@ export default function GoHighLevelManager({
                       />
                       <span className="hidden sm:inline">{c.actif ? t("syncActive") : t("syncPause")}</span>
                     </label>
-                    <Button size="icon" variant="ghost" className="h-8 w-8" title={t("tester")} onClick={() => tester(c.id)} disabled={testEnCours === c.id}>
-                      <RefreshCw className={`h-4 w-4 ${testEnCours === c.id ? "animate-spin" : ""}`} />
+                    {/* LE TEST PORTE SON MOT (Bene, 15 septembre 2026 : "je ne
+                        vois aucun bouton tester"). Une icone seule, avec le
+                        libelle en `title`, ne se lit qu'au survol : sur un
+                        ecran ou l'on cherche a savoir si ca marche, c'est le
+                        bouton qu'on ne trouve pas. */}
+                    <Button size="sm" variant="outline" className="h-8 rounded-full px-2.5 text-xs" onClick={() => tester(c.id)} disabled={testEnCours === c.id}>
+                      <RefreshCw className={`h-3.5 w-3.5 mr-1 ${testEnCours === c.id ? "animate-spin" : ""}`} />
+                      {t("tester")}
                     </Button>
                     {!c.est_defaut && (
                       <Button size="icon" variant="ghost" className="h-8 w-8" title={t("definirDefaut")} onClick={() => patch(c.id, { estDefaut: true }, t("toastMaj"))}>

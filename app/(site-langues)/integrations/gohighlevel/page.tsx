@@ -13,7 +13,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getLocale } from "next-intl/server";
 
-import { EnBref, Faq, FilDAriane, Phrase } from "@/components/site/Integrations";
+import { Capture, EnBref, Faq, FilDAriane, Phrase } from "@/components/site/Integrations";
 import { HOTE_VENTE } from "@/lib/publicHost";
 import { SUPPORTED_LOCALES } from "@/i18n/config";
 import { faqJsonLd, filDArianeJsonLd } from "@/lib/site/integrations";
@@ -112,18 +112,59 @@ export default async function TiquizGoHighLevel({ searchParams }: PageProps) {
         ))}
       </section>
 
+      {/* LE GUIDE PAS À PAS (Béné, 15 septembre 2026 : "le step by step
+          comme Quizify : illustré, guidé à chaque étape"). Une action par
+          étape, numérotée, avec le produit dans lequel on est, et sa
+          capture. Tant qu'une capture manque, l'encadré NOMME l'écran à
+          photographier : un vide passerait pour un oubli (c'est ce que font
+          les pages de fonctionnalités depuis le 5 septembre). */}
       <section className="tq-large mt-16">
         <h2 className="text-[2rem]">{t.etapesTitre}</h2>
-        {t.etapes.map((e) => (
-          <div key={e.titre} className="mt-8">
-            <h3 className="text-xl font-semibold">{e.titre}</h3>
-            {e.corps.map((segments, i) => (
-              <p key={i} className="tq-doux tq-lire mt-4 leading-relaxed">
-                <Phrase segments={segments} lien={lien} />
-              </p>
-            ))}
-          </div>
-        ))}
+        <p className="tq-doux tq-lire mt-4 leading-relaxed">{t.etapesIntro}</p>
+        <ol className="mt-8 space-y-10 list-none p-0">
+          {t.etapes.map((e, n) => (
+            <li key={e.titre} className="tq-lire">
+              <div className="flex items-center gap-3 flex-wrap">
+                <span
+                  aria-hidden
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--tq-bleu)] text-white font-bold"
+                >
+                  {n + 1}
+                </span>
+                <h3 className="text-xl font-semibold m-0">
+                  <span className="sr-only">{t.etapeMot} {n + 1} : </span>
+                  {e.titre}
+                </h3>
+                <span
+                  className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+                    e.ou === "tiquiz" ? "border-[var(--tq-bleu)] text-[var(--tq-bleu)]" : "border-[var(--tq-bord)] tq-doux"
+                  }`}
+                >
+                  {t.ou[e.ou]}
+                </span>
+              </div>
+              {e.corps.map((segments, i) => (
+                <p key={i} className="tq-doux mt-4 leading-relaxed">
+                  <Phrase segments={segments} lien={lien} />
+                </p>
+              ))}
+              {e.capture.image ? (
+                <Capture
+                  src={`/integrations/${e.capture.image.fichier}`}
+                  alt={e.capture.image.alt}
+                  largeur={e.capture.image.largeur}
+                  hauteur={e.capture.image.hauteur}
+                  legende={e.capture.image.legende}
+                />
+              ) : (
+                <div className="mt-6 rounded-2xl border-2 border-dashed border-[var(--tq-bord)] p-5">
+                  <p className="m-0 text-xs font-extrabold uppercase tracking-wider tq-doux">{t.captureAAjouter}</p>
+                  <p className="m-0 mt-2 text-sm">{e.capture.aFaire}</p>
+                </div>
+              )}
+            </li>
+          ))}
+        </ol>
       </section>
 
       <section className="tq-large mt-16">

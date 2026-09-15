@@ -30,7 +30,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { ExternalLink, Info } from "lucide-react";
+import { BookOpen, ExternalLink, Info } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -230,14 +230,22 @@ export default function ConnexionsTab() {
                   {contenu}
                 </button>
               )}
+              {/* LE GUIDE PAS A PAS, DANS UN NOUVEL ONGLET (Bene, 15 septembre
+                  2026 : "sur chaque carte de connexion a un outil tiers, un
+                  lien qui s'ouvre dans une nouvelle fenetre avec le step by
+                  step comme Quizify"). Nouvel onglet, parce qu'on le lit
+                  PENDANT qu'on connecte : une navigation interne ferait
+                  perdre l'ecran qu'il explique. */}
               {f.aide && (
                 <a
                   href={guide(f.aide)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="self-start px-1 text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1"
+                  className="self-start px-1 text-xs font-medium text-primary hover:underline inline-flex items-center gap-1"
                 >
-                  {t("guide")} <ExternalLink className="h-3 w-3" />
+                  <BookOpen className="h-3.5 w-3.5" />
+                  {t("guide")}
+                  <ExternalLink className="h-3 w-3" />
                 </a>
               )}
             </div>
