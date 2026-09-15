@@ -14596,3 +14596,38 @@ Test : `tests/logic/retour-oauth-ghl.test.mts` (11 cas), vérifié en
 rejouant trois versions fautives (le GET qui échange sans `state`, un
 `state` faux rattrapé comme "depuis le fournisseur", le POST qui accepte
 un cookie vide) : les trois rougissent.
+
+### Le retour OAuth atterrissait sur `localhost`, et la carte demandait deux clics (14 septembre 2026, la nuit)
+
+Béné, après avoir choisi son sous-compte sur la page de GoHighLevel :
+"après je vais sur `https://localhost:3001/settings?tab=connections&ghl=ok&n=1`.
+C'est quoi ce merdier encore ??" Et sur l'onglet : "clic sur bouton =
+connexion. Point barre. Pas de menu en dessous."
+
+**L'ÉCHANGE AVAIT RÉUSSI.** `ghl=ok&n=1` est ce que le callback écrit
+APRÈS avoir échangé le code et enregistré le sous-compte : les clés, le
+`redirect_uri`, les scopes et l'échange sont justes, et **la connexion
+créée pendant son test existe en base**. Seule la redirection FINALE
+était fausse : quatre `NextResponse.redirect(new URL(..., req.nextUrl.origin))`
+dans les deux routes OAuth, et derrière le proxy cette origine vaut
+`localhost:3001`. Une origine présente et fausse traverse tout : c'est
+le `??` du 2 août (les liens `localhost` envoyés à Véronique), dans une
+autre robe, et **`adresseDeRetourGhl` passait DÉJÀ par `resolveAppUrl`**
+dix lignes plus haut. Deux adresses du même parcours, une seule
+protégée.
+
+**Règle : toute redirection de ces routes passe par
+`resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL, req.nextUrl.origin)`**,
+et le test compte les lectures de `req.nextUrl.origin` : chacune doit
+être DANS un `resolveAppUrl`, sinon il rougit.
+
+**Et la carte ne fait plus qu'un clic.** "Connecter" sur GoHighLevel EST
+le départ OAuth (un lien vers `/api/connexions/crm-oauth/oauth`), sans
+panneau ni deuxième bouton, dès que l'OAuth est configuré et qu'aucune
+connexion n'existe encore. "Gérer" ouvre toujours le panneau une fois
+une connexion créée, et le jeton privé y reste, en second. Sans OAuth
+configuré, la carte retombe sur le panneau, qui DIT ce qui manque.
+
+Test : les 2 cas ajoutés à `tests/logic/retour-oauth-ghl.test.mts`,
+vérifiés en rejouant les deux versions fautives (la redirection sur
+l'origine brute, la carte qui rouvre le panneau) : les deux rougissent.

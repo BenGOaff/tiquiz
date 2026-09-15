@@ -31,6 +31,9 @@ import { FOURNISSEURS, type Fournisseur } from "@/lib/integrations/fournisseurs"
 import { hrefPourLangue } from "@/lib/site/nav";
 import { HOTE_VENTE } from "@/lib/publicHost";
 
+/** Le depart OAuth GoHighLevel : le meme chemin que dans GoHighLevelManager. */
+const LIEN_OAUTH_GHL = "/api/connexions/crm-oauth/oauth";
+
 interface ConnexionPublique {
   id: string;
   fournisseur: Fournisseur;
@@ -186,15 +189,26 @@ export default function ConnexionsTab() {
               </div>
               <p className="text-sm text-muted-foreground flex-1">{t(`desc.${f.id}`)}</p>
               <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  className="rounded-full"
-                  variant={c.n > 0 ? "outline" : "default"}
-                  disabled={!f.disponible}
-                  onClick={() => setOuvert(estOuvert ? null : f.id)}
-                >
-                  {c.n > 0 ? t("boutonGerer") : t("boutonConnecter")}
-                </Button>
+                {f.id === "gohighlevel" && oauthGhl && c.n === 0 ? (
+                  // Un clic = la connexion (Bene, 14 septembre : "pas de menu en
+                  // dessous"). Le bouton EST le depart OAuth ; le jeton prive
+                  // reste accessible dans le panneau, derriere "Gerer", une fois
+                  // qu'une connexion existe. Sans OAuth configure, on retombe sur
+                  // le panneau, qui explique ce qui manque au lieu d'un lien mort.
+                  <Button asChild size="sm" className="rounded-full">
+                    <a href={LIEN_OAUTH_GHL}>{t("boutonConnecter")}</a>
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="rounded-full"
+                    variant={c.n > 0 ? "outline" : "default"}
+                    disabled={!f.disponible}
+                    onClick={() => setOuvert(estOuvert ? null : f.id)}
+                  >
+                    {c.n > 0 ? t("boutonGerer") : t("boutonConnecter")}
+                  </Button>
+                )}
                 {f.aide && (
                   <a
                     href={guide(f.aide)}
