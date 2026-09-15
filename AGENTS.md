@@ -14816,3 +14816,41 @@ rejouant QUATRE versions fautives (l'ancien module en trois paragraphes
 avec le jeton et les chevrons, le bouton Tester en icône seule, les
 libellés Systeme.io dans `fr.json`, le lien du guide sans nouvel
 onglet) : les quatre rougissent.
+
+### Les captures du guide GoHighLevel sont posées (Béné, 15 septembre 2026, le soir)
+
+"J'ai mis les screenshots ici pour le step by step" : neuf écrans PNG
+dans `public/screenshots/` sur `main`. Ils sont convertis en WebP (1600 px
+de large au plus, 16 à 100 Ko chacun) dans `public/integrations/
+ghl-NN-mot.webp`, et posés dans `lib/site/outils/gohighlevel.ts`, fr et
+en, avec leurs dimensions, un `alt` qui décrit l'écran et une légende
+qui dit le geste.
+
+**Posés en les REGARDANT, jamais d'après leur numéro** (règle du
+1er septembre). Ce que le regard a changé : ses écrans font NEUF
+étapes, pas sept. L'installation chez GoHighLevel est deux écrans
+(l'autorisation avec les permissions, puis le choix du sous-compte), le
+workflow aussi (le déclencheur Contact tag / Tag added, puis l'action
+Send email et Publish). Le guide passe donc de 8 à 10 étapes, et la
+dixième, la fiche du contact dans GoHighLevel, est la seule sans
+capture. Les fichiers gardent leur numéro d'étape dans leur nom.
+
+**Regardé aussi pour ce qui ne doit pas sortir :** l'écran de choix du
+sous-compte porte le nom et l'adresse postale de son sous-compte de
+test (Ethilife, 377 ter avenue...), à moitié couverts par sa flèche. Ce
+n'est ni une clé ni une adresse email, et cette adresse est celle de ses
+mentions légales : posé tel quel, et dit dans le message du jour pour
+qu'elle puisse le refuser. Le fragment `KtGEUd` sur deux captures est
+un morceau de nom de connexion, pas un secret.
+
+**Le garde-fou pose un plancher** (`guide-pas-a-pas-ghl.test.mts`) : au
+moins 9 captures posées, les mêmes fichiers dans le même ordre en fr et
+en en, chacune servie par une seule étape, et l'`alt` distinct de la
+légende. Sans lui, un passage qui remettrait `image: null` repasserait
+au vert et la page réafficherait "capture à ajouter" sur un guide dont
+les captures existent. Vérifié en rejouant une capture retirée : il
+rougit.
+
+**Le dossier `public/screenshots/` de main n'est pas touché** : les six
+captures produit (`tiquiz-*.png`) servent sa fiche Marketplace, et ce
+n'est pas à ce dépôt de décider de leur sort.

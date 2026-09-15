@@ -75,6 +75,32 @@ test("le guide GoHighLevel est une suite d'étapes numérotées, et chacune dit 
   }
 });
 
+test("les captures de Béné sont posées, les mêmes fichiers dans le même ordre en fr et en en", () => {
+  // Béné a fourni 9 captures le 15 septembre (public/screenshots sur main,
+  // converties en WebP dans public/integrations). Sans ce plancher, un
+  // passage qui remettrait `image: null` repasserait au vert : la page
+  // afficherait de nouveau l'encadré "capture à ajouter" sur un guide
+  // dont les captures existent. Seule la dernière étape (la fiche du
+  // contact dans GoHighLevel) reste à photographier.
+  const fr = contenuGoHighLevel("fr").etapes;
+  const en = contenuGoHighLevel("en").etapes;
+  const fichiersFr = fr.map((e) => e.capture.image?.fichier ?? null);
+  const fichiersEn = en.map((e) => e.capture.image?.fichier ?? null);
+  assert.deepEqual(fichiersFr, fichiersEn, "fr et en posent les mêmes captures, dans le même ordre");
+  const posees = fichiersFr.filter((f): f is string => f !== null);
+  assert.ok(posees.length >= 9, `au moins 9 captures posées (${posees.length})`);
+  assert.equal(new Set(posees).size, posees.length, "une capture ne sert qu'une étape");
+  for (const f of posees) {
+    assert.match(f, /^ghl-\d\d-[a-z-]+\.webp$/, `${f} : nom de fichier attendu ghl-NN-mot.webp`);
+  }
+  // Et l'alt n'est pas la légende : deux phrases, deux rôles.
+  for (const t of [fr, en]) {
+    for (const e of t) {
+      if (e.capture.image) assert.notEqual(e.capture.image.alt, e.capture.image.legende);
+    }
+  }
+});
+
 test("le guide ne décrit plus le jeton privé, retiré de l'écran le 15 septembre", () => {
   for (const langue of ["fr", "en"] as const) {
     for (const ph of phrasesDe(contenuGoHighLevel(langue))) {

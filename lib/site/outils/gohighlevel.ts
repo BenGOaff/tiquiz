@@ -36,6 +36,17 @@
 // 5 septembre) : un espace vide passerait pour un oubli, un écran nommé
 // se remplit en deux minutes dans un vrai compte.
 //
+// Béné a fourni les captures le 15 septembre au soir (`public/screenshots`
+// sur main, 9 écrans PNG). Elles sont converties en WebP, 1600 px de
+// large au plus, dans `public/integrations/ghl-NN-mot.webp`, et posées
+// en les REGARDANT une par une, jamais d'après leur numéro : ses deux
+// écrans GoHighLevel du workflow (le déclencheur, puis l'action) et ses
+// deux écrans d'installation (l'autorisation, puis le sous-compte) font
+// chacun DEUX étapes, dans l'ordre où elle les a traversés. Seule la
+// dernière étape, la fiche du contact dans GoHighLevel, reste à
+// photographier. Son interface est en anglais sur les captures ; le texte
+// français nomme les libellés français de Tiquiz, la légende dit le geste.
+//
 // -- CE QUI EST VRAI, ET D'OÙ ÇA VIENT --------------------------------
 //
 // Tout ce que cette page affirme est vérifiable dans le code :
@@ -158,7 +169,34 @@ const FR: TexteGoHighLevel = {
       ],
       capture: {
         aFaire: "L'onglet Connexions de Tiquiz, avec la carte GoHighLevel et son bouton Connecter.",
-        image: null,
+        image: {
+          fichier: "ghl-01-connexions.webp",
+          largeur: 1600,
+          hauteur: 796,
+          alt: "L'onglet Connexions de Tiquiz : la carte GoHighLevel porte le bouton Connecter, une flèche rouge le désigne.",
+          legende: "Paramètres, Connexions : un clic sur Connecter, et rien d'autre.",
+        },
+      },
+    },
+    {
+      titre: "Autorise Tiquiz",
+      ou: "gohighlevel",
+      corps: [
+        [
+          "Tu arrives chez GoHighLevel, connecté à ton compte. La page dit ce que Tiquiz demande, et rien de plus : lire et écrire les contacts, lire les sous-comptes, lire les tags. Rien sur tes conversations, tes paiements ni tes rendez-vous. Clique sur ",
+          { code: "Next" },
+          ".",
+        ],
+      ],
+      capture: {
+        aFaire: "La page d'installation GoHighLevel qui liste les permissions demandées par Tiquiz.",
+        image: {
+          fichier: "ghl-02-autoriser.webp",
+          largeur: 1600,
+          hauteur: 1432,
+          alt: "La page d'installation de GoHighLevel : Tiquiz demande les contacts en lecture et écriture, les sous-comptes et les tags en lecture. Une flèche rouge désigne le bouton Next.",
+          legende: "Les permissions, en toutes lettres. Contacts, sous-comptes, tags : c'est tout.",
+        },
       },
     },
     {
@@ -166,17 +204,20 @@ const FR: TexteGoHighLevel = {
       ou: "gohighlevel",
       corps: [
         [
-          "Tu arrives chez GoHighLevel, connecté à ton compte. La page liste tes sous-comptes (tes ",
+          "La page liste tes sous-comptes (tes ",
           { code: "Locations" },
-          "). Choisis celui qui doit recevoir les leads de tes quiz, puis autorise Tiquiz. Une agence peut en cocher plusieurs : chacun devient une connexion.",
-        ],
-        [
-          "Tiquiz ne demande que le nécessaire : lire et écrire les contacts, lire les sous-comptes, lire les tags. Rien sur tes conversations, tes paiements ni tes rendez-vous.",
+          "). Choisis celui qui doit recevoir les leads de tes quiz. Une agence peut en relier plusieurs : chacun devient une connexion dans Tiquiz.",
         ],
       ],
       capture: {
-        aFaire: "La page GoHighLevel qui liste les sous-comptes, avec celui à choisir coché.",
-        image: null,
+        aFaire: "La page GoHighLevel qui liste les sous-comptes, avec celui à choisir.",
+        image: {
+          fichier: "ghl-03-sous-compte.webp",
+          largeur: 1104,
+          hauteur: 955,
+          alt: "La page Select an account de GoHighLevel, avec la liste déroulante des sous-comptes et une flèche rouge sur celui à choisir.",
+          legende: "Un sous-compte dans la liste, un clic dessus.",
+        },
       },
     },
     {
@@ -193,7 +234,13 @@ const FR: TexteGoHighLevel = {
       ],
       capture: {
         aFaire: "La fenêtre GoHighLevel dans Tiquiz, avec le sous-compte connecté et le bouton Tester.",
-        image: null,
+        image: {
+          fichier: "ghl-04-tester.webp",
+          largeur: 1600,
+          hauteur: 702,
+          alt: "La fenêtre GoHighLevel dans les paramètres de Tiquiz : le sous-compte connecté, marqué par défaut, l'interrupteur de synchronisation, le bouton Tester, et le bouton Ajouter un sous-compte.",
+          legende: "De retour dans Tiquiz : la connexion est là, Tester dit si elle répond.",
+        },
       },
     },
     {
@@ -203,14 +250,22 @@ const FR: TexteGoHighLevel = {
         [
           "Ouvre le quiz, onglet ",
           { gras: "Créer" },
-          ", colonne de gauche, groupe \"Gestion du quiz\" : ",
-          { gras: "Destination des leads" },
+          ", colonne de gauche, ",
+          { gras: "Paramètres" },
+          ", groupe \"Gestion du quiz\" : ",
+          { gras: "Destination des leads de ce quiz" },
           ". Choisis ta connexion GoHighLevel. Ta première connexion devient la destination par défaut de ton projet, donc tes prochains quiz la prennent sans rien régler.",
         ],
       ],
       capture: {
         aFaire: "Le sélecteur Destination des leads dans l'éditeur, réglé sur la connexion GoHighLevel.",
-        image: null,
+        image: {
+          fichier: "ghl-05-destination.webp",
+          largeur: 768,
+          hauteur: 1193,
+          alt: "La colonne Paramètres de l'éditeur Tiquiz : le sélecteur Destination des leads de ce quiz est ouvert, et la connexion GoHighLevel est surlignée.",
+          legende: "Le sélecteur liste les clés Systeme.io et les connexions : on prend GoHighLevel.",
+        },
       },
     },
     {
@@ -225,7 +280,13 @@ const FR: TexteGoHighLevel = {
       ],
       capture: {
         aFaire: "Un profil de résultat ouvert dans l'éditeur, avec son tag renseigné.",
-        image: null,
+        image: {
+          fichier: "ghl-06-tag.webp",
+          largeur: 1226,
+          hauteur: 521,
+          alt: "Le champ Tag à appliquer aux personnes qui ont obtenu ce profil, dans l'éditeur Tiquiz, avec le tag follow-up déjà posé et le menu Ajouter un tag.",
+          legende: "Le tag du profil : ici follow-up, un tag qui existait déjà dans le sous-compte.",
+        },
       },
     },
     {
@@ -235,16 +296,22 @@ const FR: TexteGoHighLevel = {
         [
           "Onglet ",
           { gras: "Automatiser" },
-          " de l'éditeur : il liste, pour ce quiz, les tags exacts qui partiront chez GoHighLevel, et la recette à refaire pour chacun. Un clic sur un tag le copie. C'est cette liste que tu vas prendre à l'étape suivante.",
+          " de l'éditeur : il liste, pour ce quiz, les tags exacts qui partiront chez GoHighLevel, et la recette à refaire pour chacun. Un clic sur un tag le copie. C'est cette liste que tu vas prendre aux deux étapes suivantes.",
         ],
       ],
       capture: {
         aFaire: "L'onglet Automatiser, avec la liste des tags du quiz et la recette GoHighLevel.",
-        image: null,
+        image: {
+          fichier: "ghl-07-automatiser.webp",
+          largeur: 1580,
+          hauteur: 1291,
+          alt: "L'onglet Automatiser de Tiquiz : la recette en trois clics pour GoHighLevel, puis la liste des profils du quiz avec leur tag en face, chacun copiable.",
+          legende: "Un tag par profil, la recette une seule fois : c'est ce qu'on emporte dans GoHighLevel.",
+        },
       },
     },
     {
-      titre: "Crée un workflow par tag",
+      titre: "Crée un workflow, déclenché par le tag",
       ou: "gohighlevel",
       corps: [
         [
@@ -258,13 +325,46 @@ const FR: TexteGoHighLevel = {
           { code: "Contact Tag" },
           ", filtre ",
           { code: "Tag Added" },
-          ", puis colle le tag. Action : l'email ou la campagne que la personne doit recevoir. Publie le workflow.",
+          ", puis colle le tag copié à l'étape d'avant. Enregistre le déclencheur.",
+        ],
+      ],
+      capture: {
+        aFaire: "Un workflow GoHighLevel avec le déclencheur Contact Tag, le filtre Tag Added et le tag collé.",
+        image: {
+          fichier: "ghl-08-declencheur.webp",
+          largeur: 1600,
+          hauteur: 981,
+          alt: "Le constructeur de workflow de GoHighLevel : le déclencheur Contact tag est choisi, le filtre Tag added est réglé, et un champ attend le tag. Deux flèches rouges désignent les deux menus.",
+          legende: "Contact tag, puis Tag added, puis le tag : trois choix, dans cet ordre.",
+        },
+      },
+    },
+    {
+      titre: "Ajoute l'action, et publie",
+      ou: "gohighlevel",
+      corps: [
+        [
+          "Sous le déclencheur, clique sur le ",
+          { code: "+" },
+          " et choisis ce que la personne doit recevoir : ",
+          { code: "Send Email" },
+          ", ou une campagne. Passe le workflow de ",
+          { code: "Draft" },
+          " à ",
+          { code: "Publish" },
+          ".",
         ],
         ["Recommence pour chaque tag de la liste. Un profil sans workflow reçoit son tag, et rien d'autre."],
       ],
       capture: {
-        aFaire: "Un workflow GoHighLevel avec le déclencheur Contact Tag, le filtre Tag Added et le tag collé.",
-        image: null,
+        aFaire: "Le même workflow, avec le panneau des actions ouvert sur Send Email.",
+        image: {
+          fichier: "ghl-09-action.webp",
+          largeur: 1600,
+          hauteur: 1074,
+          alt: "Le workflow GoHighLevel avec son déclencheur Tag added follow-up, et le panneau Actions ouvert à droite sur Send email.",
+          legende: "L'action : ici Send email. Puis Publish, en haut à droite.",
+        },
       },
     },
     {
@@ -371,14 +471,41 @@ const EN: TexteGoHighLevel = {
           { gras: "Settings" },
           ", ",
           { gras: "Connections" },
-          " tab. You see one card per tool. On the GoHighLevel card, click ",
+          " tab. One card per tool. On the GoHighLevel card, click ",
           { gras: "Connect" },
-          ". That is the only action of this step: nothing to copy, nothing to paste.",
+          ". That is the only move in this step: nothing to copy, nothing to paste.",
         ],
       ],
       capture: {
         aFaire: "The Connections tab in Tiquiz, with the GoHighLevel card and its Connect button.",
-        image: null,
+        image: {
+          fichier: "ghl-01-connexions.webp",
+          largeur: 1600,
+          hauteur: 796,
+          alt: "The Connections tab in Tiquiz: the GoHighLevel card carries the Connect button, pointed at by a red arrow.",
+          legende: "Settings, Connections: one click on Connect, nothing else.",
+        },
+      },
+    },
+    {
+      titre: "Authorize Tiquiz",
+      ou: "gohighlevel",
+      corps: [
+        [
+          "You land on GoHighLevel, signed in to your account. The page says what Tiquiz asks for, and nothing more: read and write contacts, read sub-accounts, read tags. Nothing about your conversations, payments or appointments. Click ",
+          { code: "Next" },
+          ".",
+        ],
+      ],
+      capture: {
+        aFaire: "The GoHighLevel install page listing the permissions Tiquiz requests.",
+        image: {
+          fichier: "ghl-02-autoriser.webp",
+          largeur: 1600,
+          hauteur: 1432,
+          alt: "The GoHighLevel install page: Tiquiz requests contacts read and write, sub-accounts and tags read. A red arrow points at the Next button.",
+          legende: "The permissions, spelled out. Contacts, sub-accounts, tags: that is all.",
+        },
       },
     },
     {
@@ -386,17 +513,20 @@ const EN: TexteGoHighLevel = {
       ou: "gohighlevel",
       corps: [
         [
-          "You land at GoHighLevel, logged into your account. The page lists your sub-accounts (your ",
+          "The page lists your sub-accounts (your ",
           { code: "Locations" },
-          "). Pick the one that should receive your quiz leads, then authorise Tiquiz. An agency can tick several: each becomes a connection.",
-        ],
-        [
-          "Tiquiz only asks for what it needs: read and write contacts, read sub-accounts, read tags. Nothing about your conversations, payments or appointments.",
+          "). Pick the one that should receive your quiz leads. An agency can link several: each one becomes a connection in Tiquiz.",
         ],
       ],
       capture: {
-        aFaire: "The GoHighLevel page listing the sub-accounts, with the one to pick ticked.",
-        image: null,
+        aFaire: "The GoHighLevel page listing the sub-accounts, with the one to pick.",
+        image: {
+          fichier: "ghl-03-sous-compte.webp",
+          largeur: 1104,
+          hauteur: 955,
+          alt: "GoHighLevel's Select an account page, with the sub-account dropdown open and a red arrow on the one to pick.",
+          legende: "One sub-account in the list, one click on it.",
+        },
       },
     },
     {
@@ -413,7 +543,13 @@ const EN: TexteGoHighLevel = {
       ],
       capture: {
         aFaire: "The GoHighLevel window in Tiquiz, with the connected sub-account and the Test button.",
-        image: null,
+        image: {
+          fichier: "ghl-04-tester.webp",
+          largeur: 1600,
+          hauteur: 702,
+          alt: "The GoHighLevel window in Tiquiz settings: the connected sub-account, marked as default, the sync switch, the Test button, and the Add a sub-account button.",
+          legende: "Back in Tiquiz: the connection is there, Test tells you whether it responds.",
+        },
       },
     },
     {
@@ -423,14 +559,22 @@ const EN: TexteGoHighLevel = {
         [
           "Open the quiz, ",
           { gras: "Create" },
-          " tab, left column, \"Quiz management\" group: ",
+          " tab, left column, ",
+          { gras: "Settings" },
+          ", \"Quiz management\" group: ",
           { gras: "Where this quiz's leads go" },
-          ". Pick your GoHighLevel connection. Your first connection becomes the default destination of your project, so your next quizzes use it with nothing to set.",
+          ". Pick your GoHighLevel connection. Your first connection becomes the default destination of your project, so your next quizzes take it without any setup.",
         ],
       ],
       capture: {
         aFaire: "The lead destination selector in the editor, set to the GoHighLevel connection.",
-        image: null,
+        image: {
+          fichier: "ghl-05-destination.webp",
+          largeur: 768,
+          hauteur: 1193,
+          alt: "The Settings column of the Tiquiz editor: the Where this quiz's leads go selector is open, and the GoHighLevel connection is highlighted.",
+          legende: "The selector lists Systeme.io keys and connections: pick GoHighLevel.",
+        },
       },
     },
     {
@@ -438,14 +582,20 @@ const EN: TexteGoHighLevel = {
       ou: "tiquiz",
       corps: [
         [
-          "Still in the Create tab, open each result profile. Below its text, the field ",
+          "Still in the Create tab, open each result profile. Under its text, the field ",
           { gras: "Tag to apply to people who got this profile" },
           ". The safest choice is a tag that already exists in your sub-account, written character for character. A survey applies one tag per answer; a scored quiz can also apply one tag per score range.",
         ],
       ],
       capture: {
         aFaire: "A result profile open in the editor, with its tag filled in.",
-        image: null,
+        image: {
+          fichier: "ghl-06-tag.webp",
+          largeur: 1226,
+          hauteur: 521,
+          alt: "The Tag to apply to people who got this profile field in the Tiquiz editor, with the follow-up tag already set and the Add a tag menu.",
+          legende: "The profile's tag: here follow-up, a tag that already existed in the sub-account.",
+        },
       },
     },
     {
@@ -453,22 +603,28 @@ const EN: TexteGoHighLevel = {
       ou: "tiquiz",
       corps: [
         [
-          "The ",
+          "The editor's ",
           { gras: "Automate" },
-          " tab of the editor lists, for this quiz, the exact tags that will be sent to GoHighLevel, and the recipe to repeat for each. One click on a tag copies it. This is the list you take to the next step.",
+          " tab lists, for this quiz, the exact tags that will be sent to GoHighLevel, and the recipe to repeat for each one. One click on a tag copies it. This is the list you take into the next two steps.",
         ],
       ],
       capture: {
         aFaire: "The Automate tab, with the list of the quiz's tags and the GoHighLevel recipe.",
-        image: null,
+        image: {
+          fichier: "ghl-07-automatiser.webp",
+          largeur: 1580,
+          hauteur: 1291,
+          alt: "The Automate tab in Tiquiz: the three-click recipe for GoHighLevel, then the list of the quiz's profiles with their tag next to each, each one copyable.",
+          legende: "One tag per profile, the recipe once: this is what you take into GoHighLevel.",
+        },
       },
     },
     {
-      titre: "Create one workflow per tag",
+      titre: "Create a workflow, triggered by the tag",
       ou: "gohighlevel",
       corps: [
         [
-          "A tag on its own triggers nothing, in GoHighLevel as anywhere else. In the sub-account: ",
+          "An applied tag triggers nothing on its own, in GoHighLevel as anywhere else. In the sub-account: ",
           { code: "Automations" },
           ", ",
           { code: "Workflows" },
@@ -478,13 +634,46 @@ const EN: TexteGoHighLevel = {
           { code: "Contact Tag" },
           ", filter ",
           { code: "Tag Added" },
-          ", then paste the tag. Action: the email or campaign the person should receive. Publish the workflow.",
+          ", then paste the tag copied in the previous step. Save the trigger.",
         ],
-        ["Repeat for each tag in the list. A profile without a workflow gets its tag, and nothing else."],
       ],
       capture: {
         aFaire: "A GoHighLevel workflow with the Contact Tag trigger, the Tag Added filter and the pasted tag.",
-        image: null,
+        image: {
+          fichier: "ghl-08-declencheur.webp",
+          largeur: 1600,
+          hauteur: 981,
+          alt: "GoHighLevel's workflow builder: the Contact tag trigger is chosen, the Tag added filter is set, and a field waits for the tag. Two red arrows point at the two menus.",
+          legende: "Contact tag, then Tag added, then the tag: three choices, in that order.",
+        },
+      },
+    },
+    {
+      titre: "Add the action, and publish",
+      ou: "gohighlevel",
+      corps: [
+        [
+          "Under the trigger, click the ",
+          { code: "+" },
+          " and pick what the person should receive: ",
+          { code: "Send Email" },
+          ", or a campaign. Switch the workflow from ",
+          { code: "Draft" },
+          " to ",
+          { code: "Publish" },
+          ".",
+        ],
+        ["Repeat for each tag in the list. A profile with no workflow gets its tag, and nothing else."],
+      ],
+      capture: {
+        aFaire: "The same workflow, with the actions panel open on Send Email.",
+        image: {
+          fichier: "ghl-09-action.webp",
+          largeur: 1600,
+          hauteur: 1074,
+          alt: "The GoHighLevel workflow with its Tag added follow-up trigger, and the Actions panel open on the right on Send email.",
+          legende: "The action: here Send email. Then Publish, top right.",
+        },
       },
     },
     {
@@ -492,9 +681,9 @@ const EN: TexteGoHighLevel = {
       ou: "gohighlevel",
       corps: [
         [
-          "Take your quiz with a test address, up to the email screen. In ",
+          "Take your quiz with a test address, through to the email screen. In ",
           { code: "Contacts" },
-          ", the contact shows up with the tag of its profile, the source \"Tiquiz: \" followed by the quiz title, and the profile in plain words in the ",
+          ", the contact shows up with its profile tag, the source \"Tiquiz : \" followed by the quiz title, and the profile spelled out in the ",
           { code: "tiquiz_resultat" },
           " field if you created it. Take the quiz again with the same address and another result: the second tag is added, the first one stays.",
         ],
