@@ -31,6 +31,7 @@
 // ferait recommencer chez eux sans savoir pourquoi.
 
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAppUrl } from "@/lib/authLinks";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { creerConnexion, echangerCodeGhl, sousComptesInstallesGhl, type SecretConnexion } from "@/lib/integrations/store";
 import { validerCompteGhl } from "@/lib/integrations/adaptateurs/gohighlevel";
@@ -41,8 +42,18 @@ export const dynamic = "force-dynamic";
 
 const CHEMIN_COOKIES = "/api/connexions/crm-oauth";
 
+// L'origine de la requete est celle que Next VOIT, et derriere le proxy
+// c'est `localhost:3001` : une redirection batie dessus a envoye Bene sur
+// `https://localhost:3001/settings` juste apres un echange REUSSI (14
+// septembre). `resolveAppUrl` refuse toute adresse locale et retombe sur
+// le domaine canonique : c'est deja ce que fait `adresseDeRetourGhl` pour
+// l'adresse envoyee a GoHighLevel, et les deux doivent parler du meme site.
+function origineDuSite(req: NextRequest): string {
+  return resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL, req.nextUrl.origin);
+}
+
 function retour(req: NextRequest, mot: string, extra?: Record<string, string>): NextResponse {
-  const url = new URL("/settings", req.nextUrl.origin);
+  const url = new URL("/settings", origineDuSite(req));
   url.searchParams.set("tab", "connections");
   url.searchParams.set("ghl", mot);
   for (const [k, v] of Object.entries(extra ?? {})) url.searchParams.set(k, v);
@@ -53,7 +64,7 @@ function retour(req: NextRequest, mot: string, extra?: Record<string, string>): 
 
 function versLaConnexion(req: NextRequest): NextResponse {
   const cible = `${req.nextUrl.pathname}${req.nextUrl.search}`;
-  return NextResponse.redirect(new URL(`/login?redirect=${encodeURIComponent(cible)}`, req.nextUrl.origin));
+  return NextResponse.redirect(new URL(`/login?redirect=${encodeURIComponent(cible)}`, origineDuSite(req)));
 }
 
 /**

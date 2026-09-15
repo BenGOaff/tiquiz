@@ -59,9 +59,12 @@ export function adresseDeRetourGhl(req: NextRequest): string {
 export async function GET(req: NextRequest) {
   const supabase = await getSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.redirect(new URL("/login?redirect=/settings?tab=connections", req.nextUrl.origin));
+  // Meme origine que l'adresse de retour envoyee a GoHighLevel : derriere le
+  // proxy, `req.nextUrl.origin` vaut `localhost:3001` (drame du 14 septembre).
+  const site = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL, req.nextUrl.origin);
+  if (!user) return NextResponse.redirect(new URL("/login?redirect=/settings?tab=connections", site));
   if (!oauthGhlConfigure()) {
-    return NextResponse.redirect(new URL("/settings?tab=connections&ghl=non_configure", req.nextUrl.origin));
+    return NextResponse.redirect(new URL("/settings?tab=connections&ghl=non_configure", site));
   }
 
   const state = randomBytes(24).toString("hex");

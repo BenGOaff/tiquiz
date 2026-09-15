@@ -137,3 +137,39 @@ test("le menu de l'avatar mene a l'onglet Connexions, plus a une cle Systeme.io"
     assert.equal(menu.connections, j.settings?.tabConnections, `${l} : le menu dit le meme mot que l'onglet`);
   }
 });
+
+// ---------------------------------------------------------------------------
+// LE RETOUR ATTERRIT SUR NOTRE DOMAINE, JAMAIS SUR localhost (14 septembre,
+// le soir). Bene, apres avoir choisi son sous-compte : "apres je vais sur
+// https://localhost:3001/settings?tab=connections&ghl=ok&n=1. C'est quoi ce
+// merdier encore ??". L'echange avait REUSSI (ghl=ok, n=1) ; seule la
+// redirection finale etait batie sur `req.nextUrl.origin`, qui derriere le
+// proxy vaut `localhost:3001`. C'est le `??` du 2 aout dans une autre robe :
+// une origine presente et fausse traverse tout. `resolveAppUrl` refuse toute
+// adresse locale, et c'est deja lui qui fabrique l'adresse de retour envoyee
+// a GoHighLevel : les deux doivent parler du meme site.
+// ---------------------------------------------------------------------------
+
+const OAUTH = "app/api/connexions/crm-oauth/oauth/route.ts";
+
+test("aucune redirection des deux routes OAuth n'est batie sur l'origine brute de la requete", () => {
+  for (const f of [CALLBACK, OAUTH]) {
+    const src = sansCommentaires(lire(f));
+    assert.ok(src.includes("resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL, req.nextUrl.origin)"), `${f} : passe par resolveAppUrl`);
+    // Toute autre lecture de l'origine est une redirection qui peut sortir en localhost.
+    const brutes = src.split("req.nextUrl.origin").length - 1;
+    const viaResolve = src.split("resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL, req.nextUrl.origin)").length - 1;
+    assert.equal(brutes, viaResolve, `${f} : ${brutes - viaResolve} lecture(s) de req.nextUrl.origin hors de resolveAppUrl`);
+    assert.ok(!/new URL\([^)]*req\.nextUrl\.origin\)/.test(src), `${f} : une URL de redirection lit l'origine brute`);
+  }
+});
+
+test("sur la carte GoHighLevel, un clic sur Connecter EST le depart OAuth (pas de panneau, pas de deuxieme bouton)", () => {
+  const src = sansCommentaires(lire("components/connexions/ConnexionsTab.tsx"));
+  assert.ok(src.includes('const LIEN_OAUTH_GHL = "/api/connexions/crm-oauth/oauth"'), "le chemin OAuth est nomme");
+  assert.ok(/f\.id === "gohighlevel" && oauthGhl && c\.n === 0 \?/.test(src), "la carte sans connexion et avec OAuth configure prend le chemin direct");
+  assert.ok(/<Button asChild[^>]*>\s*<a href=\{LIEN_OAUTH_GHL\}>\{t\("boutonConnecter"\)\}<\/a>/.test(src), "le bouton Connecter est un lien vers le depart OAuth");
+  // Le manager garde le meme chemin : deux departs differents finiraient par diverger.
+  const manager = sansCommentaires(lire("components/connexions/GoHighLevelManager.tsx"));
+  assert.ok(manager.includes('href="/api/connexions/crm-oauth/oauth"'), "le panneau part vers le meme chemin");
+});
