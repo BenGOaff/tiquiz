@@ -28,6 +28,7 @@ import {
 } from "@/lib/quizBranding";
 import { QuizPanelMedia } from "@/components/quiz/QuizPanelMedia";
 import { sanitizeRichText, stripHtml, decodeHtmlEntities } from "@/lib/richText";
+import { decouperSurLeLibelle, formeDuConsentement } from "@/lib/quiz/consentement";
 import { fireQuizPixel, newEventId } from "@/lib/clientPixels";
 import { RichParagraph } from "@/components/ui/rich-paragraph";
 import { makeInterpolator, getGenderLabels, extractResultLabel, type QuizGender } from "@/lib/quizPersonalization";
@@ -5303,17 +5304,18 @@ function ConsentText({ text, privacyUrl, locale }: { text: string | null; privac
   const raw = isStoredDefault ? t.defaultConsent : text!;
 
   // Adeline (18 mai 2026) : le consent text peut maintenant être
-  // rich-text (gras / couleur / taille / police). Si on détecte du
-  // HTML on rend via sanitizeRichText + dangerouslySetInnerHTML —
-  // c'est l'éditeur qui pose le lien <a> directement, donc on n'a
-  // plus besoin de patcher le needle. Le défaut localisé reste plain
-  // text et passe par l'ancien code (needle-link injection).
-  const looksLikeHtml = /<[a-z][\s\S]*?>/i.test(raw);
-  if (looksLikeHtml) {
-    const alreadyHasLink = /<a\s[^>]*href=/i.test(raw);
+  // rich-text (gras / couleur / taille / police). S'il y a une balise on
+  // rend via sanitizeRichText + dangerouslySetInnerHTML : c'est l'éditeur
+  // qui pose le lien <a> directement. Sinon c'est du texte, et il sort
+  // DÉCODÉ (Béné, 15 septembre 2026 : `confidentialité&nbsp;` affiché en
+  // clair, une entité sans balise). La forme se décide dans
+  // `lib/quiz/consentement.ts`, jamais ici : on ne rend plus `raw`.
+  const forme = formeDuConsentement(raw);
+  if (forme.genre === "html") {
+    const alreadyHasLink = forme.porteUnLien;
     return (
       <span className="tiquiz-rich tiquiz-rich-inline">
-        <span dangerouslySetInnerHTML={{ __html: sanitizeRichText(raw) }} />
+        <span dangerouslySetInnerHTML={{ __html: sanitizeRichText(forme.html) }} />
         {/* Si l'auteur n'a pas inséré son propre lien et qu'on a un
             privacy_url renseigné, on l'affiche en suffixe pour ne pas
             faire disparaître la politique de confidentialité. */}
@@ -5335,16 +5337,13 @@ function ConsentText({ text, privacyUrl, locale }: { text: string | null; privac
     );
   }
 
-  if (!privacyUrl) return <span>{raw}</span>;
-
-  const needle = t.consentNeedle;
-  const idx = raw.toLowerCase().indexOf(needle);
+  const texte = forme.texte;
+  if (!privacyUrl) return <span>{texte}</span>;
 
   // If the needle is found in the text, make it a clickable link inline
-  if (idx !== -1) {
-    const before = raw.slice(0, idx);
-    const match = raw.slice(idx, idx + needle.length);
-    const after = raw.slice(idx + needle.length);
+  const morceaux = decouperSurLeLibelle(texte, t.consentNeedle);
+  if (morceaux) {
+    const { avant: before, libelle: match, apres: after } = morceaux;
 
     return (
       <span>
@@ -5366,7 +5365,7 @@ function ConsentText({ text, privacyUrl, locale }: { text: string | null; privac
   // Fallback: needle not found in text — show consent text + separate visible link
   return (
     <span>
-      {raw}{" "}
+      {texte}{" "}
       <a
         href={ensureExternalUrl(privacyUrl)}
         target="_blank"
