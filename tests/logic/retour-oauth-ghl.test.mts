@@ -164,12 +164,51 @@ test("aucune redirection des deux routes OAuth n'est batie sur l'origine brute d
   }
 });
 
-test("sur la carte GoHighLevel, un clic sur Connecter EST le depart OAuth (pas de panneau, pas de deuxieme bouton)", () => {
+test("sur la carte GoHighLevel, un clic EST le depart OAuth tant que rien n'est connecte, et ouvre la fenetre de gestion ensuite", () => {
   const src = sansCommentaires(lire("components/connexions/ConnexionsTab.tsx"));
   assert.ok(src.includes('const LIEN_OAUTH_GHL = "/api/connexions/crm-oauth/oauth"'), "le chemin OAuth est nomme");
-  assert.ok(/f\.id === "gohighlevel" && oauthGhl && c\.n === 0 \?/.test(src), "la carte sans connexion et avec OAuth configure prend le chemin direct");
-  assert.ok(/<Button asChild[^>]*>\s*<a href=\{LIEN_OAUTH_GHL\}>\{t\("boutonConnecter"\)\}<\/a>/.test(src), "le bouton Connecter est un lien vers le depart OAuth");
+  // La CARTE ENTIERE est le lien : pas un bouton dedans, pas de panneau dessous.
+  assert.ok(/const directOauth = f\.id === "gohighlevel" && oauthGhl && c\.n === 0 && !aConfirmer;/.test(src), "la carte sans connexion et avec OAuth configure prend le chemin direct, sauf confirmation en attente");
+  assert.ok(/directOauth \? \(\s*<a href=\{LIEN_OAUTH_GHL\} className=\{CARTE\}>/.test(src), "la carte est un lien vers le depart OAuth");
+  assert.ok(/<button type="button" disabled=\{!f\.disponible\} onClick=\{\(\) => setOuvert\(f\.id\)\} className=\{CARTE\}>/.test(src), "sinon la carte ouvre la fenetre");
+  // Tout se gere dans une FENETRE (Bene, 15 septembre : "un clic sur la carte
+  // ouvre une popup qui permet de tout gerer, c'est pas ergonomique de scroller").
+  assert.ok(src.includes("<Dialog open={fOuvert !== null}"), "la gestion vit dans une fenetre");
+  for (const m of ["<SioApiKeysManager sansCadre />", "<GoHighLevelManager oauthDisponible={oauthGhl}"]) {
+    const i = src.indexOf(m);
+    assert.ok(i > src.indexOf("<DialogContent") && i < src.indexOf("</DialogContent>"), `${m} est rendu DANS la fenetre, pas sous la grille`);
+  }
+  // Le libelle ne dit "Connecter" que sans connexion : "je vois toujours le
+  // bouton connecter alors que je SUIS connectee".
+  assert.ok(/\{c\.n > 0 \? t\("boutonGerer"\) : t\("boutonConnecter"\)\}/.test(src), "Gerer des qu'une connexion existe");
   // Le manager garde le meme chemin : deux departs differents finiraient par diverger.
   const manager = sansCommentaires(lire("components/connexions/GoHighLevelManager.tsx"));
-  assert.ok(manager.includes('href="/api/connexions/crm-oauth/oauth"'), "le panneau part vers le meme chemin");
+  assert.ok(manager.includes('href="/api/connexions/crm-oauth/oauth"'), "la fenetre part vers le meme chemin");
+  assert.ok(manager.includes('t("ajouterSousCompte")'), "dans la fenetre, le geste s'appelle ajouter un sous-compte, jamais Connecter");
+  assert.ok(!manager.includes('t("oauthBouton")') && !manager.includes('t("oauthAide")'), "plus de gros bouton Connecter ni de phrase d'explication dans la fenetre");
+});
+
+test("plus aucun jeton prive a l'ecran : connexion native, c'est tout (Bene, 15 septembre 2026)", () => {
+  const manager = sansCommentaires(lire("components/connexions/GoHighLevelManager.tsx"));
+  assert.ok(!/type="password"/.test(manager), "aucun champ de jeton");
+  assert.ok(!/\btoken\b/.test(manager), "le manager n'envoie plus de jeton");
+  assert.ok(!/ouJeton|nouveauJeton|jetonLabel|modeAgence/.test(manager), "aucune cle de langue du jeton");
+  assert.ok(!/<Card/.test(manager), "le manager n'a plus de cadre : la fenetre porte deja le nom de l'outil");
+  // Les sept langues : les cles du jeton sont PARTIES, et aucune phrase de
+  // l'onglet ne parle encore de jeton ou de token.
+  for (const langue of ["fr", "en", "es", "it", "ar", "pt", "pt-BR"]) {
+    const cx = (JSON.parse(lire(`messages/${langue}.json`)) as { connexions: Record<string, unknown> }).connexions;
+    const ghl = cx.ghl as Record<string, unknown>;
+    for (const k of ["ouJeton", "nouveauJeton", "jetonLabel", "jetonAide", "oauthAide", "oauthBouton", "modeJeton", "modeOauth"]) {
+      assert.ok(!(k in ghl), `${langue} : la cle ${k} est partie`);
+    }
+    assert.equal(typeof ghl.ajouterSousCompte, "string", `${langue} : ajouterSousCompte existe`);
+    const phrases: string[] = [];
+    const marcher = (o: unknown) => {
+      if (typeof o === "string") phrases.push(o);
+      else if (o && typeof o === "object") for (const v of Object.values(o as Record<string, unknown>)) marcher(v);
+    };
+    marcher(cx);
+    for (const ph of phrases) assert.ok(!/jeton|token/i.test(ph), `${langue} : une phrase parle encore de jeton : ${ph}`);
+  }
 });

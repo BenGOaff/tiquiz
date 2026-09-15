@@ -31,7 +31,11 @@ interface SioKey {
   actif?: boolean;
 }
 
-export default function SioApiKeysManager() {
+// `sansCadre` : le contenu seul, sans la Card ni son titre. C'est ce que
+// l'onglet Connexions affiche dans sa fenêtre, qui porte déjà le nom de
+// l'outil (Béné, 15 septembre 2026 : un clic sur la carte ouvre une
+// fenêtre, rien sous la grille).
+export default function SioApiKeysManager({ sansCadre = false }: { sansCadre?: boolean } = {}) {
   const t = useTranslations("sio.keysManager");
   const tc = useTranslations("connexions.sio");
   const [keys, setKeys] = useState<SioKey[]>([]);
@@ -170,18 +174,8 @@ export default function SioApiKeysManager() {
     }
   }
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <KeyRound className="h-5 w-5 text-primary" />
-          {t("title")}
-        </CardTitle>
-        <CardDescription>
-          {t("description")}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+  const contenu = (
+    <div className="space-y-4">
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -326,7 +320,22 @@ export default function SioApiKeysManager() {
             {t("addKey")}
           </Button>
         )}
-      </CardContent>
+    </div>
+  );
+  if (sansCadre) return contenu;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <KeyRound className="h-5 w-5 text-primary" />
+          {t("title")}
+        </CardTitle>
+        <CardDescription>
+          {t("description")}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>{contenu}</CardContent>
     </Card>
   );
 }

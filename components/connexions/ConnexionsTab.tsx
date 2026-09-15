@@ -3,14 +3,23 @@
 // components/connexions/ConnexionsTab.tsx
 //
 // L'ONGLET CONNEXIONS : où partent les leads (Béné, 14 septembre 2026,
-// en montrant l'écran Intégrations de Quizify).
+// en montrant l'écran Intégrations de Quizify ; puis le 15 : "un clic
+// sur la carte du haut ouvre une popup qui permet de tout gérer. C'est
+// PAS ergonomique de devoir scroller").
 //
-// Une carte par outil, du catalogue `lib/integrations/fournisseurs.ts`.
-// Un clic sur une carte ouvre SON panneau sous la grille : Systeme.io
-// garde son gestionnaire de clés tel quel (il n'a pas bougé d'une
-// ligne, la pause en plus), GoHighLevel a le sien. Les outils "bientôt"
-// ont une carte grisée qui le DIT : une carte absente ferait croire que
-// l'outil n'est pas prévu.
+// Une carte par outil, du catalogue `lib/integrations/fournisseurs.ts`,
+// et LA CARTE EST LE GESTE :
+//   - GoHighLevel sans connexion, OAuth configuré : la carte est un LIEN
+//     vers le départ OAuth. Un clic, et on est chez eux ;
+//   - sinon : la carte ouvre une FENÊTRE (Dialog) qui contient tout ce
+//     qu'on peut faire sur cet outil. Rien ne s'affiche sous la grille,
+//     rien à faire défiler.
+// Le libellé de la carte dit ce qui va se passer : "Connecter" quand
+// rien n'est connecté, "Gérer" dès qu'une connexion existe. Un "Connecter"
+// sous une connexion active se lit comme "ça n'a pas marché".
+//
+// Les outils "bientôt" ont une carte grisée qui le DIT : une carte
+// absente ferait croire que l'outil n'est pas prévu.
 //
 // AUCUNE IMAGE EXTERNE : la pastille porte les initiales de l'outil sur
 // sa couleur. Un logo tiers chargé depuis leur CDN casserait le jour où
@@ -25,9 +34,10 @@ import { ExternalLink, Info } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import SioApiKeysManager from "@/components/sio/SioApiKeysManager";
 import GoHighLevelManager from "@/components/connexions/GoHighLevelManager";
-import { FOURNISSEURS, type Fournisseur } from "@/lib/integrations/fournisseurs";
+import { FOURNISSEURS, type Fournisseur, type FicheFournisseur } from "@/lib/integrations/fournisseurs";
 import { hrefPourLangue } from "@/lib/site/nav";
 import { HOTE_VENTE } from "@/lib/publicHost";
 
@@ -45,6 +55,18 @@ interface CleSio {
   id: string;
   actif?: boolean;
   validation_status: string | null;
+}
+
+function Pastille({ f, taille = "h-10 w-10 text-sm" }: { f: FicheFournisseur; taille?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={`rounded-full inline-flex items-center justify-center text-white font-bold shrink-0 ${taille}`}
+      style={{ backgroundColor: f.couleur }}
+    >
+      {f.initiales}
+    </span>
+  );
 }
 
 export default function ConnexionsTab() {
@@ -80,7 +102,7 @@ export default function ConnexionsTab() {
   }, [version]);
 
   // LE RETOUR DU BOUTON OAUTH atterrit ici avec un mot dans l'adresse
-  // (`?ghl=ok|refuse|...`). On le dit UNE fois, et on ouvre le panneau
+  // (`?ghl=ok|refuse|...`). On le dit UNE fois, et on ouvre la fenetre
   // GoHighLevel pour que la connexion fraîche soit sous les yeux.
   useEffect(() => {
     const ghl = searchParams.get("ghl");
@@ -139,6 +161,12 @@ export default function ConnexionsTab() {
   }, [connexions, cles]);
 
   const guide = (chemin: string) => `${HOTE_VENTE}${hrefPourLangue(chemin, locale === "en" ? "en" : "fr")}`;
+  const fOuvert = ouvert ? FOURNISSEURS.find((f) => f.id === ouvert) ?? null : null;
+
+  const CARTE =
+    "w-full h-full text-left rounded-xl border bg-card p-4 flex flex-col gap-3 transition-colors " +
+    "hover:border-primary/60 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 " +
+    "disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:border-border disabled:hover:bg-card";
 
   return (
     <div className="space-y-4">
@@ -154,22 +182,14 @@ export default function ConnexionsTab() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {FOURNISSEURS.map((f) => {
           const c = compte[f.id];
-          const estOuvert = ouvert === f.id;
-          return (
-            <div
-              key={f.id}
-              className={`rounded-xl border p-4 flex flex-col gap-3 transition-colors ${
-                estOuvert ? "border-primary ring-1 ring-primary/40" : ""
-              } ${f.disponible ? "" : "opacity-70"}`}
-            >
+          // Un clic = la connexion, tant que rien n'est connecte. Une
+          // confirmation en attente passe par la fenetre : c'est la que
+          // vit le bouton "Relier".
+          const directOauth = f.id === "gohighlevel" && oauthGhl && c.n === 0 && !aConfirmer;
+          const contenu = (
+            <>
               <div className="flex items-center gap-3">
-                <span
-                  aria-hidden
-                  className="h-10 w-10 rounded-full inline-flex items-center justify-center text-white font-bold text-sm shrink-0"
-                  style={{ backgroundColor: f.couleur }}
-                >
-                  {f.initiales}
-                </span>
+                <Pastille f={f} />
                 <div className="min-w-0">
                   <div className="font-semibold">{f.nom}</div>
                   <div className="text-xs text-muted-foreground flex flex-wrap gap-1.5 items-center">
@@ -188,61 +208,77 @@ export default function ConnexionsTab() {
                 </div>
               </div>
               <p className="text-sm text-muted-foreground flex-1">{t(`desc.${f.id}`)}</p>
-              <div className="flex items-center gap-2">
-                {f.id === "gohighlevel" && oauthGhl && c.n === 0 ? (
-                  // Un clic = la connexion (Bene, 14 septembre : "pas de menu en
-                  // dessous"). Le bouton EST le depart OAuth ; le jeton prive
-                  // reste accessible dans le panneau, derriere "Gerer", une fois
-                  // qu'une connexion existe. Sans OAuth configure, on retombe sur
-                  // le panneau, qui explique ce qui manque au lieu d'un lien mort.
-                  <Button asChild size="sm" className="rounded-full">
-                    <a href={LIEN_OAUTH_GHL}>{t("boutonConnecter")}</a>
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    className="rounded-full"
-                    variant={c.n > 0 ? "outline" : "default"}
-                    disabled={!f.disponible}
-                    onClick={() => setOuvert(estOuvert ? null : f.id)}
-                  >
-                    {c.n > 0 ? t("boutonGerer") : t("boutonConnecter")}
-                  </Button>
-                )}
-                {f.aide && (
-                  <a
-                    href={guide(f.aide)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-primary inline-flex items-center gap-1 hover:underline"
-                  >
-                    {t("guide")} <ExternalLink className="h-3 w-3" />
-                  </a>
-                )}
-              </div>
+              {f.disponible && (
+                <span
+                  className={`self-start rounded-full px-3 py-1 text-xs font-medium ${
+                    c.n > 0 ? "border bg-background" : "bg-primary text-primary-foreground"
+                  }`}
+                >
+                  {c.n > 0 ? t("boutonGerer") : t("boutonConnecter")}
+                </span>
+              )}
+            </>
+          );
+          return (
+            <div key={f.id} className="flex flex-col gap-1.5">
+              {directOauth ? (
+                <a href={LIEN_OAUTH_GHL} className={CARTE}>
+                  {contenu}
+                </a>
+              ) : (
+                <button type="button" disabled={!f.disponible} onClick={() => setOuvert(f.id)} className={CARTE}>
+                  {contenu}
+                </button>
+              )}
+              {f.aide && (
+                <a
+                  href={guide(f.aide)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="self-start px-1 text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1"
+                >
+                  {t("guide")} <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
             </div>
           );
         })}
       </div>
 
-      {aConfirmer && (
-        <div className="rounded-lg border border-primary/40 bg-primary/5 p-4 space-y-3" role="status">
-          <p className="text-sm">{t("ghl.confirmer.texte")}</p>
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" className="rounded-full" disabled={relie} onClick={relier}>
-              {t("ghl.confirmer.bouton")}
-            </Button>
-            <Button size="sm" variant="outline" className="rounded-full" disabled={relie} onClick={() => setAConfirmer(false)}>
-              {t("ghl.confirmer.annuler")}
-            </Button>
-          </div>
-        </div>
-      )}
+      <Dialog open={fOuvert !== null} onOpenChange={(o) => { if (!o) setOuvert(null); }}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+          {fOuvert && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Pastille f={fOuvert} taille="h-7 w-7 text-[11px]" />
+                  {fOuvert.nom}
+                </DialogTitle>
+                <DialogDescription>{fOuvert.id === "gohighlevel" ? t("ghl.desc") : t(`desc.${fOuvert.id}`)}</DialogDescription>
+              </DialogHeader>
 
-      {ouvert === "systemeio" && <SioApiKeysManager />}
-      {ouvert === "gohighlevel" && (
-        <GoHighLevelManager oauthDisponible={oauthGhl} onChange={() => setVersion((v) => v + 1)} />
-      )}
+              {fOuvert.id === "gohighlevel" && aConfirmer && (
+                <div className="rounded-lg border border-primary/40 bg-primary/5 p-4 space-y-3" role="status">
+                  <p className="text-sm">{t("ghl.confirmer.texte")}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" className="rounded-full" disabled={relie} onClick={relier}>
+                      {t("ghl.confirmer.bouton")}
+                    </Button>
+                    <Button size="sm" variant="outline" className="rounded-full" disabled={relie} onClick={() => setAConfirmer(false)}>
+                      {t("ghl.confirmer.annuler")}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {fOuvert.id === "systemeio" && <SioApiKeysManager sansCadre />}
+              {fOuvert.id === "gohighlevel" && (
+                <GoHighLevelManager oauthDisponible={oauthGhl} onChange={() => setVersion((v) => v + 1)} />
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -14624,10 +14624,71 @@ et le test compte les lectures de `req.nextUrl.origin` : chacune doit
 **Et la carte ne fait plus qu'un clic.** "Connecter" sur GoHighLevel EST
 le départ OAuth (un lien vers `/api/connexions/crm-oauth/oauth`), sans
 panneau ni deuxième bouton, dès que l'OAuth est configuré et qu'aucune
-connexion n'existe encore. "Gérer" ouvre toujours le panneau une fois
-une connexion créée, et le jeton privé y reste, en second. Sans OAuth
-configuré, la carte retombe sur le panneau, qui DIT ce qui manque.
+connexion n'existe encore.
+
+🚨 **Cette ligne disait "Gérer ouvre toujours le panneau [...] et le
+jeton privé y reste, en second. Sans OAuth configuré, la carte retombe
+sur le panneau". C'EST PÉRIMÉ depuis le 15 septembre**, corrigé en place
+plutôt qu'empilé : il n'y a plus de panneau sous la grille, "Gérer"
+ouvre une FENÊTRE, et le jeton privé a disparu de l'écran. Voir la
+section suivante.
 
 Test : les 2 cas ajoutés à `tests/logic/retour-oauth-ghl.test.mts`,
 vérifiés en rejouant les deux versions fautives (la redirection sur
 l'origine brute, la carte qui rouvre le panneau) : les deux rougissent.
+
+### La carte est le geste : une fenêtre, et plus aucun jeton privé (Béné, 15 septembre 2026)
+
+"Ça marche je suis connectée. Par contre je t'ai demandé de supprimer
+la carte dessous : un clic sur la carte du haut ouvre une popup qui
+permet de tout gérer. C'est PAS ergonomique de devoir scroller. Tu as
+toute la procédure sur Quizify, ils ont fait ça très bien. Et tu n'as
+pas besoin de coller plein d'infos inutiles [...]. En plus je vois
+toujours le bouton Connecter alors que je SUIS connectée ! C'est pas
+premium, pas logique, pas bon. Tu supprimes aussi le jeton privé : on
+fait connexion native c'est tout."
+
+Quatre reproches, et le passage du 14 au soir en avait créé deux : la
+carte "Connecter" ouvrait bien l'OAuth, mais le PANNEAU restait affiché
+sous la grille, avec son texte d'explication, son deuxième bouton et
+son formulaire de jeton, et le libellé de la carte ne changeait pas une
+fois connectée.
+
+**Règle : la carte est le SEUL geste, et l'écran de gestion est une
+fenêtre** (`components/connexions/ConnexionsTab.tsx`, un `Dialog`).
+
+| état de GoHighLevel | la carte | ce qu'un clic fait |
+|---|---|---|
+| OAuth configuré, rien de connecté | "Connecter" | un LIEN vers `/api/connexions/crm-oauth/oauth`, aucun écran entre |
+| au moins un sous-compte | "Gérer" | ouvre la fenêtre : la liste, le test, le nom, le défaut, la pause, la suppression, et "Ajouter un sous-compte" qui repart en OAuth |
+| OAuth non configuré | "Connecter" | ouvre la fenêtre, qui DIT ce qui manque (`ghl.oauthAbsent`) |
+
+Le libellé se DÉDUIT du compte (`c.n > 0 ? boutonGerer : boutonConnecter`),
+il n'est plus écrit en dur : un bouton "Connecter" sous une connexion
+établie est ce qu'elle a lu comme "pas premium", et c'est exactement le
+genre de défaut qu'aucun test de logique ne voit sans le nommer.
+
+**Plus rien sous la grille.** Systeme.io passe par la même fenêtre
+(`SioApiKeysManager` prend `sansCadre`, pour ne pas rendre une carte
+dans une carte). Le retour OAuth (`?ghl=`) ouvre la fenêtre de
+GoHighLevel tout seul, et le clic de confirmation du chemin sans
+`state` (14 septembre) y vit aussi, en bandeau.
+
+**Le jeton privé a disparu de l'ÉCRAN, pas du SERVEUR.** Les routes
+`/api/connexions` (POST avec jeton, import d'agence) restent telles
+quelles : elles ne coûtent rien, elles sont testées, et un client qui
+n'aurait pas la Marketplace pourrait un jour en avoir besoin par un
+autre chemin. Ce qui est retiré, c'est l'offre à l'écran : le
+formulaire, le sélecteur sous-compte / agence, les 22 clés de langue
+qui les portaient, dans les 7 langues. Aucune phrase sous `connexions`
+ne dit plus "jeton" ni "token", et le test l'exige langue par langue.
+
+**Quizify est le modèle, et il se lit en trois gestes :** une grille
+d'outils, un clic qui connecte, un clic qui gère. Rien à lire avant de
+cliquer, rien à copier, rien à faire défiler.
+
+Test : les 2 cas réécrits dans `tests/logic/retour-oauth-ghl.test.mts`
+(la carte est le geste, plus aucun jeton privé à l'écran), vérifiés en
+rejouant deux versions fautives (l'ancien gestionnaire avec son
+formulaire de jeton, le libellé "Connecter" figé quelle que soit la
+connexion) : les deux rougissent.
