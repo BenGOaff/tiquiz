@@ -14525,3 +14525,74 @@ l'upsert, l'en-tête `Version` retiré, un 401 relu à la main dans
 l'ancienne colonne, l'alias `systemeio` retiré, la migration sans
 `connexion_id`, une langue inconnue qui retombe sur le français, un
 chevron remis dans l'alerte) : les douze rougissent.
+
+### Une installation lancée CHEZ GoHighLevel arrive sans notre `state` (14 septembre 2026, le soir)
+
+Béné, en testant le bouton une fois les clés posées :
+`error.noAppVersionIdFound`, puis "je suis bien redirigée vers ghl mais
+ça ne marche pas, même en me reconnectant".
+
+**CE QUE LEUR DOCUMENTATION DIT, et ce que le 400 sur
+`installationDetails?appId=` confirme :** la page de choix du sous-compte
+(`chooselocation`, celle que notre bouton ouvre) exige une version
+PUBLIÉE de l'app. Une version est "Draft" tant qu'elle n'est pas
+publiée ; "Live" veut dire "approuvée et installable". Publier une app
+**Public** l'envoie en relecture Marketplace ; une app **Private** passe
+live immédiatement, sans relecture, avec un plafond de 5 agences. Notre
+bouton ne peut donc rien tant qu'aucune version n'est live, et ce n'est
+pas un bug de notre côté.
+
+**Le chemin qui marche AVANT la publication est le leur** : Manage >
+Versions > le menu à trois points de la version > Test Link, avec le
+Location ID du sous-compte de test. Ce lien installe la version brouillon
+et revient sur notre `callback` avec un `code`... **et sans notre
+`state`**, puisque personne n'est passé par notre bouton. C'est AUSSI le
+chemin d'un client qui installe depuis leur Marketplace, et celui de
+l'installation en masse d'une agence : le parcours "un clic" de Quizify.
+Le callback d'avant refusait tous ces retours ("La connexion a expiré en
+route") : le parcours que Béné demandait le 14 au matin était donc
+impossible par construction, et personne ne l'aurait vu avant le
+premier client.
+
+**Règle : `lib/integrations/retourOauth.ts` (pur) classe le retour, et
+le chemin sans `state` demande UN clic avant d'écrire.**
+
+| `state` | genre | ce que fait le GET |
+|---|---|---|
+| présent et juste | notre bouton | échange tout de suite |
+| présent et faux | invalide | refus, JAMAIS rattrapé par la ligne suivante |
+| absent | depuis le fournisseur | range le code dans un cookie httpOnly de 5 min, renvoie `ghl=confirmer`, n'écrit RIEN |
+
+L'onglet Connexions affiche alors "Relier ce sous-compte", et c'est un
+**POST** sur le même callback, venu de notre page, qui échange le code
+(`relierAvecCode`, la MÊME fonction que le chemin du bouton : deux
+échanges écrits séparément finiraient par ne plus ranger la même chose).
+
+**Pourquoi le clic n'est pas du confort.** Sans `state`, rien ne prouve
+que la personne connectée à Tiquiz est celle qui vient de cliquer chez
+GoHighLevel : n'importe qui peut tirer un code depuis SON sous-compte et
+faire atterrir l'adresse chez quelqu'un d'autre. Sans confirmation, la
+victime se retrouverait avec une connexion vers un sous-compte inconnu,
+et si elle devient celle par défaut, ce sont ses leads qui y partent. Le
+cookie est `SameSite=Lax` et le POST vient d'un `fetch` de notre page :
+un site tiers ne peut ni lire le code ni déclencher l'échange.
+
+**Sans session, le code n'est pas perdu** : la redirection vers `/login`
+porte l'adresse COMPLÈTE, encodée. Un client qui installe depuis
+GoHighLevel n'est pas forcément déjà connecté à Tiquiz.
+
+**Et le menu de l'avatar disait encore "Clé Systeme.io"** : il mène à
+l'onglet Connexions, avec le mot de l'onglet, dans les 7 langues.
+
+**Ce qui reste à trancher par Béné, pas par le code :** publier. Si
+l'app peut encore passer en Private, une publication la rend installable
+tout de suite (5 agences, le client en est une). Sinon, Public exige la
+relecture Marketplace avant que le bouton ne marche chez quiconque ; en
+attendant, le lien de test installe le brouillon sur SON sous-compte.
+Je n'ai pas pu vérifier d'ici si le type Public/Private se change après
+création.
+
+Test : `tests/logic/retour-oauth-ghl.test.mts` (11 cas), vérifié en
+rejouant trois versions fautives (le GET qui échange sans `state`, un
+`state` faux rattrapé comme "depuis le fournisseur", le POST qui accepte
+un cookie vide) : les trois rougissent.

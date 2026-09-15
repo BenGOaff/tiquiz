@@ -3,7 +3,7 @@
 import { useCallback, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Settings, Palette, Globe, Key, BarChart3, Trash2, LogOut } from "lucide-react";
+import { Settings, Palette, Globe, Plug, BarChart3, Trash2, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -35,13 +35,13 @@ export function UserAvatarMenu({ userEmail }: Props) {
   // Adeline (19 mai 2026) : "il manque des réglages dans le menu
   // déroulant photo de profil". Avant ce fix, on avait seulement
   // settings/systemeio/account — alors que /settings expose maintenant
-  // 6 onglets (general / branding / domain / systemeio / tracking /
+  // 6 onglets (general / branding / domain / connections / tracking /
   // account). Le menu reflète maintenant l'intégralité de la nav.
   const menuItems = [
     { key: "settings", icon: Settings, tab: "general" },
     { key: "branding", icon: Palette, tab: "branding" },
     { key: "domain", icon: Globe, tab: "domain" },
-    { key: "systemeio", icon: Key, tab: "systemeio" },
+    { key: "connections", icon: Plug, tab: "connections" },
     { key: "tracking", icon: BarChart3, tab: "tracking" },
     { key: "account", icon: Trash2, tab: "account" },
   ] as const;

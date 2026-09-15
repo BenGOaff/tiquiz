@@ -1074,7 +1074,7 @@
     "logout": "Log out",
     "menu": {
       "settings": "Settings",
-      "systemeio": "Systeme.io Key",
+      "connections": "Connections",
       "account": "My account",
       "branding": "Branding",
       "domain": "Domain",
@@ -3555,7 +3555,13 @@
         "erreur": "Something went wrong during the connection.",
         "deja": "This connection already exists.",
         "aucun_sous_compte": "No sub-account found on this agency.",
-        "non_configure": "The direct connect button is not enabled on this server."
+        "non_configure": "The direct connect button is not enabled on this server.",
+        "expire": "The GoHighLevel code has expired. Start the install again from GoHighLevel."
+      },
+      "confirmer": {
+        "texte": "GoHighLevel sent you here to link a sub-account to your Tiquiz account. Confirm so its leads go there.",
+        "bouton": "Link this sub-account",
+        "annuler": "Cancel"
       }
     },
     "sio": {
