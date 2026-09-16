@@ -8,6 +8,8 @@
 // écrits : ils sont les mêmes quel que soit l'outil, et c'est ce qui
 // fait qu'un quiz peut changer de destination sans être refait.
 
+import type { ChampContactPerso } from "@/lib/integrations/champsContact";
+
 export interface ChargeLead {
   email: string;
   prenom?: string | null;
@@ -24,6 +26,12 @@ export interface ChargeLead {
   communityId?: string | null;
   /** D'où vient le contact, pour les outils qui ont un champ "source". */
   source?: string | null;
+  /**
+   * Les champs personnalisés du formulaire, avec leur valeur (Béné,
+   * 16 septembre 2026). Décidés par `champsContactPersonnalises`, jamais
+   * recomposés dans un adaptateur.
+   */
+  champs?: readonly ChampContactPerso[];
 }
 
 /**

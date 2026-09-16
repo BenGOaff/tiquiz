@@ -16,8 +16,16 @@
 // C'est le "déconnecté" que `classerEchecEnvoi` attend.
 
 import type { ChargeLead, ResultatEnvoi } from "@/lib/integrations/charge";
+import type { ChampContactPerso } from "@/lib/integrations/champsContact";
 
 const SIO_BASE = "https://api.systeme.io/api";
+
+/**
+ * Le préfixe des slugs de champs personnalisés chez Systeme.io
+ * (`tiquiz_cf_xxxxxx`), passé à `champsContactPersonnalises`. Tipote
+ * écrit `tipote`, comme pour `tiquiz_result` / `tipote_quiz_result`.
+ */
+export const SIO_PREFIXE_CHAMP = "tiquiz";
 
 export class ErreurAuthSio extends Error {
   status: number;
@@ -142,6 +150,67 @@ export async function enrichSioContact(apiKey: string, contactId: number, quizRe
   }
 }
 
+// -- LES CHAMPS PERSONNALISÉS (16 septembre 2026) -----------------------
+//
+// Un slug INCONNU est accepté et ignoré par Systeme.io (mesuré le
+// 25 août 2026) : écrire la valeur sans avoir créé le champ ne rend
+// aucune erreur, et la valeur disparaît. On ASSURE donc le champ
+// (`POST /contact_fields`, 422 = il existe déjà) AVANT d'écrire, et
+// jamais l'inverse. Le `fieldName` est le libellé du jour : sur un champ
+// qui existe déjà, un PATCH le renomme, pour que la fiche contact dise
+// ce que l'éditeur dit.
+//
+// Le résultat est MÉMORISÉ par clé et par champ pour la vie du
+// processus : un champ ne se crée qu'une fois, pas à chaque lead.
+
+const champsAssures = new Map<string, true>();
+const MAX_CHAMPS_ASSURES = 5000;
+
+function cleMemo(apiKey: string, slug: string, fieldName: string): string {
+  // Jamais la clé entière dans une structure qu'on pourrait un jour
+  // journaliser : sa longueur et sa fin suffisent à distinguer deux clés.
+  return `${apiKey.length}:${apiKey.slice(-8)}|${slug}|${fieldName}`;
+}
+
+/** Crée le champ de contact s'il manque, le renomme s'il existe. Ne jette que sur un refus de clé. */
+export async function assurerChampContactSio(apiKey: string, slug: string, fieldName: string): Promise<boolean> {
+  const memo = cleMemo(apiKey, slug, fieldName);
+  if (champsAssures.has(memo)) return true;
+  const create = await sioFetch(apiKey, "/contact_fields", { method: "POST", body: { fieldName, slug } });
+  let assure = create.ok;
+  if (!create.ok && create.status === 422) {
+    // Il existe : on aligne son nom sur le libellé du jour, best-effort.
+    const patch = await sioFetch(apiKey, `/contact_fields/${encodeURIComponent(slug)}`, { method: "PATCH", body: { fieldName } });
+    assure = patch.ok || patch.status === 422;
+  }
+  if (!assure) {
+    console.warn(`[Systeme.io champ] ${slug} ni cree ni retrouve (${create.status}) : la valeur ne sera pas ecrite.`);
+    return false;
+  }
+  if (champsAssures.size >= MAX_CHAMPS_ASSURES) champsAssures.clear();
+  champsAssures.set(memo, true);
+  return true;
+}
+
+/**
+ * Écrit les champs personnalisés du formulaire sur la fiche contact, en
+ * UN seul PATCH, après avoir assuré chacun. Un champ qui n'a pu être
+ * assuré est laissé de côté et dit dans le journal : les autres partent.
+ */
+export async function ecrireChampsPersonnalisesSio(
+  apiKey: string,
+  contactId: number,
+  champs: readonly ChampContactPerso[],
+): Promise<void> {
+  const fields: { slug: string; value: string }[] = [];
+  for (const c of champs) {
+    if (await assurerChampContactSio(apiKey, c.slug, c.nom)) fields.push({ slug: c.slug, value: c.valeur });
+  }
+  if (fields.length === 0) return;
+  const res = await sioFetch(apiKey, `/contacts/${contactId}`, { method: "PATCH", body: { fields } });
+  if (!res.ok) console.warn(`[Systeme.io champ] ecriture refusee (${res.status}) pour ${fields.length} champ(s) personnalise(s).`);
+}
+
 export async function enrollInSioCourse(apiKey: string, courseId: string, contactId: number) {
   try {
     await sioFetch(apiKey, `/school/courses/${courseId}/enrollments`, { method: "POST", body: { contactId } });
@@ -159,8 +228,8 @@ export async function addToSioCommunity(apiKey: string, communityId: string, con
 }
 
 /**
- * Envoie un lead : le contact, ses tags, le titre du profil, la
- * formation et la communauté. C'est, dans le même ordre, ce que la route
+ * Envoie un lead : le contact, ses tags, le titre du profil, les champs
+ * personnalisés du formulaire, la formation et la communauté. C'est, dans le même ordre, ce que la route
  * de capture faisait avant le 14 septembre.
  */
 export async function envoyerVersSystemeio(apiKey: string, charge: ChargeLead): Promise<ResultatEnvoi> {
@@ -187,6 +256,14 @@ export async function envoyerVersSystemeio(apiKey: string, charge: ChargeLead): 
     }
 
     if (charge.profilTitre) await enrichSioContact(apiKey, contactId, charge.profilTitre);
+    if (charge.champs && charge.champs.length > 0) {
+      try {
+        await ecrireChampsPersonnalisesSio(apiKey, contactId, charge.champs);
+      } catch (e) {
+        if (e instanceof ErreurAuthSio) throw e;
+        console.error("[Systeme.io champ] Error:", e);
+      }
+    }
     if (charge.courseId) await enrollInSioCourse(apiKey, charge.courseId, contactId);
     if (charge.communityId) await addToSioCommunity(apiKey, charge.communityId, contactId);
 

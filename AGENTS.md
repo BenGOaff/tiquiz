@@ -14872,10 +14872,10 @@ les deux dépôts, et chez Tipote aussi `leads.custom_fields` (le CRM),
 en clair comme `phone`. Le CRM de Tipote résout les libellés en lisant
 `quizzes.custom_fields` de la personne.
 
-**Ce qui n'est PAS fait, et qui se dit :** la valeur n'est envoyée ni
-à Systeme.io ni à GoHighLevel (les champs de contact y demandent un
-mappage par outil). Elle vit chez nous, dans l'export CSV, les stats et
-l'IA. C'est une décision de Béné, pas un oubli.
+🚨 **Ce paragraphe disait "la valeur n'est envoyée ni à Systeme.io ni à
+GoHighLevel, c'est une décision de Béné". C'EST PÉRIMÉ le jour même**
+(Béné : "oui il faut envoyer à systeme io et ghl"), corrigé en place
+plutôt qu'empilé : voir la section suivante.
 
 🚨 Migration : `supabase/migrations/20260916_champs_personnalises.sql`,
 sur les DEUX Supabase.
@@ -14883,6 +14883,106 @@ sur les DEUX Supabase.
 Test : `tests/logic/champs-personnalises.test.mts`, le même dans les deux
 dépôts, vérifié en rejouant la version d'avant (le viewer qui n'envoie
 plus `custom_fields` : il rougit).
+
+## Les champs personnalisés partent dans la fiche contact (Béné, 16 septembre 2026)
+
+"Oui il faut envoyer à systeme io et ghl."
+
+Le matin, la valeur d'un champ personnalisé vivait chez nous (le lead,
+l'export, les stats, l'IA) et nulle part ailleurs. Le soir, elle part
+dans la fiche contact de l'outil choisi, avec le reste du lead.
+
+### CE QUI A ÉTÉ MESURÉ AVANT D'ÉCRIRE UNE LIGNE
+
+| | |
+|---|---|
+| Systeme.io sait CRÉER un champ de contact | `POST /api/contact_fields` `{fieldName (255), slug (^\w+$)}`, `PATCH /api/contact_fields/{slug}` pour le renommer (lu dans leur OpenAPI le 16 septembre) |
+| son compte porte 28 champs, `{slug, fieldName}` sans `id` | `GET /contact_fields`, mesuré sur son compte |
+| un slug INCONNU est accepté et IGNORÉ | mesuré le 25 août (`lib/sio/contactFields.ts`) : écrire avant de créer perdrait la valeur sans une erreur |
+| GoHighLevel liste et crée les champs | `GET/POST /locations/{id}/customFields`, `{name, dataType: "TEXT", model: "contact"}`, réponse `{customField: {id, fieldKey}}` |
+| le `fieldKey` GoHighLevel est DÉRIVÉ DU NOM | `contact.ta_ville` : on ne peut pas y imposer notre slug |
+| la valeur s'écrit sous **`field_value`** | **12 occurrences dans leur spécification OpenAPI, `fieldValue` zéro** |
+
+**LA DERNIÈRE LIGNE A FAILLI ÊTRE FAUSSE.** Le résumé automatique de
+leur page de documentation rendait `fieldValue`, "verbatim", et je
+l'avais écrit dans l'adaptateur. La spécification brute, lue ensuite
+sur leur dépôt GitHub, dit `field_value`, douze fois. **Un résumé d'une
+page n'est pas la page** : sur un nom de propriété, on lit la source
+brute ou on ne conclut pas. Le test refuse `fieldValue` dans le fichier.
+
+### LA DÉCISION EST PURE, ET LE SLUG EST STABLE
+
+`lib/integrations/champsContact.ts`, identique à l'octet près dans les
+deux dépôts :
+
+```bash
+cmp lib/integrations/champsContact.ts ../tipote-app/lib/integrations/champsContact.ts
+```
+
+- `champsContactPersonnalises(prefixe, champs, valeurs)` : ne part que
+  ce qui a un libellé ET une valeur (jamais un champ vide, Systeme.io
+  traite une chaîne vide comme une valeur et écraserait une saisie
+  manuelle). Le slug est `<prefixe>_cf_xxxxxx`, dérivé de l'IDENTITÉ du
+  champ : renommer "Ta ville" en "Ville" garde le même champ chez
+  Systeme.io, et le `fieldName` (celui qu'on lit dans le tableau de
+  bord) suit le libellé du jour. Un slug dérivé du libellé aurait
+  fabriqué un deuxième champ au premier renommage, en silence.
+- **Le préfixe est un PARAMÈTRE**, jamais deviné : `SIO_PREFIXE_CHAMP`
+  vaut `"tiquiz"` ici (dans l'adaptateur) et `"tipote"` là bas (dans la
+  route), comme `tiquiz_result` et `tipote_quiz_result`. Un préfixe
+  vide est REFUSÉ : ce serait le slug de l'autre app.
+- `planifierChampsGhl(existants, voulus)` : un champ se retrouve par sa
+  CLÉ d'abord (`contact.tiquiz_resultat`, pour un champ créé à la main
+  avant ce chantier), par son NOM ensuite (casse et espaces ignorés) ;
+  ce qui manque se crée UNE fois même si deux voulus portent le même
+  nom.
+
+### CE QUE CHAQUE ADAPTATEUR FAIT, DANS CET ORDRE
+
+**Systeme.io** (`ecrireChampsPersonnalisesSio`) : pour chaque champ,
+`POST /contact_fields` (un 422 veut dire "il existe", et on le RENOMME
+au libellé du jour), PUIS un seul `PATCH /contacts/{id}` avec toutes les
+valeurs. Le résultat est mémorisé par clé et par champ pour la vie du
+processus : un champ ne se crée qu'une fois, pas à chaque lead. Un
+champ qui n'a pu être assuré est écarté et dit dans le journal, les
+autres partent.
+
+**GoHighLevel** (`ecrireChampsGhl`) : LISTER les champs du sous-compte,
+CRÉER ceux qui manquent, écrire par identifiant. Le profil
+(`tiquiz_resultat`) passe par le même chemin : il n'y a plus à le créer
+à la main, et le guide le dit. Tout ça part APRÈS les tags, dans des
+appels à part, et un échec ne fait que journaliser : un champ de
+confort ne coûte jamais un tag.
+
+**Un libellé renommé crée un NOUVEAU champ chez GoHighLevel** (l'ancien
+garde ses valeurs) : c'est leur API qui dérive la clé du nom, et c'est
+écrit dans le guide plutôt que découvert dans un CRM.
+
+### LES SCOPES, ET CE QUI EST À FAIRE CHEZ GOHIGHLEVEL
+
+Lister et créer des champs demande `locations/customFields.readonly` et
+`locations/customFields.write`. `GHL_OAUTH_SCOPES` les porte. **Une
+connexion établie AVANT ne les a pas** : le listage répond 401 ou 403,
+ce qui N'EST PAS lu comme une déconnexion (le contact et les tags
+viennent de passer), l'adaptateur retombe sur l'écriture par clé
+d'avant et NOMME le scope dans le journal. Les deux scopes doivent
+aussi être ajoutés dans l'app du Marketplace, sinon le bouton
+"Connecter" échoue chez GoHighLevel avec un scope invalide.
+
+### CE QUI N'EST PAS MESURÉ, ET QUI SE DIT
+
+Aucun appel n'a été exercé contre un vrai compte : il n'y a ni clé
+Systeme.io ni jeton GoHighLevel joignable d'ici. Ce qui est vérifié :
+l'ORDRE des appels, les corps, les noms de propriétés lus dans les deux
+spécifications, et sept versions fautives rejouées qui rougissent
+(Systeme.io qui écrit avant de créer, `fieldValue`, GoHighLevel qui crée
+sans lister, la route qui n'envoie pas les champs, les scopes retirés,
+et deux côté Tipote). La forme exacte de `customFields` chez GoHighLevel
+(`id` + `field_value`) reste à constater sur son sous-compte de test,
+comme le disait déjà la note du 14 septembre.
+
+Test : `tests/logic/champs-vers-le-crm.test.mts`, le même dans les deux
+dépôts.
 
 ## Le bouton "Publier" est un interrupteur Actif / Désactivé (retour client, 16 septembre 2026)
 
