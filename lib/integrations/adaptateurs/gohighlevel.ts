@@ -24,16 +24,31 @@
 // contact est créé ou retrouvé d'abord, puis les tags sont AJOUTÉS par
 // `POST /contacts/{id}/tags`, qui n'enlève rien. Le test l'exige.
 //
-// -- LE CHAMP PERSONNALISÉ EST BEST-EFFORT -----------------------------
+// -- LES CHAMPS PERSONNALISÉS SONT BEST-EFFORT -------------------------
 //
 // Le titre du profil part dans un champ personnalisé `tiquiz_resultat`,
-// comme chez Systeme.io (`tiquiz_result`). Ce champ n'existe que si la
-// créatrice l'a créé dans son sous-compte : un champ inconnu fait
-// refuser la demande, et on ne laisse pas un champ de confort faire
-// échouer la pose des tags. Il part donc dans un appel À PART, après
-// les tags, et son échec ne fait que journaliser.
+// comme chez Systeme.io (`tiquiz_result`), et depuis le 16 septembre
+// 2026 les champs personnalisés du formulaire partent avec lui, chacun
+// dans un champ qui porte son libellé. Ces champs sont CRÉÉS quand ils
+// manquent (`POST /locations/{id}/customFields`), après avoir LISTÉ ceux
+// du sous-compte : leur API dérive `fieldKey` du nom, donc un champ se
+// retrouve par son nom, jamais par un slug qu'on choisirait. Le plan
+// (quoi écrire, quoi créer) est PUR : `planifierChampsGhl`.
+//
+// Tout ça part dans des appels À PART, après les tags, et un échec ne
+// fait que journaliser : on ne laisse pas un champ de confort faire
+// échouer la pose des tags. Lister et créer des champs demande les
+// scopes `locations/customFields.readonly` et `.write` : sans eux, le
+// listage répond 401 ou 403, ce qui n'est PAS une déconnexion (le
+// contact et les tags viennent de passer), et on retombe sur l'écriture
+// par clé d'avant, en nommant le scope manquant dans le journal.
 
 import type { ChargeLead, ResultatEnvoi } from "@/lib/integrations/charge";
+import {
+  planifierChampsGhl,
+  type ChampGhlExistant,
+  type ChampGhlVoulu,
+} from "@/lib/integrations/champsContact";
 
 export const GHL_BASE = "https://services.leadconnectorhq.com";
 export const GHL_VERSION = "2021-07-28";
@@ -172,7 +187,8 @@ function corpsUpsert(compte: CompteGhl, charge: ChargeLead, complet: boolean): R
 
 /**
  * Envoie un lead : le contact (créé ou retrouvé), puis ses tags, puis le
- * titre du profil. Ne jette jamais.
+ * titre du profil et les champs personnalisés du formulaire. Ne jette
+ * jamais.
  */
 export async function envoyerVersGhl(compte: CompteGhl, charge: ChargeLead): Promise<ResultatEnvoi> {
   type Upsert = { contact?: { id?: string }; new?: boolean };
@@ -206,19 +222,83 @@ export async function envoyerVersGhl(compte: CompteGhl, charge: ChargeLead): Pro
     tagsPoses = [...charge.tags];
   }
 
-  if (charge.profilTitre) {
-    const c = await ghlRequete(compte.token, `/contacts/${encodeURIComponent(contactId)}`, {
-      method: "PUT",
-      body: { customFields: [{ key: GHL_CHAMP_RESULTAT, field_value: charge.profilTitre }] },
-    });
-    if (!c.ok) {
-      console.warn(
-        `[gohighlevel] le champ ${GHL_CHAMP_RESULTAT} n'a pas ete ecrit (${c.status}) : cree-le dans le sous-compte pour recevoir le profil.`,
-      );
-    }
-  }
+  const voulus: ChampGhlVoulu[] = [];
+  if (charge.profilTitre) voulus.push({ cle: GHL_CHAMP_RESULTAT, nom: GHL_CHAMP_RESULTAT, valeur: charge.profilTitre });
+  for (const c of charge.champs ?? []) voulus.push({ nom: c.nom, valeur: c.valeur });
+  if (voulus.length > 0) await ecrireChampsGhl(compte, contactId, voulus);
 
   return { ok: true, status: up.status, contactId, tagsPoses };
+}
+
+/** Les champs personnalisés de contact du sous-compte. */
+export async function listerChampsGhl(
+  compte: CompteGhl,
+): Promise<{ ok: boolean; status: number; champs: ChampGhlExistant[]; erreur?: string }> {
+  const r = await ghlRequete<{ customFields?: Array<{ id?: string; name?: string; fieldKey?: string | null }> }>(
+    compte.token,
+    `/locations/${encodeURIComponent(compte.locationId)}/customFields?model=contact`,
+  );
+  if (!r.ok) return { ok: false, status: r.status, champs: [], erreur: r.erreur };
+  const champs = (Array.isArray(r.data?.customFields) ? r.data!.customFields! : [])
+    .map((c) => ({ id: String(c.id ?? "").trim(), name: String(c.name ?? "").trim(), fieldKey: c.fieldKey ?? null }))
+    .filter((c) => c.id && c.name);
+  return { ok: true, status: r.status, champs };
+}
+
+/** Crée un champ de contact TEXTE qui porte ce nom. Rend `null` sur un refus. */
+export async function creerChampGhl(compte: CompteGhl, nom: string): Promise<ChampGhlExistant | null> {
+  const r = await ghlRequete<{ customField?: { id?: string; name?: string; fieldKey?: string | null } }>(
+    compte.token,
+    `/locations/${encodeURIComponent(compte.locationId)}/customFields`,
+    { method: "POST", body: { name: nom, dataType: "TEXT", model: "contact" } },
+  );
+  const id = String(r.data?.customField?.id ?? "").trim();
+  if (!r.ok || !id) {
+    console.warn(`[gohighlevel] le champ "${nom}" n'a pas pu etre cree (${r.status}) : ${r.erreur ?? ""}`);
+    return null;
+  }
+  return { id, name: String(r.data?.customField?.name ?? nom), fieldKey: r.data?.customField?.fieldKey ?? null };
+}
+
+/**
+ * Écrit des valeurs de champs personnalisés sur un contact : on liste les
+ * champs du sous-compte, on crée ceux qui manquent, on écrit par
+ * identifiant. Ne jette jamais, ne rend rien : le lead est déjà passé.
+ */
+export async function ecrireChampsGhl(compte: CompteGhl, contactId: string, voulus: readonly ChampGhlVoulu[]): Promise<void> {
+  const liste = await listerChampsGhl(compte);
+  if (!liste.ok) {
+    // Sans le droit de lire les champs, on écrit ce qu'on peut par CLÉ
+    // (le profil), et on nomme ce qui manque : ce n'est pas une panne,
+    // c'est un scope à ajouter dans l'app puis une reconnexion.
+    const parCle = voulus.filter((v) => v.cle).map((v) => ({ key: String(v.cle), field_value: v.valeur }));
+    if (parCle.length > 0) {
+      const c = await ghlRequete(compte.token, `/contacts/${encodeURIComponent(contactId)}`, {
+        method: "PUT",
+        body: { customFields: parCle },
+      });
+      if (!c.ok) console.warn(`[gohighlevel] le champ ${GHL_CHAMP_RESULTAT} n'a pas ete ecrit (${c.status}).`);
+    }
+    console.warn(
+      `[gohighlevel] impossible de lister les champs personnalises (${liste.status}) : ` +
+        `il manque probablement les scopes locations/customFields.readonly et .write, a ajouter dans l'app puis reconnecter. ` +
+        `${voulus.length - parCle.length} champ(s) du formulaire non ecrit(s).`,
+    );
+    return;
+  }
+
+  const existants = [...liste.champs];
+  for (const aCreer of planifierChampsGhl(existants, voulus).aCreer) {
+    const cree = await creerChampGhl(compte, aCreer.nom);
+    if (cree) existants.push(cree);
+  }
+  const plan = planifierChampsGhl(existants, voulus);
+  if (plan.aEcrire.length === 0) return;
+  const c = await ghlRequete(compte.token, `/contacts/${encodeURIComponent(contactId)}`, {
+    method: "PUT",
+    body: { customFields: plan.aEcrire.map((e) => ({ id: e.id, field_value: e.valeur })) },
+  });
+  if (!c.ok) console.warn(`[gohighlevel] ${plan.aEcrire.length} champ(s) personnalise(s) non ecrit(s) (${c.status}) : ${c.erreur ?? ""}`);
 }
 
 /** Pose un seul tag sur un contact retrouvé par email (le tag de partage). */

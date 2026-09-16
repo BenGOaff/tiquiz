@@ -275,7 +275,11 @@ function QuestionTrend({
       <CardHeader>
         <CardTitle className="text-base flex items-start gap-2">
           <Badge variant="outline">{t(`type_${question.question_type}` as never)}</Badge>
-          <span className="flex-1">{question.question_text || t("untitledQuestion")}</span>
+          {/* TEXTE BRUT, donc `stripHtml` : rendu tel quel, ce champ
+              montrait le balisage et les entites en clair. C'est CET
+              ecran qui a produit le "Quelle note donneriez-vous a la
+              structure de l'entreprise&nbsp;?" du 16 septembre 2026. */}
+          <span className="flex-1">{stripHtml(question.question_text) || t("untitledQuestion")}</span>
         </CardTitle>
         <p className="text-xs text-muted-foreground">
           {respondedCount} {t("trendResponseCount")}

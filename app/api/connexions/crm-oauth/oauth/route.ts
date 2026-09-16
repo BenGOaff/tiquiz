@@ -13,7 +13,9 @@
 //
 // Une app déclarée sur leur Marketplace (Developer), avec :
 //   - les scopes : contacts.readonly, contacts.write, locations.readonly,
-//     locations/tags.readonly ;
+//     locations/tags.readonly, locations/customFields.readonly et
+//     locations/customFields.write (les deux derniers depuis le
+//     16 septembre 2026, pour les champs personnalisés du formulaire) ;
 //   - l'adresse de retour EXACTE : <app>/api/connexions/crm-oauth/callback ;
 //   - son Client ID et son Client Secret, posés dans le `.env` en
 //     GHL_CLIENT_ID et GHL_CLIENT_SECRET (et GHL_APP_ID pour lister les
@@ -49,7 +51,13 @@ import { oauthGhlConfigure } from "@/lib/integrations/store";
 
 export const dynamic = "force-dynamic";
 
-export const GHL_OAUTH_SCOPES = "contacts.readonly contacts.write locations.readonly locations/tags.readonly";
+// `locations/customFields.readonly` et `.write` sont la depuis le
+// 16 septembre 2026 : les champs personnalises du formulaire partent dans
+// la fiche contact, et il faut lister puis creer les champs du sous-compte.
+// Une connexion etablie AVANT ne les porte pas : sans eux, l'adaptateur
+// retombe sur l'ecriture par cle et nomme le scope dans le journal.
+export const GHL_OAUTH_SCOPES =
+  "contacts.readonly contacts.write locations.readonly locations/tags.readonly locations/customFields.readonly locations/customFields.write";
 export const COOKIE_ETAT_GHL = "tq_ghl_state";
 
 export function adresseDeRetourGhl(req: NextRequest): string {

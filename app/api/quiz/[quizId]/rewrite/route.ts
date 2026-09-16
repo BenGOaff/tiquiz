@@ -20,6 +20,7 @@ import { fetchAnthropic } from "@/lib/aiRetry";
 import { cleAnthropic } from "@/lib/ai/cleAnthropic";
 import { echecIa } from "@/lib/ia/echecIa";
 import { classifyThrown, classifyUpstream } from "@/lib/aiFailure";
+import { stripHtml } from "@/lib/texteBrut";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -108,7 +109,8 @@ export async function POST(
     return NextResponse.json({ ok: false, error: "Quiz not found" }, { status: 404 });
   }
 
-  const stripHtml = (s: string | null | undefined) => String(s ?? "").replace(/<[^>]*>/g, "").trim();
+  // La porte est `lib/texteBrut.ts` (16 septembre 2026) : le strip recopie
+  // ici ne decodait aucune entite.
   const quizTitle = stripHtml((quiz as any).title) || "Quiz";
   const quizIntro = stripHtml((quiz as any).introduction).slice(0, 600);
   const localeTag = String((quiz as any).locale ?? "fr");

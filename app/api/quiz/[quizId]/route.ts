@@ -2,6 +2,7 @@
 // Single quiz operations: GET detail, PATCH update, DELETE
 import { NextRequest, NextResponse } from "next/server";
 import { sanitizeChampsPersonnalises } from "@/lib/quiz/champsPersonnalises";
+import { sanitizeLibellesCapture } from "@/lib/quiz/champsCapture";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sanitizeSlug, sanitizeShareNetworks, BRAND_FONT_CHOICES, QUIZ_GRADIENTS, sanitizePanelMediaConfig } from "@/lib/quizBranding";
@@ -237,6 +238,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       // 2026). JSONB libre en base : la FORME est contrôlée ci-dessous par
       // sanitizeChampsPersonnalises, jamais crue sur parole.
       "custom_fields",
+      // Les libellés riches et placeholders de TOUS les champs de capture
+      // (16 septembre 2026). JSONB libre : la forme est contrôlée par
+      // sanitizeLibellesCapture, une clé inconnue est jetée.
+      "capture_labels",
     ];
 
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -246,6 +251,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     if ("custom_fields" in patch) {
       patch.custom_fields = sanitizeChampsPersonnalises(patch.custom_fields);
+    }
+    if ("capture_labels" in patch) {
+      patch.capture_labels = sanitizeLibellesCapture(patch.capture_labels);
     }
 
     // Présentation : on n'accepte que des valeurs connues, sinon on retombe
@@ -495,6 +503,17 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     if (error && "custom_fields" in patch) {
       console.error("[quiz PATCH] update refuse, repli sans custom_fields :", error.message);
       const { custom_fields: _pendingChamps, ...rest } = patch as Record<string, unknown>;
+      ({ error } = await supabase.from("quizzes").update(rest).eq("id", quizId));
+    }
+    // Et pour capture_labels (16 septembre 2026, migration
+    // 20260916_capture_labels.sql) : les libellés attendent la migration,
+    // le reste de la sauvegarde ne l'attend pas. On retire AUSSI
+    // custom_fields du rejeu : `patch` a déjà pu perdre cette clé au repli
+    // précédent, et un rejeu qui la remettrait échouerait pour la même
+    // raison.
+    if (error && "capture_labels" in patch) {
+      console.error("[quiz PATCH] update refuse, repli sans capture_labels :", error.message);
+      const { capture_labels: _pendingLibelles, ...rest } = patch as Record<string, unknown>;
       ({ error } = await supabase.from("quizzes").update(rest).eq("id", quizId));
     }
     if (error) {

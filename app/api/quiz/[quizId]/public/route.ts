@@ -13,7 +13,7 @@
 // every lead lands in the workspace attached to its quiz — never another.
 
 import { NextRequest, NextResponse } from "next/server";
-import { sanitizeChampsPersonnalises, sanitizeValeursChamps, type ValeursChamps } from "@/lib/quiz/champsPersonnalises";
+import { sanitizeChampsPersonnalises, sanitizeValeursChamps, type ChampPersonnalise, type ValeursChamps } from "@/lib/quiz/champsPersonnalises";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { assetProxyEnabled, proxyAssetsDeep } from "@/lib/assetProxy";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -21,6 +21,8 @@ import { resolveQuizBranding } from "@/lib/quizBranding";
 import { resoudreDestination } from "@/lib/integrations/store";
 import { envoyerLead } from "@/lib/integrations/envoyer";
 import { fusionnerTags } from "@/lib/integrations/charge";
+import { champsContactPersonnalises } from "@/lib/integrations/champsContact";
+import { SIO_PREFIXE_CHAMP } from "@/lib/integrations/adaptateurs/systemeio";
 import { ficheFournisseur } from "@/lib/integrations/fournisseurs";
 import { isNewLeadLocked } from "@/lib/leadLock";
 import { isPaidPlan } from "@/lib/planLimits";
@@ -41,6 +43,7 @@ import {
 } from "@/lib/quizScoring";
 import { affiliateAbsent, lireAffiliateObjet } from "@/lib/quiz/affiliateRelay";
 import { echapperMotifLike } from "@/lib/db/motifLike";
+import { stripHtml } from "@/lib/texteBrut";
 // LES TROIS AIDES ONT DEMENAGE dans le module de charge, et on les
 // RE-IMPORTE plutot que d'en garder une copie : deux versions de
 // `resolveQuizId` finiraient par ne plus resoudre le meme quiz, et le
@@ -164,8 +167,8 @@ function colonneInconnue(err: { code?: string | null; message?: string | null } 
 }
 
 /**
- * Ce que le visiteur a saisi dans les champs personnalisés du formulaire
- * (16 septembre 2026), nettoyé contre la liste des champs du quiz.
+ * Les champs personnalisés du formulaire (16 septembre 2026) et ce que le
+ * visiteur y a saisi, nettoyé contre la liste des champs du quiz.
  *
  * La liste est lue dans une requête À PART, et best-effort : ajouter
  * `custom_fields` au select principal ferait répondre 404 à TOUTES les
@@ -173,18 +176,22 @@ function colonneInconnue(err: { code?: string | null; message?: string | null } 
  * 2 juin). Ici, une colonne absente coûte les valeurs de ces champs,
  * jamais le lead.
  */
-async function lireValeursChampsPersonnalises(
+async function lireChampsPersonnalises(
   admin: typeof supabaseAdmin,
   quizId: string,
   brut: unknown,
-): Promise<ValeursChamps> {
-  if (!brut || typeof brut !== "object" || Array.isArray(brut) || Object.keys(brut as object).length === 0) return {};
+): Promise<{ champs: ChampPersonnalise[]; valeurs: ValeursChamps }> {
+  const rien = { champs: [] as ChampPersonnalise[], valeurs: {} as ValeursChamps };
+  if (!brut || typeof brut !== "object" || Array.isArray(brut) || Object.keys(brut as object).length === 0) return rien;
   const { data, error } = await admin.from("quizzes").select("custom_fields").eq("id", quizId).maybeSingle();
   if (error) {
     console.error("[quiz/public] custom_fields illisible, valeurs ignorees :", error.message);
-    return {};
+    return rien;
   }
-  return sanitizeValeursChamps(brut, sanitizeChampsPersonnalises((data as { custom_fields?: unknown } | null)?.custom_fields));
+  // Les CHAMPS sont rendus avec les valeurs : c'est leur libellé qui
+  // nomme le champ de contact chez Systeme.io et GoHighLevel.
+  const champs = sanitizeChampsPersonnalises((data as { custom_fields?: unknown } | null)?.custom_fields);
+  return { champs, valeurs: sanitizeValeursChamps(brut, champs) };
 }
 
 export async function POST(req: NextRequest, context: RouteContext) {
@@ -264,7 +271,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const rawGender = String(body.gender ?? "").trim().toLowerCase();
     const gender: "m" | "f" | "x" | null = rawGender === "m" || rawGender === "f" || rawGender === "x" ? rawGender : null;
     const answers = Array.isArray(body.answers) ? body.answers : null;
-    const valeursChamps = await lireValeursChampsPersonnalises(admin, quizId, body.custom_fields);
+    const { champs: champsPerso, valeurs: valeursChamps } = await lireChampsPersonnalises(admin, quizId, body.custom_fields);
     const colonnesChamps: Record<string, unknown> =
       Object.keys(valeursChamps).length > 0 ? { custom_fields: valeursChamps } : {};
     // Snapshot des scores multi-axes (mode scoring uniquement). Validé
@@ -576,9 +583,12 @@ export async function POST(req: NextRequest, context: RouteContext) {
               pays: country || null,
               tags: tagsToApply,
               profilTitre: resultTitle || null,
+              // Les champs personnalisés du formulaire, nommés par leur
+              // libellé du jour, slug stable dérivé de l'id (16 septembre 2026).
+              champs: champsContactPersonnalises(SIO_PREFIXE_CHAMP, champsPerso, valeursChamps),
               courseId: courseId || null,
               communityId: communityId || null,
-              source: `Tiquiz : ${String(quiz.title ?? "").replace(/<[^>]*>/g, "").trim() || "quiz"}`.slice(0, 120),
+              source: `Tiquiz : ${stripHtml(quiz.title) || "quiz"}`.slice(0, 120),
             },
             quizUserId,
           );

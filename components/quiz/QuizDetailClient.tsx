@@ -1,6 +1,15 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import {
+  appliquerLibelle,
+  appliquerPlaceholder,
+  elaguerLibelles,
+  grouperEnLignes,
+  resoudreChampsCapture,
+  sanitizeLibellesCapture,
+  type LibellesCapture,
+} from "@/lib/quiz/champsCapture";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -59,7 +68,7 @@ import { QrCodeCard } from "@/components/share/QrCodeCard";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { interpolateText } from "@/lib/quizPersonalization";
 import { resultChoiceLabel } from "@/lib/quiz/resultLabel";
-import { champsVisibles, sanitizeChampsPersonnalises, type ChampPersonnalise } from "@/lib/quiz/champsPersonnalises";
+import { sanitizeChampsPersonnalises, type ChampPersonnalise } from "@/lib/quiz/champsPersonnalises";
 import ChampsPersonnalisesEditor from "@/components/quiz/ChampsPersonnalisesEditor";
 import StatutToggle from "@/components/quiz/StatutToggle";
 import { AutomatisationPanel } from "@/components/quiz/AutomatisationPanel";
@@ -699,6 +708,14 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
   // visiteur. La colonne porte la garantie que rien ne bouge sur les
   // quiz existants, exactement comme result_layout ci-dessus.
   const [tieBreak, setTieBreak] = useState<"first" | "answers">("first");
+  // `quizzes.capture_labels` : le libellé et le placeholder de chaque
+  // champ de capture, par clé. Il entre dans l'instantané comme tout
+  // réglage éditable, ET dans les dépendances du memo juste en dessous :
+  // sans la dépendance, le memo ne se recalcule pas, donc écrire un
+  // libellé ne déclenche AUCUN enregistrement, et rien ne le dit.
+  // `QUIZ_SNAPSHOT_KEYS` le réclame, et le compilateur
+  // refuse un appelant qui l'oublie : c'est exactement ce qu'il a fait.
+  const [captureLabels, setCaptureLabels] = useState<LibellesCapture>({});
   // null tant qu'on ne sait pas : on n'affiche RIEN plutôt que de
   // proposer un coach auquel elle n'a pas accès (règle du 2 août 2026).
   const hasAtelier = useAtelierStatus();
@@ -1140,6 +1157,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
     show_result_bridge: showResultBridge,
     result_layout: resultLayout,
     tie_break: tieBreak,
+    capture_labels: captureLabels,
     brand_logo_align: brandLogoAlign,
     brand_logo_width: brandLogoWidth,
     intro_text_width: introTextWidth,
@@ -1230,6 +1248,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
     brandLogoAlign, brandLogoWidth, introTextWidth,
     captureEnabled, captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired, customFields,
+    captureLabels,
     showConsentCheckbox, showResultsBreakdown, hideResponseCounts, notifyResponses, showOtherResults, otherResultsPosition,
     scoringAxesEdit, showScoreGauge, scoreDisplayMode, scoreLabelsEdit, sioScoreTags,
     metaPixelId, ga4MeasurementId, googleAdsConversionId, googleAdsConversionLabel,
@@ -1292,6 +1311,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
     if (typeof s.phone_required === "boolean") setPhoneRequired(s.phone_required);
     if (typeof s.country_required === "boolean") setCountryRequired(s.country_required);
     if (Array.isArray(s.custom_fields)) setCustomFields(sanitizeChampsPersonnalises(s.custom_fields));
+    if (s.capture_labels) setCaptureLabels(sanitizeLibellesCapture(s.capture_labels));
     if (typeof s.show_consent_checkbox === "boolean") setShowConsentCheckbox(s.show_consent_checkbox);
     if (typeof s.show_results_breakdown === "boolean") setShowResultsBreakdown(s.show_results_breakdown);
     if (Array.isArray(s.scoring_axes)) setScoringAxesEdit(normalizeScoringAxes(s.scoring_axes));
@@ -1449,6 +1469,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
       setShowResultBridge((q as { show_result_bridge?: boolean | null }).show_result_bridge !== false);
       setResultLayout(resultLayoutMode((q as { result_layout?: string | null }).result_layout));
       setTieBreak(tieBreakMode((q as { tie_break?: string | null }).tie_break));
+      setCaptureLabels(sanitizeLibellesCapture((q as { capture_labels?: unknown }).capture_labels));
       setBrandLogoAlign(logoAlignSetting((q as { brand_logo_align?: string | null }).brand_logo_align));
       setBrandLogoWidth(logoWidthPct((q as { brand_logo_width?: number | null }).brand_logo_width));
       setIntroTextWidth(introTextWidthPct((q as { intro_text_width?: number | null }).intro_text_width));
@@ -1598,6 +1619,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
           show_result_bridge: (q as { show_result_bridge?: boolean | null }).show_result_bridge !== false,
           result_layout: resultLayoutMode((q as { result_layout?: string | null }).result_layout),
           tie_break: tieBreakMode((q as { tie_break?: string | null }).tie_break),
+          capture_labels: sanitizeLibellesCapture((q as { capture_labels?: unknown }).capture_labels),
           brand_logo_align: logoAlignSetting((q as { brand_logo_align?: string | null }).brand_logo_align),
           brand_logo_width: logoWidthPct((q as { brand_logo_width?: number | null }).brand_logo_width),
           intro_text_width: introTextWidthPct((q as { intro_text_width?: number | null }).intro_text_width),
@@ -2559,6 +2581,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
           show_result_bridge: showResultBridge,
           result_layout: resultLayout,
     tie_break: tieBreak,
+    capture_labels: captureLabels,
           brand_logo_align: brandLogoAlign,
           brand_logo_width: brandLogoWidth,
           intro_text_width: introTextWidth,
@@ -2991,6 +3014,76 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
     ask_first_name: askFirstName,
     capture_first_name: captureFirstName,
   });
+
+  // L'APERÇU DU FORMULAIRE DE CAPTURE (Béné, 16 septembre 2026).
+  // "TOUT doit être éditable donc si je clique sur Prénom dans le quiz,
+  // je dois pouvoir écrire Entre ton prénom."
+  //
+  // La liste, l'ordre, les libellés et les placeholders viennent de
+  // `resoudreChampsCapture`, LA MÊME fonction que le viewer public :
+  // un aperçu qui recompose le formulaire à la main finit toujours par
+  // mentir (sorti six fois dans ces dépôts). `mode: "apercu"` est ce qui
+  // change, et rien d'autre : un champ personnalisé pas encore nommé
+  // s'affiche ici (sinon elle ne peut pas lui donner son nom) et jamais
+  // chez le visiteur.
+  const champsCaptureApercu = useMemo(
+    () =>
+      resoudreChampsCapture(
+        {
+          capture_last_name: captureLastName,
+          capture_phone: capturePhone,
+          capture_country: captureCountry,
+          last_name_required: lastNameRequired,
+          phone_required: phoneRequired,
+          country_required: countryRequired,
+          custom_fields: customFields,
+          capture_labels: captureLabels,
+        },
+        {
+          mode: "apercu",
+          prenomSurCapture: captureFirstName && prenomMoment === "capture",
+          prenomObligatoire: prenomMoment === "capture" && firstNameRequired,
+          defauts: {
+            first_name: t("previewCaptureFirstName"),
+            last_name: t("previewCaptureLastName"),
+            email: "Email",
+            phone: t("fieldPhone"),
+            country: t("fieldCountry"),
+            emailPlaceholder: "",
+          },
+        },
+      ),
+    [
+      captureLastName, capturePhone, captureCountry,
+      lastNameRequired, phoneRequired, countryRequired,
+      customFields, captureLabels,
+      captureFirstName, prenomMoment, firstNameRequired, t,
+    ],
+  );
+  const lignesCaptureApercu = useMemo(() => grouperEnLignes(champsCaptureApercu), [champsCaptureApercu]);
+
+  // Les deux gestes de l'aperçu. Le module écrit LES DEUX états d'un
+  // bloc : pour un champ personnalisé, le nom en texte nu suit le
+  // libellé riche, parce que c'est lui que lisent le CSV, le CRM, les
+  // statistiques et l'IA. Deux écritures séparées finiraient par ne plus
+  // dire la même chose.
+  const majLibelleCapture = useCallback((cle: string, html: string) => {
+    const apres = appliquerLibelle({ champs: customFields, libelles: captureLabels }, cle, html);
+    setCustomFields(apres.champs);
+    setCaptureLabels(apres.libelles);
+  }, [customFields, captureLabels]);
+  const majPlaceholderCapture = useCallback((cle: string, texte: string) => {
+    const apres = appliquerPlaceholder({ champs: customFields, libelles: captureLabels }, cle, texte);
+    setCustomFields(apres.champs);
+    setCaptureLabels(apres.libelles);
+  }, [customFields, captureLabels]);
+  // L'éditeur de champs rend un TABLEAU entier : c'est ici qu'on rattrape
+  // un champ supprimé, sinon son libellé reste dans `capture_labels` pour
+  // toujours.
+  const majChampsPersonnalises = useCallback((champs: ChampPersonnalise[]) => {
+    setCustomFields(champs);
+    setCaptureLabels((prev) => elaguerLibelles(champs, prev));
+  }, []);
 
   const beatFlags = useMemo(() => ({
     show_result_insight: showResultInsight,
@@ -4213,7 +4306,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
                         <Plus className="w-3.5 h-3.5" /> {t("addField")}
                       </button>
                     )}
-                    <ChampsPersonnalisesEditor ns="quizEditor" champs={customFields} onChange={setCustomFields} />
+                    <ChampsPersonnalisesEditor ns="quizEditor" champs={customFields} onChange={majChampsPersonnalises} />
                     {/* Consent checkbox is opt-out — most creators want it for
                         RGPD safety, but some manage consent upstream (their CRM,
                         a separate landing page) and don't want a redundant
@@ -5480,18 +5573,40 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
                   <RichTextEdit value={captureHeading || t("previewCaptureHeadingDefault")} onChange={setCaptureHeading} onImageUpload={handleRichTextImageUpload} singleLine className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("previewCaptureHeadingPh")} />
                   <RichTextEdit value={captureSubtitle || t("previewCaptureSubtitleDefault")} onChange={setCaptureSubtitle} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-base text-center" placeholder={t("previewCaptureSubtitlePh")} />
                   <div className="space-y-3 max-w-md mx-auto">
-                    {/* L'aperçu suit la MÊME règle que le viewer : prénom
-                        demandé au début, pas de case ici. */}
-                    {((captureFirstName && prenomMoment === "capture") || captureLastName) && <div className="grid grid-cols-2 gap-3">
-                      {captureFirstName && prenomMoment === "capture" && <div><label className="text-sm text-muted-foreground">{t("previewCaptureFirstName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
-                      {captureLastName && <div><label className="text-sm text-muted-foreground">{t("previewCaptureLastName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
-                    </div>}
-                    <div><label className="text-sm text-muted-foreground">Email</label><Input readOnly className="mt-1 bg-muted/20" /></div>
-                    {capturePhone && <div><label className="text-sm text-muted-foreground">{t("previewCapturePhone")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
-                    {/* L'aperçu montre les champs personnalisés comme le viewer : le libellé, le placeholder, l'astérisque. */}
-                    {champsVisibles(customFields).map((c) => (
-                      <div key={c.id}><label className="text-sm text-muted-foreground">{c.label}{c.required && <span className="text-destructive ml-0.5">*</span>}</label><Input readOnly placeholder={c.placeholder} className="mt-1 bg-muted/20" /></div>
-                    ))}
+                    {/* CHAQUE CHAMP EST ÉDITABLE, LIBELLÉ ET PLACEHOLDER.
+                        Le libellé est du texte riche (gras, taille,
+                        couleur) comme tous les autres champs du quiz ; la
+                        case grise EST le placeholder, donc ce qu'elle y
+                        tape est exactement ce que le visiteur lira dedans.
+                        La liste et l'ordre viennent du module, pas d'ici. */}
+                    {lignesCaptureApercu.map((ligne) => {
+                      const champs = ligne.map((c) => (
+                        <div key={c.cle} className={c.sansNom ? "opacity-60" : undefined}>
+                          <div className="text-sm text-muted-foreground flex items-start gap-0.5">
+                            <RichTextEdit
+                              singleLine
+                              value={c.labelHtml}
+                              onChange={(html) => majLibelleCapture(c.cle, html)}
+                              className="text-sm flex-1"
+                              placeholder={t("previewCaptureLabelPh")}
+                            />
+                            {c.required && <span className="text-destructive">*</span>}
+                          </div>
+                          <Input
+                            value={c.placeholder}
+                            onChange={(e) => majPlaceholderCapture(c.cle, e.target.value)}
+                            placeholder={t("previewCapturePlaceholderPh")}
+                            className="mt-1 bg-muted/20"
+                          />
+                        </div>
+                      ));
+                      return ligne[0].demiLargeur ? (
+                        <div key={ligne[0].cle} className="grid grid-cols-2 gap-3">{champs}</div>
+                      ) : (
+                        champs
+                      );
+                    })}
+                    <p className="text-[11px] text-muted-foreground italic">{t("previewCaptureFieldHint")}</p>
                   </div>
                   {/* Adeline (18 mai 2026) : la case à cocher RGPD doit
                       être éditée WYSIWYG, dans le preview du quiz, pas
@@ -6487,8 +6602,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
                       {rebalanceProposal.additions.length > 0 && (
                         <ul className="divide-y border-b">
                           {rebalanceProposal.additions.map((a, i) => {
-                            const qText = cleanPlaceholdersForLabel(editQuestions[a.question_index]?.question_text).replace(/<[^>]*>/g, "").trim() || `Q${a.question_index + 1}`;
-                            const toTitle = cleanPlaceholdersForLabel(editResults[a.result_index]?.title).replace(/<[^>]*>/g, "").trim() || `${a.result_index + 1}`;
+                            const qText = stripHtml(cleanPlaceholdersForLabel(editQuestions[a.question_index]?.question_text)) || `Q${a.question_index + 1}`;
+                            const toTitle = stripHtml(cleanPlaceholdersForLabel(editResults[a.result_index]?.title)) || `${a.result_index + 1}`;
                             return (
                               <li key={`add-${i}`} className="px-3 py-2 text-xs">
                                 <div className="font-medium truncate">{qText}</div>
@@ -6506,10 +6621,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
                       )}
                       <ul className="divide-y">
                         {rebalanceProposal.changes.map((c, i) => {
-                          const qText = cleanPlaceholdersForLabel(editQuestions[c.question_index]?.question_text).replace(/<[^>]*>/g, "").trim() || `Q${c.question_index + 1}`;
-                          const oText = cleanPlaceholdersForLabel(editQuestions[c.question_index]?.options[c.option_index]?.text).replace(/<[^>]*>/g, "").trim() || `Opt ${c.option_index + 1}`;
-                          const fromTitle = cleanPlaceholdersForLabel(editResults[c.from]?.title).replace(/<[^>]*>/g, "").trim() || `${c.from + 1}`;
-                          const toTitle = cleanPlaceholdersForLabel(editResults[c.to]?.title).replace(/<[^>]*>/g, "").trim() || `${c.to + 1}`;
+                          const qText = stripHtml(cleanPlaceholdersForLabel(editQuestions[c.question_index]?.question_text)) || `Q${c.question_index + 1}`;
+                          const oText = stripHtml(cleanPlaceholdersForLabel(editQuestions[c.question_index]?.options[c.option_index]?.text)) || `Opt ${c.option_index + 1}`;
+                          const fromTitle = stripHtml(cleanPlaceholdersForLabel(editResults[c.from]?.title)) || `${c.from + 1}`;
+                          const toTitle = stripHtml(cleanPlaceholdersForLabel(editResults[c.to]?.title)) || `${c.to + 1}`;
                           return (
                             <li key={i} className="px-3 py-2 text-xs">
                               <div className="font-medium truncate">{qText}</div>

@@ -19,6 +19,7 @@ import { ArrowLeft, Check, Loader2 } from "lucide-react";
 
 import type { QuizTemplate } from "@/lib/templates/types";
 import { TemplatesChrome } from "../TemplatesChrome";
+import { stripHtml } from "@/lib/texteBrut";
 
 export default function TemplateDetailClient({
   template,
@@ -152,8 +153,8 @@ export default function TemplateDetailClient({
           </h2>
 
           <div className="mt-3 rounded-xl border border-border/60 bg-card p-5">
-            <p className="text-base font-medium text-foreground">{p.title}</p>
-            <p className="mt-2 text-sm text-muted-foreground">{p.introduction}</p>
+            <p className="text-base font-medium text-foreground">{stripHtml(p.title)}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{stripHtml(p.introduction)}</p>
           </div>
 
           {/* Questions */}
@@ -165,7 +166,7 @@ export default function TemplateDetailClient({
               >
                 <p className="text-sm font-medium text-foreground">
                   <span className="text-primary">Q{qi + 1}.</span>{" "}
-                  {q.question_text}
+                  {stripHtml(q.question_text)}
                 </p>
                 <ul className="mt-2 space-y-1">
                   {q.options.map((o, oi) => (
@@ -174,7 +175,7 @@ export default function TemplateDetailClient({
                       className="text-sm text-muted-foreground flex items-start gap-2"
                     >
                       <span className="mt-1 w-1.5 h-1.5 rounded-full bg-border shrink-0" />
-                      {o.text}
+                      {stripHtml(o.text)}
                     </li>
                   ))}
                 </ul>
@@ -194,7 +195,7 @@ export default function TemplateDetailClient({
               >
                 <p className="font-semibold text-foreground flex items-center gap-1.5">
                   <Check className="w-4 h-4 text-primary" />
-                  {r.title}
+                  {stripHtml(r.title)}
                 </p>
                 <p className="mt-1.5 text-sm text-muted-foreground">
                   {r.description}

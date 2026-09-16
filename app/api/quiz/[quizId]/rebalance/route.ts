@@ -21,6 +21,7 @@ import { fetchAnthropic } from "@/lib/aiRetry";
 import { cleAnthropic } from "@/lib/ai/cleAnthropic";
 import { echecIa } from "@/lib/ia/echecIa";
 import { classifyThrown, classifyUpstream } from "@/lib/aiFailure";
+import { stripHtml } from "@/lib/texteBrut";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -201,7 +202,9 @@ export async function POST(
 
   // Build a compact JSON snapshot for the model. We strip rich-text HTML so
   // Claude doesn't get distracted by markup it can't act on.
-  const stripHtml = (s: string | null | undefined) => String(s ?? "").replace(/<[^>]*>/g, "").trim();
+  // LA PORTE EST `lib/texteBrut.ts`, jamais un strip recopie ici : celui
+  // d'avant laissait les entites, donc le modele lisait `&nbsp;` et le
+  // recopiait dans ce qu'il ecrivait (16 septembre 2026).
   const questionsJson = (questions ?? []).map((q: any, qi: number) => ({
     index: qi,
     text: stripHtml(q.question_text),
@@ -388,7 +391,7 @@ Respond STRICTLY with valid JSON, no surrounding text, in this exact shape:
     for (const raw of parsed.additions) {
       const qi = Number((raw as any).question_index);
       const ri = Number((raw as any).result_index);
-      const text = String((raw as any).text ?? "").replace(/<[^>]*>/g, "").trim().slice(0, 300);
+      const text = stripHtml(String((raw as any).text ?? "")).slice(0, 300);
       if (!text) continue;
       if (!Number.isInteger(qi) || qi < 0 || qi >= N) continue;
       if (!Number.isInteger(ri) || ri < 0 || ri >= R) continue;

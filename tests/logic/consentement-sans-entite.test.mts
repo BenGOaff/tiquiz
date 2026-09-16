@@ -25,10 +25,13 @@ test("ce que Bene a vu : une entite sans balise sort DECODEE, jamais en clair", 
   const f = formeDuConsentement("J'accepte la politique de confidentialité&nbsp;:");
   assert.equal(f.genre, "texte");
   if (f.genre !== "texte") throw new Error("forme");
-  // `decodeHtmlEntities` rend une espace ORDINAIRE pour `&nbsp;` : c'est
-  // son contrat depuis mai, et un noeud de texte n'a pas besoin de
-  // l'insecable pour ne pas couper. Ce qui compte : plus d'entite.
-  assert.equal(f.texte, "J'accepte la politique de confidentialité :");
+  // `decodeHtmlEntities` rend l'INSECABLE (16 septembre 2026). Le
+  // commentaire d'avant disait "un noeud de texte n'a pas besoin de
+  // l'insecable pour ne pas couper" : c'est FAUX, un noeud de texte coupe
+  // sur une espace ordinaire comme n'importe ou ailleurs, et on aurait
+  // retire l'espace francaise qu'on venait d'inserer. Ce qui compte
+  // reste : plus d'entite, et l'espace TOUJOURS la.
+  assert.equal(f.texte, "J'accepte la politique de confidentialité\u00a0:");
   assert.ok(!f.texte.includes("&nbsp;"));
 });
 
@@ -60,7 +63,10 @@ test("le libelle se retrouve dans le texte decode, meme colle par un &nbsp;", ()
   // Avant, l'aiguille se cherchait dans le texte BRUT : `politique&nbsp;de`
   // ne la contenait pas, donc le lien partait a cote des mots au lieu de
   // dessus. Decode d'abord, elle se retrouve.
-  assert.deepEqual(m, { avant: "J'accepte la ", libelle: "politique de confidentialité", apres: "." });
+  // Le libelle rendu garde l'espace TELLE QU'ELLE EST DANS LE TEXTE :
+  // on decoupe des tranches, on ne reecrit pas ce que la creatrice a
+  // ecrit.
+  assert.deepEqual(m, { avant: "J'accepte la ", libelle: "politique\u00a0de confidentialité", apres: "." });
   const ok = decouperSurLeLibelle("J'accepte la Politique de Confidentialité du site", "politique de confidentialité");
   assert.deepEqual(ok, { avant: "J'accepte la ", libelle: "Politique de Confidentialité", apres: " du site" });
   assert.equal(decouperSurLeLibelle("texte", ""), null);

@@ -14729,8 +14729,27 @@ dessus.
 **Le viewer de Tipote n'avait AUCUN décodeur.** Tiquiz portait
 `decodeHtmlEntities` depuis mai et l'appliquait à neuf champs ; Tipote
 rendait ces neuf champs bruts. Un garde-fou qui ne protège qu'un des
-deux jumeaux ne protège personne : le décodeur y est porté, et les neuf
-champs y passent.
+deux jumeaux ne protège personne.
+
+🚨 **ET CETTE PAGE A ÉCRIT "le décodeur y est porté, et les neuf champs y
+passent". C'ÉTAIT FAUX, mesuré le 16 septembre**, et je le corrige en
+place plutôt que d'empiler. Ni `lib/quiz/consentement.ts`, ni
+`decodeHtmlEntities`, ni le test n'existaient chez Tipote : son
+`ConsentText` rendait encore `{raw}` et ses neuf champs sortaient bruts.
+
+**Pendant 24 heures, cette page a décrit comme actif un garde-fou absent
+de l'autre dépôt.** C'est mot pour mot la faute du 23 août ("un
+garde-fou non fusionné ne protège personne"), à ceci près que là il
+était écrit et pas fusionné, et qu'ici il n'était même pas écrit. Le
+portage a été fait le 16 septembre, avec le reste du chantier `&nbsp;`.
+
+**La règle qui manquait : quand une section annonce un portage, la
+dernière étape n'est pas de l'écrire, c'est d'aller CHERCHER le fichier
+chez le jumeau.** Une commande, dix secondes :
+
+```bash
+ls ../tipote-app/lib/quiz/consentement.ts
+```
 
 Test : `tests/logic/consentement-sans-entite.test.mts`, dans les deux
 dépôts, vérifié en rejouant les deux viewers d'avant (il rougit).
@@ -14872,10 +14891,10 @@ les deux dépôts, et chez Tipote aussi `leads.custom_fields` (le CRM),
 en clair comme `phone`. Le CRM de Tipote résout les libellés en lisant
 `quizzes.custom_fields` de la personne.
 
-**Ce qui n'est PAS fait, et qui se dit :** la valeur n'est envoyée ni
-à Systeme.io ni à GoHighLevel (les champs de contact y demandent un
-mappage par outil). Elle vit chez nous, dans l'export CSV, les stats et
-l'IA. C'est une décision de Béné, pas un oubli.
+🚨 **Ce paragraphe disait "la valeur n'est envoyée ni à Systeme.io ni à
+GoHighLevel, c'est une décision de Béné". C'EST PÉRIMÉ le jour même**
+(Béné : "oui il faut envoyer à systeme io et ghl"), corrigé en place
+plutôt qu'empilé : voir la section suivante.
 
 🚨 Migration : `supabase/migrations/20260916_champs_personnalises.sql`,
 sur les DEUX Supabase.
@@ -14883,6 +14902,106 @@ sur les DEUX Supabase.
 Test : `tests/logic/champs-personnalises.test.mts`, le même dans les deux
 dépôts, vérifié en rejouant la version d'avant (le viewer qui n'envoie
 plus `custom_fields` : il rougit).
+
+## Les champs personnalisés partent dans la fiche contact (Béné, 16 septembre 2026)
+
+"Oui il faut envoyer à systeme io et ghl."
+
+Le matin, la valeur d'un champ personnalisé vivait chez nous (le lead,
+l'export, les stats, l'IA) et nulle part ailleurs. Le soir, elle part
+dans la fiche contact de l'outil choisi, avec le reste du lead.
+
+### CE QUI A ÉTÉ MESURÉ AVANT D'ÉCRIRE UNE LIGNE
+
+| | |
+|---|---|
+| Systeme.io sait CRÉER un champ de contact | `POST /api/contact_fields` `{fieldName (255), slug (^\w+$)}`, `PATCH /api/contact_fields/{slug}` pour le renommer (lu dans leur OpenAPI le 16 septembre) |
+| son compte porte 28 champs, `{slug, fieldName}` sans `id` | `GET /contact_fields`, mesuré sur son compte |
+| un slug INCONNU est accepté et IGNORÉ | mesuré le 25 août (`lib/sio/contactFields.ts`) : écrire avant de créer perdrait la valeur sans une erreur |
+| GoHighLevel liste et crée les champs | `GET/POST /locations/{id}/customFields`, `{name, dataType: "TEXT", model: "contact"}`, réponse `{customField: {id, fieldKey}}` |
+| le `fieldKey` GoHighLevel est DÉRIVÉ DU NOM | `contact.ta_ville` : on ne peut pas y imposer notre slug |
+| la valeur s'écrit sous **`field_value`** | **12 occurrences dans leur spécification OpenAPI, `fieldValue` zéro** |
+
+**LA DERNIÈRE LIGNE A FAILLI ÊTRE FAUSSE.** Le résumé automatique de
+leur page de documentation rendait `fieldValue`, "verbatim", et je
+l'avais écrit dans l'adaptateur. La spécification brute, lue ensuite
+sur leur dépôt GitHub, dit `field_value`, douze fois. **Un résumé d'une
+page n'est pas la page** : sur un nom de propriété, on lit la source
+brute ou on ne conclut pas. Le test refuse `fieldValue` dans le fichier.
+
+### LA DÉCISION EST PURE, ET LE SLUG EST STABLE
+
+`lib/integrations/champsContact.ts`, identique à l'octet près dans les
+deux dépôts :
+
+```bash
+cmp lib/integrations/champsContact.ts ../tipote-app/lib/integrations/champsContact.ts
+```
+
+- `champsContactPersonnalises(prefixe, champs, valeurs)` : ne part que
+  ce qui a un libellé ET une valeur (jamais un champ vide, Systeme.io
+  traite une chaîne vide comme une valeur et écraserait une saisie
+  manuelle). Le slug est `<prefixe>_cf_xxxxxx`, dérivé de l'IDENTITÉ du
+  champ : renommer "Ta ville" en "Ville" garde le même champ chez
+  Systeme.io, et le `fieldName` (celui qu'on lit dans le tableau de
+  bord) suit le libellé du jour. Un slug dérivé du libellé aurait
+  fabriqué un deuxième champ au premier renommage, en silence.
+- **Le préfixe est un PARAMÈTRE**, jamais deviné : `SIO_PREFIXE_CHAMP`
+  vaut `"tiquiz"` ici (dans l'adaptateur) et `"tipote"` là bas (dans la
+  route), comme `tiquiz_result` et `tipote_quiz_result`. Un préfixe
+  vide est REFUSÉ : ce serait le slug de l'autre app.
+- `planifierChampsGhl(existants, voulus)` : un champ se retrouve par sa
+  CLÉ d'abord (`contact.tiquiz_resultat`, pour un champ créé à la main
+  avant ce chantier), par son NOM ensuite (casse et espaces ignorés) ;
+  ce qui manque se crée UNE fois même si deux voulus portent le même
+  nom.
+
+### CE QUE CHAQUE ADAPTATEUR FAIT, DANS CET ORDRE
+
+**Systeme.io** (`ecrireChampsPersonnalisesSio`) : pour chaque champ,
+`POST /contact_fields` (un 422 veut dire "il existe", et on le RENOMME
+au libellé du jour), PUIS un seul `PATCH /contacts/{id}` avec toutes les
+valeurs. Le résultat est mémorisé par clé et par champ pour la vie du
+processus : un champ ne se crée qu'une fois, pas à chaque lead. Un
+champ qui n'a pu être assuré est écarté et dit dans le journal, les
+autres partent.
+
+**GoHighLevel** (`ecrireChampsGhl`) : LISTER les champs du sous-compte,
+CRÉER ceux qui manquent, écrire par identifiant. Le profil
+(`tiquiz_resultat`) passe par le même chemin : il n'y a plus à le créer
+à la main, et le guide le dit. Tout ça part APRÈS les tags, dans des
+appels à part, et un échec ne fait que journaliser : un champ de
+confort ne coûte jamais un tag.
+
+**Un libellé renommé crée un NOUVEAU champ chez GoHighLevel** (l'ancien
+garde ses valeurs) : c'est leur API qui dérive la clé du nom, et c'est
+écrit dans le guide plutôt que découvert dans un CRM.
+
+### LES SCOPES, ET CE QUI EST À FAIRE CHEZ GOHIGHLEVEL
+
+Lister et créer des champs demande `locations/customFields.readonly` et
+`locations/customFields.write`. `GHL_OAUTH_SCOPES` les porte. **Une
+connexion établie AVANT ne les a pas** : le listage répond 401 ou 403,
+ce qui N'EST PAS lu comme une déconnexion (le contact et les tags
+viennent de passer), l'adaptateur retombe sur l'écriture par clé
+d'avant et NOMME le scope dans le journal. Les deux scopes doivent
+aussi être ajoutés dans l'app du Marketplace, sinon le bouton
+"Connecter" échoue chez GoHighLevel avec un scope invalide.
+
+### CE QUI N'EST PAS MESURÉ, ET QUI SE DIT
+
+Aucun appel n'a été exercé contre un vrai compte : il n'y a ni clé
+Systeme.io ni jeton GoHighLevel joignable d'ici. Ce qui est vérifié :
+l'ORDRE des appels, les corps, les noms de propriétés lus dans les deux
+spécifications, et sept versions fautives rejouées qui rougissent
+(Systeme.io qui écrit avant de créer, `fieldValue`, GoHighLevel qui crée
+sans lister, la route qui n'envoie pas les champs, les scopes retirés,
+et deux côté Tipote). La forme exacte de `customFields` chez GoHighLevel
+(`id` + `field_value`) reste à constater sur son sous-compte de test,
+comme le disait déjà la note du 14 septembre.
+
+Test : `tests/logic/champs-vers-le-crm.test.mts`, le même dans les deux
+dépôts.
 
 ## Le bouton "Publier" est un interrupteur Actif / Désactivé (retour client, 16 septembre 2026)
 
@@ -14906,3 +15025,270 @@ n'existe plus envoie chercher au mauvais endroit.
 
 Test : `tests/logic/statut-toggle.test.mts`, vérifié en rejouant la
 version d'avant (le vert remplacé par la couleur des boutons : il rougit).
+
+## `&nbsp;` en clair : la cause était NOTRE PROPRE sanitize (16 septembre 2026)
+
+Béné, en colère, et elle avait raison de l'être : « j'ai encore des
+putains de "Quelle note donneriez-vous à la structure de
+l'entreprise&nbsp;?" !!! Il faut vraiment faire le tour et supprimer ça
+aussi bien côté users que visiteurs, **sans nicker les espaces
+nécessaires en français**... ça fait des MOIS que j'essaye de régler ce
+problème qui revient toujours quelque part, c'est infernal, donc mal
+géré, tu dois expertiser et régler ça une bonne fois pour toutes. »
+
+### LA PHRASE DE SON CLIENT CONTENAIT LE DIAGNOSTIC
+
+« Y'a que celle-là et c'est pas sur la passation ! »
+
+**MESURÉ, PAS DÉDUIT.** Le sérialiseur de DOMPurify réencode U+00A0 en
+`&nbsp;` **dès que le champ porte UNE balise** :
+
+```
+sanitizeRichText("entreprise ?")          -> "entreprise ?"
+sanitizeRichText("<b>x</b> entreprise ?") -> "<b>x</b> entreprise&nbsp;?"
+```
+
+Or `lib/frenchTypography.ts` INSÈRE ce caractère devant `? ! : ;` à
+chaque enregistrement. Ses quatre observations s'expliquent alors une
+par une :
+
+| Ce qu'elle a vu | Pourquoi |
+|---|---|
+| « y'a que celle-là » | seule une question MISE EN FORME porte une balise, donc l'entité |
+| « c'est pas sur la passation » | le viewer rend `question_text` en HTML : le visiteur ne voit rien |
+| ça se voit dans les stats | `SurveyTrends` le rend en NOEUD DE TEXTE, donc en clair |
+| « ça revient toujours » | nettoyer la base ne servait à rien : l'entité revenait au premier enregistrement |
+
+**C'est nous qui la fabriquions, à chaque sauvegarde.** Aucune créatrice
+n'a jamais tapé `&nbsp;`.
+
+### LA CORRECTION EST EN DEUX MOITIÉS, ET IL FAUT LES DEUX
+
+**1. On ne la FABRIQUE plus.** `sansEntiteInsecable` au sortir de
+DOMPurify. **On rend le CARACTÈRE, jamais une espace ordinaire** : c'est
+sa contrainte (« sans nicker les espaces nécessaires en français »), et
+une espace ordinaire laisserait le `?` tomber seul à la ligne suivante,
+le drame Damien du 27 août.
+
+**2. Il n'y a plus qu'UNE porte vers le texte brut.**
+`lib/texteBrut.ts`, PUR : ni DOMPurify, ni `supabaseAdmin`, ni
+`server-only`. C'est la condition pour que la règle soit la même
+partout : tant que `stripHtml` vivait dans `lib/richText.ts` avec
+DOMPurify, chaque module de décision, chaque email et chaque prompt
+réécrivait son propre `.replace(/<[^>]*>/g, "")`, et **celui-là ne
+décode AUCUNE entité**. `lib/richText.ts` réexporte les trois fonctions :
+tous les imports existants marchent à l'identique.
+
+### UNE SEULE ENTITÉ EST TOUCHÉE, ET C'EST MESURÉ
+
+`&amp;` `&lt;` `&gt;` sont STRUCTURELS : les décoder casserait le HTML.
+Les accents, le `€`, les emoji, les apostrophes et U+202F ne sont pas
+encodés du tout par le sérialiseur. `&nbsp;` est la SEULE entité
+cosmétique qu'il fabrique. Et `&amp;nbsp;` (une créatrice qui écrit
+vraiment le texte `&nbsp;`) n'est PAS touché.
+
+**L'ancienne donnée se répare à l'AFFICHAGE, donc aucune migration** :
+le sanitize convertit au passage, `stripHtml` décode. La base garde sa
+valeur jusqu'au prochain enregistrement du champ.
+
+### LE BUG TROUVÉ EN CHEMIN, ET IL EST DE LA MÊME FAMILLE
+
+`<b>Prêt</b>?` ne recevait **JAMAIS** son espace française. Le découpage
+met le `?` seul en tête de son fragment, et tous les motifs exigent une
+lettre DEVANT. Une question écrite en gras restait donc fautive pour
+toujours, et personne ne pouvait la corriger à la main puisque
+l'enregistrement suivant ne la touchait pas non plus.
+
+`insererApresBalise` garde le dernier caractère VISIBLE, et seulement à
+travers une balise EN LIGNE (`b`, `i`, `span`, `a`...). Un `<br>`, un
+`<div>` ou une image remettent la mémoire à zéro : poser une insécable
+en tête de ligne mettrait une espace au début du paragraphe.
+
+**Encore une fois, ce sont les champs MIS EN FORME qui se comportaient
+autrement que les autres.**
+
+### CE QUE LE BALAYAGE A TROUVÉ
+
+Le garde balaie TOUT le dépôt, il ne surveille pas une liste de
+fichiers : une liste oublie le prochain fichier écrit, et c'est comme ça
+que ces endroits sont arrivés.
+
+| | |
+|---|---|
+| strippers maison routés | 9 chez Tiquiz, 11 chez Tipote |
+| champs riches rendus bruts en JSX | 4 chez Tiquiz, 6 chez Tipote |
+| dont **`SurveyTrends`** | **l'écran exact où son client a vu l'entité**, dans les DEUX dépôts |
+| dont `lib/leadAnswers.ts` (Tipote) | les réponses d'un lead, rendues dans l'admin, les exports et les emails |
+
+**Deux exemptions, avec leur raison écrite à côté** :
+`lib/texteBrut.ts` (c'est LA porte) et `lib/bonus/markdownHtml.ts` (il
+rend du markdown qu'on vient de fabriquer, pas du texte de créatrice).
+Une exemption sans raison est une exemption que le prochain passage
+prend pour un oubli.
+
+### L'ATELIER N'EST PAS DANS LE MÊME CAS, ET C'EST MESURÉ
+
+`formaquiz` n'a **ni DOMPurify, ni `lib/frenchTypography.ts`** : il ne
+peut rien fabriquer. Il ne fait qu'INGÉRER le titre d'un quiz que Tiquiz
+lui envoie, et son `stripTiquizHtml` le décode déjà. Il ne porte donc
+PAS `lib/texteBrut.ts`, et la raison est écrite à côté de la fonction.
+
+Ce qui lui manquait quand même : les formes NUMÉRIQUES. `&#160;` et
+`&#x00a0;` sont le MÊME caractère que `&nbsp;`, et sa liste d'entités,
+recopiée à la main, ne les connaissait pas.
+
+Et `stripTiquizHtml` est sortie dans `lib/integrations/texteTiquiz.ts` :
+elle vivait dans un module qui importe `server-only` et `supabaseAdmin`,
+donc **aucun test ne pouvait la charger**, donc aucun ne l'exerçait
+(règle du 1er août).
+
+### LA LEÇON, ET ELLE EST PLUS GRANDE QUE `&nbsp;`
+
+**« Ça revient toujours » veut dire qu'on corrige le symptôme.** Trois
+passages précédents ont nettoyé un champ, puis un autre, puis un
+troisième, sans jamais demander D'OÙ l'entité venait. Elle venait de
+nous, et chaque correction locale la laissait revenir au prochain
+enregistrement.
+
+Et **une liste d'entités recopiée à la main en oublie toujours une** :
+c'est la mécanique même du problème qui revient. Il n'y a plus qu'une
+liste, dans un module pur, testée.
+
+Tests : `tests/logic/plus-jamais-nbsp.test.mts` (14 cas, le même dans
+les deux dépôts) et `tests/logic/texte-de-tiquiz.test.mts` (6 cas, côté
+Atelier), vérifiés en rejouant SIX versions fautives (le sanitize qui ne
+convertit plus, `decodeHtmlEntities` qui rend une espace ordinaire,
+l'insertion après balise retirée aux DEUX sites d'appel, `SurveyTrends`
+qui rend brut, un `extractResultLabel` qui réécrit son propre strip, les
+formes numériques retirées côté Atelier) : les six rougissent.
+
+## TOUT le formulaire de capture est éditable (Béné, 16 septembre 2026)
+
+« TOUT doit être éditable donc si je clique sur "Prénom" dans le quiz, je
+dois pouvoir écrire "Entre ton prénom" par exemple, avec l'éditeur de
+texte, pour mettre en gras, changer la taille etc ... et il faut mettre un
+placeholder, qu'on peut aussi personnaliser !! Par exemple : "Ex : Jean"
+ou "Ex : jeandupont@gmail.com" ou "Youtube" si c'est un réseau préféré
+demandé en champ personnalisé. »
+
+Jusque là, les cinq champs intégrés (prénom, nom, email, téléphone, pays)
+portaient un libellé FIXE venu des traductions du viewer, sans
+placeholder, et seuls les champs personnalisés avaient les deux, tapés
+dans une colonne de réglages.
+
+**Règle : `lib/quiz/champsCapture.ts` décide, personne d'autre.** Module
+PUR, identique à l'octet près dans les deux dépôts, appelé par le viewer
+public ET par les DEUX aperçus d'éditeur :
+
+```bash
+cmp lib/quiz/champsCapture.ts ../tipote-app/lib/quiz/champsCapture.ts
+```
+
+`resoudreChampsCapture` rend la liste (quels champs, dans quel ordre, avec
+quel libellé et quel placeholder), `grouperEnLignes` dit lesquels se
+partagent une ligne. **Le viewer et l'aperçu appellent les DEUX** :
+septième fois que ce défaut se présente, et c'est la seule protection qui
+tient (les réseaux de partage, l'affichage du score, l'alignement du
+sous-titre, la disposition des réponses, les 4 temps, le nom du profil).
+
+### OÙ VIT QUOI, ET CE N'EST PAS UNIFORME
+
+- `quizzes.capture_labels` (JSONB, `{cle: {label, placeholder}}`) porte le
+  libellé RICHE de tous les champs, intégrés et personnalisés, et le
+  placeholder des champs INTÉGRÉS. Vide = le défaut d'avant, donc **aucun
+  quiz en ligne ne bouge**.
+- un champ personnalisé garde son NOM en texte nu dans
+  `custom_fields[].label` : c'est lui qui nomme la colonne du CSV, le
+  champ de contact chez Systeme.io et GoHighLevel, la ligne des
+  statistiques et du prompt d'analyse. Du HTML n'a rien à faire là.
+
+**`appliquerLibelle` écrit LES DEUX d'un bloc.** Deux écritures séparées
+finiraient par ne plus dire la même chose, et c'est le nom du CSV qui
+mentirait. Même chose pour `appliquerPlaceholder`, qui sait seul que le
+placeholder d'un champ personnalisé vit sur le CHAMP et celui d'un champ
+intégré dans `capture_labels` : l'écran ne choisit pas.
+
+### LA MÉCANIQUE EST UN PARAMÈTRE
+
+`mode: "visiteur" | "apercu"` décide si un champ personnalisé SANS NOM
+s'affiche : jamais chez le visiteur (règle du 16 septembre au matin, un
+champ sans libellé est gardé en base et jamais montré), toujours dans
+l'aperçu, sinon la créatrice ne peut pas lui donner son nom en cliquant
+dessus et le champ qu'elle vient d'ajouter n'apparaît nulle part.
+
+### LA CASE GRISE *EST* LE PLACEHOLDER
+
+Dans l'aperçu, le libellé est un `RichTextEdit` (gras, taille, couleur,
+comme tous les autres champs du quiz) et la case sous lui n'est plus un
+`readOnly` décoratif : ce qu'elle y tape devient exactement ce que le
+visiteur lira dans le champ vide. Une ligne le dit sous le formulaire,
+parce qu'une case qui accepte du texte sans dire à quoi il sert se remplit
+avec une réponse au lieu d'un exemple.
+
+### TROIS DÉFAUTS TROUVÉS EN BRANCHANT, ET LE PREMIER EST LE PLUS CHER
+
+**1. LE MEMO NE SE RECALCULAIT JAMAIS.** `capture_labels` était dans
+l'objet de `autosaveSnapshot` et PAS dans ses dépendances : écrire un
+libellé ne déclenchait donc AUCUN enregistrement, et rien ne le disait.
+Le commentaire posé au dessus de l'état promettait l'inverse ("il entre
+dans l'instantané comme tout réglage éditable, sinon une modification ne
+déclencherait aucun enregistrement"). Onzième fois que ces dépôts paient
+une règle écrite en commentaire et démentie par le code.
+
+**2. La reprise d'un brouillon laissait les libellés derrière.** Le
+brouillon restaurait `custom_fields` et pas `capture_labels` : l'éditeur
+repartait alors avec les champs du brouillon et les libellés du serveur,
+donc la sauvegarde suivante écrasait le travail, en silence.
+
+**3. L'aperçu ne montrait ni le PAYS ni l'astérisque du prénom**, et côté
+sondage il montrait la case Prénom même quand le prénom est demandé sur
+l'écran d'accueil. Le visiteur, lui, ne la voyait pas : c'est
+`lib/quiz/firstNameAsk.ts` qui décide, des deux côtés désormais.
+
+**Et un champ supprimé emporte son libellé** (`elaguerLibelles`) :
+`ChampsPersonnalisesEditor` rend un TABLEAU entier, il n'émet pas
+d'événement "supprimé", donc c'est l'appelant qui rattrape. Sans ça,
+`capture_labels` garde pour toujours l'entrée d'un champ qui n'existe
+plus.
+
+### LE NOM D'UN CHAMP NE S'ÉCRIT PLUS QU'À UN ENDROIT
+
+La colonne de réglages portait un champ texte pour le NOM d'un champ
+personnalisé et un autre pour son EXEMPLE. Depuis que le libellé est du
+texte riche posé sur le formulaire, le riche GAGNE à l'affichage : taper
+dans la colonne n'aurait plus rien changé à l'écran, **en silence**, et
+c'est la forme de panne que ces dépôts paient le plus cher.
+
+`ChampsPersonnalisesEditor` garde donc ce que l'aperçu ne peut pas dire :
+ajouter, retirer, rendre obligatoire, et le rappel qu'un champ sans nom
+n'est pas montré au visiteur. C'est la mécanique WYSIWYG du reste de
+l'éditeur (le titre, le sous-titre, la case de consentement, le bouton),
+posée depuis le 18 mai 2026 par Adeline : « la case à cocher RGPD doit
+être éditée WYSIWYG, dans le preview du quiz, pas dans une sidebar
+Réglages ».
+
+Le test l'exige dans les deux sens : plus aucune écriture de `label` ni
+de `placeholder` depuis la colonne, et l'ajout, le retrait et
+l'obligatoire toujours là.
+
+### CE QUI NE CASSE RIEN SI LA MIGRATION N'EST PAS PASSÉE
+
+Le PATCH rejoue sans `capture_labels` et CRIE ; la charge publique tente
+la colonne dans `QUIZ_COLS_NEW` et jamais dans la liste stable (une
+colonne absente y ferait répondre 404 à TOUS les quiz, drame
+`survey_thanks_*` du 2 juin) ; `sanitizeLibellesCapture` ne lève jamais et
+rend `{}` sur une valeur illisible, c'est à dire les défauts d'avant.
+
+🚨 Migration : `supabase/migrations/20260916_capture_labels.sql`, sur les
+DEUX Supabase.
+
+Test : `tests/logic/champs-capture.test.mts`, le même dans les deux
+dépôts, vérifié en rejouant la version d'avant (le module qui diverge chez
+le jumeau : il rougit).
+
+**Et DEUX garde-fous existants ont rougi sur du code juste** : ils
+figeaient `champsVisibles(quiz.custom_fields)` dans le viewer et
+`champsVisibles(customFields).map` dans l'aperçu, alors que c'est le
+module qui filtre maintenant. Ils visent le FAIT (`mode: "visiteur"`,
+`mode: "apercu"`), pas la forme. **Un garde-fou qui fige une FORMULATION
+empêche de corriger la formulation** : neuvième fois.

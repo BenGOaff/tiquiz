@@ -48,8 +48,11 @@
 //     passage ajoute un deuxième tag et garde le premier ;
 //   - les tags sont ceux du profil, des réponses, des scores et du
 //     partage (`fusionnerTags`, la route de capture) ;
-//   - le champ personnalisé `tiquiz_resultat` reçoit le titre du profil
-//     s'il existe (`GHL_CHAMP_RESULTAT`) ;
+//   - le champ personnalisé `tiquiz_resultat` reçoit le titre du profil,
+//     et les champs personnalisés du formulaire partent chacun dans un
+//     champ qui porte leur libellé ; ces champs sont CRÉÉS s'ils manquent
+//     (`ecrireChampsGhl`, 16 septembre 2026), à condition que la
+//     connexion porte les scopes `locations/customFields.*` ;
 //   - une connexion coupée prévient par email, une fois
 //     (`doitAlerterDeconnexion`).
 // Aucun chiffre, aucun prix : GoHighLevel change les siens sans nous.
@@ -276,7 +279,7 @@ const FR: TexteGoHighLevel = {
           { code: "Contacts" },
           ", le contact apparaît avec le tag de son profil, la source \"Tiquiz : \" suivie du titre du quiz, et le profil en toutes lettres dans le champ ",
           { code: "tiquiz_resultat" },
-          " si tu l'as créé. Refais le quiz avec la même adresse et un autre résultat : le second tag s'ajoute, le premier reste.",
+          ". Refais le quiz avec la même adresse et un autre résultat : le second tag s'ajoute, le premier reste.",
         ],
       ],
       capture: {
@@ -294,7 +297,11 @@ const FR: TexteGoHighLevel = {
       { gras: "Le profil obtenu" },
       ", en toutes lettres, dans un champ personnalisé nommé ",
       { code: "tiquiz_resultat" },
-      ". Crée ce champ dans le sous-compte pour le recevoir ; sans lui, tout le reste part quand même.",
+      ". Tiquiz le crée dans le sous-compte s'il manque ; si la création est refusée, tout le reste part quand même.",
+    ],
+    [
+      { gras: "Les champs personnalisés" },
+      " de ton formulaire de capture, chacun dans un champ de contact qui porte son libellé, créé s'il manque. Renommer un champ dans l'éditeur crée un nouveau champ chez GoHighLevel : l'ancien garde ses valeurs.",
     ],
     [{ gras: "La source" }, " du contact : \"Tiquiz\" suivi du titre du quiz."],
   ],
@@ -496,7 +503,7 @@ const EN: TexteGoHighLevel = {
           { code: "Contacts" },
           ", the contact shows up with the tag of its profile, the source \"Tiquiz: \" followed by the quiz title, and the profile in plain words in the ",
           { code: "tiquiz_resultat" },
-          " field if you created it. Take the quiz again with the same address and another result: the second tag is added, the first one stays.",
+          " field. Take the quiz again with the same address and another result: the second tag is added, the first one stays.",
         ],
       ],
       capture: {
@@ -514,7 +521,11 @@ const EN: TexteGoHighLevel = {
       { gras: "The result profile" },
       ", in plain words, in a custom field named ",
       { code: "tiquiz_resultat" },
-      ". Create that field in the sub-account to receive it; without it, everything else is still sent.",
+      ". Tiquiz creates it in the sub-account if it is missing; if the creation is refused, everything else is still sent.",
+    ],
+    [
+      { gras: "Your custom fields" },
+      " from the capture form, each one in a contact field named after its label, created if missing. Renaming a field in the editor creates a new field in GoHighLevel: the old one keeps its values.",
     ],
     [{ gras: "The source" }, " of the contact: \"Tiquiz\" followed by the quiz title."],
   ],

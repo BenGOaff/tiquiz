@@ -59,14 +59,25 @@ export function formeDuConsentement(raw: string): FormeConsentement {
  * On cherche dans le texte DÉCODÉ : un `&nbsp;` collé entre deux mots du
  * libellé ferait sinon rater l'aiguille, donc afficher le lien à côté
  * au lieu de sur les mots.
+ *
+ * ET TOUTE ESPACE VAUT TOUTE ESPACE (16 septembre 2026). Depuis que
+ * `decodeHtmlEntities` rend l'INSÉCABLE au lieu d'une espace ordinaire,
+ * `politique\u00a0de confidentialité` ne contenait plus l'aiguille
+ * `politique de confidentialité`, et le lien légal repartait à côté des
+ * mots : exactement le bug que cette fonction existe pour fermer. On
+ * normalise donc les blancs des DEUX côtés. Un blanc remplace UN blanc,
+ * donc les positions ne bougent pas et les tranches restent justes.
  */
+const TOUT_BLANC = /[\s\u00a0\u202f]/g;
+const memesBlancs = (s: string) => s.toLowerCase().replace(TOUT_BLANC, " ");
+
 export function decouperSurLeLibelle(
   texte: string,
   libelle: string,
 ): { avant: string; libelle: string; apres: string } | null {
-  const aiguille = libelle.toLowerCase();
-  if (!aiguille) return null;
-  const idx = texte.toLowerCase().indexOf(aiguille);
+  const aiguille = memesBlancs(libelle);
+  if (!aiguille.trim()) return null;
+  const idx = memesBlancs(texte).indexOf(aiguille);
   if (idx === -1) return null;
   return {
     avant: texte.slice(0, idx),
