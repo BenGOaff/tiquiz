@@ -19,12 +19,22 @@ export async function GET() {
     const scope = await getActiveProjectScope(user.id, user.email ?? null);
 
     // Get all quiz IDs owned by user (scopés par projet si débloqué)
-    let quizQuery = supabase
-      .from("quizzes")
-      .select("id, title")
-      .eq("user_id", user.id);
-    if (scope) quizQuery = quizQuery.eq("project_id", scope);
-    const { data: quizzes } = await quizQuery;
+    // `custom_fields` porte les champs personnalisés du formulaire (16
+    // septembre 2026) : la page en fait des colonnes. La colonne peut ne
+    // pas exister encore : PostgREST refuserait alors le select ENTIER,
+    // donc on retombe sur la liste d'avant plutôt que sur une page vide.
+    type QuizLigne = { id: string; title: string; custom_fields?: unknown };
+    const lireQuizzes = async (cols: string): Promise<{ data: QuizLigne[] | null; error: { message: string } | null }> => {
+      let q = supabase.from("quizzes").select(cols).eq("user_id", user.id);
+      if (scope) q = q.eq("project_id", scope);
+      const res = await q;
+      return { data: (res.data as unknown as QuizLigne[] | null) ?? null, error: res.error };
+    };
+    let { data: quizzes, error: quizzesErr } = await lireQuizzes("id, title, custom_fields");
+    if (quizzesErr) {
+      console.error("[leads] select custom_fields refuse, repli :", quizzesErr.message);
+      ({ data: quizzes, error: quizzesErr } = await lireQuizzes("id, title"));
+    }
 
     if (!quizzes || quizzes.length === 0) {
       return NextResponse.json({ ok: true, leads: [], quizzes: [], plan: "free" });

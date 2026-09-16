@@ -44,9 +44,13 @@
 // Nom, Résultat, Date) : quelqu'un qui a déjà une correspondance
 // d'import ne doit pas la refaire. Tout ce qui est nouveau vient après.
 
+import { champsVisibles, valeurChamp, type ChampPersonnalise } from "@/lib/quiz/champsPersonnalises";
+
 /** Ce que l'export sait lire d'un lead. Volontairement large : la ligne
  *  vient d'un `select("*")`, et un champ absent n'est pas une erreur. */
 export type LeadExportable = {
+  /** Les champs personnalisés du formulaire, {id: valeur} (16 septembre 2026). */
+  custom_fields?: unknown;
   email?: string | null;
   first_name?: string | null;
   last_name?: string | null;
@@ -129,6 +133,9 @@ export function colonnesExport(params: {
   reponse: (lead: LeadExportable, position: number) => string;
   /** Titre de question nettoyé de son HTML, fourni par l'appelant. */
   nettoyer: (html: string) => string;
+  /** Les champs personnalisés du formulaire : une colonne chacun, sous
+   *  son libellé, juste après le pays (16 septembre 2026). */
+  champs?: ReadonlyArray<ChampPersonnalise>;
 }): Colonne[] {
   const { libelles: L, questions } = params;
   const colonnes: Colonne[] = [
@@ -140,6 +147,12 @@ export function colonnesExport(params: {
     { entete: L.telephone, valeur: (l) => l.phone ?? "" },
     { entete: L.pays, valeur: (l) => l.country ?? "" },
   ];
+
+  // LES CHAMPS PERSONNALISÉS, rangés par id sur le lead : la colonne
+  // porte le libellé DU JOUR, donc un champ renommé garde ses valeurs.
+  for (const c of champsVisibles([...(params.champs ?? [])])) {
+    colonnes.push({ entete: c.label, valeur: (l) => valeurChamp(l.custom_fields, c.id) ?? "" });
+  }
 
   if (params.scoring) {
     colonnes.push({ entete: L.scores, valeur: (l) => params.resumerScores(l.scores) });

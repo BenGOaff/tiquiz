@@ -189,7 +189,7 @@ export async function chargerQuizPublic({
   // tente d'abord, et ABANDONNE la liste entiere si PostgREST en refuse
   // une. Sans ce repli, un deploiement en avance sur la migration ferait
   // repondre 404 a TOUS les quiz publics (drame survey_thanks_*, 2 juin).
-  const QUIZ_COLS_NEW = "tie_break,other_results_position,intro_start_mode";
+  const QUIZ_COLS_NEW = "tie_break,other_results_position,intro_start_mode,custom_fields";
 
   let quizRes = await admin
     .from("quizzes")

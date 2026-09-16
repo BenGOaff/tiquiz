@@ -61,6 +61,9 @@ import {
   diffEditorSnapshot,
 } from "@/lib/quiz/editorSnapshot";
 import { answerImageRender } from "@/lib/quiz/answerImage";
+import { champsVisibles, sanitizeChampsPersonnalises, valeurChamp, type ChampPersonnalise } from "@/lib/quiz/champsPersonnalises";
+import ChampsPersonnalisesEditor from "@/components/quiz/ChampsPersonnalisesEditor";
+import StatutToggle from "@/components/quiz/StatutToggle";
 import { stripHtml } from "@/lib/richText";
 import { alignBlockMarginClass, alignJustifyClass, alignTextClass, resolveBlockAlign } from "@/lib/quiz/textAlign";
 import { isPixelFieldValid } from "@/lib/clientPixels";
@@ -130,6 +133,8 @@ type QuizResult = { id?: string; title: string; description: string | null; insi
 type QuizLead = {
   id: string;
   email: string;
+  /** Les champs personnalisés du formulaire, {id: valeur} (16 septembre 2026). */
+  custom_fields?: unknown;
   first_name: string | null;
   last_name: string | null;
   phone: string | null;
@@ -167,6 +172,8 @@ type QuizData = {
   capture_first_name: boolean | null; capture_last_name: boolean | null;
   capture_phone: boolean | null; capture_country: boolean | null;
   phone_required?: boolean | null; first_name_required?: boolean | null; last_name_required?: boolean | null; country_required?: boolean | null;
+  /** Les champs personnalisés du formulaire (16 septembre 2026), JSONB libre. */
+  custom_fields?: unknown;
   virality_enabled: boolean; bonus_description: string | null; bonus_image_url: string | null;
   share_message: string | null; locale: string | null;
   sio_share_tag_name: string | null;
@@ -401,6 +408,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [lastNameRequired, setLastNameRequired] = useState(false);
   const [phoneRequired, setPhoneRequired] = useState(false);
   const [countryRequired, setCountryRequired] = useState(false);
+  // Les champs personnalisés du formulaire (16 septembre 2026).
+  const [customFields, setCustomFields] = useState<ChampPersonnalise[]>([]);
   // Defaults to true so older quizzes (no column value yet) keep showing the
   // GDPR-style checkbox. Only flips when the creator explicitly opts out.
   const [showConsentCheckbox, setShowConsentCheckbox] = useState(true);
@@ -653,6 +662,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     last_name_required: lastNameRequired,
     phone_required: phoneRequired,
     country_required: countryRequired,
+    custom_fields: customFields,
     show_consent_checkbox: showConsentCheckbox,
     meta_pixel_id: metaPixelId,
     ga4_measurement_id: ga4MeasurementId,
@@ -692,7 +702,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     title, introduction, ctaText, ctaUrl, startButtonText, privacyUrl, consentText,
     captureHeading, captureSubtitle, captureSubmitText, resultInsightHeading, resultProjectionHeading,
     captureFirstName, captureLastName, capturePhone, captureCountry,
-    firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
+    firstNameRequired, lastNameRequired, phoneRequired, countryRequired, customFields,
     showConsentCheckbox, metaPixelId, ga4MeasurementId, googleAdsConversionId,
     googleAdsConversionLabel, askFirstName, askGender,
     shareMessage, locale, sioShareTagName, sioCaptureTag, status,
@@ -733,6 +743,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (typeof s.last_name_required === "boolean") setLastNameRequired(s.last_name_required);
     if (typeof s.phone_required === "boolean") setPhoneRequired(s.phone_required);
     if (typeof s.country_required === "boolean") setCountryRequired(s.country_required);
+    if (Array.isArray(s.custom_fields)) setCustomFields(sanitizeChampsPersonnalises(s.custom_fields));
     if (typeof s.capture_country === "boolean") setCaptureCountry(s.capture_country);
     if (typeof s.show_consent_checkbox === "boolean") setShowConsentCheckbox(s.show_consent_checkbox);
     if (typeof s.meta_pixel_id === "string") setMetaPixelId(s.meta_pixel_id);
@@ -836,6 +847,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setCapturePhone(q.capture_phone ?? false); setCaptureCountry(q.capture_country ?? false);
       setFirstNameRequired(q.first_name_required ?? false); setLastNameRequired(q.last_name_required ?? false);
       setPhoneRequired(q.phone_required ?? false); setCountryRequired(q.country_required ?? false);
+      setCustomFields(sanitizeChampsPersonnalises(q.custom_fields));
       setAskFirstName(Boolean((q as unknown as Record<string, unknown>).ask_first_name));
       setAskGender(Boolean((q as unknown as Record<string, unknown>).ask_gender));
       setShareMessage(q.share_message ?? ""); setLocale(q.locale ?? "");
@@ -918,6 +930,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           last_name_required: q.last_name_required ?? false,
           phone_required: q.phone_required ?? false,
           country_required: q.country_required ?? false,
+          custom_fields: sanitizeChampsPersonnalises(q.custom_fields),
           show_consent_checkbox: (q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false,
           meta_pixel_id: (q as { meta_pixel_id?: string | null }).meta_pixel_id ?? "",
           ga4_measurement_id: (q as { ga4_measurement_id?: string | null }).ga4_measurement_id ?? "",
@@ -1316,6 +1329,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           capture_phone: capturePhone, capture_country: captureCountry,
           first_name_required: firstNameRequired, last_name_required: lastNameRequired,
           phone_required: phoneRequired, country_required: countryRequired,
+          custom_fields: customFields,
           // Surveys never gate on virality / bonus → keep server-side defaults.
           share_message: shareMessage, locale: locale || null,
           sio_share_tag_name: sioShareTagName || null, sio_capture_tag: sioCaptureTag || null, status,
@@ -1543,7 +1557,12 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (!leads.length) return;
     // Strip rich-text formatting before CSV — raw `<span style=…>` markup
     // would otherwise leak (cf. rapport Adeline, 17 mai 2026).
-    const csv = [t("csvHeader"), ...leads.map(l => [l.email, l.first_name ?? "", l.last_name ?? "", stripHtml(l.result_title ?? ""), l.created_at ? new Date(l.created_at).toLocaleDateString() : ""].map(c => `"${String(c).replace(/"/g,'""')}"`).join(","))].join("\n");
+    // Les champs personnalisés : une colonne chacun, sous son libellé,
+    // en fin de ligne (16 septembre 2026). L'en-tête et la ligne sont
+    // construits depuis la MÊME liste, donc ils ne peuvent pas se décaler.
+    const champs = champsVisibles(customFields);
+    const entete = [t("csvHeader"), ...champs.map((c) => `"${c.label.replace(/"/g, '""')}"`)].join(",");
+    const csv = [entete, ...leads.map(l => [l.email, l.first_name ?? "", l.last_name ?? "", stripHtml(l.result_title ?? ""), l.created_at ? new Date(l.created_at).toLocaleDateString() : "", ...champs.map((c) => valeurChamp(l.custom_fields, c.id) ?? "")].map(c => `"${String(c).replace(/"/g,'""')}"`).join(","))].join("\n");
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = `leads-${quizId}.csv`; a.click();
   };
 
@@ -1663,7 +1682,11 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           <Button size="sm" variant="outline" onClick={handleSave} disabled={saving} className="shrink-0 px-2 sm:px-3">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 sm:mr-1" />}<span className="hidden sm:inline">{saving ? "" : t("save")}</span>
           </Button>
-          <Button size="sm" onClick={handleToggleStatus} className="shrink-0">{status === "active" ? t("deactivate") : t("publish")}</Button>
+          <StatutToggle
+              actif={status === "active"}
+              onToggle={handleToggleStatus}
+              libelles={{ on: t("statusOn"), off: t("statusOff"), onHint: t("statusOnHint"), offHint: t("statusOffHint") }}
+            />
         </div>
       </header>
       {/* Onglets en 2e ligne sur MOBILE : la nav d'en-tête est `hidden sm:flex`
@@ -1953,6 +1976,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       <Plus className="w-3.5 h-3.5" /> {t("addField")}
                     </button>
                   )}
+                  <ChampsPersonnalisesEditor ns="quizEditor" champs={customFields} onChange={setCustomFields} />
                   {/* Consent checkbox is opt-out — most creators want it for
                       RGPD safety, but some manage consent upstream (their CRM,
                       a separate landing page) and don't want a redundant
@@ -2569,6 +2593,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     </div>}
                     <div><label className="text-sm text-muted-foreground">Email</label><Input readOnly className="mt-1 bg-muted/20" /></div>
                     {capturePhone && <div><label className="text-sm text-muted-foreground">{t("previewCapturePhone")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
+                    {champsVisibles(customFields).map((c) => (
+                      <div key={c.id}><label className="text-sm text-muted-foreground">{c.label}{c.required && <span className="text-destructive ml-0.5">*</span>}</label><Input readOnly placeholder={c.placeholder} className="mt-1 bg-muted/20" /></div>
+                    ))}
                   </div>
                   {showConsentCheckbox && (
                     <div className="max-w-md mx-auto flex items-start gap-2 text-sm text-muted-foreground">
@@ -2952,6 +2979,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                 locale={locale}
                 onToggleFlag={handleToggleFlag}
                 onDelete={handleDeleteResponses}
+                champs={customFields}
               />
             )}
 

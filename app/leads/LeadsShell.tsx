@@ -18,6 +18,7 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 import { PageBanner } from "@/components/ui/page-banner";
+import { colonnesChampsPersonnalises, valeurChamp } from "@/lib/quiz/champsPersonnalises";
 
 type Lead = {
   id: string;
@@ -38,6 +39,8 @@ type Lead = {
   scores?: unknown;
   /** Server-redacted PII — UI just adds a CSS blur on top. */
   locked?: boolean;
+  /** Les champs personnalisés du formulaire, {id: valeur} (16 septembre 2026). */
+  custom_fields?: unknown;
 };
 
 export default function LeadsShell({ userEmail }: { userEmail: string }) {
@@ -54,7 +57,10 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
   // concernés ?"). Toggle : 2e clic sur la même card revient à "all".
   type KpiFilter = "all" | "synced" | "not_synced" | "this_month";
   const [kpiFilter, setKpiFilter] = useState<KpiFilter>("all");
-  const [quizzes, setQuizzes] = useState<{ id: string; title: string }[]>([]);
+  const [quizzes, setQuizzes] = useState<{ id: string; title: string; custom_fields?: unknown }[]>([]);
+  // Les colonnes des champs personnalisés : l'union de ceux de tous les
+  // quiz, un par id, sous son libellé du jour (lib/quiz/champsPersonnalises.ts).
+  const colonnesPerso = useMemo(() => colonnesChampsPersonnalises(quizzes), [quizzes]);
   const [syncing, setSyncing] = useState<Set<string>>(new Set());
   const [plan, setPlan] = useState<string>("free");
   const [lockedCount, setLockedCount] = useState<number>(0);
@@ -95,7 +101,8 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
         (l) =>
           l.email.toLowerCase().includes(s) ||
           (l.first_name ?? "").toLowerCase().includes(s) ||
-          (l.last_name ?? "").toLowerCase().includes(s)
+          (l.last_name ?? "").toLowerCase().includes(s) ||
+          colonnesPerso.some((c) => (valeurChamp(l.custom_fields, c.id) ?? "").toLowerCase().includes(s))
       );
     }
     return result;
@@ -120,6 +127,8 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
       t("csv.syncSio"),
       t("csv.scores"),
       t("csv.date"),
+      // Une colonne par champ personnalisé, sous son libellé (16 septembre 2026).
+      ...colonnesPerso.map((c) => c.label),
     ];
     // Locked rows are skipped — exporting `••••••` masks would only pollute
     // the file with rows the creator can't act on. The server-side export
@@ -140,6 +149,7 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
       l.sio_synced ? t("csv.yes") : t("csv.no"),
       formatScoresSummary(l.scores),
       new Date(l.created_at).toLocaleDateString(localeTag),
+      ...colonnesPerso.map((c) => valeurChamp(l.custom_fields, c.id) ?? ""),
     ]);
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
@@ -325,6 +335,14 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
                         </td>
                         <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground">
                           {[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "—"}
+                          {colonnesPerso.some((c) => valeurChamp(lead.custom_fields, c.id)) && (
+                            <div className="mt-0.5 text-xs text-muted-foreground/80 space-y-0.5">
+                              {colonnesPerso.map((c) => {
+                                const v = valeurChamp(lead.custom_fields, c.id);
+                                return v ? <div key={c.id} className="truncate max-w-[220px]"><span className="font-medium">{c.label} :</span> {v}</div> : null;
+                              })}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3 hidden md:table-cell">
                           <span className="truncate max-w-[150px] block text-muted-foreground">{stripHtml(lead.quiz_title)}</span>
@@ -391,6 +409,14 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
                         <td className="px-4 py-3 font-medium">{lead.email}</td>
                         <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground">
                           {[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "—"}
+                          {colonnesPerso.some((c) => valeurChamp(lead.custom_fields, c.id)) && (
+                            <div className="mt-0.5 text-xs text-muted-foreground/80 space-y-0.5">
+                              {colonnesPerso.map((c) => {
+                                const v = valeurChamp(lead.custom_fields, c.id);
+                                return v ? <div key={c.id} className="truncate max-w-[220px]"><span className="font-medium">{c.label} :</span> {v}</div> : null;
+                              })}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">
                           {stripHtml(lead.quiz_title)}

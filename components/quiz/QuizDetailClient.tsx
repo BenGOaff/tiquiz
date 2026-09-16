@@ -59,6 +59,9 @@ import { QrCodeCard } from "@/components/share/QrCodeCard";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { interpolateText } from "@/lib/quizPersonalization";
 import { resultChoiceLabel } from "@/lib/quiz/resultLabel";
+import { champsVisibles, sanitizeChampsPersonnalises, type ChampPersonnalise } from "@/lib/quiz/champsPersonnalises";
+import ChampsPersonnalisesEditor from "@/components/quiz/ChampsPersonnalisesEditor";
+import StatutToggle from "@/components/quiz/StatutToggle";
 import { AutomatisationPanel } from "@/components/quiz/AutomatisationPanel";
 import { type TieConflict } from "@/lib/quizTieAnalysis";
 import { tieBreakMode } from "@/lib/quiz/profileWinner";
@@ -228,7 +231,7 @@ type IntroImagePosition = "top" | "after_title" | "after_intro" | "bottom";
 // titre du bonus) | "after_heading" | "after_intro" | "bottom".
 type BonusImagePosition = "top" | "after_heading" | "after_intro" | "bottom";
 type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; insight_heading?: string | null; projection_heading?: string | null; bridge?: string | null; bridge_heading?: string | null; beat_media?: BeatMedia | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_tag_names?: string[] | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number; image_url?: string | null; image_position?: ResultImagePosition | null; image_width?: number | null; min_score?: number | null; max_score?: number | null };
-type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_id: string | null; result_title: string | null; answers: { question_index: number; question_id?: string | null; option_index?: number; option_indices?: number[] }[] | null; scores?: unknown; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
+type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; custom_fields?: unknown; result_id: string | null; result_title: string | null; answers: { question_index: number; question_id?: string | null; option_index?: number; option_indices?: number[] }[] | null; scores?: unknown; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
 type QuizData = {
   id: string; title: string; slug: string | null;
   introduction: string | null; cta_text: string | null; cta_url: string | null;
@@ -242,6 +245,8 @@ type QuizData = {
   capture_first_name: boolean | null; capture_last_name: boolean | null;
   capture_phone: boolean | null; capture_country: boolean | null;
   phone_required?: boolean | null; first_name_required?: boolean | null; last_name_required?: boolean | null; country_required?: boolean | null;
+  /** Les champs personnalisés du formulaire (16 septembre 2026), JSONB libre. */
+  custom_fields?: unknown;
   virality_enabled: boolean; bonus_description: string | null; bonus_image_url: string | null; bonus_image_position: BonusImagePosition | null; bonus_image_width?: number | null;
   intro_image_url: string | null; intro_image_position: IntroImagePosition | null; intro_image_width?: number | null;
   bonus_heading: string | null;
@@ -737,6 +742,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
   const [lastNameRequired, setLastNameRequired] = useState(false);
   const [phoneRequired, setPhoneRequired] = useState(false);
   const [countryRequired, setCountryRequired] = useState(false);
+  // Les champs personnalisés du formulaire (16 septembre 2026). La forme
+  // vient de lib/quiz/champsPersonnalises.ts, l'écran ne décide de rien.
+  const [customFields, setCustomFields] = useState<ChampPersonnalise[]>([]);
   // Defaults to true so older quizzes (no column value yet) keep showing the
   // GDPR-style checkbox. Only flips when the creator explicitly opts out.
   const [showConsentCheckbox, setShowConsentCheckbox] = useState(true);
@@ -1145,6 +1153,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
     last_name_required: lastNameRequired,
     phone_required: phoneRequired,
     country_required: countryRequired,
+    custom_fields: customFields,
     show_consent_checkbox: showConsentCheckbox,
     show_results_breakdown: showResultsBreakdown,
     scoring_axes: scoringAxesEdit,
@@ -1220,7 +1229,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
     resultBridgeHeading, showResultBridge, resultLayout, tieBreak,
     brandLogoAlign, brandLogoWidth, introTextWidth,
     captureEnabled, captureFirstName, captureLastName, capturePhone, captureCountry,
-    firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
+    firstNameRequired, lastNameRequired, phoneRequired, countryRequired, customFields,
     showConsentCheckbox, showResultsBreakdown, hideResponseCounts, notifyResponses, showOtherResults, otherResultsPosition,
     scoringAxesEdit, showScoreGauge, scoreDisplayMode, scoreLabelsEdit, sioScoreTags,
     metaPixelId, ga4MeasurementId, googleAdsConversionId, googleAdsConversionLabel,
@@ -1282,6 +1291,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
     if (typeof s.last_name_required === "boolean") setLastNameRequired(s.last_name_required);
     if (typeof s.phone_required === "boolean") setPhoneRequired(s.phone_required);
     if (typeof s.country_required === "boolean") setCountryRequired(s.country_required);
+    if (Array.isArray(s.custom_fields)) setCustomFields(sanitizeChampsPersonnalises(s.custom_fields));
     if (typeof s.show_consent_checkbox === "boolean") setShowConsentCheckbox(s.show_consent_checkbox);
     if (typeof s.show_results_breakdown === "boolean") setShowResultsBreakdown(s.show_results_breakdown);
     if (Array.isArray(s.scoring_axes)) setScoringAxesEdit(normalizeScoringAxes(s.scoring_axes));
@@ -1470,6 +1480,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
       setCapturePhone(q.capture_phone ?? false); setCaptureCountry(q.capture_country ?? false);
       setFirstNameRequired(q.first_name_required ?? false); setLastNameRequired(q.last_name_required ?? false);
       setPhoneRequired(q.phone_required ?? false); setCountryRequired(q.country_required ?? false);
+      setCustomFields(sanitizeChampsPersonnalises(q.custom_fields));
       setAskFirstName(Boolean((q as unknown as Record<string, unknown>).ask_first_name));
       setAskGender(Boolean((q as unknown as Record<string, unknown>).ask_gender));
       setViralityEnabled(q.virality_enabled); setBonusDescription(q.bonus_description ?? "");
@@ -1600,6 +1611,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
           last_name_required: q.last_name_required ?? false,
           phone_required: q.phone_required ?? false,
           country_required: q.country_required ?? false,
+          custom_fields: sanitizeChampsPersonnalises(q.custom_fields),
           show_consent_checkbox: (q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false,
           show_results_breakdown: (q as { show_results_breakdown?: boolean | null }).show_results_breakdown === true,
           scoring_axes: normalizeScoringAxes((q as { scoring_axes?: unknown }).scoring_axes),
@@ -2557,6 +2569,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
           capture_phone: capturePhone, capture_country: captureCountry,
           first_name_required: firstNameRequired, last_name_required: lastNameRequired,
           phone_required: phoneRequired, country_required: countryRequired,
+          custom_fields: customFields,
           virality_enabled: viralityEnabled, bonus_description: bonusDescription,
           bonus_heading: bonusHeading.trim() || null,
           bonus_intro_text: bonusIntroText.trim() || null,
@@ -3220,6 +3233,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
         return formatSurveyAnswer(questionsExport[position] as never, rep as never, locale);
       },
       nettoyer: stripHtml,
+      champs: customFields,
     });
     const csv = construireCsv(colonnes, leads as unknown as LeadExportable[]);
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); a.download = `leads-${quizId}.csv`; a.click();
@@ -3479,7 +3493,11 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
               {t("unlockTiquizCta")}
             </Button>
           ) : (
-            <Button size="sm" onClick={handleToggleStatus} className="shrink-0">{status === "active" ? t("deactivate") : t("publish")}</Button>
+            <StatutToggle
+              actif={status === "active"}
+              onToggle={handleToggleStatus}
+              libelles={{ on: t("statusOn"), off: t("statusOff"), onHint: t("statusOnHint"), offHint: t("statusOffHint") }}
+            />
           )}
         </div>
       </header>
@@ -4195,6 +4213,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
                         <Plus className="w-3.5 h-3.5" /> {t("addField")}
                       </button>
                     )}
+                    <ChampsPersonnalisesEditor ns="quizEditor" champs={customFields} onChange={setCustomFields} />
                     {/* Consent checkbox is opt-out — most creators want it for
                         RGPD safety, but some manage consent upstream (their CRM,
                         a separate landing page) and don't want a redundant
@@ -5469,6 +5488,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
                     </div>}
                     <div><label className="text-sm text-muted-foreground">Email</label><Input readOnly className="mt-1 bg-muted/20" /></div>
                     {capturePhone && <div><label className="text-sm text-muted-foreground">{t("previewCapturePhone")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
+                    {/* L'aperçu montre les champs personnalisés comme le viewer : le libellé, le placeholder, l'astérisque. */}
+                    {champsVisibles(customFields).map((c) => (
+                      <div key={c.id}><label className="text-sm text-muted-foreground">{c.label}{c.required && <span className="text-destructive ml-0.5">*</span>}</label><Input readOnly placeholder={c.placeholder} className="mt-1 bg-muted/20" /></div>
+                    ))}
                   </div>
                   {/* Adeline (18 mai 2026) : la case à cocher RGPD doit
                       être éditée WYSIWYG, dans le preview du quiz, pas
@@ -6919,6 +6942,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken, embedConte
               results={editResults}
               onExportCSV={handleExportCSV}
               hideCounts={hideResponseCounts}
+              champsPersonnalises={customFields}
             />
 
             {/* Analyse IA strategique (funnel, capture, profils, axes

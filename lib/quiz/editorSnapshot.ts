@@ -72,6 +72,8 @@ export const QUIZ_SNAPSHOT_KEYS = [
   "last_name_required",
   "phone_required",
   "country_required",
+  // Les champs personnalisés du formulaire (16 septembre 2026).
+  "custom_fields",
   "show_consent_checkbox",
   "show_results_breakdown",
   "scoring_axes",
@@ -169,6 +171,8 @@ export const SURVEY_SNAPSHOT_KEYS = [
   "last_name_required",
   "phone_required",
   "country_required",
+  // Les champs personnalisés du formulaire (16 septembre 2026).
+  "custom_fields",
   "show_consent_checkbox",
   "meta_pixel_id",
   "ga4_measurement_id",
