@@ -13,6 +13,7 @@
 // every lead lands in the workspace attached to its quiz — never another.
 
 import { NextRequest, NextResponse } from "next/server";
+import { sanitizeChampsPersonnalises, sanitizeValeursChamps, type ValeursChamps } from "@/lib/quiz/champsPersonnalises";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { assetProxyEnabled, proxyAssetsDeep } from "@/lib/assetProxy";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -162,6 +163,30 @@ function colonneInconnue(err: { code?: string | null; message?: string | null } 
   return m.includes("column") && (m.includes("does not exist") || m.includes("schema cache"));
 }
 
+/**
+ * Ce que le visiteur a saisi dans les champs personnalisés du formulaire
+ * (16 septembre 2026), nettoyé contre la liste des champs du quiz.
+ *
+ * La liste est lue dans une requête À PART, et best-effort : ajouter
+ * `custom_fields` au select principal ferait répondre 404 à TOUTES les
+ * captures tant que la migration n'est pas passée (drame survey_thanks_*,
+ * 2 juin). Ici, une colonne absente coûte les valeurs de ces champs,
+ * jamais le lead.
+ */
+async function lireValeursChampsPersonnalises(
+  admin: typeof supabaseAdmin,
+  quizId: string,
+  brut: unknown,
+): Promise<ValeursChamps> {
+  if (!brut || typeof brut !== "object" || Array.isArray(brut) || Object.keys(brut as object).length === 0) return {};
+  const { data, error } = await admin.from("quizzes").select("custom_fields").eq("id", quizId).maybeSingle();
+  if (error) {
+    console.error("[quiz/public] custom_fields illisible, valeurs ignorees :", error.message);
+    return {};
+  }
+  return sanitizeValeursChamps(brut, sanitizeChampsPersonnalises((data as { custom_fields?: unknown } | null)?.custom_fields));
+}
+
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
     const { quizId: slugOrId } = await context.params;
@@ -239,6 +264,9 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const rawGender = String(body.gender ?? "").trim().toLowerCase();
     const gender: "m" | "f" | "x" | null = rawGender === "m" || rawGender === "f" || rawGender === "x" ? rawGender : null;
     const answers = Array.isArray(body.answers) ? body.answers : null;
+    const valeursChamps = await lireValeursChampsPersonnalises(admin, quizId, body.custom_fields);
+    const colonnesChamps: Record<string, unknown> =
+      Object.keys(valeursChamps).length > 0 ? { custom_fields: valeursChamps } : {};
     // Snapshot des scores multi-axes (mode scoring uniquement). Validé
     // et borné côté serveur : triplets {points, min, max} finis, 6 axes
     // max. Invalide → ignoré silencieusement (le lead reste capturé).
@@ -300,7 +328,18 @@ export async function POST(req: NextRequest, context: RouteContext) {
         .select("id, created_at")
         .single();
 
-    let { data: lead, error } = await ecrireLead(colonnesAffiliate);
+    let { data: lead, error } = await ecrireLead({ ...colonnesAffiliate, ...colonnesChamps });
+
+    // La colonne des champs personnalisés peut ne pas exister encore
+    // (16 septembre 2026) : on retombe sur le lead SANS ces valeurs, et on
+    // crie. Le lead, lui, est toujours écrit.
+    if (error && Object.keys(colonnesChamps).length > 0 && colonneInconnue(error)) {
+      console.error(
+        "[quiz/public] colonne custom_fields absente en base : lead enregistre SANS ses champs personnalises. " +
+          "Appliquer supabase/migrations/20260916_champs_personnalises.sql",
+      );
+      ({ data: lead, error } = await ecrireLead(colonnesAffiliate));
+    }
 
     // LA MIGRATION PEUT NE PAS ÊTRE ENCORE PASSÉE, et PostgREST rejette
     // l'écriture ENTIÈRE sur une colonne inconnue. Sans ce repli, un

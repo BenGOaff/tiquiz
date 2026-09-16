@@ -1,6 +1,7 @@
 // app/api/quiz/[quizId]/route.ts
 // Single quiz operations: GET detail, PATCH update, DELETE
 import { NextRequest, NextResponse } from "next/server";
+import { sanitizeChampsPersonnalises } from "@/lib/quiz/champsPersonnalises";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sanitizeSlug, sanitizeShareNetworks, BRAND_FONT_CHOICES, QUIZ_GRADIENTS, sanitizePanelMediaConfig } from "@/lib/quizBranding";
@@ -232,11 +233,19 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       // Scoring multi-axes (Véronique juillet 2026). scoring_axes est
       // re-validé ci-dessous (JSONB non typé sinon).
       "scoring_axes", "show_score_gauge", "score_display_mode", "score_labels", "sio_score_tags",
+      // Les champs personnalisés du formulaire de capture (16 septembre
+      // 2026). JSONB libre en base : la FORME est contrôlée ci-dessous par
+      // sanitizeChampsPersonnalises, jamais crue sur parole.
+      "custom_fields",
     ];
 
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
     for (const key of allowedFields) {
       if (key in body) patch[key] = body[key];
+    }
+
+    if ("custom_fields" in patch) {
+      patch.custom_fields = sanitizeChampsPersonnalises(patch.custom_fields);
     }
 
     // Présentation : on n'accepte que des valeurs connues, sinon on retombe
@@ -477,6 +486,15 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     if (error && "tie_break" in patch) {
       console.error("[quiz PATCH] update refuse, repli sans tie_break :", error.message);
       const { tie_break: _pending, ...rest } = patch as Record<string, unknown>;
+      ({ error } = await supabase.from("quizzes").update(rest).eq("id", quizId));
+    }
+    // Même repli pour la colonne des champs personnalisés (16 septembre
+    // 2026) : la migration 20260916_champs_personnalises.sql peut ne pas
+    // être passée, et une sauvegarde qui échoue en entier coûterait le
+    // travail en cours de la créatrice.
+    if (error && "custom_fields" in patch) {
+      console.error("[quiz PATCH] update refuse, repli sans custom_fields :", error.message);
+      const { custom_fields: _pendingChamps, ...rest } = patch as Record<string, unknown>;
       ({ error } = await supabase.from("quizzes").update(rest).eq("id", quizId));
     }
     if (error) {

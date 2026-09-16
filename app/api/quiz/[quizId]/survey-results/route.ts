@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { champsVisibles, sanitizeChampsPersonnalises, valeurChamp } from "@/lib/quiz/champsPersonnalises";
 import { aggregateSurvey } from "@/lib/survey/analysis";
 import { fetchAllRows } from "@/lib/db/fetchAllRows";
 import { formatSurveyAnswer, indexAnswers, type SurveyAnswerLike, type SurveyQuestionLike } from "@/lib/survey/format";
@@ -48,6 +49,12 @@ export async function GET(
     return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
   }
 
+  // Les champs personnalises du formulaire : une colonne chacun dans
+  // l'export (16 septembre 2026). Lus A PART et best-effort : la colonne
+  // peut ne pas exister encore, et l'export ne doit pas echouer pour ca.
+  const { data: quizChamps } = await supabaseAdmin.from("quizzes").select("custom_fields").eq("id", quizId).maybeSingle();
+  const champs = champsVisibles(sanitizeChampsPersonnalises((quizChamps as { custom_fields?: unknown } | null)?.custom_fields));
+
   if (format === "json") {
     const aggregate = await aggregateSurvey(quizId, user.id);
     if (!aggregate) {
@@ -76,14 +83,24 @@ export async function GET(
 
     // Export COMPLET (pas de plafond 1000) : pagination serveur, c'est un
     // fichier téléchargé donc le volume n'est pas un souci côté navigateur.
-    const leads = await fetchAllRows((from, to) =>
-      supabaseAdmin
-        .from("quiz_leads")
-        .select("created_at, email, first_name, last_name, phone, country, flagged, answers")
-        .eq("quiz_id", quizId)
-        .order("created_at", { ascending: true })
-        .range(from, to),
-    );
+    const lireLeads = (cols: string) =>
+      fetchAllRows((from, to) =>
+        supabaseAdmin
+          .from("quiz_leads")
+          .select(cols)
+          .eq("quiz_id", quizId)
+          .order("created_at", { ascending: true })
+          .range(from, to),
+      );
+    const COLS = "created_at, email, first_name, last_name, phone, country, flagged, answers";
+    let leads: unknown[];
+    try {
+      leads = champs.length > 0 ? await lireLeads(`${COLS}, custom_fields`) : await lireLeads(COLS);
+    } catch (e) {
+      // La colonne custom_fields manque encore : l'export sort sans elle.
+      console.error("[survey-results] select custom_fields refuse, repli :", e instanceof Error ? e.message : e);
+      leads = await lireLeads(COLS);
+    }
 
     // Identité du répondant EN PREMIER (la demande #1 : savoir qui a répondu
     // quoi) + colonne "Marqué", puis une colonne par question avec le VRAI
@@ -95,6 +112,7 @@ export async function GET(
       "Nom",
       "Téléphone",
       "Pays",
+      ...champs.map((c) => c.label),
       "Marqué",
       ...questions.map((q) => stripHtml(String(q.question_text ?? "")).trim() || "Question"),
     ];
@@ -110,6 +128,7 @@ export async function GET(
         country?: string | null;
         flagged?: boolean | null;
         answers?: SurveyAnswerLike[] | null;
+        custom_fields?: unknown;
       };
       const byQ = indexAnswers(l.answers, questions);
       rows.push([
@@ -119,6 +138,7 @@ export async function GET(
         l.last_name ?? "",
         l.phone ?? "",
         l.country ?? "",
+        ...champs.map((c) => valeurChamp(l.custom_fields, c.id) ?? ""),
         l.flagged ? "Oui" : "",
         ...questions.map((q, qi) => formatSurveyAnswer(q, byQ.get(qi), locale)),
       ]);
