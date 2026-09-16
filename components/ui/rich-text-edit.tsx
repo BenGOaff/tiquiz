@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { ImageCropDialog } from "@/components/quiz/ImageCropDialog";
 import { sanitizeRichText, isSafeUrl } from "@/lib/richText";
+import { stripHtml } from "@/lib/texteBrut";
 import { HexColorPicker } from "react-colorful";
 import { QuizVarInserter, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { useUserPalettes } from "@/components/editor/PalettesContext";
@@ -1244,8 +1245,11 @@ export function RichTextEdit({
   );
 }
 
+// LA PORTE COMMUNE, pas un strip recopie (16 septembre 2026) : celui-ci
+// ne decodait que `&nbsp;`, donc un champ qui ne portait que `&amp;`
+// passait pour non vide a tort.
 function stripTagsQuick(html: string): string {
-  return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+  return stripHtml(html);
 }
 
 function ToolbarBtn(props: React.ButtonHTMLAttributes<HTMLButtonElement> & { children: React.ReactNode }) {

@@ -11,6 +11,7 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolveAppUrl } from "@/lib/authLinks";
 import { adresseExpediteur, tiquizFrom } from "./tiquizShell";
+import { stripHtml } from "@/lib/texteBrut";
 
 const RESEND_URL = "https://api.resend.com/emails";
 const APP_URL = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
@@ -28,19 +29,12 @@ function esc(s: string): string {
  * colorés). Dans l'email on veut le TEXTE seul : sinon le destinataire voit
  * le balisage brut (drame Gwenn 19 juil 2026). Ne change RIEN au rendu de
  * l'app, qui continue d'afficher le HTML stylé.
+ *
+ * LA COPIE LOCALE A ETE RETIREE (16 septembre 2026). Elle decodait un jeu
+ * d'entites choisi a la main, donc elle divergeait de la porte commune des
+ * le jour ou une entite de plus arrivait. `lib/texteBrut.ts` est PUR :
+ * l'importer ici ne charge ni DOMPurify ni quoi que ce soit d'autre.
  */
-function stripHtml(input: string | null | undefined): string {
-  return String(input ?? "")
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#0*39;|&apos;|&rsquo;/gi, "'")
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
 export interface ResponseNotificationArgs {
   ownerUserId: string;

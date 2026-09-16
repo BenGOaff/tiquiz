@@ -67,6 +67,7 @@ const IMG_WIDTH_RE = /^\d{1,3}(?:\.\d+)?%$|^\d{1,4}px$/i;
 // en silence a la sauvegarde.
 import { FIELD_FONT_SIZES, FIELD_FS_CLASS } from "./richTextFieldSize.ts";
 import { reparerEntitesCassees } from "@/lib/frenchTypography";
+import { sansEntiteInsecable } from "@/lib/texteBrut";
 
 const FIELD_ALLOWED_SIZES = new Set<string>(FIELD_FONT_SIZES);
 
@@ -234,6 +235,14 @@ function convertFontTags(html: string): string {
     .replace(/<\/font>/gi, "</span>");
 }
 
+
+// LES TROIS FONCTIONS DE TEXTE BRUT VIVENT DANS UN MODULE PUR
+// (`lib/texteBrut.ts`, 16 septembre 2026), pour que les modules qui n'ont
+// rien a faire de DOMPurify puissent les appeler. On les reexporte ici :
+// tout ce qui importe deja `stripHtml` ou `decodeHtmlEntities` depuis
+// `@/lib/richText` continue de marcher sans changer une ligne.
+export { sansEntiteInsecable, decodeHtmlEntities, stripHtml } from "@/lib/texteBrut";
+
 export function sanitizeRichText(input: string | null | undefined): string {
   if (!input) return "";
   // ON RÉPARE À L'AFFICHAGE, PAS SEULEMENT À L'ENREGISTREMENT
@@ -257,7 +266,7 @@ export function sanitizeRichText(input: string | null | undefined): string {
     // commentaire qui disait le contraire a coûté le retour du 24 août.
     ADD_ATTR: ["target"],
   });
-  return typeof clean === "string" ? clean : String(clean);
+  return sansEntiteInsecable(typeof clean === "string" ? clean : String(clean));
 }
 
 // Tight-check for URLs pasted into the <a> / <img> dialogs
@@ -265,73 +274,5 @@ export function isSafeUrl(url: string): boolean {
   return SAFE_URL_RE.test(url.trim());
 }
 
-// Decode les entités HTML nommées/numériques les plus fréquentes SANS
-// toucher aux balises ni aux espaces (contrairement à stripHtml, qui
-// supprime les balises et écrase les blancs). À utiliser quand on rend un
-// champ auteur en TEXTE BRUT (JSX children) alors qu'il peut contenir un
-// `&nbsp;` collé par le contentEditable : sans ça, l'entité apparait en
-// clair (ex. "et&nbsp;" affiché tel quel sur l'intro d'un sondage).
-export function decodeHtmlEntities(input: string | null | undefined): string {
-  if (!input || input.indexOf("&") === -1) return input ?? "";
-  return input
-    .replace(/&nbsp;/g, " ")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&#(\d+);/g, (_m, n) => {
-      const code = Number(n);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
-    })
-    .replace(/&#x([0-9a-fA-F]+);/g, (_m, n) => {
-      const code = parseInt(n, 16);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
-    })
-    // &amp; en dernier, sinon on double-décode `&amp;nbsp;`.
-    .replace(/&amp;/g, "&");
-}
 
-// Strip all HTML tags AND decode HTML entities — used for short previews,
-// OpenGraph metadata, navigator.share titles, etc. Le précédent stripHtml
-// laissait `&nbsp;`, `&amp;`, `&#39;`… visibles en clair dans les aperçus
-// de partage (cf. rapport iMessage Tiquiz, 16 mai 2026) parce qu'on rend
-// la sortie comme texte JSX et non comme HTML — les entités ne sont
-// alors jamais décodées par le browser.
-export function stripHtml(input: string | null | undefined): string {
-  if (!input) return "";
-  // Même réparation que dans `sanitizeRichText` : ce chemin sert les
-  // aperçus de partage, les `og:title` et les libellés d'admin, où un
-  // `&nbsp ;` non réparé s'afficherait en toutes lettres.
-  return reparerEntitesCassees(input)
-    // UNE FRONTIERE DE BLOC EST UNE ESPACE (Damien, 27 aout 2026). Son
-    // titre est `Tu as une expertise ?<div>Qu'est-ce qui...</div>` : deux
-    // lignes a l'ecran, et un seul mot une fois les balises retirees,
-    // parce qu'on les remplacait par RIEN. Le texte de partage et le
-    // `og:title` sortaient en "expertise ?Qu'est-ce".
-    //
-    // Ca vaut pour l'ouvrante autant que pour la fermante : ici la
-    // coupure est un <div> OUVRANT, sans fermante avant lui. Le
-    // `\s+` -> " " plus bas absorbe les doublons de `</div><div>`.
-    .replace(/<\/?(?:div|p|li|ul|ol|h[1-6]|blockquote|section|article|tr)[^>]*>|<br\s*\/?>/gi, " ")
-    .replace(/<[^>]*>/g, "")
-    // Entités nommées les plus fréquentes du contentEditable (le browser
-    // insère systématiquement `&nbsp;` à la place des espaces protégés).
-    .replace(/&nbsp;/g, " ")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    // Décimales / hex (ex. &#39; pour l'apostrophe droite).
-    .replace(/&#(\d+);/g, (_m, n) => {
-      const code = Number(n);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
-    })
-    .replace(/&#x([0-9a-fA-F]+);/g, (_m, n) => {
-      const code = parseInt(n, 16);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
-    })
-    // &amp; en dernier, sinon on double-decode `&amp;nbsp;`.
-    .replace(/&amp;/g, "&")
-    .replace(/\s+/g, " ")
-    .trim();
-}
+

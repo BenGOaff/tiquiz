@@ -43,6 +43,7 @@ import {
 } from "@/lib/quizScoring";
 import { affiliateAbsent, lireAffiliateObjet } from "@/lib/quiz/affiliateRelay";
 import { echapperMotifLike } from "@/lib/db/motifLike";
+import { stripHtml } from "@/lib/texteBrut";
 // LES TROIS AIDES ONT DEMENAGE dans le module de charge, et on les
 // RE-IMPORTE plutot que d'en garder une copie : deux versions de
 // `resolveQuizId` finiraient par ne plus resoudre le meme quiz, et le
@@ -587,7 +588,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
               champs: champsContactPersonnalises(SIO_PREFIXE_CHAMP, champsPerso, valeursChamps),
               courseId: courseId || null,
               communityId: communityId || null,
-              source: `Tiquiz : ${String(quiz.title ?? "").replace(/<[^>]*>/g, "").trim() || "quiz"}`.slice(0, 120),
+              source: `Tiquiz : ${stripHtml(quiz.title) || "quiz"}`.slice(0, 120),
             },
             quizUserId,
           );
