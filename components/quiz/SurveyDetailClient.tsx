@@ -72,7 +72,7 @@ import {
 import { answerImageRender } from "@/lib/quiz/answerImage";
 import { champsVisibles, sanitizeChampsPersonnalises, valeurChamp, type ChampPersonnalise } from "@/lib/quiz/champsPersonnalises";
 import { firstNameRequiredOnCapture, showFirstNameOnCapture } from "@/lib/quiz/firstNameAsk";
-import ChampsPersonnalisesEditor from "@/components/quiz/ChampsPersonnalisesEditor";
+import ChampsCaptureEditor from "@/components/quiz/ChampsCaptureEditor";
 import StatutToggle from "@/components/quiz/StatutToggle";
 import { stripHtml } from "@/lib/richText";
 import { alignBlockMarginClass, alignJustifyClass, alignTextClass, resolveBlockAlign } from "@/lib/quiz/textAlign";
@@ -294,29 +294,6 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
         </button>
       )}
     </div>
-  );
-}
-
-// Rounded pill used in the capture-form settings panel
-function CapturePill({ label, active, locked, onToggle }: {
-  label: string; active: boolean; locked?: boolean; onToggle?: () => void;
-}) {
-  const base = "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors border";
-  if (locked) {
-    return <span className={`${base} bg-muted text-muted-foreground border-border`}>{label}</span>;
-  }
-  if (active) {
-    return (
-      <button type="button" onClick={onToggle} className={`${base} bg-primary/10 text-primary border-primary/30 hover:bg-primary/15`}>
-        {label}
-        <X className="w-3 h-3 opacity-60" />
-      </button>
-    );
-  }
-  return (
-    <button type="button" onClick={onToggle} className={`${base} bg-background text-muted-foreground border-dashed border-border hover:text-foreground hover:border-primary/30`}>
-      <Plus className="w-3 h-3" /> {label}
-    </button>
   );
 }
 
@@ -2024,55 +2001,18 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       Christelle 14 juillet 2026). Le picker PATCH
                       sio_api_key_id de facon autonome. */}
                   <QuizSioKeyPicker quizId={quizId} variante="colonne" />
-                  <div className="flex flex-wrap gap-1.5">
-                    <CapturePill label={t("fieldEmailRequired")} active locked />
-                    <CapturePill label={t("fieldFirstNameRequired")} active={captureFirstName} onToggle={() => setCaptureFirstName(!captureFirstName)} />
-                    <CapturePill label={t("fieldLastNameRequired")} active={captureLastName} onToggle={() => setCaptureLastName(!captureLastName)} />
-                    <CapturePill label={t("fieldPhone")} active={capturePhone} onToggle={() => setCapturePhone(!capturePhone)} />
-                    <CapturePill label={t("fieldCountry")} active={captureCountry} onToggle={() => setCaptureCountry(!captureCountry)} />
-                  </div>
-                  {(captureFirstName || captureLastName || capturePhone || captureCountry) && (
-                    <div className="flex flex-col gap-1.5 pt-1">
-                      {captureFirstName && (
-                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
-                          <input type="checkbox" checked={firstNameRequired} onChange={(e) => setFirstNameRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
-                          <span>{t("fieldFirstNameRequiredToggle")}</span>
-                        </label>
-                      )}
-                      {captureLastName && (
-                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
-                          <input type="checkbox" checked={lastNameRequired} onChange={(e) => setLastNameRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
-                          <span>{t("fieldLastNameRequiredToggle")}</span>
-                        </label>
-                      )}
-                      {capturePhone && (
-                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
-                          <input type="checkbox" checked={phoneRequired} onChange={(e) => setPhoneRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
-                          <span>{t("fieldPhoneRequired")}</span>
-                        </label>
-                      )}
-                      {captureCountry && (
-                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
-                          <input type="checkbox" checked={countryRequired} onChange={(e) => setCountryRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
-                          <span>{t("fieldCountryRequiredToggle")}</span>
-                        </label>
-                      )}
-                    </div>
-                  )}
-                  {(!captureFirstName || !captureLastName || !capturePhone || !captureCountry) && (
-                    <button
-                      onClick={() => {
-                        if (!captureFirstName) setCaptureFirstName(true);
-                        else if (!captureLastName) setCaptureLastName(true);
-                        else if (!capturePhone) setCapturePhone(true);
-                        else if (!captureCountry) setCaptureCountry(true);
-                      }}
-                      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-muted/60 hover:bg-muted text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <Plus className="w-3.5 h-3.5" /> {t("addField")}
-                    </button>
-                  )}
-                  <ChampsPersonnalisesEditor ns="quizEditor" champs={customFields} onChange={majChampsPersonnalises} />
+                  {/* UN SEUL ENDROIT POUR TOUT CE QU'ON DEMANDE AU
+                      VISITEUR (Béné, 17 septembre 2026). Même composant que
+                      l'éditeur de quiz, et que les deux éditeurs de Tipote. */}
+                  <ChampsCaptureEditor
+                    ns="quizEditor"
+                    prenom={{ actif: captureFirstName, setActif: setCaptureFirstName, obligatoire: firstNameRequired, setObligatoire: setFirstNameRequired }}
+                    nom={{ actif: captureLastName, setActif: setCaptureLastName, obligatoire: lastNameRequired, setObligatoire: setLastNameRequired }}
+                    telephone={{ actif: capturePhone, setActif: setCapturePhone, obligatoire: phoneRequired, setObligatoire: setPhoneRequired }}
+                    pays={{ actif: captureCountry, setActif: setCaptureCountry, obligatoire: countryRequired, setObligatoire: setCountryRequired }}
+                    champs={customFields}
+                    onChangeChamps={majChampsPersonnalises}
+                  />
                   {/* Consent checkbox is opt-out — most creators want it for
                       RGPD safety, but some manage consent upstream (their CRM,
                       a separate landing page) and don't want a redundant
