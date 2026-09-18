@@ -41,6 +41,7 @@ import {
   dollars,
   enEuros,
 } from "@/lib/generateur/tarifsIa";
+import { coherenceTrafic, phraseCoherence } from "@/lib/trafic/coherenceTrafic";
 import {
   construireEntonnoir,
   MIN_VUES_POUR_UN_TAUX,
@@ -206,6 +207,7 @@ export function TraficPilotage() {
       ) : (
         <>
           <h2 className="text-lg font-semibold">tiquiz.fr</h2>
+          <AlerteMesure vues={entonnoir.vues} ventes={entonnoir.ventes} />
           <Entonnoir e={entonnoir} encaisseCents={d.resume.encaisseCents} />
 
           {avantLeComptage ? (
@@ -240,11 +242,39 @@ export function TraficPilotage() {
           <p className="text-xs text-muted-foreground">
             On compte des <strong>vues de page</strong>, jamais des visiteurs : aucun cookie
             n&apos;est posé pour ces chiffres, donc on ne sait pas distinguer une personne qui
-            revient d&apos;une nouvelle. En échange, ce compteur voit aussi les gens qui refusent le
-            bandeau cookies et ceux qui ont un bloqueur, que Google Analytics ne voit pas.
+            revient d&apos;une nouvelle. Le comptage se fait dans le navigateur depuis le 18
+            septembre 2026, parce que Cloudflare sert les pages depuis son cache et que le serveur
+            ne les voit pas passer. Conséquence à connaître : ce compteur voit les gens qui refusent
+            le bandeau cookies (Google Analytics ne les voit pas), mais il ne voit pas ceux qui ont
+            un bloqueur très agressif. C&apos;est donc un plancher, jamais un plafond.
           </p>
         </>
       )}
+    </div>
+  );
+}
+
+/**
+ * LE BANDEAU QUI DIT QUE LA MESURE EST CASSÉE.
+ *
+ * Le 18 septembre, cet écran affichait "0 vue" à côté de "8 ventes
+ * encaissées", et il a fallu onze jours et une cliente en colère pour
+ * apprendre que le compteur était mort. Cette phrase là, le code pouvait
+ * la dire tout seul : on ne vend pas à des gens qui ne sont jamais
+ * venus.
+ *
+ * La décision et le texte vivent dans `lib/trafic/coherenceTrafic.ts`,
+ * pur et testé. Ici on ne fait que peindre : une phrase enfermée dans du
+ * JSX n'est pas testable, donc elle peut redevenir rassurante sans que
+ * personne ne le voie.
+ */
+function AlerteMesure({ vues, ventes }: { vues: number; ventes: number }) {
+  const phrase = phraseCoherence(coherenceTrafic({ vues, ventes }));
+  if (!phrase) return null;
+  return (
+    <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-900">
+      <p className="font-semibold">Ce chiffre n&apos;est pas fiable.</p>
+      <p className="mt-1">{phrase}</p>
     </div>
   );
 }
@@ -432,6 +462,9 @@ function AtelierBloc({
         </div>
       ) : (
         <>
+          {/* Le même garde-fou que pour tiquiz.fr : un garde-fou qui ne
+              protège qu'un des deux jumeaux ne protège personne. */}
+          <AlerteMesure vues={e.vues} ventes={e.ventes} />
           <Entonnoir e={e} />
           <div className="grid gap-4 md:grid-cols-2">
             <Classement

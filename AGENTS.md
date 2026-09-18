@@ -770,3 +770,4 @@ Les sections déplacées, dans l'ordre :
 - La vente qui n'était identifiée nulle part, et l'affilié qu'on ne pouvait pas rassurer (Béné, 17 septembre 2026)
 - Le live de Greg, l'email qui ne disait rien, et /admin qui s'éteint (Béné, 18 septembre 2026)
 - Le registre devient opposable, et l'Atelier s'offre dans une fenêtre (Béné, 18 septembre 2026)
+- « Mon trafic n'est absolument pas tracké » : Cloudflare répondait avant nous (Béné, 18 septembre 2026)

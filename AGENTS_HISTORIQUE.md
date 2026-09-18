@@ -15407,3 +15407,133 @@ de 6 mois et 1 an ; la séquence d'accueil, c'est elle.
 
 Filets : `tests/logic/cadeau-atelier.test.mts` (23 tests) et
 `tests/logic/rattachement-manuel.test.mts` (13, côté Tipote).
+
+## « Mon trafic n'est absolument pas tracké » : Cloudflare répondait avant nous (Béné, 18 septembre 2026)
+
+L'écran de pilotage affichait **0 vue du site, 0 vue d'un bon de
+commande, et 8 ventes encaissées**. Google Search Console, lui, voyait
+7 clics et 78 impressions sur `tiquiz.fr` en 3 mois.
+
+Béné : "c'est impossible que je n'ai eu aucune visite mais que j'ai
+vendu quand même... comment faire confiance à un centre de pilotage que
+tu sembles bricoler à l'aveugle ?"
+
+Elle avait raison, et le reproche est le bon : **rien dans le code ne
+disait que le compteur était mort.** Il l'était depuis sa naissance, le
+7 septembre. Onze jours.
+
+### LA CAUSE, EN UNE COMMANDE
+
+```
+curl -sS -o /dev/null -D - https://tiquiz.fr/ -H "accept: text/html"
+-> cache-control: max-age=300
+-> cf-cache-status: HIT      age: 9
+```
+
+**Cloudflare sert la page publique depuis SON cache.** Une réponse
+servie par le cache ne touche jamais notre serveur : le middleware ne
+tourne pas, donc `signalerVue` n'est jamais appelé, donc la vue n'existe
+nulle part. Mesuré pareil sur `atelierduquiz.fr/` (HIT) et sur `/blog`
+(`s-maxage=3600`).
+
+C'est MOT POUR MOT la règle du 31 août, celle des images en 403 : quand
+un changement déplace l'endroit d'où quelque chose est SERVI, la
+dernière étape n'est pas d'écrire le code, c'est d'aller chercher l'URL
+et de lire le code de réponse. Personne n'avait demandé au serveur s'il
+voyait passer la page.
+
+### CE QUI ÉTAIT SAIN, ET C'EST CE QUI RENDAIT LA PANNE INVISIBLE
+
+Tout le reste de la chaîne marchait, et chaque pièce prise isolément
+répondait correctement. Vérifié le 18, dans cet ordre :
+
+- la route interne répond **401** sans le secret : elle est joignable et
+  `CRON_SECRET` est bien posé sur le serveur ;
+- un POST en `http://` survit à la redirection (**308**, la méthode est
+  préservée) : la théorie du POST transformé en GET est morte, testée
+  au lieu d'être affirmée ;
+- la table `trafic_jour` est **lisible** : l'écran affiche des chiffres
+  et pas son bloc "pas encore lisible", donc la migration EST passée ;
+- le middleware tourne bien sur les pages non mises en cache : il y pose
+  ses cookies (vérifié avec `?ref=`, qui casse le cache).
+
+Il n'y avait rien à réparer dans le code. Il y avait un intermédiaire
+qui répondait avant lui.
+
+### LE CORRECTIF : LE COMPTEUR PASSE DANS LE NAVIGATEUR
+
+`components/site/CompteurDeVue.tsx` -> `POST /api/public/vue`. Le HTML
+vient du cache, la balise part quand même : c'est une requête à part, et
+un POST n'est jamais mis en cache. On garde donc la vitesse du cache ET
+on compte.
+
+**Débrancher le cache aurait été l'autre réponse, et elle est moins
+bonne** : elle ralentit de vraies pages qui commencent tout juste à
+ranker, pour un compteur.
+
+**Posé dans le layout RACINE, pas dans `SiteShell`.** Le bon de commande
+n'est pas sous `SiteShell`, et c'est exactement sa vue qui manquait
+("vues d'un bon de commande : 0" à côté de 8 ventes). Une balise à
+recopier page par page est une balise qu'on oublie sur la suivante.
+
+**Et on n'en garde QU'UN SEUL.** Le comptage du middleware est retiré
+dans le même geste (`lib/trafic/signalerVue.ts` et
+`app/api/interne/trafic/` supprimés). Garder les deux compterait DEUX
+FOIS chaque page dynamique, le bon de commande en tête, et un chiffre
+faux dans un tableau de bord fait prendre des décisions.
+
+### LA FAUTE QUE J'AI FAITE EN L'ÉCRIVANT, ET QUI VAUT PLUS QUE LE RESTE
+
+Mon premier jet n'acceptait la vue que sur `sec-fetch-site:
+same-origin`. **Safari ne pose les en-têtes `Sec-Fetch-*` que depuis la
+version 16.4.** Tous les visiteurs d'un iPhone un peu ancien auraient été
+refusés, silencieusement, et le compteur aurait recommencé à sous
+compter sans que rien ne le dise : le défaut que j'étais en train de
+réparer, réintroduit dans le correctif.
+
+Il y a donc DEUX preuves, et il en faut UNE : `sec-fetch-site`, ou
+`origin` qui désigne notre hôte (un POST le porte toujours, dans tous
+les navigateurs). Les deux absentes : refusé, parce qu'une vue ratée est
+une ligne en moins, alors qu'une vue inventée est une décision prise sur
+un chiffre faux.
+
+### ET L'ÉCRAN N'A PLUS LE DROIT D'AFFICHER UN ZÉRO QU'IL NE PEUT PAS DÉFENDRE
+
+C'est la partie qui compte vraiment, parce que c'est elle qui aurait
+donné l'alerte le 8 septembre au lieu du 18.
+
+`lib/trafic/coherenceTrafic.ts`, pur et testé : des ventes et zéro vue,
+c'est la MESURE qui est cassée, jamais le trafic. **On ne vend pas à des
+gens qui ne sont jamais venus.** L'écran affiche alors un bandeau rouge
+"Ce chiffre n'est pas fiable", sur `tiquiz.fr` ET sur
+`atelierduquiz.fr`.
+
+Zéro vue ET zéro vente ne déclenche rien : un garde-fou qui crie pour
+rien finit ignoré.
+
+C'est la règle du 22 août, retournée. On savait qu'un chiffre GONFLÉ est
+pire qu'une absence de chiffre. Un chiffre EFFONDRÉ fait prendre les
+mêmes décisions, à l'envers : arrêter un canal qui marche, croire que le
+référencement ne donne rien, refaire une page qui convertissait.
+
+### CE QU'IL FAUT SAVOIR DU NOUVEAU CHIFFRE
+
+Il voit les gens qui refusent le bandeau cookies (aucun identifiant
+n'est stocké, donc aucun consentement n'est requis), ce que Google
+Analytics ne voit pas. Il ne voit pas ceux qui ont un bloqueur très
+agressif. **C'est donc un plancher, jamais un plafond**, et l'écran
+l'écrit. L'ancienne phrase promettait de voir les bloqueurs : elle était
+vraie côté serveur, elle est fausse côté navigateur, et un test refuse
+maintenant qu'elle revienne.
+
+L'adresse est première partie et ne porte ni "track", ni "analytics",
+ni "collect", ni "pixel", ni "beacon", ni "stat" : ce sont les mots que
+les listes de blocage reconnaissent. Un test le tient.
+
+### LE FILET
+
+`tests/logic/trafic-cloudflare.test.mts`, **ici ET dans formaquiz** :
+l'Atelier portait exactement le même défaut, et un garde-fou qui ne
+protège qu'un des deux jumeaux ne protège personne. `vueNavigateur.ts`,
+`app/api/public/vue/route.ts` et `lib/rateLimit/parIp.ts` sont jumeaux
+à l'octet (`cmp`).

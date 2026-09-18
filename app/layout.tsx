@@ -9,6 +9,7 @@ import { codeVerificationPinterest } from "@/lib/site/pinterest";
 import { resolvePublicUrl } from "@/lib/authLinks";
 import { headers } from "next/headers";
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
+import CompteurDeVue from "@/components/site/CompteurDeVue";
 import { isPublicSalesHost } from "@/lib/sales/salesHosts";
 import { hoteCanonique } from "@/lib/publicHost";
 
@@ -123,6 +124,14 @@ export default async function RootLayout({
           page de vente. */}
       <GoogleAnalytics estHoteDeVente={hoteDeVente} />
       <body className="font-sans antialiased">
+        {/* COMBIEN DE MONDE ARRIVE. Posé ICI, à la racine, et à un seul
+            endroit : le bon de commande n'est pas sous `SiteShell`, et
+            c'est justement sa vue qui manquait. Le composant refuse de
+            lui même tout hôte qui n'est pas un domaine de vente.
+            Il a remplacé le comptage du middleware le 18 septembre :
+            Cloudflare servait les pages depuis son cache, donc le
+            middleware ne tournait jamais (cf. lib/trafic/vueNavigateur.ts). */}
+        <CompteurDeVue />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>{children}</Providers>
         </NextIntlClientProvider>

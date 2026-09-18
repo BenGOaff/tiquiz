@@ -23,8 +23,6 @@ import { ENTETE_LANGUE, langueDuChemin, serviParUneRouteDeLangue } from "@/lib/s
 import { readSa, SA_COOKIE, SA_MAX_AGE_SECONDS, SA_PARAM } from "@/lib/affiliate/sa";
 import { readRef, REF_COOKIE, REF_MAX_AGE_SECONDS, REF_PARAM } from "@/lib/affiliate/refLien";
 import { canalDeLUrl, clicASignaler, signalerClic } from "@/lib/affiliate/signalerClic";
-import { signalerVue } from "@/lib/trafic/signalerVue";
-import { cheminPourStats, sourceDeLaVue, vueASignaler } from "@/lib/trafic/vueASignaler";
 
 const UI_LOCALE_COOKIE = "ui_locale";
 const SUPPORTED_LOCALES = ["en", "fr", "es", "it", "ar", "pt", "pt-BR"];
@@ -142,37 +140,26 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
     );
   }
 
-  // COMBIEN DE MONDE ARRIVE (Bene, 4 septembre 2026, point 3).
+  // LE COMPTAGE DES VUES N'EST PLUS ICI (18 septembre 2026).
   //
-  // Le clic affilie juste au dessus ne compte QUE ceux qui viennent d'un
-  // lien affilie. Le denominateur de "combien achetent" doit compter
-  // TOUT LE MONDE, sinon le taux de conversion parle d'une population
-  // et pas de l'autre.
+  // Il y a vecu du 7 au 18 septembre, et il n'a JAMAIS rien compte.
+  // Mesure du 18 : `curl -D - https://tiquiz.fr/` rend
+  // `cf-cache-status: HIT`, `age: 9`. Cloudflare sert la page publique
+  // depuis son cache, donc la requete n'atteint pas ce serveur, donc ce
+  // middleware ne tourne pas, donc la vue n'existe nulle part. Idem sur
+  // `atelierduquiz.fr/`.
   //
-  // Meme forme que le clic, pour les memes raisons : `waitUntil`, donc
-  // hors du chemin de la reponse, et une statistique ne fait jamais
-  // attendre une page de vente.
-  if (
-    vueASignaler({
-      host: req.headers.get("host"),
-      pathname,
-      accept: req.headers.get("accept"),
-      userAgent: req.headers.get("user-agent"),
-    })
-  ) {
-    event.waitUntil(
-      signalerVue(req.nextUrl.origin, {
-        hote: String(req.headers.get("host") ?? "").toLowerCase().split(":")[0],
-        chemin: cheminPourStats(pathname),
-        source: sourceDeLaVue({
-          referrer: req.headers.get("referer"),
-          canal: canalDeLUrl(req.nextUrl.searchParams),
-          utmSource: req.nextUrl.searchParams.get("utm_source"),
-          host: req.headers.get("host"),
-        }),
-      }),
-    );
-  }
+  // Le compteur vit maintenant dans le NAVIGATEUR
+  // (`components/site/CompteurDeVue.tsx` -> `/api/public/vue`), qui lui
+  // est appele meme quand le HTML vient du cache.
+  //
+  // ET ON N'EN GARDE QU'UN SEUL : rebrancher celui ci compterait DEUX
+  // FOIS chaque page dynamique, le bon de commande en tete. Un chiffre
+  // faux dans un tableau de bord fait prendre des decisions.
+  //
+  // Le signalement du CLIC AFFILIE juste au dessus reste ici : il ne
+  // mesure pas une audience, il rattache une personne, et il doit
+  // tourner avant que la reponse ne parte.
 
   const poseSa = (res: NextResponse): NextResponse => {
     // Les deux cookies sont LISIBLES par le bon de commande : c'est LUI
