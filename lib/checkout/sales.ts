@@ -30,7 +30,8 @@
 // Le pliage est ici, pur et testé. La route se contente de lire la table
 // et de l'appeler.
 
-import { metaAbonnementDeLaFacture } from "@/lib/checkout/formeStripe";
+import { abonnementDeLaFacture, metaAbonnementDeLaFacture } from "@/lib/checkout/formeStripe";
+import type { OrigineVente, VerdictCommission } from "@/lib/ventes/identite";
 
 /** Une ligne de `webhook_logs`, réduite à ce qu'on lit. */
 export interface EventRow {
@@ -109,6 +110,34 @@ export interface Sale {
    * d'affaires ; ce champ sert a la NOMMER, jamais a la retirer.
    */
   nature?: "premiere" | "echeance";
+  /**
+   * L'ABONNEMENT QUI A PRODUIT CET ENCAISSEMENT.
+   *
+   * Ajouté le 17 septembre 2026, et c'est le fil qui manquait. Une
+   * échéance PayPal (`PAYMENT.SALE.COMPLETED`) ne porte PAS toujours le
+   * `custom_id` de son abonnement, donc ni l'adresse ni le produit. Elle
+   * porte en revanche TOUJOURS `billing_agreement_id`, et
+   * `profiles.paypal_subscription_id` porte l'adresse depuis
+   * l'activation : le lecteur jetait ce fil, et affichait "adresse
+   * inconnue" sur une vente dont le webhook connaissait la propriétaire.
+   */
+  subscriptionId?: string | null;
+  /**
+   * D'OÙ VIENT L'ABONNEMENT. Voir `lib/ventes/identite.ts`.
+   *
+   * Absent = on ne s'est pas prononcé. Ce n'est PAS `bon_de_commande` :
+   * un repli sur notre caisse ferait croire qu'une commission manque
+   * chez nous sur une vente que Systeme.io a déjà commissionnée.
+   */
+  origine?: OrigineVente;
+  /**
+   * CE QU'EST DEVENUE LA COMMISSION DE CETTE VENTE.
+   *
+   * Posé par `completerVentes` depuis la fiche écrite par le webhook.
+   * `null` ou absent = on n'a pas la trace, ce qui n'est pas "aucun
+   * affilié" et doit se voir à l'écran.
+   */
+  commission?: VerdictCommission | null;
 }
 
 /**
@@ -212,6 +241,47 @@ export function productIdDeLaFacture(facture: Record<string, unknown>): string |
   return produitParMontant(Number(facture.amount_paid ?? 0));
 }
 
+/**
+ * NOTRE MARQUEUR SUR UNE FACTURE D'ABONNEMENT, ou `null`.
+ *
+ * Notre bon de commande pose TOUJOURS `subscription_data[metadata][product]`
+ * sur l'abonnement qu'il crée (`lib/checkout/stripeCheckout.ts`), et
+ * Stripe le recopie sur chaque facture. Son absence est donc un FAIT :
+ * cet abonnement n'a pas été ouvert par notre caisse.
+ *
+ * C'est ce fait qui manquait le 17 septembre. Les cinq échéances à
+ * 9,00 € du tableau de bord de Béné sont des abonnements Tiquiz vendus
+ * par Systeme.io et prélevés sur son compte Stripe : elles arrivent
+ * donc bien dans notre journal, sans aucune de nos clés. L'écran les
+ * affichait comme des ventes directes "Produit non identifié", alors
+ * que ce sont des ventes Systeme.io d'un palier qu'on sait nommer.
+ *
+ * On regarde les TROIS endroits où la clé peut vivre, et on considère
+ * que la facture est à nous dès que l'un d'eux répond : se tromper dans
+ * ce sens là ne coûte qu'un mot d'origine, alors que l'inverse ferait
+ * croire qu'une commission manque chez nous.
+ */
+export function marqueurBonDeCommande(facture: Record<string, unknown>): string | null {
+  const surLaFacture = texte(lire(facture.metadata).product);
+  if (surLaFacture) return surLaFacture;
+
+  const surLAbonnement = texte(metaAbonnementDeLaFacture(facture).product);
+  if (surLAbonnement) return surLAbonnement;
+
+  const lignes = lire(facture.lines).data;
+  if (Array.isArray(lignes)) {
+    for (const brute of lignes) {
+      const ligne = lire(brute);
+      const surLigne =
+        texte(lire(ligne.metadata).product) ??
+        texte(lire(lire(ligne.price).metadata).product) ??
+        texte(lire(lire(ligne.plan).metadata).product);
+      if (surLigne) return surLigne;
+    }
+  }
+  return null;
+}
+
 /** Le produit du catalogue qui coûte EXACTEMENT cette somme. */
 export function produitParMontant(cents: number): string | null {
   if (!Number.isFinite(cents) || cents <= 0) return null;
@@ -252,6 +322,9 @@ export function buildSales(rows: readonly EventRow[]): Sale[] {
           currency: (texte(objet.currency) ?? "eur").toLowerCase(),
           paidAt: row.created_at,
           refundedAt: null,
+          // Une session de paiement, c'est NOTRE caisse : elle n'existe
+          // que parce qu'on l'a créée. Aucune déduction ici.
+          origine: "bon_de_commande",
         });
       } else if (type === "invoice.paid") {
         // ── L'ÉCHÉANCE D'UN ABONNEMENT ──
@@ -280,12 +353,18 @@ export function buildSales(rows: readonly EventRow[]): Sale[] {
         // pas sur ce qu'il devrait y avoir.
         const ref = refFacture(objet);
         if (!ref) continue;
+        // L'ORIGINE SE LIT AVANT LE PRODUIT, parce que c'est elle qui dit
+        // ce que le produit VAUT : sans notre marqueur, le nom qui suit
+        // vient du montant, pas de la vente.
+        const notreProduit = marqueurBonDeCommande(objet);
         ventes.set(ref, {
           ref,
           provider: "stripe",
           email: texte(objet.customer_email) ?? texte(lire(objet.customer_details).email),
           name: texte(objet.customer_name) ?? texte(lire(objet.customer_details).name),
-          productId: texte(lire(objet.metadata).product) ?? productIdDeLaFacture(objet),
+          productId: notreProduit ?? productIdDeLaFacture(objet),
+          origine: notreProduit ? "bon_de_commande" : "hors_bon_de_commande",
+          subscriptionId: abonnementDeLaFacture(objet),
           // La MEME lecture que l'alerte email (`natureDeLaFactureStripe`) :
           // `subscription_cycle` et `subscription_update` sont des
           // echeances, `subscription_create` la premiere facture.
@@ -367,6 +446,17 @@ export function buildSales(rows: readonly EventRow[]): Sale[] {
           currency: (texte(montant.currency) ?? "eur").toLowerCase(),
           paidAt: row.created_at,
           refundedAt: null,
+          // LE FIL QUI MANQUAIT (17 septembre 2026). Cet événement porte
+          // TOUJOURS `billing_agreement_id`, et c'est par lui que
+          // `completerVentes` retrouve l'adresse dans `profiles`, celle
+          // que notre propre webhook y a écrite à l'activation. Sans
+          // lui, une échéance dont le `custom_id` n'a pas été recopié
+          // par PayPal sortait en "adresse inconnue", et l'accueil
+          // l'annonçait comme une vente orpheline.
+          subscriptionId: texte(res.billing_agreement_id),
+          // Un abonnement PayPal n'existe que si NOTRE bon de commande
+          // l'a ouvert : Systeme.io n'encaisse pas sur ce compte là.
+          origine: "bon_de_commande",
         });
       } else if (type === "PAYMENT.SALE.REFUNDED") {
         // Ici le fil est direct : `sale_id` désigne la vente d'origine.

@@ -18,10 +18,10 @@
 // de statistiques perdues.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, ShieldAlert } from "lucide-react";
 
 import { CARTE } from "@/components/pilotage/carte";
+import WebhookLogsCard from "@/components/admin/WebhookLogsCard";
 import {
   LIBELLE_VERDICT,
   readCallVerdict,
@@ -296,12 +296,6 @@ export function SantePilotage() {
       <section className={`${CARTE} p-4`}>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-sm font-medium">Les paiements et les appels reçus</h2>
-          {/* Le journal complet, avec le payload lu ligne par ligne, vit
-              encore dans l'admin de Tiquiz. Cette page en tire le
-              verdict ; elle ne le remplace pas encore. */}
-          <Link href="/admin" className="text-xs text-primary underline-offset-2 hover:underline">
-            Le journal complet, dans Tiquiz
-          </Link>
         </div>
 
         {appels === null ? (
@@ -341,6 +335,18 @@ export function SantePilotage() {
           </>
         )}
       </section>
+
+      {/* ── LE JOURNAL COMPLET, ARRIVÉ ICI LE 17 SEPTEMBRE 2026 ──
+          Béné : "l'admin de tiquiz ne devrait plus suivre les ventes
+          etc qui ne doivent être suivis que sur pilotage."
+
+          Il vivait dans l'onglet "Mes ventes" de l'admin, et la section
+          au dessus renvoyait vers lui par un lien. La section dit le
+          VERDICT ("ce paiement n'a ouvert aucun accès"), le journal dit
+          le DÉTAIL (le payload, ligne par ligne) : c'est la même
+          question à deux niveaux de zoom, et elle se lit mieux sur un
+          seul écran que par un aller-retour entre deux app. */}
+      <WebhookLogsCard />
     </div>
   );
 }

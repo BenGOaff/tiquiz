@@ -87,6 +87,13 @@ function quand(iso: string | null | undefined): string {
   return new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short" }).format(new Date(t));
 }
 
+/** Le moyen de paiement, écrit pour un humain. */
+const MOYEN_LISIBLE: Record<string, string> = {
+  stripe: "par carte",
+  paypal: "PayPal",
+  systeme_io: "Systeme.io",
+};
+
 export function AccueilPilotage() {
   const params = useSearchParams();
   const query = params?.toString() ?? "";
@@ -419,10 +426,25 @@ function Alertes({
     // sans sa date elle se lit comme une urgence permanente : c'est
     // comme ça qu'une alerte finit par ne plus être lue.
     for (const v of orphelines.slice(0, 5)) {
+      // UNE ADRESSE MANQUANTE NE S'ÉCRIT PAS "null" (17 septembre 2026).
+      //
+      // Béné avait cette phrase sous les yeux : "null a payé 17 € le
+      // 17 septembre 2026". L'interpolation d'un `email: null` produit
+      // le mot "null", et une alerte d'argent qui parle de "null" fait
+      // douter de tout l'écran.
+      //
+      // La cause a été corrigée à la source (`completerVentes` retrouve
+      // l'adresse par l'abonnement), mais ce garde-fou reste : une vente
+      // vraiment sans adresse est un cas légitime, et il doit se lire
+      // comme une PHRASE. Elle dit alors ce qu'on a pour la retrouver,
+      // c'est à dire le moyen et le montant.
+      const qui = v.email?.trim()
+        ? v.email.trim()
+        : `Un paiement ${MOYEN_LISIBLE[v.provider] ?? v.provider} sans adresse`;
       lignes.push({
         cle: `orpheline-${v.ref}`,
         texte:
-          `${v.email} a payé ${euros(v.amountCents)} le ${quandLong(v.paidAt)}`
+          `${qui} a payé ${euros(v.amountCents)} le ${quandLong(v.paidAt)}`
           + " et n'apparaît dans aucun compte.",
         // La section Ventes de la console, pas l'ancien admin : le
         // jour où on éteindra /admin, ce lien deviendrait un cul-de-sac.

@@ -194,6 +194,31 @@ export function isKnownAmountCents(cents: number): boolean {
   return Number.isFinite(cents) && cents in AMOUNT_TO_PLAN;
 }
 
+/**
+ * LE PALIER TIQUIZ QUI COÛTE EXACTEMENT CETTE SOMME, EN CENTIMES.
+ *
+ * Ajouté le 17 septembre 2026, et c'est une CORRECTION D'AFFICHAGE, pas
+ * un nouveau routage : `AMOUNT_TO_PLAN` savait depuis toujours que 900
+ * centimes est un mensuel Tiquiz (l'ancien prix, avant le 6 août), mais
+ * seul le webhook Systeme.io la lisait. Le tableau de bord, lui, ne
+ * comparait qu'au catalogue de notre bon de commande (17, 29, 170,
+ * 290) : les cinq échéances à 9,00 € encore prélevées chaque mois
+ * sortaient donc en "Produit non identifié".
+ *
+ * DIFFÉRENT de `inferPlanFromAmount`, et volontairement : celui là
+ * accepte aussi les euros (`17` pour 1700), parce qu'il lit un payload
+ * dont on ne connaît pas l'unité. Ici l'unité est certaine, elle vient
+ * de chez nous. Accepter les deux ferait qu'un encaissement de 9
+ * CENTIMES (un contrôle de carte, un prorata) serait nommé "mensuel".
+ *
+ * Correspondance EXACTE : une somme remisée rend `null`, et l'écran
+ * préfère "non identifié" à un faux nom.
+ */
+export function planTiquizParMontant(cents: number): TiquizPlan | null {
+  if (!Number.isFinite(cents) || cents <= 0) return null;
+  return AMOUNT_TO_PLAN[Math.round(cents)] ?? null;
+}
+
 const AMOUNT_TO_PLAN: Record<number, TiquizPlan> = {
   // En centimes, comme les renvoie l'API Systeme.io.
   900: "monthly",      // ancien prix

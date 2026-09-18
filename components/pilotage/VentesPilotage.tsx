@@ -28,12 +28,54 @@ import { Loader2, Search } from "lucide-react";
 import { CARTE } from "@/components/pilotage/carte";
 import { nomProduitVendu } from "@/lib/admin/saleProduct";
 import type { Sale } from "@/lib/checkout/sales";
+import {
+  etatCommission,
+  nomProduitComplete,
+  resumeCommissions,
+  type EtatCommissionVente,
+} from "@/lib/ventes/identite";
 
 type LigneVente = { vente: Sale; email: string; nom: string | null };
 
 type Donnees = {
   resume: { toutesVentes: LigneVente[]; totalVentesPeriode: number; encaisseCents: number; rembourseCents: number };
   periode: { libelle: string };
+  /**
+   * Les fiches d'identité ont-elles pu être lues ?
+   *
+   * `false` = la migration n'est pas passée, ou la table est muette. Ce
+   * n'est PAS "aucune commission n'a été créée", et l'écran doit dire la
+   * différence : sinon une migration oubliée se lit comme des affiliés
+   * non payés, ce qui est la pire des deux erreurs possibles ici.
+   */
+  identitesLisibles?: boolean;
+};
+
+/**
+ * LE MOT DE CHAQUE ÉTAT DE COMMISSION, et le fait de savoir s'il appelle
+ * une action.
+ *
+ * La DÉCISION vit dans `lib/ventes/identite.ts`, pure et testée. Ici il
+ * n'y a que la phrase : c'est la règle du 1er août, et c'est ce qui
+ * permet de changer un mot sans toucher à une règle d'argent.
+ */
+const COMMISSION: Record<EtatCommissionVente, { mot: string; ton: "bien" | "neutre" | "alerte" }> = {
+  attribuee: { mot: "commission créée", ton: "bien" },
+  aucun_affilie: { mot: "aucun affilié, vérifié", ton: "neutre" },
+  doublon: { mot: "déjà commissionnée", ton: "neutre" },
+  reglee_ailleurs: { mot: "commission réglée par Systeme.io", ton: "neutre" },
+  rien_a_devoir: { mot: "rien à commissionner", ton: "neutre" },
+  en_attente: { mot: "commission en attente de rejeu", ton: "neutre" },
+  affilie_inconnu: { mot: "affilié inconnu du registre", ton: "alerte" },
+  non_tentee: { mot: "commission NON créée", ton: "alerte" },
+  reponse_inconnue: { mot: "réponse du registre illisible", ton: "alerte" },
+  sans_trace: { mot: "commission non tracée", ton: "alerte" },
+};
+
+const TON: Record<"bien" | "neutre" | "alerte", string> = {
+  bien: "text-emerald-700 dark:text-emerald-300",
+  neutre: "",
+  alerte: "font-semibold text-destructive",
 };
 
 function euros(cents: number): string {
@@ -89,6 +131,14 @@ export function VentesPilotage({
     void charger();
   }, [charger]);
 
+  // LE BILAN DES COMMISSIONS PORTE SUR TOUTE LA PÉRIODE, pas sur la
+  // recherche en cours : un chiffre qui bougerait en tapant dans le
+  // champ de recherche ne serait plus une garantie, juste un compteur.
+  const bilan = useMemo(
+    () => resumeCommissions((d?.resume.toutesVentes ?? []).map((l) => l.vente)),
+    [d],
+  );
+
   const vues = useMemo(() => {
     const lignes = d?.resume.toutesVentes ?? [];
     const q = recherche.trim().toLowerCase();
@@ -141,6 +191,41 @@ export function VentesPilotage({
             </p>
           )}
 
+          {/* ── LA GARANTIE D'AFFILIATION ──
+              Béné, 17 septembre : "il faut être sûre à 200 % qu'un
+              affilié ne va pas perdre sa com parce que notre système
+              aurait foiré." Ce bandeau est la réponse, et il ne dit
+              JAMAIS "tout va bien" sans l'avoir vérifié ligne par
+              ligne. */}
+          {d.identitesLisibles === false ? (
+            <p className="rounded-lg border border-amber-300/50 bg-amber-50 px-4 py-2 text-xs dark:bg-amber-950/20">
+              Le suivi des commissions n&apos;a pas pu être lu. Ce n&apos;est pas la preuve
+              qu&apos;aucune commission n&apos;a été créée : la migration
+              <code className="mx-1">20260918_ventes_identite.sql</code>
+              doit être appliquée sur Supabase.
+            </p>
+          ) : bilan.aVerifier > 0 ? (
+            <p className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-2 text-xs text-destructive">
+              <strong>
+                {bilan.aVerifier} vente{bilan.aVerifier > 1 ? "s" : ""} dont la commission
+                n&apos;est pas établie.
+              </strong>{" "}
+              Un affilié peut y avoir droit sans l&apos;avoir touchée. Pour trancher, lance
+              <code className="mx-1">npm run audit:affiliation</code>
+              sur le serveur : il relit chaque encaissement chez le fournisseur et chez
+              l&apos;espace affilié.
+            </p>
+          ) : (
+            <p className="rounded-lg border bg-muted/40 px-4 py-2 text-xs text-muted-foreground">
+              Commissions : {bilan.attribuees} créée{bilan.attribuees > 1 ? "s" : ""}
+              {bilan.centsAttribues > 0 ? ` (${euros(bilan.centsAttribues)})` : ""},{" "}
+              {bilan.aucunAffilie} sans affilié après vérification, {bilan.horsDeNotreCompte} hors
+              de notre bon de commande
+              {bilan.enAttente > 0 ? `, ${bilan.enAttente} en attente de rejeu` : ""}. Aucune
+              vente sans verdict.
+            </p>
+          )}
+
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative flex-1 sm:max-w-xs">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -175,6 +260,15 @@ export function VentesPilotage({
               <section className={`${CARTE} divide-y`}>
                 {vues.slice(0, combien).map((l) => {
                   const via = attributions[l.email.toLowerCase()];
+                  // L'AFFILIÉ DE LA VENTE D'ABORD, celui du client
+                  // ensuite. Le premier est ce que le webhook a
+                  // enregistré SUR CET ENCAISSEMENT, le second ce que
+                  // l'espace affilié sait de cette personne. Les
+                  // confondre ferait attribuer une vente à l'affilié
+                  // d'une inscription vieille d'un an.
+                  const etat = etatCommission(l.vente);
+                  const verdict = COMMISSION[etat];
+                  const affilie = l.vente.commission?.affilie ?? null;
                   return (
                     <div key={`${l.vente.ref}-${l.vente.paidAt}`} className="px-4 py-3">
                       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -191,17 +285,48 @@ export function VentesPilotage({
                         </span>
                       </div>
                       <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                        <span>{nomProduitVendu(l.vente)}</span>
+                        {/* LE NOM DU PRODUIT, AVEC SON REPLI PAR LE
+                            MONTANT. `nomProduitVendu` ne connaît que
+                            notre catalogue et les plans Systeme.io :
+                            une échéance à 9,00 € (l'ancien prix Tiquiz,
+                            encore prélevé) n'était donc nommée par
+                            personne, et sortait en "Produit non
+                            identifié". */}
+                        <span>{nomProduitComplete(l.vente) ?? nomProduitVendu(l.vente)}</span>
                         <span>·</span>
                         <span>{quand(l.vente.paidAt)}</span>
                         <span>·</span>
                         <span>{MOYEN[l.vente.provider] ?? l.vente.provider}</span>
-                        {via && (
+                        {l.vente.origine === "hors_bon_de_commande" && (
+                          // D'OÙ VIENT L'ABONNEMENT, et c'est ce qui
+                          // manquait : sans notre marqueur, cet
+                          // abonnement n'a pas été ouvert par notre bon
+                          // de commande. Le dire évite de chercher chez
+                          // nous une commission que Systeme.io a déjà
+                          // réglée.
                           <>
                             <span>·</span>
-                            <span className="text-primary">via {via}</span>
+                            <span>hors bon de commande</span>
                           </>
                         )}
+                        {affilie ? (
+                          <>
+                            <span>·</span>
+                            <span className="text-primary">via {affilie}</span>
+                          </>
+                        ) : via ? (
+                          <>
+                            <span>·</span>
+                            <span className="text-primary">client de {via}</span>
+                          </>
+                        ) : null}
+                        <span>·</span>
+                        <span className={TON[verdict.ton]}>
+                          {verdict.mot}
+                          {l.vente.commission?.cents
+                            ? ` (${euros(l.vente.commission.cents)})`
+                            : ""}
+                        </span>
                         {l.vente.nature === "echeance" && (
                           // Un renouvellement, pas une nouvelle personne :
                           // c'est ce qu'elle a demandé à distinguer ("les
