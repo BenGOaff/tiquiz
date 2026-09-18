@@ -47,7 +47,7 @@ export async function sendSupportAlert(args: SupportAlertArgs): Promise<boolean>
       args.message,
       // Le lien direct vers la FICHE : d'un email a tout ce qu'on sait
       // d'elle, sans chercher dans la liste.
-      `Sa fiche : ${appUrl}/admin/clients/${encodeURIComponent(args.email)}`,
+      `Sa fiche : ${appUrl}/pilotage/clients/${encodeURIComponent(args.email)}`,
     ].filter(Boolean),
     footer: "Répondre depuis l'onglet Support de l'admin Tiquiz.",
   });

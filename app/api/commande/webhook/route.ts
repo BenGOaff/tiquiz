@@ -55,6 +55,7 @@ import { etatOctroiTiquiz } from "@/lib/checkout/etatOctroi";
 import { natureDeLaFactureStripe } from "@/lib/ventes/alerteVente";
 import { marquerMoisOffertConsomme } from "@/lib/trial/moisOffertCheckout";
 import { ecrireFiche, ecrireVerdictCommission } from "@/lib/ventes/identiteStore";
+import { affiliationPourAlerte, type VerdictCommission } from "@/lib/ventes/identite";
 import { ouvertureDemandee, type OuvertureDemandee } from "@/lib/checkout/planChange";
 import { estPlanAVie } from "@/lib/checkout/plansAVie";
 import { estAbonnementVivant } from "@/lib/checkout/subscriptionCancel";
@@ -435,6 +436,11 @@ async function traiterEvenement(
       devise: product.currency,
       reference: vente.paymentRef ?? sessionId,
       compteCree: octroi.created,
+      affiliation: affiliationPourAlerte({
+        verdict,
+        code: vente.affiliateCode,
+        ref: vente.affiliateRef,
+      }),
     });
   }
 
@@ -747,10 +753,12 @@ async function surAbonnement(
   // d'essai vaut 0, donc pas de commission ; la première vraie échéance
   // en crée une.
   if (eventType === "invoice.paid") {
-    await commissionnerEcheance(abonnement, objet);
+    // LE VERDICT PASSE DE MAIN EN MAIN, il ne se recalcule pas : c'est
+    // la commission qui vient d'être créée (ou pas) que l'email annonce.
+    const verdict = await commissionnerEcheance(abonnement, objet);
     // En dernier, best-effort : Béné apprend chaque échéance encaissée,
     // et un mois offert qui démarre.
-    await alerterEcheance(abonnement, objet);
+    await alerterEcheance(abonnement, objet, verdict);
   }
 
   if (lecture.outcome !== "revoke") {
@@ -903,6 +911,7 @@ function metaDeLEcheance(
 async function alerterEcheance(
   abonnement: RawSubscription | null,
   facture: Record<string, unknown>,
+  verdict: VerdictCommission | null,
 ): Promise<void> {
   const email = String(facture.customer_email ?? "").trim();
   const factureId = String(facture.id ?? "").trim();
@@ -920,18 +929,43 @@ async function alerterEcheance(
     devise: String(facture.currency ?? produit?.currency ?? "eur"),
     reference: factureId,
     compteCree: null,
+    // LE CODE EST PASSÉ MÊME SANS COMMISSION : un code présent sur une
+    // commission absente désigne le problème (le code n'est pas au
+    // registre) ; son absence dit l'inverse (personne n'a cliqué).
+    affiliation: affiliationPourAlerte({
+      verdict,
+      code: String(meta.affiliate_code ?? "") || null,
+      ref: String(meta.affiliate_ref ?? "") || null,
+      // Un mois offert encaisse zero : rien n'etait du, et l'email le
+      // dit au lieu de laisser croire a une commission oubliee.
+      rienADevoir: paye <= 0,
+    }),
   });
 }
 
+/**
+ * ON REND LE VERDICT POUR QUE L'EMAIL PUISSE LE DIRE (18 septembre 2026).
+ *
+ * Béné : "dans l'email que je reçois, je voudrais savoir en plus si la
+ * vente est liée à un affilié, et si oui lequel."
+ *
+ * La réponse existait DÉJÀ ici, trente lignes avant que l'email ne
+ * parte. `alerterEcheance` ne pouvait pas la recalculer sans refaire
+ * l'appel au registre, et deux lectures de la même chose finissent
+ * toujours par se contredire : elle passe donc de main en main.
+ */
 async function commissionnerEcheance(
   abonnement: RawSubscription | null,
   facture: Record<string, unknown>,
-): Promise<void> {
+): Promise<VerdictCommission | null> {
   // Ce qui a VRAIMENT été encaissé sur cette facture, jamais le prix du
   // catalogue : une remise, un prorata ou une TVA différente changent la
   // somme, et la commission se calcule sur ce qui est rentré.
   const paye = Math.round(Number(facture.amount_paid ?? 0)) || 0;
-  if (paye <= 0) return;
+  // ZERO ENCAISSE : le registre n'est pas appele, donc il n'a rien
+  // repondu, donc on rend `null`. C'est l'appelant qui sait que rien
+  // n'etait du (il a le montant) et qui le dira dans l'email.
+  if (paye <= 0) return null;
   // LA TVA, ET ELLE DÉCIDE DE 1,13 EUR PAR VENTE ET PAR MOIS.
   //
   // `invoice.tax` est devenu `invoice.total_taxes[].amount`. Lu au seul
@@ -948,7 +982,7 @@ async function commissionnerEcheance(
       "[commande/webhook] facture payee sans identifiant : commission NON creee, " +
         "elle serait impossible a dedupliquer.",
     );
-    return;
+    return { statut: "non_tentee", cents: null, affilie: null, detail: "facture sans identifiant" };
   }
 
   // LES METADONNÉES, AVEC LEUR REPLI SUR LA FACTURE.
@@ -1000,11 +1034,14 @@ async function commissionnerEcheance(
     // bon de commande est commissionne par Systeme.io. Le faire remonter
     // comme une anomalie ferait chercher une panne chaque mois, sur
     // cinq echeances, et l'ecran d'alerte finirait par ne plus etre lu.
-    await ecrireVerdictCommission("stripe", factureId, {
+    const verdict: VerdictCommission = {
       statut: "reglee_ailleurs",
+      cents: null,
+      affilie: null,
       detail: "abonnement hors de notre bon de commande",
-    });
-    return;
+    };
+    await ecrireVerdictCommission("stripe", factureId, verdict);
+    return verdict;
   }
 
   if (!email) {
@@ -1014,11 +1051,14 @@ async function commissionnerEcheance(
     console.error(
       `[commande/webhook] echeance ${factureId} encaissee sans adresse sur la facture : commission NON creee.`,
     );
-    await ecrireVerdictCommission("stripe", factureId, {
+    const verdict: VerdictCommission = {
       statut: "non_tentee",
+      cents: null,
+      affilie: null,
       detail: "aucune adresse sur la facture",
-    });
-    return;
+    };
+    await ecrireVerdictCommission("stripe", factureId, verdict);
+    return verdict;
   }
 
   const verdict = await commissionnerVente({
@@ -1032,4 +1072,5 @@ async function commissionnerEcheance(
     product: { id: produit.id, label: produit.label },
   });
   await ecrireVerdictCommission("stripe", factureId, verdict);
+  return verdict;
 }

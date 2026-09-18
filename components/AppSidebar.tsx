@@ -132,7 +132,7 @@ function ResellerAdminItem() {
         <SidebarMenuItem>
           <SidebarMenuButton asChild>
             <NavLink
-              to="/admin"
+              to="/pilotage"
               className={MENU_ITEM_CLASS}
               activeClassName={MENU_ITEM_ACTIVE_CLASS}
             >

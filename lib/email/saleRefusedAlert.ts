@@ -98,7 +98,7 @@ export async function sendSaleRefusedAlert(args: SaleRefusedArgs): Promise<boole
       </ul>
       <p style="margin:0 0 16px;"><strong>${ouvert ? "À vérifier" : "Tout de suite"} :</strong> ${ouvert ? `si ce client a pris un annuel ou un palier PLUS, corrige son plan dans l'admin (il a déjà l'accès, ce n'est pas urgent).` : "ouvre le bon plan à la main dans l'admin, le client est débloqué."}</p>
       <p style="margin:0 0 16px;"><strong>Ensuite :</strong> ces identifiants sont exactement ce qu'il faut ajouter dans la table de routage pour que le prochain passe tout seul.</p>
-      <p style="margin:0;"><a href="${appUrl}/admin" style="color:#5D6CDB;">Ouvrir l'admin Tiquiz</a></p>
+      <p style="margin:0;"><a href="${appUrl}/pilotage" style="color:#5D6CDB;">Ouvrir le centre de pilotage</a></p>
     </div>`;
 
   try {

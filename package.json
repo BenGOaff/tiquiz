@@ -46,7 +46,9 @@
     "check:vitesse-quiz": "node scripts/check-vitesse-quiz.mjs",
     "faq:extraire": "node --experimental-strip-types scripts/extraire-faq-vente.mjs",
     "anims:extraire": "node scripts/extraire-anims-vente.mjs",
-    "audit:affiliation": "tsx scripts/audit-affiliation.mts"
+    "audit:affiliation": "tsx scripts/audit-affiliation.mts",
+    "check:lien-affilie": "tsx scripts/check-lien-affilie.mts",
+    "affilie:crediter": "tsx scripts/crediter-affilie.mts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

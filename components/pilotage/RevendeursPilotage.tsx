@@ -14,18 +14,24 @@
 // revendeur à deux licences du palier suivant est un appel à passer.
 // L'ordre vient de `trierRevendeurs`, pas d'ici.
 //
-// -- ET ON N'AGIT PAS ENCORE DEPUIS CET ÉCRAN -------------------------
+// -- ET ON AGIT DEPUIS CET ÉCRAN DEPUIS LE 18 SEPTEMBRE 2026 ----------
 //
-// Promouvoir quelqu'un, suspendre, marquer une facture payée : ça vit
-// toujours dans `/admin`, et la carte le DIT. Un bouton absent sans un
-// mot se lit comme un bug, et elle a déjà perdu du temps à chercher
-// celui de remboursement (22 août).
+// Ce bloc disait : "promouvoir quelqu'un, suspendre, marquer une
+// facture payée : ça vit toujours dans /admin, et la carte le DIT."
+// C'est périmé. Béné : "oui tu peux enlever ça de l'admin, je veux tout
+// suivre dans pilotage." `/admin` n'existe plus, et les deux cartes qui
+// faisaient ce travail sont rendues plus bas.
+//
+// La phrase qui renvoyait vers l'admin a donc disparu avec lui : un
+// lien vers un écran éteint est pire qu'un bouton absent.
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, Loader2, Search } from "lucide-react";
+import { AlertTriangle, Loader2, Search } from "lucide-react";
 
 import { CARTE } from "@/components/pilotage/carte";
+import ResellersCard from "@/components/admin/ResellersCard";
+import ResellerPaymentEventsCard from "@/components/admin/ResellerPaymentEventsCard";
 import type { LigneRevendeur, ResumeRevendeurs } from "@/lib/pilotage/revendeurs";
 import { estActif } from "@/lib/pilotage/revendeurs";
 
@@ -175,9 +181,7 @@ export function RevendeursPilotage() {
                 {lignes.length === 0 ? (
                   <>
                     Un revendeur se promeut depuis{" "}
-                    <Link href="/admin" className="text-primary underline-offset-2 hover:underline">
-                      l&apos;onglet Revendeurs de l&apos;admin
-                    </Link>
+                    l&apos;onglet Revendeurs de l&apos;admin
                     , à partir d&apos;un compte Tiquiz existant.
                   </>
                 ) : (
@@ -241,16 +245,11 @@ export function RevendeursPilotage() {
             </ul>
           )}
 
-          {/* CE QUI SE FAIT ENCORE AILLEURS, ET C'EST DIT. Un bouton
-              absent sans un mot se lit comme un bug. */}
+          {/* CE QUI SE FAIT MAINTENANT JUSTE EN DESSOUS. La phrase qui
+              renvoyait vers l'admin a disparu avec lui. */}
           <p className="text-xs text-muted-foreground">
-            Promouvoir un revendeur, le suspendre ou marquer une facture payée se fait encore
-            dans{" "}
-            <Link href="/admin" className="text-primary underline-offset-2 hover:underline">
-              l&apos;onglet Revendeurs de l&apos;admin de Tiquiz
-              <ArrowRight className="ml-1 inline h-3 w-3" />
-            </Link>
-            .
+            Promouvoir un revendeur, le suspendre ou marquer une facture payée se fait plus
+            bas, sur cette page.
           </p>
         </>
       )}
@@ -278,6 +277,17 @@ function Chiffre({
         {valeur}
       </p>
       {note && <p className="mt-0.5 text-xs text-muted-foreground">{note}</p>}
+
+      {/* LA GESTION DES REVENDEURS ET LEURS FACTURES, arrivées ici le
+          18 septembre 2026 avec la disparition de /admin.
+          
+          C'était la SEULE chose de cet écran là qui n'avait pas
+          d'équivalent dans la console : elle listait les revendeurs
+          sans pouvoir en créer un, ni éditer un portefeuille, ni
+          émettre une facture. Éteindre /admin sans porter ça aurait
+          retiré l'outil sans donner son remplaçant. */}
+      <ResellersCard />
+      <ResellerPaymentEventsCard />
     </div>
   );
 }

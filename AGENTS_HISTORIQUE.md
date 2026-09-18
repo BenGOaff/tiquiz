@@ -15040,3 +15040,194 @@ la première chose à lancer.
 
 Le filet : `tests/logic/vente-non-identifiee.test.mts` (22 tests), et
 `admin-tabs.test.mts` réécrit.
+
+## Le live de Greg, l'email qui ne disait rien, et /admin qui s'éteint (Béné, 18 septembre 2026)
+
+Trois demandes dans le même message, et une sortie d'audit qui m'a
+attrapé sur mon propre défaut.
+
+### CE QUE L'AUDIT A RÉPONDU, ET CE QUE J'AVAIS MAL ÉCRIT
+
+```
+13 encaissement(s) sur la periode.
+  0 avec une commission creee chez Tipote
+  11 hors de notre bon de commande, ou a zero euro
+  1 A REGARDER
+2026-09-17   17.00 EUR  paypal  ptitboutdefemmenancy@gmail.com  Tiquiz mensuel
+    !! aucune commission ne porte de cle chez Tipote.
+```
+
+**La bonne nouvelle est dans la ligne elle même** : l'adresse et le
+produit s'affichent. La correction du 17 marche, et elle marche
+rétroactivement (l'adresse vient de l'abonnement, le produit du
+montant).
+
+**La mauvaise est ma phrase.** « Aucune commission ne porte de clé chez
+Tipote » pouvait vouloir dire deux choses opposées : le registre est
+vide, ou la version de Tipote DÉPLOYÉE ne rend pas encore `orderId`
+(le champ était arrivé le matin même). Le second cas se lisait comme le
+premier, c'est à dire comme une commission perdue.
+
+**C'est exactement la faute que ce script existe pour empêcher, commise
+par le script lui même.** Il compte maintenant : des lignes SANS clé,
+c'est le déploiement ; zéro ligne, c'est le registre. Et il ne conclut
+plus « aucun affilié lésé » quand le rapprochement n'a pas pu se faire.
+
+### CE QU'ON SAIT DU CAS GREG, ET CE QU'AUCUN CODE NE SAURA
+
+*« J'ai fait 2 présentations live et plusieurs personnes étaient
+intéressées et auraient dû passer par le lien de Greg. »*
+
+**Un live n'est pas un lien.** Quelqu'un qui regarde une présentation
+puis va sur tiquiz.fr de lui même n'a cliqué sur rien : pas de cookie,
+pas d'attribution, pas de commission. Ce n'est PAS une panne, c'est le
+fonctionnement de l'affiliation, et aucun code ne peut deviner qu'une
+personne a entendu parler du produit par quelqu'un.
+
+La chaîne `?ref=`, elle, a été relue de bout en bout et **elle est
+intacte** : le middleware pose `tq_ref` (un an, `httpOnly: false`), le
+bon de commande le relit dans `document.cookie`, et il part dans le
+`custom_id` PayPal comme dans les metadata Stripe. Les 8 destinations
+affiliées sont toutes sur `tiquiz.fr`, donc même hôte que la caisse.
+
+Donc : créditer Greg est une DÉCISION de Béné, pas une conclusion du
+système. Deux commandes existent pour ça, et aucune ne décide à sa
+place.
+
+### `check:lien-affilie` : les quatre maillons, LUS SUR LE SERVEUR
+
+Trois des quatre maillons d'un lien affilié se cassent **sans rien
+casser à l'écran** :
+
+1. le code existe au registre, et l'affilié est ACTIF ;
+2. l'adresse est sur NOS domaines ;
+3. la réponse pose bien le cookie ;
+4. et elle n'est PAS servie depuis un cache.
+
+Le quatrième est le pire : une réponse en cache n'arrive jamais jusqu'à
+nous, donc pas de clic, pas de cookie, pas de commission, **et la page
+s'affiche parfaitement**. L'affilié voit son lien marcher et ses
+chiffres rester à zéro.
+
+C'est la règle du 31 août : le script ne raisonne pas sur le code, il va
+CHERCHER l'URL en prod et lit ce que le serveur répond.
+
+**Et une faute évitée de justesse.** J'avais écrit un en tête maison
+(`x-tiquiz-controle`) pour que le contrôle ne compte pas de faux clics.
+Il n'existe pas. L'inventer voulait dire écrire du code dans le
+middleware pour le lire, donc toucher au chemin de TOUTES les requêtes
+pour le confort d'un script. Le mécanisme existait déjà :
+`clicASignaler` exige `text/html`. Le script demande autre chose, et le
+cookie est quand même posé (`poseSa` est appliqué sur toutes les sorties
+du middleware). Zéro ligne en production. **Lu dans le code, pas
+supposé.**
+
+### `affilie:crediter` : blanc par défaut, et il ne force rien
+
+```bash
+npm run affilie:crediter -- <adresse> <code>              # blanc
+npm run affilie:crediter -- <adresse> <code> --pour-de-vrai
+```
+
+Deux gestes : le rattachement (`/api/affiliate/rattacher`, à vie), puis
+le rejeu de l'attribution de chaque encaissement déjà fait, avec la clé
+EXACTE du webhook.
+
+Trois garanties. **Blanc par défaut** : un versement ne se reprend pas.
+**Idempotente** : le premier rattachement gagne, et Tipote répond
+`duplicate` sur une clé connue. **Aucun argent n'en part** : elle crée
+une commission au registre, le virement passe toujours par le fichier
+déposé en banque.
+
+**Et elle s'arrête si la personne est DÉJÀ rattachée à quelqu'un
+d'autre.** Écraser pour payer un troisième, ce serait prendre à l'un
+pour donner à l'autre, sans que personne ne le voie.
+
+Le montant est envoyé en `base: "ttc"`, et c'est délibéré : la facture
+est déjà émise, on ne sait plus ventiler la TVA après coup. Mentir en
+`ht` paierait 1,13 € de trop par vente (26 août).
+
+### L'EMAIL DIT L'AFFILIÉ, ET C'EST UN PARAMÈTRE OBLIGATOIRE
+
+*« Dans l'email que je reçois, je voudrais savoir en plus si la vente
+est liée à un affilié, et si oui lequel. »*
+
+La réponse existait déjà, trente lignes avant que l'email ne parte :
+depuis le 17, le webhook garde le verdict du registre. Il ne le passait
+simplement à personne.
+
+`affiliation` est **obligatoire** sur `VenteAlertee`, comme `nature`. Un
+appelant qui se tait laisserait l'email muet, c'est à dire exactement
+l'état qu'elle vient de faire corriger, et rien ne le dirait. Le
+compilateur a attrapé les cinq appelants (trois Tiquiz, deux Atelier) et
+le fixture de chaque test.
+
+**Sept états, plus grossiers que les huit du registre**, parce qu'elle
+lit ça sur son téléphone : ce qu'elle doit savoir en trois secondes,
+c'est « quelqu'un est payé, personne n'est payé, ou il faut que je
+regarde ». La traduction est EXHAUSTIVE (pas de `default`) : un statut
+nouveau fait rougir le compilateur au lieu de dire « aucun affilié » sur
+une commission qu'on n'a pas su lire.
+
+**La ligne est TOUJOURS écrite**, même quand il n'y a personne : une
+ligne absente se lit « on n'en a pas parlé ». Et le CODE du lien part
+même sans commission : un code présent sur une commission absente
+désigne le problème (le code n'est pas au registre), son absence dit
+l'inverse (personne n'a cliqué).
+
+**Le vocabulaire est parti dans `lib/ventes/verdictCommission.ts`**,
+identique à l'octet près avec l'Atelier, comme `alerteVente.ts` juste à
+côté : les deux app appellent le même registre et doivent en dire la
+même chose.
+
+### /ADMIN N'EXISTE PLUS
+
+*« Oui tu peux enlever ça de l'admin, je veux tout suivre dans
+pilotage. »*
+
+Quatre choses seulement n'avaient pas d'équivalent dans la console, et
+elles l'ont rejointe : inviter un compte et le contrôle des tags dans
+`/pilotage/clients`, la gestion des revendeurs et leurs factures dans
+`/pilotage/revendeurs`, la modération du blog dans `/pilotage/support`.
+
+**Ça change la règle 1 de `sections.ts` (« LA CONSOLE PILOTE, ELLE
+N'ÉDITE PAS »), alors c'est écrit.** C'était une règle d'ÉTAPE, pour que
+la console ne redevienne pas l'empilement qu'on venait de défaire tant
+que les deux écrans cohabitaient. Elle était d'ailleurs déjà contredite
+dans les faits : `/pilotage/clients/<adresse>` rend `ClientFiche`, qui
+change un palier et rembourse. La cible, elle, n'a jamais bougé.
+
+`/admin` et `/admin/clients/<adresse>` **redirigent**, ils ne rendent
+pas un 404 : la première est dans ses favoris, la seconde est citée dans
+CHAQUE email d'alerte déjà envoyé, et ces emails ne se réécrivent pas.
+Les liens des futurs emails, eux, pointent sur la console.
+
+**Et la redirection de la fiche ne touche pas au segment.** Le décoder
+pour le ré-encoder perdrait un `+` dans `bene+test@gmail.com`, et la
+fiche s'ouvrirait sur personne : c'est le drame du 31 août, par l'autre
+bout.
+
+### LA FAUTE QUE LE MÉNAGE ALLAIT FAIRE, DEUX JOURS DE SUITE
+
+La veille, supprimer `StatistiquesCard` emportait trois garde-fous.
+Aujourd'hui, supprimer `AdminDashboard` en emportait six de plus.
+
+Un test qui décrit un écran supprimé ne « devient pas faux » : il
+devient **muet**, et c'est pire, parce qu'il continue de passer pour un
+filet. Ils ont été RETARGETÉS, pas effacés : la liste unique vise
+maintenant `ClientsPilotage`, la fiche vise sa nouvelle adresse, et un
+test neuf exige que **chaque morceau parti de l'admin soit ARRIVÉ
+quelque part**, avec la section correspondante dans le menu.
+
+**Et deux de mes propres assertions étaient fausses au premier jet** :
+`/admin/clients/` matchait `/api/admin/clients/` (une route, pas un
+écran), et `/admin` matchait `@/lib/adminEmails` dans une ligne
+d'import. Un test qui rougit sur un nom de module ferait renommer un
+fichier pour rien.
+
+### CE QUI RESTE VRAI ET QU'IL FAUT MESURER
+
+`npm run audit:affiliation` est à relancer **une fois tipote-app
+déployé**. Tant que `orderId` n'est pas en prod, l'audit ne peut pas
+rapprocher une vente de sa commission, et il le dit maintenant au lieu
+de laisser croire à une commission manquante.

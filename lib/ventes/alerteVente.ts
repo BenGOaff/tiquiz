@@ -40,7 +40,82 @@
 // qui annonce 17,00 € pour un prélèvement de 0 € ferait douter de tout
 // le reste.
 
+// -- ET ELLE DOIT SAVOIR SI UN AFFILIÉ EST DERRIÈRE (Béné, 18 septembre) -
+//
+// "Dans l'email que je reçois, je voudrais savoir en plus si la vente
+// est liée à un affilié, et si oui lequel."
+//
+// La demande arrive au bon moment : depuis le 17 septembre, le webhook
+// CONNAÎT la réponse au moment où il envoie cet email (il vient
+// d'appeler le registre, et il en garde le verdict). Avant, personne ne
+// le savait à cet endroit là.
+//
+// **`affiliation` est un paramètre OBLIGATOIRE**, comme `nature`. Un
+// appelant qui se tait laisserait l'email muet sur la question, c'est à
+// dire exactement l'état qu'elle vient de faire corriger, et rien ne le
+// dirait. Avec un champ obligatoire, le compilateur refuse le silence :
+// `"inconnu"` existe pour le dire à voix haute.
+
 export type MoyenEncaissement = "stripe" | "paypal";
+
+/**
+ * CE QU'IL FAUT DIRE DE L'AFFILIÉ, DANS UNE BOÎTE DE RÉCEPTION.
+ *
+ * Volontairement plus grossier que les statuts du registre : Béné lit
+ * cet email sur son téléphone, et ce qu'elle a besoin de savoir en
+ * trois secondes, c'est « quelqu'un est payé, personne n'est payé, ou
+ * il faut que je regarde ». Les huit statuts du registre se replient
+ * donc sur ces sept états, et la traduction est EXHAUSTIVE chez
+ * l'appelant : un statut nouveau fait rougir le compilateur au lieu de
+ * tomber dans un repli silencieux.
+ *
+ * - `credite`     : un affilié a une commission sur cette vente ;
+ * - `aucun`       : le registre a regardé, il n'y a pas d'affilié. Une
+ *                   vraie réponse, et la plus fréquente ;
+ * - `ailleurs`    : vente hors de notre bon de commande, c'est
+ *                   Systeme.io qui règle la commission ;
+ * - `rien_du`     : zéro euro encaissé (mois offert), rien n'était dû ;
+ * - `en_cours`    : l'appel au registre n'est pas passé, il sera rejoué.
+ *                   Rien n'est perdu, mais ce n'est pas fini ;
+ * - `a_regarder`  : aucune commission, et ça ne devrait pas être le cas.
+ *                   C'est le seul état qui demande une action ;
+ * - `inconnu`     : on ne sait pas. Jamais un repli de confort : il se
+ *                   passe quand on n'a VRAIMENT pas la réponse.
+ */
+export type EtatAffiliationAlerte =
+  | "credite"
+  | "aucun"
+  | "ailleurs"
+  | "rien_du"
+  | "en_cours"
+  | "a_regarder"
+  | "inconnu";
+
+export interface AffiliationAlertee {
+  etat: EtatAffiliationAlerte;
+  /**
+   * QUI est crédité. Le nom public de l'affilié quand le registre l'a
+   * nommé, à défaut son identifiant. `null` quand personne ne l'est.
+   */
+  affilie?: string | null;
+  /**
+   * Le CODE du lien utilisé (`?ref=greg`), quand la vente en portait un.
+   *
+   * Il vaut la peine d'être dit même quand la commission n'a pas été
+   * créée : un code présent avec un état `a_regarder` désigne tout de
+   * suite le problème (le code n'est pas au registre), alors qu'un état
+   * `a_regarder` sans code dit l'inverse (personne n'a cliqué).
+   */
+  code?: string | null;
+  /** La commission créée, en centimes. `null` quand il n'y en a pas. */
+  commissionCents?: number | null;
+  /**
+   * Ce que l'appelant a compris, en clair, quand ça explique un état qui
+   * n'a rien payé. Repris tel quel et ÉCHAPPÉ : c'est un détail
+   * technique, pas une phrase à elle.
+   */
+  detail?: string | null;
+}
 
 /**
  * Ce que l'encaissement EST, du point de vue de celle qui lit l'email.
@@ -76,6 +151,14 @@ export interface VenteAlertee {
   compteCree: boolean | null;
   /** L'adresse de la fiche à ouvrir dans l'admin. */
   lienAdmin: string;
+  /**
+   * L'AFFILIÉ DE CETTE VENTE. Obligatoire : voir l'en tête du fichier.
+   *
+   * Un appelant qui n'a pas encore la réponse passe
+   * `{ etat: "inconnu" }`, et l'email le dit. Le silence, lui, n'est
+   * plus une option.
+   */
+  affiliation: AffiliationAlertee;
 }
 
 export interface ContenuAlerte {
@@ -171,6 +254,50 @@ function phraseSelonNature(v: VenteAlertee): string {
   }
 }
 
+/**
+ * LA LIGNE « AFFILIÉ » DE L'EMAIL.
+ *
+ * Elle est TOUJOURS écrite, même quand il n'y a pas d'affilié : une
+ * ligne absente se lit "on n'en a pas parlé", et c'est précisément ce
+ * qu'elle a demandé à ne plus avoir. Un "Aucun affilié" explicite est
+ * une information ; un silence n'en est pas une.
+ */
+export function ligneAffiliation(a: AffiliationAlertee): string {
+  const qui = a.affilie?.trim() || null;
+  const code = a.code?.trim() || null;
+  const montant =
+    Number(a.commissionCents) > 0 ? montantLisible(Number(a.commissionCents), "eur") : null;
+  const viaLeCode = code ? ` (lien ${code})` : "";
+
+  switch (a.etat) {
+    case "credite":
+      return (
+        `Affilié${NBSP}: ${qui ?? "crédité"}${viaLeCode}` +
+        (montant ? `, ${montant} de commission` : ", commission créée")
+      );
+    case "aucun":
+      // On dit "vérifié" : sans ce mot, la phrase se lit comme un doute,
+      // et elle ferait aller regarder pour rien.
+      return `Affilié${NBSP}: aucun, vérifié auprès du registre`;
+    case "ailleurs":
+      return `Affilié${NBSP}: commission réglée par Systeme.io, rien à faire`;
+    case "rien_du":
+      return `Affilié${NBSP}: rien à commissionner sur cet encaissement`;
+    case "en_cours":
+      return (
+        `Affilié${NBSP}: commission pas encore créée${viaLeCode}, elle sera rejouée` +
+        (a.detail ? ` (${a.detail})` : "")
+      );
+    case "a_regarder":
+      return (
+        `Affilié${NBSP}: AUCUNE COMMISSION CRÉÉE${viaLeCode}, à vérifier` +
+        (a.detail ? ` (${a.detail})` : "")
+      );
+    case "inconnu":
+      return `Affilié${NBSP}: je ne sais pas si quelqu'un a été crédité`;
+  }
+}
+
 function phraseCompte(compteCree: boolean | null): string | null {
   if (compteCree === true) return "Le compte vient d'être créé.";
   if (compteCree === false) return "Le compte existait déjà.";
@@ -196,6 +323,7 @@ export function contenuAlerteVente(v: VenteAlertee): ContenuAlerte {
     `Montant encaissé${NBSP}: ${montant}`,
     `Moyen de paiement${NBSP}: ${MOYENS[v.moyen]}`,
     `Référence${NBSP}: ${v.reference}`,
+    ligneAffiliation(v.affiliation),
   ];
 
   const subject = titreSelonNature(v, montant);

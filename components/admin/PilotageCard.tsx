@@ -612,7 +612,7 @@ export default function PilotageCard({ vue }: { vue: VuePilotage }) {
                 {moisOfferts.aRegarder.map((l) => (
                   <li key={l.email} className="flex flex-wrap items-baseline gap-x-2">
                     <a
-                      href={`/admin/clients/${encodeURIComponent(l.email)}`}
+                      href={`/pilotage/clients/${encodeURIComponent(l.email)}`}
                       className="font-semibold underline"
                     >
                       {l.name ?? l.email}
@@ -765,7 +765,7 @@ export default function PilotageCard({ vue }: { vue: VuePilotage }) {
                               </Button>
                             ))}
                             <Link
-                              href={`/admin/clients/${encodeURIComponent(p.email)}`}
+                              href={`/pilotage/clients/${encodeURIComponent(p.email)}`}
                               className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-semibold hover:bg-muted"
                             >
                               Sa fiche <ChevronRight className="size-3.5" />

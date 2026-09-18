@@ -1,46 +1,28 @@
 // app/admin/clients/[email]/page.tsx
 //
-// LA FICHE D'UNE PERSONNE.
+// LA FICHE D'UNE PERSONNE A DÉMÉNAGÉ DANS LA CONSOLE (18 septembre 2026).
 //
-// Béné, 22 août : "Tu trouves ça pratique ? lisible ? facile à utiliser ?
-// Quand j'aurai 200000 clients, je fais comment ?"
+// C'est le MÊME composant des deux côtés depuis le début
+// (`ClientFiche`) : il n'y a jamais eu deux fiches, seulement deux
+// adresses pour la même. Il n'en reste qu'une.
 //
-// Un tiroir dans une liste sert à regarder, pas à travailler. La liste
-// reste la liste ; tout ce qu'on FAIT sur une personne se passe ici.
+// L'ancienne adresse redirige au lieu de disparaître : elle est citée
+// dans chaque email d'alerte de vente déjà envoyé, et ces emails ne se
+// réécrivent pas.
 //
-// La garde est la MÊME que celle de /admin : le middleware protège déjà
-// le préfixe, et on revalide ici. Une page qui affiche l'argent d'un
-// client et qui rembourse ne se contente pas d'un seul verrou.
+// LE SEGMENT N'EST PAS DÉCODÉ PAR NEXT, et on ne le décode pas non plus
+// ici : on le repasse TEL QUEL à la nouvelle adresse. Le décoder pour le
+// ré-encoder ferait perdre un `+` dans une adresse comme
+// `bene+test@gmail.com`, et la fiche s'ouvrirait sur personne (drame du
+// 31 août, par l'autre bout).
 
-import { redirect } from "next/navigation";
+import { permanentRedirect } from "next/navigation";
 
-import AppShell from "@/components/AppShell";
-import ClientFiche from "@/components/admin/ClientFiche";
-import { isAdminEmail } from "@/lib/adminEmails";
-import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { lireEmailParam } from "@/lib/admin/emailParam";
-
-export const dynamic = "force-dynamic";
-
-export const metadata = { title: "Fiche client" };
-
-export default async function FicheClientPage({
+export default async function AncienneFichePage({
   params,
 }: {
   params: Promise<{ email: string }>;
-}) {
-  const supabase = await getSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user || !isAdminEmail(user.email)) redirect("/dashboard");
-
-  // Next décode déjà le segment : `a%40b.fr` arrive en `a@b.fr`.
+}): Promise<never> {
   const { email } = await params;
-
-  return (
-    <AppShell userEmail={user.email ?? ""} headerTitle="Fiche client">
-      <ClientFiche email={lireEmailParam(email)} />
-    </AppShell>
-  );
+  permanentRedirect(`/pilotage/clients/${email}`);
 }

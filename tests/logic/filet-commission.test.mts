@@ -178,7 +178,14 @@ test("les deux sorties muettes de l'audit disent maintenant ce qu'elles perdent"
   const stripe = sansCommentaires(readFileSync("app/api/commande/webhook/route.ts", "utf8"));
   const debut = stripe.indexOf("async function commissionnerEcheance(");
   const c = stripe.slice(debut);
-  assert.match(c, /if \(!email\) \{[\s\S]*?console\.error\([\s\S]*?commission NON creee[\s\S]*?return;/);
+  // Elle ne se contente plus de CRIER dans le journal du serveur : elle
+  // rend un verdict, qui est ecrit dans la fiche de la vente et qui
+  // remonte jusqu'a l'email (18 septembre 2026). Un journal se lit quand
+  // on sait deja qu'il faut regarder ; une trace se voit toute seule.
+  assert.match(
+    c,
+    /if \(!email\) \{[\s\S]*?console\.error\([\s\S]*?commission NON creee[\s\S]*?statut: "non_tentee"[\s\S]*?return verdict;/,
+  );
   const paypal = sansCommentaires(readFileSync("app/api/commande/paypal/webhook/route.ts", "utf8"));
   assert.match(paypal, /const produit = findOwnerProduct\(abo\.productId\);[\s\S]*?\} else \{[\s\S]*?console\.error\([\s\S]*?produit inconnu/);
 });

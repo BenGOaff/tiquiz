@@ -768,3 +768,4 @@ Les sections déplacées, dans l'ordre :
 - TOUT le formulaire de capture est éditable (Béné, 16 septembre 2026)
 - Un seul endroit pour TOUT ce qu'on demande au visiteur (Béné, 17 septembre 2026)
 - La vente qui n'était identifiée nulle part, et l'affilié qu'on ne pouvait pas rassurer (Béné, 17 septembre 2026)
+- Le live de Greg, l'email qui ne disait rien, et /admin qui s'éteint (Béné, 18 septembre 2026)

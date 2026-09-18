@@ -51,6 +51,7 @@ import {
 } from "@/lib/checkout/paypalOwner";
 import { rememberPaypalSubscription } from "@/lib/checkout/customerLink";
 import { ecrireFiche, ecrireVerdictCommission } from "@/lib/ventes/identiteStore";
+import { affiliationPourAlerte, type VerdictCommission } from "@/lib/ventes/identite";
 import { construireFacture } from "@/lib/facture/construire";
 import type { FactureAEmettre } from "@/lib/facture/construire";
 import { taxeEstUnRepli, taxePaypalCents } from "@/lib/facture/taxeVentePaypal";
@@ -549,6 +550,17 @@ async function traiterEvenement(
       });
     }
 
+    // LE VERDICT VIT AU DESSUS DES DEUX BRANCHES (18 septembre 2026).
+    //
+    // Béné : "dans l'email que je reçois, je voudrais savoir en plus si
+    // la vente est liée à un affilié, et si oui lequel."
+    //
+    // Il était enfermé dans le `if (produit)` : l'email, envoyé plus
+    // bas, ne pouvait pas le lire. Et c'est justement la branche SANS
+    // produit qu'elle a besoin de voir passer, puisque c'est celle où
+    // aucune commission n'est créée.
+    let verdict: VerdictCommission | null = null;
+
     if (encaissement && encaissement.totalCents > 0) {
       const produit = findOwnerProduct(abo.productId);
       if (produit) {
@@ -560,7 +572,7 @@ async function traiterEvenement(
               `A verifier sur sa fiche client.`,
           );
         }
-        const verdict = await commissionnerVente({
+        verdict = await commissionnerVente({
           moyen: "paypal",
           email: abo.email,
           reference: encaissement.saleRef,
@@ -585,10 +597,13 @@ async function traiterEvenement(
         // Ça se VOIT sur l'écran, et pas seulement dans le journal : une
         // commission qui ne naîtra jamais parce qu'on ne sait pas nommer
         // le produit est exactement ce qu'elle veut pouvoir repérer.
-        await ecrireVerdictCommission("paypal", encaissement.saleRef, {
+        verdict = {
           statut: "non_tentee",
+          cents: null,
+          affilie: null,
           detail: `produit inconnu (${abo.productId ?? "aucun"})`,
-        });
+        };
+        await ecrireVerdictCommission("paypal", encaissement.saleRef, verdict);
       }
     }
 
@@ -607,6 +622,17 @@ async function traiterEvenement(
         devise: encaissement.currency,
         reference: encaissement.saleRef,
         compteCree: null,
+        // LE CODE PART MÊME SANS COMMISSION : un code présent sur une
+        // commission absente désigne le problème (le code n'est pas au
+        // registre) ; son absence dit l'inverse (personne n'a cliqué sur
+        // un lien affilié, la personne est arrivée seule).
+        affiliation: affiliationPourAlerte({
+          verdict,
+          code: abo.affiliateCode,
+          ref: abo.affiliateRef,
+          // Un mois offert ouvre l'abonnement sans qu'un euro bouge.
+          rienADevoir: encaissement.totalCents <= 0,
+        }),
       });
     }
     return NextResponse.json({ ok: true, reason: "echeance" });

@@ -296,7 +296,7 @@ export default function ClientFiche({ email }: { email: string }) {
       const j = (await res.json()) as { ok?: boolean; error?: string };
       if (j.ok) {
         toast.success("Compte supprimé.");
-        router.push("/admin");
+        router.push("/pilotage/clients");
       } else {
         toast.error(j.error ?? "Le compte n'a pas pu être supprimé.");
       }
@@ -403,7 +403,7 @@ export default function ClientFiche({ email }: { email: string }) {
   if (!data?.ok || !p) {
     return (
       <div className="mx-auto max-w-3xl space-y-4 p-6">
-        <Link href="/admin" className="inline-flex items-center gap-1 text-sm text-primary">
+        <Link href="/pilotage/clients" className="inline-flex items-center gap-1 text-sm text-primary">
           <ArrowLeft className="size-4" /> Retour à mes clients
         </Link>
         <Card className="border-rose-300 bg-rose-50">
@@ -426,7 +426,7 @@ export default function ClientFiche({ email }: { email: string }) {
       {/* La fleche remonte a MES CLIENTS, jamais a l'historique : deux
           ecrans qui se citent l'un l'autre font une boucle dont on ne
           sort pas (drame Gwenn, 1er aout). */}
-      <Link href="/admin" className="inline-flex items-center gap-1 text-sm text-primary">
+      <Link href="/pilotage/clients" className="inline-flex items-center gap-1 text-sm text-primary">
         <ArrowLeft className="size-4" /> Retour à mes clients
       </Link>
 

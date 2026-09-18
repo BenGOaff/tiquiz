@@ -32,6 +32,8 @@ import Link from "next/link";
 import { AlertTriangle, ChevronRight, Loader2, Search } from "lucide-react";
 
 import { CARTE } from "@/components/pilotage/carte";
+import { InviterCompte } from "@/components/pilotage/InviterCompte";
+import TagsCard from "@/components/admin/TagsCard";
 import {
   filtrerClients,
   compterParProduit,
@@ -213,6 +215,11 @@ export function ClientsPilotage() {
           le filtre de période : il montre tout le monde.
         </p>
       </div>
+
+      {/* OUVRIR UN COMPTE, arrivé ici le 18 septembre 2026 avec la
+          disparition de /admin. En HAUT parce que c'est un geste qu'on
+          fait AVANT de chercher quelqu'un, pas après l'avoir cherché. */}
+      <InviterCompte surCreation={() => void charger()} />
 
       {erreur && (
         <p className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
@@ -428,6 +435,11 @@ export function ClientsPilotage() {
           )}
         </>
       )}
+
+      {/* LE CONTRÔLE DES TAGS, sous la liste. Même question qu'elle
+          ("est-ce que cette personne a bien ce qu'elle a payé ?"), et la
+          correction se fait sur la fiche, à un clic d'ici. */}
+      <TagsCard />
     </div>
   );
 }
