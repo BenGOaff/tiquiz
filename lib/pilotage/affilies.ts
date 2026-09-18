@@ -193,6 +193,22 @@ export interface AchatFilleul {
 export interface Filleul {
   email: string;
   arriveLe: string | null;
+  /**
+   * COMMENT IL LUI A ÉTÉ RATTACHÉ (18 septembre 2026).
+   *
+   * Béné : "je dois être sûre que untel est envoyé par untel", "de façon
+   * fiable et sécurisée".
+   *
+   * `clic`, `inscription`, `vente` ont été MESURÉS : on a vu la requête
+   * passer. `manuel` et `import_sio` sont DÉCLARÉS : quelqu'un l'a
+   * décidé, ou l'a repris d'ailleurs. Les deux sont légitimes, et ne
+   * pas les distinguer rend le registre inopposable le jour où deux
+   * affiliés se disputent le même client.
+   *
+   * `null` : ligne antérieure au 18 septembre, origine non mesurée. Ce
+   * n'est PAS "clic" par défaut.
+   */
+  origine?: string | null;
   achats: AchatFilleul[];
   gagneCents: number;
 }
@@ -412,5 +428,98 @@ export async function lireComptesTipote(
   } catch (e) {
     const trop = e instanceof Error && e.name === "TimeoutError";
     return { ok: false, raison: trop ? "trop-lent" : "unreachable" };
+  }
+}
+
+// ── QUI A AMENÉ CETTE PERSONNE, ET COMMENT (Béné, 18 septembre 2026) ──
+//
+// "Je dois tout savoir sur tout, de façon fiable et sécurisée", "je dois
+// être sûre que untel est envoyé par untel".
+//
+// `lireAffiliesDistants().attributions` répond déjà "par qui", et c'est
+// ce que la fiche client affichait : un prénom, sans rien d'autre. Ça ne
+// permet pas de trancher un litige, parce qu'un rattachement décidé à la
+// main s'y lit exactement comme un clic mesuré.
+//
+// Cette lecture là rend le DOSSIER : depuis quand, par quel chemin, ce
+// que ce chemin vaut comme preuve, et qui l'a décidé quand c'est un
+// geste humain.
+
+export interface RattachementDuClient {
+  sa: string;
+  nom: string | null;
+  ref: string | null;
+  statut: string | null;
+  /** `clic`, `inscription`, `vente`, `import_sio`, `manuel`, ou `null`. */
+  origine: string | null;
+  /** Ce que cette origine vaut : `mesuree`, `declaree`, `inconnue`. */
+  preuve: "mesuree" | "declaree" | "inconnue";
+  decidePar: string | null;
+  note: string | null;
+  depuis: string | null;
+}
+
+/**
+ * Le dossier de rattachement d'une personne.
+ *
+ * `{ lisible: false }` quand le registre n'a pas répondu, et c'est la
+ * distinction qui compte : "je n'ai pas pu regarder" n'est PAS "personne
+ * ne l'a amené" (règle du 11 septembre). Sur cet écran là, confondre les
+ * deux ferait dire à Béné qu'un client est arrivé seul alors qu'un
+ * affilié attend sa commission.
+ */
+export async function lireRattachementDuClient(
+  email: string,
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<
+  | { lisible: true; rattache: false }
+  | { lisible: true; rattache: true; dossier: RattachementDuClient }
+  | { lisible: false }
+> {
+  const secret = String(env.PARTNER_SHARED_SECRET ?? "").trim();
+  const adresse = String(email ?? "").trim().toLowerCase();
+  if (!secret || !adresse.includes("@")) return { lisible: false };
+
+  try {
+    const res = await fetch(
+      `${origine(env)}/api/partner/affilies/rattachement?email=${encodeURIComponent(adresse)}`,
+      {
+        headers: { "x-partner-secret": secret },
+        cache: "no-store",
+        signal: AbortSignal.timeout(DELAI_MS),
+      },
+    );
+    if (!res.ok) {
+      console.warn(`[pilotage/affilies] rattachement de ${adresse} : HTTP ${res.status}`);
+      return { lisible: false };
+    }
+    const j = (await res.json()) as Record<string, unknown>;
+    if (j.ok !== true) return { lisible: false };
+    if (j.rattache !== true) return { lisible: true, rattache: false };
+
+    const preuve = String(j.preuve ?? "");
+    return {
+      lisible: true,
+      rattache: true,
+      dossier: {
+        sa: String(j.sa ?? ""),
+        nom: (j.nom as string | null) ?? null,
+        ref: (j.ref as string | null) ?? null,
+        statut: (j.statut as string | null) ?? null,
+        origine: (j.origine as string | null) ?? null,
+        // UNE VALEUR QU'ON NE CONNAÎT PAS RETOMBE SUR `inconnue`, jamais
+        // sur `mesuree` : le repli ne doit jamais renforcer une preuve.
+        preuve:
+          preuve === "mesuree" || preuve === "declaree" ? preuve : "inconnue",
+        decidePar: (j.decidePar as string | null) ?? null,
+        note: (j.note as string | null) ?? null,
+        depuis: (j.depuis as string | null) ?? null,
+      },
+    };
+  } catch (e) {
+    console.warn(
+      `[pilotage/affilies] rattachement de ${adresse} illisible : ${(e as Error).message}`,
+    );
+    return { lisible: false };
   }
 }

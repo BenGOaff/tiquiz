@@ -15231,3 +15231,179 @@ fichier pour rien.
 déployé**. Tant que `orderId` n'est pas en prod, l'audit ne peut pas
 rapprocher une vente de sa commission, et il le dit maintenant au lieu
 de laisser croire à une commission manquante.
+
+## Le registre devient opposable, et l'Atelier s'offre dans une fenêtre (Béné, 18 septembre 2026)
+
+### D'ABORD : SA SORTIE D'AUDIT NE DISAIT RIEN DE NEUF
+
+Elle a recollé la MÊME sortie que la veille, mot pour mot, avec ma
+phrase ambiguë (« aucune commission ne porte de clé chez Tipote »). Or
+cette phrase n'existe plus dans le code poussé : elle a donc lancé
+l'audit **avant de redéployer**. Rien n'était établi par ce passage là.
+
+`check:lien-affilie`, lui, tournait bien, et il a tranché : **le lien de
+Greg marche de bout en bout.** Code au registre, affilié actif, cookie
+`tq_ref` posé sur les trois pages, `cf-cache-status: DYNAMIC` partout.
+Quelqu'un qui clique dessus lui est commissionné. La piste « notre
+système a foiré » est fermée pour lui.
+
+**Et j'y ai laissé passer le `sa` en clair dans la sortie.** Corrigé le
+jour même (six premiers caractères). Ce n'est pas un secret au sens
+strict, mais les liens `?sa=` **restent lus** pour attribuer : le
+connaître suffit à s'attribuer une vente, et un terminal se colle dans
+une conversation.
+
+### LE REGISTRE DISAIT QUI ET QUAND, JAMAIS COMMENT
+
+*« Je dois être sûre que untel est envoyé par untel et que untel a
+envoyé telle et telle et telle personne. Ça doit marcher dans les deux
+sens, je dois tout savoir sur tout, de façon fiable et sécurisée. »*
+
+Les deux sens EXISTAIENT déjà en données (`filleuls` sur la fiche d'un
+affilié, `Amené par` sur celle d'un client). Ce qui manquait est plus
+grave qu'un écran : **`affiliate_conversions` ne disait pas COMMENT.**
+
+Un rattachement décidé à la main s'y lisait donc exactement comme un
+clic mesuré. Le jour où deux affiliés se disputent le même client, il
+n'y a rien à opposer à personne : c'est un registre qui ne sert plus à
+rien au moment précis où on en a besoin.
+
+Cinq origines, et **trois forces de preuve** qui ne se confondent pas :
+
+- **mesuré** (`clic`, `inscription`, `vente`) : on a vu la requête ;
+- **déclaré** (`manuel`, `import_sio`) : quelqu'un l'a décidé, ou l'a
+  repris d'ailleurs. Légitime, et ce n'est pas une mesure ;
+- **inconnu** (`null`) : ligne antérieure au 18 septembre. **On n'écrit
+  PAS `clic` dessus par défaut** : ce serait une affirmation que
+  personne n'a faite. Les colonnes arrivent à `NULL`, aucune ligne
+  existante n'est touchée.
+
+Les quatre chemins écrivent maintenant leur origine, et un test le tient
+chemin par chemin : sans ça, la traçabilité ne vaudrait que pour une
+poignée de gestes manuels sur des milliers de lignes.
+
+### L'ATTRIBUTION MANUELLE : TROIS TEMPS, ET LE PREMIER COMPTE LE PLUS
+
+*« Je ne veux pas créditer automatiquement un affilié, en revanche s'il
+me prouve que le lien n'a pas fonctionné, je veux pouvoir lui attribuer
+un client manuellement. Mais ça doit rester manuel depuis pilotage
+affiliation. »*
+
+Sur la fiche de l'affilié, au dessus de ses filleuls :
+
+1. **ON REGARDE D'ABORD.** L'écran demande au registre ce qu'il sait de
+   cette adresse : rattachée à qui, depuis quand, par quel chemin, et ce
+   que ce chemin vaut. Un bouton qui agirait sans montrer ça prendrait
+   un filleul à un autre affilié sans que personne le voie.
+2. **ON MONTRE CE QUI SERA REJOUÉ.** Ses encaissements, avec leurs
+   montants. Le rattachement seul ne paie rien sur le passé, et cliquer
+   sans savoir combien ça crée n'est pas une décision.
+3. **ON AGIT**, et seulement alors.
+
+**Le conflit ne se résout jamais tout seul.** Le PREMIER rattachement
+gagne (26 août). Si la personne appartient déjà à quelqu'un, le serveur
+REFUSE et nomme l'affilié en place ; le remplacement existe, derrière
+une deuxième confirmation qui **porte son nom**. `remplacer` est un
+paramètre SÉPARÉ, jamais une conséquence : c'est la mécanique de `base`
+(26 août), et elle empêche de faire le geste dangereux par accident.
+
+**Trois choix à ne pas défaire.** La signature vient de la SESSION, pas
+du corps de la requête : un client qui pourrait écrire qui a décidé
+ferait de la trace une décoration, sur un geste qui vaut 40 % de chaque
+échéance pour toujours. Le remplacement écrit une ligne NEUVE et retire
+l'ancienne, il ne l'édite pas : éditer réécrirait l'histoire. Et la
+route manuelle est SÉPARÉE de `/api/affiliate/rattacher` : celle là est
+automatique, appelée à chaque inscription, et le pouvoir de remplacer
+n'a rien à faire dans un chemin qui s'ouvre mille fois par jour.
+
+### « JE N'AI PAS PU REGARDER » DÉCIDE ICI D'UN GESTE SUR DE L'ARGENT
+
+La fiche client disait `Amené par <prénom>` quand le registre répondait,
+et **rien du tout** quand il ne répondait pas. Les deux silences se
+ressemblaient.
+
+Elle dit maintenant les trois cas dans trois phrases : *« Personne. Le
+registre a regardé »*, le dossier complet, ou *« L'espace affilié n'a pas
+répondu. Ce n'est pas la preuve que personne ne l'a amené. »* Et la
+route d'attribution répond **503** sur un registre muet plutôt que de
+laisser croire que la place est libre.
+
+### L'ATELIER OFFERT : SES DEUX ARBITRAGES CHANGENT TOUT
+
+*« S'il upgrade sur la version payante (n'importe laquelle) il reçoit en
+plus l'Atelier du Quiz gratos. »*
+
+Deux questions restaient ouvertes, et elles ne se devinaient pas. Ses
+réponses :
+
+- **le cadeau n'est ouvert que dans des FENÊTRES** : les 7 jours après
+  l'inscription gratuite, puis 2 jours à la relance de 6 mois, puis 2
+  jours à celle d'un an. Le 8e jour, il upgrade sans rien recevoir ;
+- **les 30 jours offerts par un lien affilié se CUMULENT** avec le
+  cadeau. Deux mécaniques séparées, aucune ne mange l'autre. (Sa phrase
+  disait « il ne reçoit PAS les 15 jours offerts » ; les 15 jours sont
+  l'essai Plus que l'Atelier offre à SES élèves, pas un essai sur nos
+  paliers. Rien à retirer, donc.)
+
+### LA FENÊTRE PART DE LA DATE D'ENVOI, PAS D'UNE DATE CALCULÉE
+
+**C'est le point qui aurait cassé silencieusement.** La relance part par
+un cron, et un cron ne tourne pas à la seconde près : une panne d'un
+week-end, et il passe avec deux jours de retard.
+
+Une fenêtre calculée depuis `inscription + 6 mois` se serait donc
+**refermée AVANT que la personne ne reçoive l'email qui la lui
+annonce**. Elle part de la date d'ENVOI, enregistrée, la seule qui
+corresponde à ce que la personne a lu.
+
+Corollaire : **réserver, c'est ouvrir la porte.** Le cron réserve avant
+d'envoyer (motif éprouvé de `churn-ask`, 21 août : un `select` puis un
+`update` ne protège de rien, c'est l'UPDATE CONDITIONNEL qui tranche).
+Si l'envoi échoue derrière, la fenêtre reste ouverte deux jours pour
+quelqu'un qui ne l'a pas su : un cadeau possible et non réclamé, jamais
+une promesse trahie. L'inverse annoncerait une fenêtre qu'un marquage
+raté n'aurait jamais ouverte.
+
+Et un **rattrapage de 7 jours** : sans lui, une panne de deux jours
+ferait manquer DÉFINITIVEMENT tous les comptes dont le 182e jour tombe
+dedans, sans que rien ne dise que la relance aurait dû partir.
+
+### TROIS PORTES, UNE SEULE DÉCISION
+
+Trois chemins ouvrent un plan payant : le checkout Stripe, le webhook
+PayPal, et le webhook Systeme.io (qui fait son propre `upsert` depuis
+toujours). Trois occasions de diverger, c'est à dire le piège numéro 1
+de ce dépôt, sorti huit fois.
+
+Elles appellent toutes `offrirAtelierSiDu`, et un test vérifie dans la
+source qu'**aucune ne recalcule la fenêtre de son côté**.
+
+**Le cas qui coûterait le plus cher** : offrir l'Atelier à CHAQUE
+changement de palier. Quelqu'un qui passe de mensuel à annuel n'upgrade
+pas DEPUIS LE GRATUIT, et l'oublier donnerait la formation à tout le
+monde, une fois par changement. `estUnUpgradeDepuisLeGratuit` regarde
+les DEUX moitiés, et c'est testé dans les deux sens.
+
+**Et on marque APRÈS avoir ouvert l'accès, jamais avant** : marquer
+d'abord perdrait le cadeau sur une panne réseau, en fermant la fenêtre
+sur un accès jamais ouvert.
+
+### LA FAUTE QUE J'AI FAITE, ET QUE CE DÉPÔT AVAIT DÉJÀ PAYÉE
+
+J'ai commencé par relire l'URL de l'Atelier depuis l'environnement, avec
+`https://quizing.tipote.com` en repli écrit en dur.
+
+`lib/partner/atelierUrl.ts` existe **exactement pour empêcher ça**,
+depuis le drame du 3 août : le rebrand « quizing » avait cassé l'aller
+et le retour séparément, parce que l'adresse vivait à deux endroits et
+ne s'était corrigée qu'à moitié. Corrigé avant le commit, et un test
+refuse maintenant que le domaine soit réécrit dans ce fichier.
+
+### CE QUI RESTE À FAIRE, ET QUI N'EST PAS DU CODE
+
+La séquence de 7 jours et les deux relances sont **ses emails à elle**,
+dans Systeme.io. Le code ouvre les fenêtres et envoie les deux relances
+de 6 mois et 1 an ; la séquence d'accueil, c'est elle.
+
+Filets : `tests/logic/cadeau-atelier.test.mts` (23 tests) et
+`tests/logic/rattachement-manuel.test.mts` (13, côté Tipote).

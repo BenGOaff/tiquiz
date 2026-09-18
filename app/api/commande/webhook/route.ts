@@ -56,6 +56,7 @@ import { natureDeLaFactureStripe } from "@/lib/ventes/alerteVente";
 import { marquerMoisOffertConsomme } from "@/lib/trial/moisOffertCheckout";
 import { ecrireFiche, ecrireVerdictCommission } from "@/lib/ventes/identiteStore";
 import { affiliationPourAlerte, type VerdictCommission } from "@/lib/ventes/identite";
+import { offrirAtelierSiDu } from "@/lib/cadeau/offrirAtelier";
 import { ouvertureDemandee, type OuvertureDemandee } from "@/lib/checkout/planChange";
 import { estPlanAVie } from "@/lib/checkout/plansAVie";
 import { estAbonnementVivant } from "@/lib/checkout/subscriptionCancel";
@@ -311,6 +312,26 @@ async function traiterEvenement(
     // Le nom AFFICHE sur le bon de commande, pour que l'email de
     // confirmation nomme ce qui vient d'etre paye.
     planLabel: product.label,
+  });
+
+
+  // ── L'ATELIER OFFERT, SI LA FENÊTRE EST OUVERTE (18 septembre 2026) ──
+  //
+  // Béné : "s'il upgrade sur la version payante (n'importe laquelle) il
+  // reçoit en plus l'Atelier du Quiz gratos."
+  //
+  // APRÈS l'octroi, et jamais avant : un cadeau qui échoue ne doit pas
+  // priver quelqu'un du plan qu'il vient de payer. La décision (est-ce
+  // un upgrade DEPUIS LE GRATUIT, et la fenêtre est-elle ouverte ?) vit
+  // dans `lib/cadeau/atelierOffert.ts`, pure et testée : les trois
+  // portes qui ouvrent un plan l'appellent, et aucune ne décide seule.
+  await offrirAtelierSiDu({
+    email: vente.email,
+    planAvant: octroi.previousPlan,
+    planApres: product.plan,
+    // L'HEURE EST LUE ICI, jamais dans la fonction pure : un calcul qui
+    // lit l'horloge tout seul n'est pas testable.
+    maintenant: new Date(),
   });
 
   if (!octroi.ok) {
@@ -796,6 +817,12 @@ async function surAbonnement(
         // n'a pas recue, et le silence coute plus cher que le bug.
         return NextResponse.json({ ok: false, reason: grant.reason ?? "grant_failed" }, { status: 502 });
       }
+      await offrirAtelierSiDu({
+        email,
+        planAvant: grant.previousPlan,
+        planApres: ouverture.plan,
+        maintenant: new Date(),
+      });
       console.log(
         `[commande/webhook] abonnement ${subId} : ${email} passe en ${ouverture.plan}`,
       );

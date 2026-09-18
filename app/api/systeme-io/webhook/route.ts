@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { readSioAmountCents } from "@/lib/admin/sioSales";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { offrirAtelierSiDu } from "@/lib/cadeau/offrirAtelier";
 import { createClient } from "@supabase/supabase-js";
 import { timingSafeEqual } from "crypto";
 import { getSignatureMode, verifySioSignature } from "@/lib/sioWebhookSig";
@@ -622,6 +623,28 @@ export async function POST(req: NextRequest) {
         // table may not exist on older deploys — audit is best-effort
       }
     }
+
+    // ── L'ATELIER OFFERT, SI LA FENÊTRE EST OUVERTE (18 septembre 2026) ──
+    //
+    // Béné : "s'il upgrade sur la version payante (n'importe laquelle)
+    // il reçoit en plus l'Atelier du Quiz gratos."
+    //
+    // LA TROISIÈME PORTE. Les deux autres (le checkout Stripe, le
+    // webhook PayPal) passent par `grantPlanByEmail` ; celle ci fait son
+    // propre upsert depuis toujours. Trois portes qui décideraient
+    // chacune si le cadeau est dû finiraient par ne pas dire la même
+    // chose : c'est le piège numéro 1 de ce dépôt. Elles appellent donc
+    // toutes les trois LA MÊME fonction, qui décide seule.
+    //
+    // APRÈS l'upsert, et jamais avant : `offrirAtelierSiDu` relit le
+    // profil, et il doit y lire le plan NEUF. Avant, il verrait encore
+    // l'ancien et conclurait que rien n'a bougé.
+    await offrirAtelierSiDu({
+      email,
+      planAvant: oldPlan,
+      planApres: finalPlan,
+      maintenant: new Date(),
+    });
 
     // 3.5 Attribution affiliée — fire-and-forget vers l'endpoint Tipote
     // qui centralise les commissions. Best-effort, ne bloque pas le flow

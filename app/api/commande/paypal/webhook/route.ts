@@ -52,6 +52,7 @@ import {
 import { rememberPaypalSubscription } from "@/lib/checkout/customerLink";
 import { ecrireFiche, ecrireVerdictCommission } from "@/lib/ventes/identiteStore";
 import { affiliationPourAlerte, type VerdictCommission } from "@/lib/ventes/identite";
+import { offrirAtelierSiDu } from "@/lib/cadeau/offrirAtelier";
 import { construireFacture } from "@/lib/facture/construire";
 import type { FactureAEmettre } from "@/lib/facture/construire";
 import { taxeEstUnRepli, taxePaypalCents } from "@/lib/facture/taxeVentePaypal";
@@ -662,6 +663,26 @@ async function traiterEvenement(
     reference: abonnementId,
     requestOrigin: req.nextUrl.origin,
     planLabel: product.label,
+  });
+
+
+  // ── L'ATELIER OFFERT, SI LA FENÊTRE EST OUVERTE (18 septembre 2026) ──
+  //
+  // Béné : "s'il upgrade sur la version payante (n'importe laquelle) il
+  // reçoit en plus l'Atelier du Quiz gratos."
+  //
+  // APRÈS l'octroi, et jamais avant : un cadeau qui échoue ne doit pas
+  // priver quelqu'un du plan qu'il vient de payer. La décision (est-ce
+  // un upgrade DEPUIS LE GRATUIT, et la fenêtre est-elle ouverte ?) vit
+  // dans `lib/cadeau/atelierOffert.ts`, pure et testée : les trois
+  // portes qui ouvrent un plan l'appellent, et aucune ne décide seule.
+  await offrirAtelierSiDu({
+    email: abo.email,
+    planAvant: octroi.previousPlan,
+    planApres: product.plan,
+    // L'HEURE EST LUE ICI, jamais dans la fonction pure : un calcul qui
+    // lit l'horloge tout seul n'est pas testable.
+    maintenant: new Date(),
   });
 
   if (!octroi.ok) {
