@@ -1,0 +1,14838 @@
+# Historique de tiquiz
+
+Ce fichier est CHRONOLOGIQUE : il raconte des pannes, dans l'ordre où
+elles sont arrivées. C'est utile pour comprendre POURQUOI une règle
+existe, et inutile pour savoir où on en est.
+
+**Il n'est PAS chargé automatiquement**, et c'est voulu : recopié dans
+chaque conversation, il ne laissait plus de place pour travailler. Le
+socle qui, lui, doit être relu à chaque fois vit dans `AGENTS.md`.
+
+**On le lit À LA DEMANDE**, avant de toucher au code qu'une section
+décrit. Rien n'en a été retiré ni réécrit.
+
+---
+
+## Distribution par résultat — RÈGLE UNIQUE (drame Gwenn 8 juin 2026)
+
+Tout endroit qui affiche la distribution des leads par résultat de quiz
+DOIT suivre cette règle exacte. La répétition de bugs (entrées
+dupliquées, résultats oubliés, anciens noms) vient TOUJOURS d'une
+ré-implémentation partielle qui zappe une étape.
+
+**Citation Béné 8 juin :** "je veux que mes users voient leur quiz
+EXISTANT, en temps réel, pas des anciennes versions ou des versions
+tronquées." → source de vérité = `quiz_results` actuel.
+
+**Algorithme obligatoire :**
+1. **SEED** `byTitle` avec TOUS les profils actuels de `quiz_results`,
+   `count = 0` inclus (pas de filtre zero). Source de vérité.
+2. Pour chaque lead, tenter d'attribuer à un profil current :
+   - via `result_id` → `quiz_results.title` LIVE (suit les renames)
+   - sinon via le snapshot `result_title` SI ce titre existe encore
+     dans `currentTitles`
+   - **sinon : on EXCLUT silencieusement** (orphan / ancien nom après
+     rename / profil supprimé). Pas de bucket "Anciens profils" affiché.
+3. Le dénominateur des `%` = somme des leads MATCHÉS (pas `leads.length`),
+   pour que les pourcentages affichés somment exactement à 100%.
+4. Sort par count desc.
+
+**Endroits à respecter (Tiquiz) :**
+- `app/api/quiz/[quizId]/analytics/route.ts` — donut page Analytics
+- `components/quiz/QuizResultsAnalytics.tsx` — donut dans l'éditeur quiz
+- Toute nouvelle UI qui affiche des compteurs par résultat
+
+**Endroits à respecter (Tipote) :**
+- `app/api/quiz/[quizId]/analytics/route.ts` — utilise `leads.quiz_result_id`
+  (migration 20260607_leads_quiz_result_id.sql) + fallback `quiz_result_title`
+- `components/quiz/QuizResultsAnalytics.tsx` — lit depuis `quiz_leads`
+  (table dédiée, déjà `result_id` + `result_title`)
+- `app/api/quiz/[quizId]/public/route.ts` (capture) DOIT écrire
+  ET `quiz_result_id` ET `quiz_result_title`
+
+**Anti-patterns INTERDITS :**
+- Ne PAS seeder avec `quiz_results` actuels → profils à 0 lead absents.
+- Afficher un bucket "Anciens profils" ou "Sans résultat" → bruit visuel
+  que Béné refuse.
+- Calculer le `%` sur `leads.length` au lieu de `matchedTotal` → la
+  somme ne fait pas 100% quand il y a des orphans exclus.
+- `groupBy(result_title)` sans match au titre LIVE → anciens noms
+  apparaissent en double après rename.
+
+## Funnel par question - RÈGLE UNIQUE (drame Adeline 1er août 2026)
+
+Tout affichage "où décrochent les répondants" DOIT être recalé sur la
+liste ACTUELLE des questions, jamais sur les seuls events.
+
+Adeline supprime sa 10e question. Les lignes de `quiz_question_events`
+gardent `question_index = 9`, et la RPC `quiz_question_funnel_detail`
+liste les index PRÉSENTS DANS LES EVENTS. Résultat : une "Question 10"
+fantôme, une "pire chute : 59% Q9 -> Q10" qui désigne une question
+supprimée, et un "restés jusqu'au bout" calculé sur elle.
+
+**Algorithme obligatoire :** passer par `buildLiveFunnel()`
+(`lib/quiz/funnel.ts`), qui :
+1. SEED les étapes sur les questions actuelles (0 à count-1) ;
+2. exclut les index >= count (questions supprimées) et les compte dans
+   `removedQuestions`, que l'UI affiche honnêtement ;
+3. marque `hasData: false` les questions vivantes sans event (ajoutées
+   après coup) : l'UI montre "pas encore de donnée", jamais "0 visiteur",
+   et ces étapes sont exclues du calcul de la pire chute ;
+4. `reachedLastQuestion()` pour "restés jusqu'au bout" : la dernière
+   question QUI A de la donnée.
+
+Fail-open : si le nombre de questions est inconnu (0), on renvoie les
+lignes brutes. Mieux vaut la donnée telle quelle qu'un écran vide.
+
+**Endroits à respecter :** `app/api/stats/route.ts`,
+`app/api/quiz/[quizId]/analytics/route.ts`, `lib/quiz/insights.ts`
+(l'IA commentait la question fantôme), `app/stats/StatsShell.tsx`,
+`components/quiz/QuizAnalyticsClient.tsx`.
+
+Même famille : `app/api/quiz/[quizId]/aggregate-responses/route.ts`
+borne les totaux visiteur aux questions ET aux options vivantes, sinon
+les pourcentages ne font plus 100.
+
+## Identité stable des questions - RÈGLE UNIQUE (1er août 2026)
+
+Le recalage sur les questions vivantes (section ci-dessus) supprime la
+question fantôme mais ne réaligne rien : une question supprimée ou
+insérée AU MILIEU décale les index de tout l'historique postérieur. La
+correction définitive est l'identité stable, et elle tient en 3 pièces.
+Les trois sont obligatoires, en zapper une remet le bug.
+
+**1. `quiz_questions.id` est DURABLE.** Le PATCH `/api/quiz/[quizId]`
+fait UPDATE des lignes déjà connues, INSERT des nouvelles, DELETE de
+celles que l'éditeur ne renvoie plus (exactement comme `quiz_results`).
+Il ne fait PLUS `delete().eq("quiz_id")` + `insert(all)`, qui régénérait
+tous les ids à chaque sauvegarde.
+-> Corollaire : **tout éditeur DOIT renvoyer `id` dans le payload
+`questions`** (`QuizDetailClient`, `SurveyDetailClient`). Sans l'id,
+la question est traitée comme nouvelle et perd son historique.
+
+**2. Ce qu'on écrit porte l'id.**
+- `quiz_question_events.question_id` (route `/track`, le viewer envoie
+  `questionId`) ;
+- `quiz_leads.answers[].question_id` (le viewer envoie `question_id`
+  dans chaque réponse).
+L'index reste écrit à côté : c'est le repli des lignes historiques.
+L'INSERT du `/track` retombe sur la version sans `question_id` si la
+colonne n'existe pas encore en prod (jamais de tracking perdu en
+silence, cf. drame `quiz_events.meta`).
+
+**3. Tout lecteur traduit l'id en POSITION ACTUELLE** via
+`lib/quiz/questionIdentity.ts` :
+- `buildQuestionPositions(questions)` -> Map id -> position ;
+- `resolveQuestionPosition(ref, positions, count)` -> position ou null ;
+- `indexAnswersByPosition(answers, positions, count)` -> Map position ->
+  réponse.
+Ordre de résolution : `question_id` connu -> position actuelle ; id
+inconnu -> question supprimée, on EXCLUT ; pas d'id -> on garde l'index
+tant qu'il désigne une question vivante. Fail-open si la structure est
+inconnue (0 question) : on renvoie l'index brut.
+
+Côté SQL, les RPC font la même traduction (`left join` sur
+`question_id`, `row_number()` pour la position) et renvoient une **ligne
+sentinelle `question_index = -1`** dont `views` porte le nombre de
+questions disparues. `buildLiveFunnel()` la lit et la transforme en
+`removedQuestions`, que l'UI affiche honnêtement.
+
+**Tri de référence : `order by sort_order, id`.** Les RPC l'utilisent ;
+les requêtes JS qui construisent des positions doivent l'utiliser aussi
+(`.order("sort_order").order("id")`), sinon deux lecteurs peuvent
+calculer des positions différentes en cas d'égalité de `sort_order`.
+
+**Anti-patterns INTERDITS :**
+- `answers.find(a => a.question_index === qIdx)` : c'est exactement le
+  bug. Passer par `indexAnswersByPosition`.
+- Un éditeur qui renvoie `questions` sans `id`.
+- Un nouveau lecteur d'`answers` qui n'importe pas
+  `lib/quiz/questionIdentity.ts`.
+
+**Endroits à respecter (Tiquiz) :** `app/api/quiz/[quizId]/route.ts`
+(PATCH), `app/api/quiz/[quizId]/track/route.ts`,
+`components/quiz/PublicQuizClient.tsx`, `QuizDetailClient.tsx`,
+`SurveyDetailClient.tsx`, `QuizResultsAnalytics.tsx`, `SurveyTrends.tsx`,
+`lib/survey/format.ts`, `lib/survey/analysis.ts`,
+`app/api/quiz/[quizId]/survey-results/route.ts`,
+`app/api/quiz/[quizId]/public/route.ts` (tags SIO par réponse),
+`supabase/migrations/20260801_question_identity.sql`.
+Le module quiz de Tipote est jumeau : toute correction ici doit être
+portée là-bas, et réciproquement.
+
+## Réponses sans options - à ne pas oublier (retour Jocelyne 1er août 2026)
+
+`free_text`, `rating_scale` et `star_rating` n'ont pas d'options. Toute
+synthèse par question qui ne compte que `option_index` / `option_indices`
+les fait DISPARAÎTRE de l'écran (leur `totalAnswered` reste à 0), alors
+que les réponses sont bien en base dans `quiz_leads.answers[].text` /
+`.rating` / `.stars`. Traiter les trois familles :
+- options -> compteur par option (existant) ;
+- texte libre -> la liste des réponses écrites + un bouton Copier ;
+- échelle -> répartition des notes + moyenne.
+
+## Taille de police d'un champ : UNE seule enveloppe (drame Jocelyne 1er août 2026)
+
+La taille de police au niveau du champ vit dans un `<div
+class="rt-field-fs" style="--rt-fs-m: Xpx; --rt-fs-d: Ypx">` qui
+enveloppe tout le contenu (cf. `RichTextEdit`, section dual-device).
+
+**Le piège :** le navigateur restructure le contenu d'un `contentEditable`
+à la moindre commande. Aligner, coller, appuyer sur Entrée enveloppe le
+bloc dans un `<div>`, et l'enveloppe de taille n'est alors PLUS enfant
+direct du champ. Le code cherchait `:scope > .rt-field-fs` : il ne la
+trouvait plus, en créait une SECONDE par-dessus, et comme la plus
+profonde porte sa propre variable CSS, c'est ELLE qui gagne. Résultat :
+le menu affiche la nouvelle taille, l'écran garde l'ancienne, et
+l'utilisatrice conclut que le bouton ne marche pas. Reproduit sur la 6e
+réponse d'une question de Jocelyne, celle qu'elle avait centrée.
+
+**Règle :** `applyFieldFontSize()` cherche les enveloppes PARTOUT dans le
+champ (`querySelectorAll`), reprend les tailles de la **plus profonde**
+(celle qui gagne en CSS, donc celle que l'utilisatrice voit), les retire
+TOUTES, puis en recrée UNE SEULE en enfant direct. Un `<div>` qui
+n'existait que pour porter la taille est déballé ; un `<div>` qui porte
+autre chose (un alignement) est conservé tel quel. Effet de bord voulu :
+un champ déjà cassé se répare tout seul au premier clic sur une taille.
+
+**Ne jamais** revenir à un `:scope >` ni supposer que le DOM d'un
+contentEditable ressemble à ce qu'on y a écrit. Le module Tipote est
+jumeau : toute correction ici se porte là-bas.
+
+## Quiz scoré : les contrôles "profil" ne s'appliquent PAS (drame Véronique 1er août 2026)
+
+Deux mécaniques d'attribution du résultat coexistent, et elles ne se
+mélangent jamais :
+
+| Mode | Le résultat est choisi par | Ce qui compte sur l'option |
+|---|---|---|
+| profils (défaut) | `option.result_index` le plus voté | `result_index` |
+| scoring | la TRANCHE `[min_score, max_score]` | `points` |
+
+En scoring, `result_index` ne veut rien dire. Or deux analyses de
+l'éditeur sont bâties dessus :
+- `resultCoverage` ("combien de questions mènent à ce résultat") ;
+- `tieAnalysis` (ex-æquo entre profils).
+
+Sur un quiz scoré, elles répondaient zéro pour tout le monde, d'où le
+bandeau rouge **"Ce résultat ne peut jamais être attribué"** sur un quiz
+parfaitement fonctionnel : Véronique testait, obtenait le bon résultat,
+et voyait quand même l'alerte. Deux jours perdus, et un bouton
+"Rééquilibrer avec l'IA" qui aurait réécrit des `result_index` inutiles.
+
+**Règle : les deux analyses sortent en `ok` / vide dès que
+`quiz.mode === "scoring"`.** Le contrôle équivalent en scoring existe
+déjà et lui est correct : `trancheCoverage` (trous et chevauchements
+entre les tranches, comparés à la plage réellement atteignable via
+`computeReachableRange`).
+
+**Avant d'ajouter un contrôle de cohérence sur les résultats**, se
+demander de quelle mécanique il parle, et le gater sur `isScoring`. Le
+module Tipote est jumeau : toute correction ici se porte là-bas.
+
+## Flèche retour = hiérarchie, jamais l'historique (drame Gwenn 1er août 2026)
+
+Gwenn clique sur les stats depuis Mes projets. La flèche des stats la
+ramène sur le quiz, la flèche du quiz la ramène sur les stats. "Et je
+tourne en boucle entre les deux, sans pouvoir en sortir."
+
+La page stats pointait EN DUR vers l'éditeur ; l'éditeur faisait
+`router.back()`, donc revenait aux stats. `router.back()` n'est pas une
+hiérarchie, c'est un historique : il renvoie là d'où on vient, y compris
+vers un écran qui renverra ici. Deux écrans qui se citent l'un l'autre =
+cycle, et la seule sortie (le bouton retour du navigateur) rejoue la
+même boucle.
+
+**Règle :** la flèche retour d'un écran de projet passe par
+`projectBackHref()` (`lib/nav/projectBack.ts`) et remonte à Mes projets.
+La navigation LATÉRALE (stats <-> éditeur) existe toujours, mais par un
+lien nommé ("Modifier"), jamais par la flèche.
+
+**INTERDIT :** `router.back()` sur une flèche retour, et une destination
+qui dépend du referrer ou de `window.history`. Le test
+`tests/logic/project-navigation.test.mts` remonte de parent en parent et
+exige que ça s'arrête : un futur écran qui recréerait un cycle le fait
+rougir avant la cliente.
+
+## "Ne pas afficher le score" (retour Véronique 1er août 2026)
+
+Véronique décoche tout en mode Score, et le pourcentage reste affiché.
+Deux causes, les deux dans la même famille que les drames précédents :
+une combinaison de réglages relue à trois endroits du viewer.
+
+1. Sans jauge, la page affichait `X / Y` **et** une ligne de
+   pourcentage, alors que le panneau promet "à la place du simple texte
+   X / Y".
+2. Le sélecteur d'affichage était gaté par `showScoreGauge ||
+   scoringAxesEdit.length > 0` : sans jauge ni axes, elle n'avait
+   AUCUN contrôle.
+
+**Règle :** la décision vit dans `resolveScoreDisplay(mode, showGauge)`
+et `resolveAxisScoreDisplay(mode)` (`lib/quizScoring.ts`), jamais dans
+le JSX. `score_display_mode` vaut `"percent" | "label" | "hidden"`
+(pas de migration : la colonne existait). `"hidden"` retire le score
+GLOBAL et les barres d'axes ; les axes restent éditables (ils alimentent
+les variables `{score_axe}` et les tags Systeme.io).
+
+Le module Tipote est jumeau : toute correction ici se porte là-bas.
+
+## Boutons de partage : les réseaux cochés, ou TOUS (retour Béné 1er août 2026)
+
+Deux problèmes distincts, sur le même bouton.
+
+**1. "Partager mes résultats ne déclenche rien."** Le bouton appelait
+`navigator.share`, absent des navigateurs desktop, retombait sur un
+`navigator.clipboard.writeText`, et TOUT échec était avalé par un
+`catch {}` silencieux. Sur desktop, au mieux un toast discret, au pire
+rien du tout. Il ouvre maintenant un panneau de boutons par réseau,
+comme l'écran bonus le faisait déjà.
+
+**2. Le repli oubliait 4 réseaux sur 9.** La liste par défaut était
+codée en dur à deux endroits :
+`["x", "facebook", "linkedin", "whatsapp", "threads"]`. Une créatrice
+qui ne cochait AUCUN réseau (le cas par défaut) privait ses visiteurs
+d'Instagram, Pinterest, Reddit et email sans le savoir.
+
+**Règle :** `resolveShareNetworks()` (`lib/quiz/shareNetworks.ts`), une
+seule fonction testée pour tous les écrans. Sélection non vide -> elle,
+dans SON ordre. Rien de coché, colonne nulle, valeur illisible -> TOUS
+les réseaux (`ALLOWED_SHARE_NETWORKS`). Une sélection qui ne contient
+que des réseaux inconnus retombe sur tous, jamais sur zéro bouton.
+L'aperçu de l'éditeur passe par la MÊME fonction, sinon il ment.
+
+**Ne pas ré-écrire de liste de réseaux en dur**, nulle part, y compris
+dans un aperçu. C'est comme ça que le bug est né.
+
+L'URL partagée depuis l'écran de résultat est celle du profil obtenu
+(`?rp=`) : `getShareData` / `shareOn` / `copyShareLink` prennent un
+`urlOverride`. Instagram, qui n'a pas d'URL de partage web, copie ce
+même lien (pas celui du quiz).
+
+Le partage de fin de quiz reste désactivable : `show_result_share`,
+toggle "Afficher le bouton de partage" dans l'éditeur.
+
+## Un lien envoyé par email pointe sur NOTRE domaine (drame Véronique 2 août 2026)
+
+"Je demande un nouveau mot de passe, je clique sur le bouton, et
+j'arrive sur `localhost n'autorise pas la connexion`. Bref, je tourne en
+rond. PS : je n'ai pas de proxy et pas de pare-feu."
+
+Elle avait raison sur toute la ligne : le lien lui demandait vraiment
+d'ouvrir un serveur sur SA machine.
+
+**Pourquoi.** Le lien reçu portait
+`redirect_to=http://localhost:3000/auth/callback`. Ce n'était pas un
+repli de Supabase : c'est NOUS qui l'avions écrit. En prod,
+`NEXT_PUBLIC_APP_URL` vaut `http://localhost:3000`, et le code faisait
+`process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com"`. Un `??`
+ne protège que du MANQUANT, jamais du FAUX : une variable présente et
+absurde traverse tout.
+
+**Et ça ne concernait pas que le mot de passe.** La même variable est lue
+partout : retours de paiement, emails de notification de réponse, liens
+d'invitation revendeur, emails d'essai Plus, webhook Systeme.io. Tout ce
+qui en sortait pointait sur la machine de celui qui recevait le message.
+
+**Règle : on n'envoie jamais le lien Supabase.** On envoie le nôtre,
+construit avec `properties.hashed_token` :
+`${APP_URL}/auth/callback?token_hash=...&type=recovery`. `/auth/callback`
+consomme le jeton lui-même (`verifyOtp`). Plus de liste blanche, plus de
+Site URL entre l'utilisatrice et son compte.
+
+**Règle : plus AUCUNE lecture directe de `NEXT_PUBLIC_APP_URL` ni de
+`NEXT_PUBLIC_SITE_URL`.** Tout passe par `resolveAppUrl()` /
+`resolvePublicUrl()` (`lib/authLinks.ts`), qui refusent toute adresse
+locale (localhost, 127.x, ::1, .local) et retombent sur l'origine de la
+requête, puis sur le domaine canonique du contexte. Un `.env` de prod
+mal renseigné ne peut plus rien casser.
+
+**Le `??` avec une valeur par défaut est un faux garde-fou** : il ne
+couvre que la variable absente. Quand une variable a une valeur
+INTERDITE, il faut la valider, pas lui donner un défaut. Côté client, `window.location.origin`
+remplace `process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"` :
+le domaine où l'utilisatrice navigue vraiment.
+
+**Restent dépendants de la config Supabase** (rien à faire côté code) :
+les emails que Supabase envoie lui-même, c'est à dire le lien magique et
+la confirmation d'inscription. Vérifier dans le dashboard que le Site
+URL est `https://quiz.tipote.com` et que les Redirect URLs contiennent
+`https://quiz.tipote.com/auth/callback`.
+
+## Profil ou score : c'est LA décision qui bloque (Véronique 2 août 2026)
+
+Véronique a construit un quiz scoré alors qu'elle voulait des profils.
+Elle a cherché pendant deux jours pourquoi "ça ne collait pas", et c'est
+le coach qui a fini par lui dire. Il n'y avait aucun bug : le mauvais
+mode avait été choisi à la première seconde, et rien ne l'avait alertée.
+
+Les deux libellés parlaient produit, pas usage : "score sur 100, jauge,
+axes, résultats par tranches" ne veut rien dire pour une débutante.
+Ils parlent maintenant du QUESTIONNEMENT :
+
+- profil -> **qui es-tu ?** (le plus courant)
+- score  -> **où en es-tu ?**
+
+Sous les deux cartes, une phrase donne le critère, une autre rassure
+(tout reste modifiable), et un lien mène à quelqu'un qui répond : le
+coach de l'Atelier pour celles qui l'ont (`useAtelierStatus`), le support
+pour les autres. **Proposer un coach auquel on n'a pas accès est pire que
+ne rien proposer** : c'est pour ça que rien ne s'affiche tant que le
+statut n'est pas connu.
+
+## Mode scoring : le visiteur ne doit JAMAIS voir une page vide
+
+Trouvé en auditant le scoring. Le viewer faisait
+`ranges.find(...) ?? null` : un score qui tombe dans un TROU entre deux
+tranches, ou un quiz dont aucun résultat n'a de tranche (le cas d'une
+débutante qui n'a pas encore touché aux bornes), donnait
+`resultProfile = null`. Tout l'écran de résultat étant en
+`resultProfile?.`, le visiteur répondait à tout, laissait son email, et
+arrivait sur une page sans titre, sans texte, sans bouton. En silence.
+
+**Règle : `pickScoringResultIndex()` (`lib/quizScoring.ts`) rend toujours
+un résultat dès qu'il en existe un.** Tranche qui contient le score,
+sinon la tranche la plus proche, sinon le premier résultat.
+`analyzeTrancheCoverage` reste là pour prévenir la créatrice : il
+l'avertit, il ne sauve pas le visiteur.
+
+**Et poser des tranches est un calcul, pas une décision de créatrice.**
+La plage de points atteignable est affichée en permanence (plus seulement
+quand quelque chose cloche), et un bouton "Répartir les tranches" découpe
+la plage en tranches contiguës via `splitRangeIntoTranches()`, la MÊME
+fonction que la finalisation d'un quiz généré par l'IA.
+
+## Un `ok: false` produit TOUJOURS quelque chose à l'écran (3 août 2026)
+
+Béné supprime un projet : rien. Elle recommence : rien. La seule trace
+était un `400` nu dans la console du navigateur, et elle a fini par se
+demander si le quiz n'était pas supprimé côté serveur et réaffiché par
+erreur. Il ne l'était pas.
+
+Deux fautes empilées, et la deuxième est la plus grave :
+
+1. `popquiz_cues.quiz_id` référence `quizzes(id)` en **ON DELETE
+   RESTRICT** : un quiz réutilisé comme question dans une vidéo
+   interactive ne PEUT pas être supprimé. C'est voulu, et la migration le
+   disait : "the editor will surface a warning instead". L'éditeur n'a
+   jamais rien affiché.
+2. Le client faisait `if (data.ok) { retirer de la liste }` et **rien**
+   dans le cas contraire. Le `catch` ne couvrait que la panne réseau. Un
+   refus du serveur était donc, à l'écran, indiscernable d'un clic qui
+   n'a pas pris.
+
+**Règle : une réponse `ok: false` DOIT produire un message visible.** Un
+échec silencieux coûte plus cher que le bug qu'il masque, parce qu'il
+envoie l'utilisatrice chercher au mauvais endroit.
+
+**Règle : un refus n'est pas une panne.** `classifyDeleteError()`
+(`lib/quizDelete.ts`) traduit l'erreur Postgres en raison exploitable ;
+la route répond **409** (l'état des données s'y oppose) et jamais 400
+(qui laissait croire à une requête malformée), avec un `reason` que le
+client traduit et le nom des vidéos qui retiennent le quiz. Le serveur
+renvoie la RAISON, jamais la phrase : l'interface existe en 7 langues.
+
+## Le chrome d'édition n'hérite jamais de l'aperçu (drame Jocelyne 3 août 2026)
+
+"Je voudrais grossir les polices sur les boutons, mais ce n'est pas
+possible, menu déroulant vide."
+
+Le menu n'était pas vide : il s'ouvrait avec ses 11 tailles, écrites en
+BLANC sur un panneau BLANC. L'éditeur est du WYSIWYG, donc la toolbar de
+`RichTextEdit` vit DANS l'aperçu, donc à l'intérieur du
+`<button class="text-white">` du CTA. Les entrées du menu n'avaient
+aucune classe de couleur : elles héritaient du blanc. Seul l'en-tête, qui
+porte `text-muted-foreground`, restait visible : un menu avec un titre et
+rien dessous. Et ça n'arrivait QUE sur les boutons, les seuls endroits où
+l'aperçu force une couleur de texte.
+
+**Règle : la classe `rt-chrome` (globals.css) est posée à la RACINE de
+tout élément de chrome rendu dans l'aperçu** (toolbar, popovers, barre
+d'image). Elle neutralise les propriétés HÉRITÉES (couleur, taille,
+graisse, casse, interlettrage, alignement) : les descendants qui
+imposent la leur gagnent comme avant, ceux qui n'imposent rien
+retrouvent des valeurs saines.
+
+**Ne pas recolorer un menu à la fois** : le prochain popover ajouté à la
+toolbar ramènerait le bug. Et **ne pas utiliser `--foreground`** : le
+`<main>` de l'aperçu le réécrit avec la couleur de texte du quiz, ce qui
+rejouerait exactement le bug pour toute créatrice ayant choisi un texte
+clair. D'où la variable dédiée `--rt-chrome-fg`, définie en clair ET en
+sombre.
+
+Le filet visuel ne pouvait rien voir : il photographie le viewer public,
+pas l'éditeur. Le garde-fou est `tests/logic/editor-chrome.test.mts`.
+
+## Moins de réponses que de profils (escalade Véronique 3 août 2026)
+
+"Configuration 2 axes croisés pour 4 profils. Comme il n'y a que 3
+réponses possibles par question et 4 résultats, forcément ça déconne."
+
+Elle a raison. En mode profils, une voix ne peut venir que d'une option
+portant le `result_index` du profil. Une question à 3 réponses ne peut
+voter que pour 3 profils sur 4 : à cette question, le 4e est hors course.
+Répété sur tout le quiz, ça donne le bandeau rouge "Ce résultat ne peut
+jamais être attribué".
+
+Trois corrections, et les trois comptent :
+
+1. **À la source.** Le prompt de génération demande désormais, en mode
+   profils, EXACTEMENT `resultCount` options par question de choix, avec
+   les `resultCount` result_index apparaissant chacun UNE fois. Une
+   réponse par profil, c'est le design naturel d'un quiz de profil.
+2. **Nommer la cause.** `analyzeOptionSupply(mode, questions, count)`
+   (`lib/quizCoherence.ts`) détecte le cas, et l'alerte dit qu'il MANQUE
+   des réponses. "Ajuste les options ou demande à l'IA de rééquilibrer"
+   était vrai mais indevinable : déplacer un `result_index` d'un profil
+   vers un autre laisse toujours un profil découvert.
+3. **Rendre l'action capable.** `/rebalance` ne savait que DÉPLACER des
+   `result_index`. Il renvoie maintenant aussi des `additions` (nouvelles
+   réponses rédigées dans la langue et le ton de la question), validées
+   côté serveur : jamais plus d'une réponse par profil, jamais un doublon
+   d'une réponse existante, jamais sur une question déjà complète.
+
+**Il n'ajoute JAMAIS de question**, et ce n'est pas un oubli : le nombre
+de questions est une décision de la créatrice, pas un trou à combler.
+
+Comme toujours, `analyzeOptionSupply` est gaté sur le mode : en scoring,
+`result_index` ne veut rien dire (cf. le drame du 1er août). `yes_no` et
+les types sans options (`free_text`, `rating_scale`, `star_rating`) sont
+exclus : deux réponses ou zéro réponse, c'est leur principe, pas un
+manque.
+
+## Titre et sous-titre partagent UN bord, calculé UNE fois (drame Béné 3 août 2026)
+
+"Je ne comprends pas pourquoi il y a toujours ce décalage entre le titre
+et le sous-titre. On a déjà parlé de ça mille fois et ça n'a pas été
+corrigé. Je veux juste que si j'aligne mon texte à gauche, le titre et le
+sous-titre commencent au même endroit à gauche, je ne veux pas de
+décalage par défaut."
+
+Le "mille fois" est la vraie information. Le décalage venait d'un
+`max-w-xl mx-auto` écrit en dur sur le sous-titre : `max-w-xl` borne la
+longueur de ligne (utile, il reste), mais `mx-auto` CENTRE le bloc quoi
+qu'il arrive. Tant que le titre est centré, invisible. Dès qu'elle aligne
+son titre à gauche, le titre part du bord et le sous-titre reste centré,
+donc commence plus à droite.
+
+Et si ça n'avait jamais été corrigé partout, c'est que la règle
+n'existait nulle part : elle était réécrite en ternaires dans chaque
+écran de chaque composant. Le viewer avait été corrigé, l'éditeur non.
+L'écran de question avait été corrigé, l'écran d'accueil non. Chaque
+passage en oubliait un, donc le bug revenait.
+
+**Règle : `lib/quiz/textAlign.ts`, et personne ne réécrit de ternaire
+d'alignement.**
+
+- `resolveBlockAlign(ownHtml, titleHtml, layout)` : son propre alignement
+  -> celui du TITRE -> la disposition. Le titre sert de référence parce
+  que c'est lui qui donne le ton de l'écran ; l'alignement propre du bloc
+  passe devant parce qu'aligner le sous-titre exprès est un choix.
+- `alignTextClass` / `alignBlockMarginClass` / `alignJustifyClass` pour
+  le texte, la marge du bloc (JAMAIS `mx-auto` en dur) et les conteneurs
+  flex (logo, bouton).
+- `richTextAlign` renvoie `null` quand la créatrice n'a jamais touché à
+  l'alignement du champ. Ce null n'est pas un détail : sans lui, un champ
+  jamais aligné imposerait la gauche et recasserait tous les quiz
+  centrés.
+
+**Endroits à respecter :** `PublicQuizClient.tsx` (écran d'accueil),
+`QuizDetailClient.tsx` et `SurveyDetailClient.tsx` (aperçu d'accueil).
+Exception assumée : en disposition "couverture" (image plein écran), le
+viewer centre tout sans condition, et l'aperçu fait pareil.
+
+**INTERDIT :** `mx-auto` sur un bloc de texte de l'écran d'accueil, et
+tout `align === "center" ? … : …` recopié dans un composant. Le test
+`tests/logic/intro-align.test.mts` fige la règle.
+
+Corollaire général, déjà vrai pour les réseaux de partage et le score :
+**quand l'aperçu de l'éditeur recalcule une décision au lieu d'appeler la
+même fonction que le viewer, il finit toujours par mentir.**
+
+## La page de résultat suit les 4 temps de l'Atelier (3 août 2026)
+
+Béné : "je voudrais retravailler la page résultat des quiz pour intégrer
+cette logique : le miroir, la cause, le chemin, le pont. Comme ça on met
+Tiquiz raccord avec ce qui est enseigné dans l'Atelier, ce qui n'est pas
+le cas avec la présentation actuelle."
+
+Le décalage était réel, et il ne venait pas d'un manque de champs : trois
+des quatre temps existaient DÉJÀ en base, sous des noms produit qui ne
+disaient pas à quoi ils servent.
+
+| Temps | Champ | Ce qu'il fait |
+|---|---|---|
+| le miroir | `title` + `description` | il se reconnaît, donc il continue à lire |
+| la cause | `insight` (+ `insight_heading`) | ce qui bloque vraiment, souvent autre chose que ce qu'il croyait |
+| le chemin | `projection` (+ `projection_heading`) | les étapes, il voit que c'est faisable |
+| le pont | `bridge` (+ `bridge_heading`) **nouveau** | l'offre comme suite logique, pas comme une pub |
+
+Ce qui manquait vraiment, c'était le PONT (`cta_text` est le libellé du
+bouton, 3 à 6 mots : il ne peut pas porter de bénéfices) et surtout
+l'INTENTION : le prompt ne disait nulle part que ces blocs forment une
+progression, donc l'IA écrivait quatre paragraphes interchangeables.
+
+**Règle : `lib/quiz/resultBeats.ts` décide, personne d'autre.**
+`buildResultBeats()` dit quels blocs, dans quel ordre, avec quel titre ;
+`beatShell()` dit à quoi ils ressemblent. Le viewer public ET l'aperçu de
+l'éditeur appellent les deux. Un aperçu qui recalcule l'allure du viewer
+finit toujours par mentir (les réseaux de partage, le score, l'alignement
+du sous-titre : trois fois le même bug).
+
+**Règle : `quizzes.result_layout` porte la garantie "on ne touche pas aux
+quiz existants".** Défaut `'classic'` en base, et `resultLayoutMode()` ne
+renvoie `'beats'` que sur la valeur explicite. Colonne absente, valeur
+inconnue, migration pas encore passée : page historique. Un quiz naît en
+`'beats'` uniquement quand le contenu reçu porte VRAIMENT un pont
+(`hasBridgeContent`), donc jamais sur un import ni une création manuelle.
+
+**Le visuel : AUCUNE décoration qui prenne de la place horizontale.**
+Il a fallu trois passages pour y arriver, et les trois échecs disent la
+même chose. Bloc plein à la couleur de marque -> "l'encart est tout pété,
+il monte presque sur le menu de gauche" ET "il est de la même couleur que
+les boutons, ça entraîne de la confusion". Filet vertical + `pl-4` ->
+"tous les morceaux du milieu sont décalés vers la droite : c'est si
+compliqué de tout aligner partout sur les mêmes marges ??"
+
+Non, ça ne l'est pas, et c'est nous qui l'avions compliqué : **une
+décoration à gauche DÉPLACE forcément ce qu'elle décore.** Les temps se
+distinguent donc par leur TITRE (couleur de marque, gras) et par le
+rythme vertical. Le pont, dernier temps, prend un filet HORIZONTAL au
+dessus de lui : il se voit et il ne décale rien.
+
+**INTERDIT sur ces blocs : `pl-*`, `px-*`, `border-l-*`, `mx-*`.** Le
+test `tests/visual/result-beats-bounds.spec.ts` mesure le bord gauche du
+titre du profil ET de chaque temps, et exige qu'ils soient identiques à
+1px près. Comparer les temps ENTRE EUX ne suffisait pas : ils étaient
+parfaitement alignés... 20px à droite du titre, ce que Béné a vu tout de
+suite.
+
+**Images :** `quiz_results.beat_media` (JSONB) porte une image PAR temps,
+avec `mode: "with" | "only"` ("only" = l'image remplace le texte).
+Sanitizé par `sanitizeBeatMedia()` : ce champ finit dans un `<img src>`
+public, donc jamais écrit brut.
+
+**Le vocabulaire de la méthode ne sort JAMAIS côté visiteur.** "miroir",
+"cause", "chemin", "pont" vivent dans l'aide de l'éditeur et dans le
+prompt, pas dans le texte produit. Le prompt l'interdit explicitement :
+sinon le visiteur lit le squelette au lieu du message.
+
+## Les titres générés s'inspirent des ressources, sans les recopier (3 août 2026)
+
+Béné : "ce serait pas mal aussi d'upgrader la qualité des titres et sous
+titres générés par l'IA, pour le moment ils sont pas ouf. Peut être en
+lui demandant de s'inspirer des 104 hooks."
+
+`lib/prompts/quiz/copywriting.ts` distille `copywriting-claude/` (104
+hooks, triggers psychologiques, puces promesses) en MÉCANIQUES, pas en
+accroches à recopier. Coller les 104 lignes coûterait des tokens à chaque
+génération et, surtout, produirait des quiz qui se ressemblent tous : un
+modèle à qui on donne une liste finie recopie la liste.
+
+Deux blocs, ajoutés au prompt existant sans y toucher par ailleurs :
+`HOOK_CRAFT_BLOCK` (7 mécaniques d'accroche + déclencheurs + règles de
+forme) et `RESULT_BEATS_BLOCK` (les 4 temps). Le reste du prompt de
+génération, qui fonctionne bien, est inchangé.
+
+## Le logo n'est pas un bloc de texte (retour Béné 3 août 2026)
+
+"Si je centre mon titre à gauche, il centre aussi le logo : on doit
+pouvoir centrer, aligner à gauche ou à droite le logo indépendamment du
+titre ET on doit aussi pouvoir l'agrandir et le rétrécir comme pour les
+gif et les images."
+
+En calant tout l'écran d'accueil sur le bord du titre (correctif de la
+veille), on avait réglé un décalage et créé une contrainte : le logo
+n'avait plus de vie propre. Beaucoup de marques le veulent centré au
+dessus d'un titre aligné à gauche.
+
+**Règle : `lib/quiz/introLayout.ts`.** `resolveLogoAlign(setting,
+titleAlign)` et `logoRender(align, widthPct)` décident, le viewer ET
+l'aperçu appellent les deux. `brand_logo_align` vaut `'auto'` par défaut
+(= suit le titre, comportement d'avant), `brand_logo_width` vaut NULL
+(= `max-h-16 w-auto`, la taille d'avant). Aucun quiz existant ne bouge.
+
+## Titre et sous-titre : la borne est sur le CONTENEUR, jamais sur un champ
+
+Deuxième passage de Béné sur le même écran : "pourquoi la case du sous
+titre est plus courte que celle du titre ?? Elle a une marge à droite que
+le titre n'a pas."
+
+Le `mx-auto` avait été retiré la veille, mais pas le `max-w-xl` posé à
+côté. Le titre vivait dans un conteneur `max-w-2xl` (42rem), le
+sous-titre portait EN PLUS sa propre borne à 36rem. **Mesuré avant
+correction : titre 672px (bord droit 1056), sous-titre 576px (bord droit
+960).** Tant que tout est centré les 96px se répartissent et ça ne se
+voit pas ; aligné à gauche, ça saute aux yeux, et aucun réglage ne
+pouvait le rattraper puisque la borne était en dur.
+
+**Règle : la largeur du bloc d'accueil vit sur le CONTENEUR COMMUN**
+(`intro_text_width`, NULL = pleine largeur), réglable à la poignée (le
+même mécanisme que la largeur des colonnes du split, qu'elle a demandé
+nommément). Le bloc est positionné par le TITRE pour les deux champs ;
+l'alignement propre du sous-titre pilote SON TEXTE, pas la position de sa
+boîte. **INTERDIT : tout `max-w-*` ou `mx-auto` sur le titre ou le
+sous-titre de l'accueil.**
+
+**Le filet de captures ne pouvait pas le voir**, et c'est la leçon
+principale : le sous-titre de la fixture se coupait au même mot à 576px
+et à 672px, donc les pixels étaient identiques alors que les bords ne
+l'étaient pas. Les 90 captures sont passées au vert pendant tout le bug.
+Le garde-fou est `tests/visual/intro-bounds.spec.ts`, qui MESURE les
+boîtes au lieu de les photographier.
+
+## Liste ou colonnes : l'aperçu ignorait le réglage (retour Béné 3 août 2026)
+
+"Le WYSIWYG de la présentation sous forme de liste ou de colonnes des
+réponses ne fonctionne pas : j'ai choisi liste et je vois toujours mes
+colonnes c'est PAS bon."
+
+Le viewer public lisait bien `answer_layout`. C'est l'APERÇU qui avait sa
+propre règle écrite en dur, sans aucune trace du réglage :
+
+```
+q.options.length >= 3 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"
+```
+
+Cocher "Liste" ne pouvait donc rien changer à l'écran. Et même en "Auto",
+les deux côtés comptaient les options à des endroits différents.
+
+**Règle : `lib/quiz/answerLayout.ts`.** `resolveAnswerLayout(quizLayout,
+questionOverride)` puis `answerGridClass(layout, count, {stacked})`. Le
+`stacked` sert l'aperçu mobile : le canvas y est étroit mais le VIEWPORT
+ne l'est pas, donc les classes `sm:` resteraient actives et montreraient
+deux colonnes que le visiteur ne verra jamais (même piège que le split).
+
+Quatrième fois que le même défaut sort, après les réseaux de partage,
+l'affichage du score et l'alignement du sous-titre. **Quand l'aperçu
+recalcule une décision au lieu d'appeler la fonction du viewer, il finit
+toujours par mentir.**
+
+## Le sous-titre du quiz dit un BÉNÉFICE, jamais la fiche technique (retour Béné 3 août 2026)
+
+"À chaque fois, l'IA génère un truc comme ça dans le sous titre du quiz :
+'9 questions, un diagnostic, un truc concret à faire ce soir.' Franchement
+on s'en fout du nombre de questions."
+
+**La cause n'était pas la ligne qu'on croit.** Aucune consigne ne demandait
+le nombre de questions. Le problème était l'inverse : rien ne disait ce
+que le sous-titre DOIT contenir. Les deux seules mentions étaient
+"accrocher en 1-2 phrases" et "texte d'intro engageant". À un modèle à qui
+on demande d'être "engageant" sans dire sur quoi, il ne reste que les
+faits du brief, et `NOMBRE DE QUESTIONS : 9` y est écrit. Il recopiait la
+fiche technique faute de mieux.
+
+**Règle : `introSubtitleBlock()` (`lib/prompts/quiz/copywriting.ts`)**,
+branché sur la génération ET sur l'import (Béné a vu le problème sur les
+deux). Bénéfice pour le visiteur, verbe d'ouverture ("Découvre pourquoi",
+"Regarde si tu", "Apprends comment"), durée, et le bonus du créateur
+quand il existe.
+
+**La DURÉE est voulue, le NOMBRE DE QUESTIONS est interdit.** Les deux se
+ressemblent et les confondre referait le bug dans l'autre sens : la durée
+lève une objection ("ça me prend combien de temps ?"), le nombre de
+questions ne dit rien au visiteur. La durée est CALCULÉE
+(`estimateQuizMinutes`, ~20 s par question) et non laissée au modèle,
+sinon il annonce 5 minutes sur un quiz de 3 questions.
+
+## Un prompt est du CODE : il se teste (3 août 2026)
+
+En relisant `lib/prompts/quiz/system.ts` pour le retour ci-dessus, trois
+incohérences y vivaient sans que personne les voie :
+
+1. un **tiret cadratin dans le gabarit de sortie** (`"Nom du profil — LE
+   MIROIR"`), dans un prompt qui bannit les tirets cadratins dix lignes
+   plus haut. On montrait au modèle exactement ce qu'on lui interdit ;
+2. l'**exemple d'options contredisait sa propre règle** : `result_index`
+   0 deux fois alors que la consigne dit "chacun UNE fois". C'est le cas
+   exact qui a fait remonter Véronique (un profil jamais attribuable) ;
+3. `FORMAT : Quiz COURT (3 à 5 questions)` **et** `NOMBRE DE QUESTIONS :
+   9`, dans le même prompt.
+
+**Règle : `tests/logic/quiz-prompt.test.mts`.** Un prompt produit une
+sortie et régresse en silence quand on le retouche : il se teste comme le
+reste. Les assertions portent sur ce qui compte (la règle est présente,
+le gabarit n'a pas d'em-dash, les `result_index` de l'exemple sont
+distincts, aucune fourchette ne contredit le compte demandé).
+
+Pour que ce soit possible, `npm run test:logic` résout maintenant l'alias
+`@/` (`tests/logic/register-alias.mjs`). Sans ça, tout module qui importe
+`@/lib/...` restait hors de portée du runner natif, donc non testé, donc
+exactement là où les bugs s'installent.
+
+## Une nouveauté qu'on ne montre pas n'existe pas (retour Jocelyne 3 août 2026)
+
+"Elle veut profiter des dernières améliorations mais c'est pas possible sur
+un quiz existant. Elle l'a dupliqué pour en profiter, mais ça n'a pas
+marché."
+
+Trois choses vraies dans cette phrase, et une fausse.
+
+**Faux : "c'est pas possible sur un quiz existant".** La page en 4 temps
+s'active sur n'importe quel quiz, l'interrupteur existait déjà. Il vivait
+dans la colonne de réglages, parmi quinze autres, donc personne ne le
+trouvait. Une nouveauté qu'on ne montre pas n'existe pas pour la
+créatrice, et elle finit par bricoler autour.
+
+**Vrai : dupliquer ne pouvait rien donner.** La duplication est FIDÈLE par
+construction (`select("*")` + liste noire de colonnes non copiables dans
+`app/api/quiz/[quizId]/duplicate/route.ts`). Elle copie donc aussi
+`result_layout = 'classic'` et l'absence de pont : la copie reproduit
+exactement la page de l'original. C'est le comportement voulu, pas un bug,
+mais c'est un cul-de-sac pour qui espère "repartir à neuf".
+
+**Corollaire sur la duplication :** elle est à l'épreuve du futur. Toute
+nouvelle colonne de `quizzes`, `quiz_questions` ou `quiz_results` est
+copiée automatiquement. Ne JAMAIS la réécrire en liste blanche : chaque
+colonne oubliée deviendrait une perte silencieuse à la copie.
+
+**Règle : toute fonctionnalité gatée par une colonne à défaut historique
+doit avoir un repère dans l'éditeur.** Ici, un bandeau au dessus des
+profils de résultat, visible uniquement quand `result_layout === 'classic'`,
+avec un bouton qui bascule et une phrase qui dit que c'est réversible et
+sans effet sur les autres quiz. Écarté = mémorisé en `localStorage` par
+quiz (une préférence d'affichage ne mérite ni colonne ni migration), lu
+APRÈS le montage pour ne pas casser l'hydratation.
+
+## Typographie française : liste NOIRE, et l'espace s'INSÈRE (3 août 2026)
+
+Béné : "en français on laisse un espace entre un mot et des guillemets, ou
+un mot et un point d'interrogation. Là ça n'est plus le cas. Ce genre de
+petits détails est chiant et long à corriger, on peut se l'éviter ?"
+
+Oui, mais pas en recorrigeant : en retirant les DEUX causes.
+
+**Cause 1 : la règle ne faisait que CONVERTIR une espace déjà présente.**
+`Prêt ?` devenait `Prêt<nbsp>?` ; `Prêt?` restait `Prêt?`. Or un modèle de
+langue écrit très souvent le français sans l'espace, donc tout le contenu
+généré arrivait fautif et le restait après n'importe quel nombre de
+sauvegardes. `fixFragment` INSÈRE désormais l'espace manquante.
+
+**Cause 2 : elle n'était appliquée qu'à la MISE À JOUR, sur une liste
+blanche de colonnes.** La CRÉATION (génération IA, import) n'appliquait
+RIEN. Et une liste blanche oublie toute colonne ajoutée après elle : c'est
+la mécanique même du "problème qui revient".
+
+**Règle : `applyFrenchTypographyDeep(payload, locale)` au SEUL point
+d'entrée**, sur `POST /api/quiz` (avant toute lecture du corps) et sur le
+PATCH. Liste NOIRE de noms de champs + garde sur la FORME de la valeur.
+Un champ nouveau est couvert d'office. **Les deux listes blanches ont été
+supprimées, pas vidées : ne pas les réintroduire.**
+
+**Insérer est plus dangereux que convertir**, d'où les gardes, tous
+testés : on n'insère que devant une ponctuation qui TERMINE (suivie d'une
+espace, d'une fermeture ou de la fin). Ça protège le `?` d'une query
+(`a?b=1`), le `:` d'un schéma (`https://`), les heures (`12:30`), le CSS
+(`color:red`). Le `:` exige en plus une LETTRE devant, jamais un chiffre.
+`applyFrenchTypographyToHtml` découpe sur les balises ET les entités :
+sans ça, `&nbsp;` deviendrait `&nbsp ;`.
+
+**Aucune autre langue n'est touchée** (`isFrenchLocale`), c'est testé pour
+les 7 locales.
+
+## L'URL de l'Atelier vit à UN endroit (drame Béné 3 août 2026)
+
+"J'ai voulu rebasculer de Tipote à Tiquiz sur l'Atelier et ça a foiré.
+J'ai bien la demande d'autorisation de connexion mais derrière je tombe
+sur la page d'erreur."
+
+Le consentement marchait. C'est le RETOUR qui tombait dans le vide :
+`app/api/partner/authorize/route.ts` renvoyait vers
+`formaquiz.tipote.com`, hostname mort depuis le rebrand "quizing" du 18
+juin. Vérifié le jour même : ce domaine répond **404**, quand
+`quizing.tipote.com` répond bien.
+
+**C'était la deuxième moitié d'un drame à moitié corrigé.** Le rebrand
+avait déjà cassé l'ALLER (`lib/integrations/tiquiz.ts` côté Atelier
+pointait vers `/connect/quizing`, inexistant). On avait réparé l'aller
+sans voir que le RETOUR portait la même adresse périmée, à l'autre bout de
+la chaîne et dans l'autre repo. **Une URL écrite en dur à deux endroits
+ne se corrige jamais qu'à moitié.**
+
+**Règle : `lib/partner/atelierUrl.ts`.** `ATELIER_BASE_URL` et
+`atelierConnectCallback()` y vivent seuls. Le retour reste FIXE (jamais lu
+depuis la requête : ce serait une redirection ouverte, donc un vol de code
+d'autorisation possible), mais la surcharge `FORMAQUIZ_CONNECT_CALLBACK`
+est VALIDÉE : une valeur vide ou non-https retombe sur le domaine
+canonique. Un `??` seul ne protège que de la variable absente, jamais de
+la variable fausse. `tests/logic/atelier-callback.test.mts` interdit le
+retour de l'ancien hostname.
+
+## Une chute dans le funnel : sur QUI, et sur QUELLE question (drame Jocelyne 4 août 2026)
+
+"J'avais une question sur laquelle il y avait vraiment une chute. À chaque
+fois que je changeais quelque chose sur les conseils du robot, ça restait
+bloqué dessus. Reformuler les quatre réponses, reformuler la question,
+remettre les réponses dans un autre ordre : j'ai tout fait, j'attendais
+trois quatre nouvelles personnes, même problème. Il m'a carrément
+conseillé de l'enlever, je l'ai enlevée, et ça continue à bloquer au même
+endroit, la question 7." Puis, le lendemain : "mon premier quiz a 15
+questions et globalement tous les gens qui le commencent le terminent."
+
+Ce n'était donc pas la longueur, et il n'y avait aucune question qui
+bloque. Trois défauts empilés, du plus grave au moins grave.
+
+**1. ON DÉSIGNAIT LA MAUVAISE QUESTION.** `views` d'une étape = les
+sessions qui ont AFFICHÉ cette question (`question_view` part au rendu).
+Quelqu'un qui abandonne entre la Q6 et la Q7 a donc vu la Q6 et jamais la
+Q7 : **il s'est arrêté SUR la Q6**. Le bandeau annonçait "Question 7 fait
+perdre X%, c'est le point chaud à reformuler en priorité". Jocelyne a
+réécrit, réordonné puis supprimé une question que les partants n'avaient
+jamais lue, et quand elle l'a supprimée l'ancienne Q8 a pris sa place :
+le bandeau a redésigné "la 7". Aucune de ses corrections ne POUVAIT
+produire d'effet.
+
+**2. AUCUN SEUIL D'ÉCHANTILLON.** L'alerte partait à 15% de perte quel que
+soit le nombre de personnes. Sur une étape atteinte par 8 visiteurs, UNE
+personne vaut 12,5%. Et comme le pourcentage se calcule sur l'effectif
+précédent, qui fond à mesure qu'on avance, l'alerte **dérive
+mécaniquement vers la fin du quiz** sans rien devoir au contenu. Sur la
+page Mes stats, le badge rouge sortait dès 1% de perte, sans aucun seuil.
+
+**3. ON N'AFFICHAIT PAS CE QU'ON AVAIT.** Chaque étape porte `views` ET
+`answers`. Vu sans réponse = il bute SUR la question (trop intime, pas
+comprise, blocage technique) ; répondu puis parti = fatigue, et
+reformuler ne sert à rien. Deux corrections opposées, aucune des deux
+affichée.
+
+**Règle : `lib/quiz/funnelSignal.ts` décide, personne d'autre.**
+`readFunnelSignal(steps)` rend `no-data | too-few | steady | hotspot`,
+et le hotspot porte la question qu'ils ont VUE (`questionIndex`), celle
+qu'ils n'ont jamais atteinte (`neverReachedIndex`), la perte EN
+PERSONNES, et la forme (`on-question` / `after-answer`). Seuils :
+`MIN_SAMPLE = 20` (une personne ne peut plus à elle seule franchir les
+15%), `MIN_LOST = 5` (en dessous on commente des individus),
+`MIN_DROP_PCT = 15` (inchangé). `stepLoss()` porte la perte sur la
+question qui la SUBIT, avec le nombre de personnes à côté du %.
+
+**Endroits à respecter :** `components/quiz/QuizAnalyticsClient.tsx`,
+`app/stats/StatsShell.tsx` (+ `answers` transmis par
+`app/api/stats/route.ts`), `lib/quiz/insights.ts` (bloc VERDICT DU FUNNEL
+calculé AVANT l'appel), `lib/insights/global.ts`, et le coach de
+l'Atelier (`lib/coach/knowledge.ts`, bloc STATS_READING_RULES).
+
+**Sur les prompts :** à un modèle qui reçoit une liste de pourcentages et
+pour consigne "nomme le point de fuite prioritaire", il reste toujours un
+maximum à nommer, même sur trois visiteurs. **La retenue ne s'obtient pas
+en la demandant, elle s'obtient en calculant le verdict AVANT** et en le
+lui donnant comme non négociable.
+
+**Deux phrases obligatoires partout où on montre un funnel :**
+- perdre du monde est NORMAL et SAIN, ce sont d'abord les visiteurs non
+  qualifiés, aucun quiz ne vise 100% de complétion (sinon chaque départ
+  se lit comme une faute et la créatrice réécrit un quiz qui va bien) ;
+- une seule modification à la fois, puis 20 à 30 nouvelles réponses avant
+  de juger.
+
+**Et le partage n'est pas un levier universel.** Sur un sujet intime ou
+stigmatisant (santé, santé mentale, neuroatypie, argent, poids,
+sexualité, famille), partager publiquement revient à s'exposer : un taux
+de partage bas n'y est ni un défaut du quiz ni un cadeau trop faible.
+Jocelyne l'avait diagnostiqué seule, les prompts le disent maintenant.
+
+Le module quiz de Tipote est jumeau : toute correction ici se porte
+là-bas.
+
+## Le mot "quiz" n'est plus interdit comme adresse (retour Béné 4 août 2026)
+
+"On ne peut pas blacklister le mot 'quiz' parce que beaucoup vont
+l'utiliser. C'est LOGIQUE !" Elle a raison, et la liste en interdisait une
+vingtaine du même genre : dashboard, stats, leads, settings, login...
+
+Ils n'étaient pas là pour la protéger. `RESERVED_PUBLIC_SLUGS` servait
+DEUX choses à la fois : "ce slug masquerait une de nos pages" et "ce
+chemin ne doit pas être servi sur le domaine d'une cliente". Le second est
+déjà réglé, et mieux, par la porte du middleware : sur un domaine perso,
+tout ce qui n'est pas explicitement autorisé répond 404.
+
+Restait un vrai risque : `example.com/quiz` était résolu par le routeur
+Next, et **une route statique gagne toujours contre une route
+dynamique**. D'où la correction : le middleware RÉÉCRIT le slug nu vers
+`/s/<slug>` (`app/s/[publicSlug]/page.tsx`), un chemin qui n'est pas une
+page de l'app. Plus d'arbitrage à rendre, donc plus de mots à interdire.
+L'URL vue par le visiteur ne change pas.
+
+`routeTenantPath()` (`lib/publicSlug.ts`) est la fonction pure qui décide
+`pass | slug | block`, testée par `tests/logic/tenant-routing.test.mts`
+sur les deux moitiés : tous les mots naturels sont rendus, et aucune de
+nos pages ne fuite. Il ne reste réservé que `api` ; `_next`,
+`.well-known` et les fichiers à extension sont déjà impossibles puisque
+`sanitizeSlug` n'accepte que `[a-z0-9-]`.
+
+**INTERDIT :** rallonger `RESERVED_PUBLIC_SLUGS` avec un nom de route de
+l'app. Si une nouvelle page apparaît, elle est déjà protégée par la porte
+du middleware.
+
+## Alignement : trois étages, et le plus fort doit pouvoir se taire (4 août 2026)
+
+Béné : "tu empiles les trucs, ça devient n'importe quoi l'éditeur. Il faut
+laisser le choix de TOUT aligner / centrer OU de modifier : une question
+où les réponses sont centrées, la suivante alignée à gauche, ou même une
+question en colonnes et une en liste. MAIS faut le faire BIEN."
+
+Le "tu empiles" est le diagnostic exact. Il n'y avait qu'un étage assumé
+(le réglage du quiz) et un étage CLANDESTIN : l'alignement écrit dans le
+texte riche, qui gagne pour toujours dès qu'on a cliqué une fois sur un
+bouton d'alignement. Jocelyne s'est retrouvée avec un quiz "centré" dont
+elle réalignait les champs un par un, sans pouvoir revenir en arrière
+autrement qu'en les reprenant tous.
+
+**Règle : `lib/quiz/questionLayout.ts`, trois étages, du plus fort au plus
+faible.**
+
+1. le champ : l'alignement posé à la main dans le texte riche ;
+2. la question : `quiz_questions.config.align` (nouveau) ;
+3. le quiz : `question_layout`.
+
+`"inherit"` n'est PAS une valeur d'affichage, c'est "je ne me prononce
+pas", et c'est le défaut de tout ce qui existe. Aucun quiz en ligne ne
+bouge. Pas de migration : `config` est déjà du JSONB.
+
+**Et le retour en arrière doit être aussi facile que l'aller.**
+`clearRichTextAlign()` + le bouton "Tout réaligner sur ce réglage"
+retirent les exceptions des questions ET les alignements écrits dans les
+champs (en conservant gras, couleurs, tailles). Sans lui, "tout centrer"
+ne centrerait rien du tout sur un quiz déjà bricolé : c'est exactement ce
+que Jocelyne a vécu, et c'est ce qui permet d'appliquer le réglage à un
+quiz DÉJÀ EN LIGNE sans le refaire.
+
+La disposition des réponses suit le même modèle
+(`config.answer_layout`, déjà lu par le viewer depuis juillet).
+
+**Endroits à respecter :** `PublicQuizClient.tsx` (écran de question),
+`QuizDetailClient.tsx` (aperçu + contrôles). L'aperçu appelle
+`resolveQuestionAlign`, jamais un ternaire recopié : sixième fois que ce
+défaut sort. Test : `tests/logic/question-layout.test.mts`.
+
+## L'image d'une réponse garde SON format (retour Béné 4 août 2026)
+
+"Adapte la place de l'image au format de la photo, là elles sont
+tronquées dans les réponses et c'est pourri."
+
+Les vignettes étaient en `aspect-video object-cover` : la boîte imposait
+son 16/9 et recadrait la photo dedans, coupant le haut des titres.
+
+**La règle existait déjà**, écrite en tête de `PublicQuizClient` : "w-full
+h-auto par défaut, jamais de `max-h-*` / `object-cover`". Elle était
+contredite soixante lignes plus bas, à QUATRE endroits (les deux branches
+du viewer, les deux aperçus d'éditeur). **Une règle écrite en commentaire
+n'est pas une règle** : elle vit maintenant dans
+`lib/quiz/answerImage.ts`, et les quatre appellent `answerImageRender()`.
+
+Corollaire visuel : deux photos de formats différents donnent deux cartes
+de hauteurs différentes. C'est voulu. La grille porte donc `items-start`
+(`answerImageGridClass`), sinon la carte la plus courte s'étire.
+
+Le filet de captures ne pouvait pas le voir : la fixture `/visual-test`
+n'a aucune réponse illustrée. À ajouter à la matrice au prochain passage.
+
+## Une librairie qui change d'API, et un `as unknown as` qui l'a caché (drame François Xavier, 7 août 2026)
+
+"Quand j'importe le quiz au format pdf, j'ai ce message d'erreur :
+Erreur lors de la lecture du fichier : r is not a function."
+
+**L'import PDF n'avait jamais marché.** Pas "plus" : jamais. Reproduit le
+jour même, hors bundle : `pdfParse is not a function`.
+
+`pdf-parse` v1 s'appelait comme une fonction. La v2, installée le 27
+juillet, est une réécriture : elle exporte une CLASSE `PDFParse` et n'a
+plus de default export du tout. Le code appelait donc un objet. En prod
+le nom de la variable est minifié, d'où le `r` : un message qui ressemble
+à un problème de fichier alors qu'il décrit notre code.
+
+**Et le compilateur le savait.** `tsc` répond "Module has no default
+export" sur `import pdfParse from "pdf-parse"` : les types livrés par la
+v2 sont justes et ils gagnent sur `@types/pdf-parse` (resté en v1, retiré
+depuis). Le bug a survécu parce que le code forçait le silence :
+
+```ts
+const pdfParse = (m as unknown as { default?: ... }).default ?? (m as unknown as (b: Buffer) => ...)
+```
+
+**Règle : pas de `as unknown as` sur un module externe.** Une double
+assertion ne convertit rien, elle interdit la vérification. Garde-fou :
+`tests/logic/pdf-import.test.mts`.
+
+**Les deux apps étaient cassées, différemment.** Tiquiz en v2 (API
+changée), Tipote resté en v1 dont l'`index.js` lit un fichier de test au
+chargement (`ENOENT ./test/data/05-versions-space.pdf`), le bug connu de
+cette version sous bundler. Deux repos jumeaux, deux versions
+divergentes, donc deux pannes qu'un seul correctif n'aurait pas couvertes.
+Les deux sont maintenant en `^2.4.5`, avec la MÊME implémentation.
+
+**Le vert local ne prouvait rien, et c'est le vrai piège.** Test logique
+vert, `tsc` vert, `next build` vert : l'import PDF échouait quand même une
+fois compilé. `pdf-parse` charge son worker par un import DYNAMIQUE
+construit à l'exécution, que Next ne voit pas passer :
+
+```
+Setting up fake worker failed: Cannot find module '.../pdf.worker.mjs'
+```
+
+D'où DEUX réglages dans `next.config.ts`, tous les deux nécessaires :
+- `serverExternalPackages: ["pdf-parse"]` : sinon le worker est cherché
+  dans les chunks au lieu de node_modules ;
+- `outputFileTracingIncludes` sur `pdfjs-dist/legacy/build/pdf.worker.mjs`
+  : sinon le fichier n'est pas copié dans la sortie standalone.
+
+Vérifié en envoyant un VRAI PDF au serveur de production des deux apps.
+Le test logique fige ces deux lignes, parce qu'elles ne servent à rien en
+local et que rien d'autre ne dirait qu'on les a retirées.
+
+**Et une exception n'est jamais la phrase que lit la cliente.** Le client
+affichait `error.message` tel quel. François Xavier ne pouvait rien en
+faire, et nous non plus : le vrai symptôme était noyé. Le serveur renvoie
+maintenant une RAISON (`lib/quiz/importFailure.ts`), l'écran la traduit
+dans les 7 langues, et les cas qui appellent une action ont leur propre
+phrase : PDF scanné, PDF protégé par mot de passe, PDF abîmé. Même règle
+que la suppression d'un quiz (3 août) : le serveur dit ce qui s'est
+passé, l'interface dit comment le dire.
+
+## Un client qui a payé reste en gratuit (drame Ivan, 7 août 2026)
+
+Ivan Pellegry passe du gratuit au mensuel. Côté Systeme.io tout est bon :
+il porte le tag `tiquiz-mensuel`, la vente est encaissée. Côté Tiquiz, son
+compte reste en `free`.
+
+**Le journal de production, une fois consultable, a tout dit :**
+
+```
+07/08 11:56-11:57  subscription.payment.failed  tunnel: -  offre: 3375217
+07/08 11:58        customer.sale.completed      tunnel: -  offre: 3375217
+                   -> refused, unknown_offer:3375217
+06/08 21:05        free_optin   tunnel: tipote.fr/tiquiz-gratuit  offre: -
+```
+
+Le webhook est bien posé et il arrive. En passant à 17 / 170, le bon de
+commande a gardé son URL mais vend un NOUVEAU plan tarifaire (`3375217`),
+absent de `OFFER_TO_PLAN`. La route a répondu `unknown_offer` et refusé,
+ce qui est le bon comportement, mais laisse dehors un client qui a payé.
+
+**LA DÉCOUVERTE QUI COMPTE : un événement de VENTE ne porte AUCUNE URL de
+tunnel.** Seul l'optin gratuit en a une. Le routage par URL, qui passe en
+premier, ne peut donc rien faire sur une vente : **l'offer-price-id est
+la seule voie qui existe** au moment où l'argent rentre.
+
+Corollaire immédiat, et il vaut un audit : les paliers PLUS n'avaient
+QUE leur URL depuis le 2 juin. Ils étaient donc irroutables sur une
+vente, exactement comme Ivan, sans que personne l'ait jamais vu.
+
+**JE ME SUIS TROMPÉ DEUX FOIS, ET LES DEUX FOIS DE LA MÊME FAÇON.**
+D'abord j'ai présenté "les nouveaux ids ne sont pas dans la table" comme
+un fait alors que c'était une hypothèse. Puis, quand Béné a précisé que
+les URLs n'avaient pas changé, j'ai retiré un diagnostic JUSTE en
+raisonnant "le routage par URL aurait donc dû marcher" : sans vérifier
+qu'il y avait une URL dans le payload. Il n'y en a pas.
+
+> **Les deux erreurs sont la même : raisonner sur la forme SUPPOSÉE d'un
+> payload au lieu de la regarder.** Un journal se lit, il ne se déduit pas.
+
+`tests/logic/sio-plan-routing.test.mts` fige désormais la forme OBSERVÉE
+(vente sans URL avec `pricePlan.id`, optin avec URL sans offre) : si un
+jour une vente cesse d'être reconnue, il dira si c'est le payload qui a
+bougé.
+
+**Les deux ajouts qui suppriment le silence :**
+
+1. **Une vente encaissée sans accès envoie une alerte email** aux admins,
+   avec l'offer-price-id et l'URL reçus, c'est à dire exactement les deux
+   lignes à ajouter pour que le suivant passe. Le refus était juste ;
+   c'est le silence qui coûtait une journée et un client.
+2. **`/admin` liste les appels Systeme.io reçus** (`WebhookLogsCard` +
+   `app/api/admin/webhook-logs/route.ts`), avec pour chaque ligne ce que
+   le routage répondrait AUJOURD'HUI. C'est cet écran qui a tranché en
+   dix secondes ce que deux diagnostics à l'aveugle n'avaient pas su
+   trancher. Une vente absente de la liste n'est jamais arrivée.
+
+**ET ON A CONFONDU DEUX IDENTIFIANTS PENDANT DEUX MOIS.** Le 2 juin, on
+a noté que "tous les bons de commande partagent le même offer-price-id
+(`offerprice-dc9c3e75`)" et on a basculé le routage sur l'URL pour
+contourner l'ambiguïté. C'était faux : `offerprice-dc9c3e75` est l'**id
+du bloc HTML** de la page de commande (`<div id="offerprice-dc9c3e75">`),
+le même partout parce que c'est le même gabarit de page. Le webhook,
+lui, envoie `pricePlan.id`, un entier UNIQUE par plan tarifaire.
+
+On a donc contourné pendant deux mois une ambiguïté qui n'existait pas,
+en se rabattant sur une URL qui, elle, est absente des ventes. **Un
+identifiant vu dans le navigateur n'est pas celui reçu par le serveur :
+c'est le payload qui fait foi, pas la page.**
+
+**ET SURTOUT, LA RÈGLE QUE BÉNÉ A IMPOSÉE :** "pourquoi une vente
+refusée ? Il a payé le client, il doit recevoir ses accès, point barre."
+
+Elle a raison, et l'ancien comportement était indéfendable. Sur une offre
+inconnue on refusait, donc un client qui venait de payer se retrouvait
+sans rien. **Ce qui est ambigu dans ce cas, ce n'est pas QU'IL a payé
+(l'événement est une vente confirmée), c'est seulement QUEL palier.** On
+répond donc à la vraie question, dans cet ordre :
+
+1. l'offer-price-id ;
+2. l'URL (optins uniquement) ;
+3. **le MONTANT** (`inferPlanFromAmount`), qui tranche entre la base et
+   le PLUS, en correspondance EXACTE : un montant remisé ne doit pas
+   ouvrir un palier au hasard ;
+4. **le palier de base** (`FALLBACK_PAID_PLAN = "monthly"`).
+
+Le repli n'est pas un pari : `monthly` et `yearly` ouvrent EXACTEMENT les
+mêmes fonctionnalités (cf. `lib/planLimits.ts`), seule la facturation
+diffère et Systeme.io s'en occupe. Se tromper entre les deux ne coûte
+rien au client, et c'est le palier le moins cher, donc on ne donne jamais
+un PLUS par accident.
+
+**Le garde-fou qui reste : `isConfirmedSaleEvent(eventType)`.** Le repli
+payant ne s'applique QU'À une vente confirmée. Un événement qu'on ne sait
+pas nommer n'ouvre toujours RIEN : sans ça, n'importe quel appel mal
+configuré donnerait un accès payant. Les annulations et les échecs de
+paiement sont filtrés en amont.
+
+L'alerte email dit maintenant QUEL palier a été ouvert, et que la
+correction n'est pas urgente puisque le client a déjà son accès.
+
+**Règle : tout plan vendu doit être joignable par un offer-price-id.**
+L'URL est un complément utile (elle distingue les tunnels affiliés sur
+les optins), pas une voie de secours : elle est absente là où ça compte.
+Le test l'exige pour les quatre plans vendus, et interdit qu'un même id
+route vers deux plans différents.
+
+**Quand un tarif change, il y a donc trois choses à faire, pas une :** le
+prix affiché dans l'app, l'entrée URL du bon de commande, et surtout son
+nouvel offer-price-id.
+
+## Partager SON résultat, pas le quiz (retour client, 7 août 2026)
+
+"Quand je partage le résultat du quiz, le lien pointe vers la page de
+bienvenue du quiz et non vers le résultat." Le texte qu'il obtenait :
+
+```
+J'ai identifié mon profil de stress dominant. Fais le test pour découvrir
+le tien. https://quiz.tipote.com/q/type-stress-biologique?rp=aa87b13d-...
+```
+
+**Le lien n'était pas le problème**, et c'est le point à ne pas
+inverser : il porte bien `?rp=<profil>`, et il DOIT mener au quiz. Béné :
+"et pour chacun : lien vers le quiz." Celui qui reçoit le lien vient
+passer le test, pas lire le résultat de quelqu'un d'autre.
+
+Ce qui manquait, c'est que **le TEXTE ne parlait pas du résultat obtenu**.
+Le visiteur partageait mot pour mot la phrase d'avant de l'avoir : de son
+point de vue, il partageait donc "le quiz".
+
+**Et c'est encore une moitié de décision.** Le serveur faisait déjà le bon
+travail depuis le 28 juillet : avec `?rp=`, `og:title` vaut "J'ai
+obtenu : <profil>" et `og:image` porte l'image du profil. Le viewer, lui,
+appelait `buildShareText` (le texte du QUIZ) dans les deux cas. **Deux
+endroits calculaient la même chose, un seul avait été corrigé** : c'est
+mot pour mot ce que l'en-tête de `lib/quiz/shareText.ts` racontait déjà
+pour le HTML brut, dans ce même fichier.
+
+**La règle attendue, en deux lignes :**
+
+| Moment | Texte | Aperçu | Lien |
+|---|---|---|---|
+| avant le résultat | le quiz | image du quiz | le quiz |
+| après le résultat | LE PROFIL OBTENU | image du profil | le quiz |
+
+**`buildResultShareText()` (`lib/quiz/shareText.ts`) décide**, et la
+créatrice garde la main : un `{resultat}` dans son message de partage y
+place le nom du profil elle-même (`{résultat}`, `{result}`, `{profil}`
+acceptés aussi, elle écrit dans son élan). Sans variable, la phrase par
+défaut nomme le profil, dans les 8 langues du viewer. Sans profil connu,
+on retombe sur le texte du quiz : un partage sans texte serait pire.
+
+**LA MÉCANIQUE EST UN PARAMÈTRE** (`getShareData(scope)`), jamais déduite
+de la présence d'un `urlOverride`. Déduire marcherait aujourd'hui et
+casserait au premier écran qui partage une autre URL : c'est la leçon des
+contrôles "profil" appliqués à un quiz scoré.
+
+**Et le texte et le lien sortent de la MÊME fonction** (`resultShare()`,
+qui rend `{ scope, url }`). Le réglage `share_result_page` gouverne les
+deux : décoché, le lien perd son `?rp=`, donc l'aperçu redevient celui du
+quiz, et un texte qui annoncerait quand même "j'ai obtenu X" contredirait
+l'image juste en dessous. Deux moitiés d'une même décision calculées
+séparément finissent toujours par se contredire.
+
+**L'écran de fin de SONDAGE reste en `"quiz"`** : il n'y a pas de profil
+à nommer, c'est voulu.
+
+Test : `tests/logic/result-share.test.mts`. Le module quiz de Tipote est
+jumeau : la correction y vit aussi.
+
+
+## Un export SingleFile n'a PAS les scripts (19 août 2026)
+
+Béné, sur la page de vente de l'Atelier répliquée chez nous : "je vois
+bien la page mais pas les popups comment ça marche et résumé en 5 points
+ni le curseur étoile."
+
+Ses trois blocs perso (étincelles au curseur, carrousel 5 écrans, mini
+test) étaient bien écrits dans sa page Systeme.io. Dans notre copie, le
+CSS était là et le JS avait disparu : **un seul `<script>` survivait dans
+tout le document**, contre 11 sur la vraie page.
+
+La cause n'est pas notre extracteur (il ne retire que Google Tag Manager
+et Facebook) : **SingleFile retire les scripts par défaut**. L'export
+qu'on nous avait donné n'en contenait aucun. Le CSS qui reste donne
+l'illusion d'une page complète, et c'est ce qui rend le piège coûteux :
+rien ne manque à l'oeil, seuls les comportements manquent.
+
+**Règle : une page de vente se capture depuis son URL EN LIGNE**
+(`scripts/fetch-sales-page.mjs`), jamais depuis un export fait à la
+main. C'est d'ailleurs pour ça que Tiquiz marchait du premier coup et
+pas l'Atelier : deux pages jumelles, deux méthodes de capture, une seule
+panne. Même famille que les deux versions divergentes de `pdf-parse` du
+7 août.
+
+**Et une capture se VÉRIFIE dans un navigateur, pas à l'oeil.** On ouvre
+la page servie par nous, on clique les boutons qui déclenchent quelque
+chose, et on lit la console. C'est ce qui a montré, en plus, que deux des
+quatre ids de son `TRIGGER_IDS` n'existent plus sur sa page (elle avait
+recréé les boutons dans l'éditeur Systeme.io, ce qui leur a donné de
+nouveaux ids) : son propre garde-fou le signalait déjà, sur la page en
+ligne comme sur la copie, et personne ne lisait la console.
+
+## Trois causes, un seul message : le 404 muet (19 août 2026)
+
+La page de vente de l'Atelier répondait `Not found`. Trois branches de la
+route rendaient exactement ce texte : clé absente, slug inconnu, fichier
+non déployé. Impossible de savoir laquelle, donc impossible d'avancer
+autrement qu'en devinant.
+
+**Règle : une fois la porte franchie, le serveur DIT ce qui cloche.**
+Sans la bonne clé, on ne dit rien (un refus explicite annoncerait qu'il y
+a quelque chose derrière). Avec la bonne clé, on nomme la cause et on
+donne la donnée qui manque toujours : le dossier depuis lequel on a
+cherché. C'est la même règle que la suppression d'un quiz (3 août) et que
+l'import PDF (7 août), appliquée à un endroit qui l'avait oubliée.
+
+La cause réelle ce jour là : `SALES_PREVIEW_TOKEN` posée sur le serveur
+de Tiquiz et pas sur celui de l'Atelier. **Deux apps, deux `.env`,** et
+une variable posée une seule fois. `grep -l NOM_DE_LA_VAR /home/tipote/*/.env`
+répond en une seconde à "je l'ai pourtant mise quelque part".
+
+## Un shell qui garde le `.env` de l'autre app (panne 22 août 2026)
+
+Les deux apps ont servi la base Supabase de l'AUTRE, deux fois dans la
+même journée, pour deux raisons différentes. Une journée entière perdue.
+
+### Le matin : le BUILD gravait les valeurs du terminal
+
+Tiquiz affichait les quiz de Tipote et répondait `column
+profiles.user_id does not exist` ; Tipote répondait `Could not find the
+table 'public.content_item' in the schema cache`. Les liens de connexion
+envoyés depuis `quiz.tipote.com` renvoyaient sur `app.tipote.com`.
+
+Les quatre faits qui ont tranché, et c'est le bon réflexe de diagnostic
+(comparer le FICHIER et le BUILD, jamais le fichier seul) :
+
+```
+== tiquiz-app ==  .env: ottpciabnrclwgdlwjdt   build: mmwyfqfbfkvcnrkyvagv
+== tipote-app ==  .env: mmwyfqfbfkvcnrkyvagv   build: ottpciabnrclwgdlwjdt
+```
+
+**Les deux `.env` étaient justes. Les deux builds étaient croisés.**
+
+Un `set -a; . .env; set +a` avait été lancé dans le terminal, pour les
+DEUX apps, dans la même session, juste pour lire une variable. `set -a`
+exporte tout le fichier dans le shell. Or Next lit `process.env` **avant**
+`.env` (`node_modules/next/dist/docs/01-app/02-guides/environment-variables.md`
+: "stopping once the variable is found"), et un `NEXT_PUBLIC_*` est gravé
+dans le code au moment du `next build`, avec "the value from the
+environment in which you run `next build`".
+
+Les bases n'ont jamais été fusionnées : chacune est restée intacte, ce
+sont les pointeurs qui étaient croisés.
+
+### Le soir : la même panne, par une autre porte
+
+Béné : "pourquoi j'ai tous mes contenus mais pas mes clients dans
+Tipote ?" La question contenait le diagnostic.
+
+Le garde-fou du matin a bien REFUSÉ de construire. Mais la ligne suivante
+du déploiement, `pm2 restart --update-env`, a poussé ce terminal pollué
+DANS le processus. Et comme `server.js` fait `process.chdir(__dirname)`,
+le serveur standalone cherche ses fichiers d'environnement dans
+`.next/standalone/`, où personne ne copiait rien : l'app ne vivait donc
+QUE sur ce que PM2 gardait en mémoire, insensible à tous les rebuilds.
+
+Le partage des symptômes disait exactement où regarder :
+- les CONTENUS s'affichaient (clé anon, GRAVÉE dans le build, donc juste) ;
+- les CLIENTS avaient disparu (clé de service, lue dans le PROCESSUS,
+  donc celle de l'autre app).
+
+**Un garde-fou qui protège le build ne protège pas le redémarrage.**
+
+### Les garde-fous, et pourquoi il en faut plusieurs
+
+Chacun couvre un MOMENT différent. En zapper un rouvre la porte par
+laquelle la panne est déjà passée.
+
+| Quand | Quoi | Ce qu'il attrape |
+|---|---|---|
+| avant le build | `prebuild` -> `scripts/check-build-env.mjs` | le terminal contredit le `.env` du repo : le build est REFUSÉ |
+| après le build | `postbuild` -> copie `.env*` dans `.next/standalone/` en 600 | le serveur standalone a enfin une source de vérité, versionnée avec le déploiement |
+| au démarrage | `instrumentation.ts` -> `lib/env/supabaseProject.ts` | la clé ne parle pas du même projet que l'URL : ça CRIE dans `pm2 logs`, à chaque démarrage |
+| à la demande | `npm run check:supabase-keys` | compare le FICHIER, le TERMINAL, le BUILD et le PROCESSUS (`/proc/<pid>/environ`) |
+
+**Le postbuild ne dispense JAMAIS d'`instrumentation.ts`** : `process.env`
+passe toujours devant les fichiers, donc une valeur fausse héritée de PM2
+gagne encore. Ce qui change, c'est qu'une variable ABSENTE du processus a
+désormais une source fiable, versionnée avec le déploiement, au lieu de
+dépendre de la mémoire de PM2.
+
+Aucun de ces contrôles n'imprime la valeur d'une clé qui ressemble à un
+secret (`estSecret`) : ces rapports finissent dans un terminal, un
+historique, parfois un copier-coller. Ils disent "les deux valeurs
+diffèrent" et s'arrêtent là. Les URL et les `NEXT_PUBLIC_*` restent
+lisibles, ce sont elles qui rendent le diagnostic évident.
+
+### Un journal se LIT, il ne se déduit pas
+
+L'agent a mis une heure à trouver, en théorisant. Deux sources donnaient
+la réponse en une commande : le corps de la réponse HTTP (onglet Réseau)
+et `/proc/<pid>/environ`. Il a lancé quatre hypothèses avant d'aller les
+regarder, et fait accuser une clé anon parfaitement bonne pendant trois
+échanges parce que son test tapait sur un point d'entrée que cette clé
+n'a pas le droit de lire.
+
+**Un test qui ne distingue pas ce qu'il est censé distinguer est pire
+qu'un test absent.** `/rest/v1/` répond 200 à n'importe quelle clé valide
+du projet, quel que soit son rôle, et 401 à une clé anon valide.
+
+| Ce qu'on veut savoir | Où taper |
+|---|---|
+| une clé anon est-elle bonne | `/auth/v1/settings` |
+| une clé de service est-elle bonne | `/auth/v1/admin/users?page=1&per_page=1` |
+| ce qu'une clé EST | décoder son `role` (`lireCleSupabase`) |
+
+Et **un 401 peut vouloir dire "clé vide"** : mesurer la longueur de ce
+qu'on a extrait avant de conclure quoi que ce soit.
+
+### Un garde-fou non fusionné ne protège personne (23 août 2026)
+
+Les trois derniers garde-fous ont été écrits le 22 au soir sur une branche
+de travail, et ne sont jamais arrivés dans `main`. Pendant 24 heures, cette
+page les décrivait comme actifs et le serveur ne les avait pas : la cause
+exacte de la panne du soir était toujours là, derrière une doc qui disait
+le contraire.
+
+**Règle : quand une session écrit un garde-fou, la dernière étape n'est
+pas de l'écrire, c'est de vérifier qu'il est arrivé.**
+
+```bash
+git log origin/main -1 --oneline -- instrumentation.ts scripts/check-supabase-keys.mjs
+```
+
+Aucune ligne = il n'est pas déployé, quoi qu'en dise la doc.
+
+### Et la leçon qui dépasse cette panne
+
+Une commande donnée à Béné doit être sûre même mal replacée.
+
+- `( set -a; . .env; set +a; ... )` : la parenthèse est un sous-shell,
+  tout meurt avec elle. **INTERDIT sans les parenthèses.** Une variable
+  exportée dans un terminal survit à tout ce qu'on y tapera ensuite.
+- `npm run build && pm2 restart <app> --update-env` : le `&&` n'est pas
+  cosmétique. Sans lui, un build REFUSÉ se déployait quand même, et c'est
+  exactement ce qui a mis Tipote par terre. Ne jamais donner ces deux
+  commandes sur deux lignes séparées.
+
+## Ce que l'API de Systeme.io donne, et ce qu'elle ne donne pas (22 août 2026)
+
+Béné : "vu que tu es connecté à Systeme.io en MCP maintenant, tu ne peux
+pas récupérer toutes les infos qu'il nous manque ? Genre les ventes
+depuis le début, l'affiliation ?"
+
+Relevé en interrogeant son compte, pas en supposant :
+
+| Disponible | Absent |
+|---|---|
+| plans tarifaires (id, nom, montant, devise) | **les commandes / les ventes** |
+| contacts, tags, champs de contact | **l'affiliation, les commissions** |
+| tunnels, étapes, pages | les remboursements |
+| campagnes, newsletters, règles d'automatisation | |
+| codes de réduction, produits numériques | |
+
+**L'historique des ventes ne peut donc PAS être rapatrié.** Il vit dans
+leur tableau de bord, et chez nous seulement depuis le 7 août, dans
+`webhook_logs`. Le dire est plus utile que de laisser espérer un import
+qui n'existera pas.
+
+**Ce que les plans tarifaires ont réglé, eux :** `lib/sio/pricePlans.ts`
+porte la table LUE dans son compte. Elle a servi deux fois le jour même.
+Trois plans Tiquiz en dollars existaient depuis avril et manquaient à
+`OFFER_TO_PLAN` (une vente dessus tombait sur le repli, donc au bon
+endroit mais au mauvais palier). Et le prix du plan donne enfin un ordre
+de grandeur au montant d'une vente Systeme.io, qui s'affichait `0,00 €`.
+
+**Ce prix reste une ESTIMATION, marquée `amountSource: "plan"`.** Son
+compte porte 54 codes de réduction actifs, dont certains à 100 % : une
+vente remisée vaut moins que le tarif affiché. Un montant `"plan"`
+n'entre donc JAMAIS dans un chiffre d'affaires (ni `encaisseCents`, ni
+`paidCents`, ni la courbe de `serieEncaissee`). **Un chiffre gonflé dans
+un tableau de bord est pire qu'une absence de chiffre : il fait prendre
+des décisions.**
+
+`Sale.amountSource` vaut `"payload" | "plan" | "inconnu"`, et c'est un
+CHAMP, pas une déduction de l'appelant. Tester `amountCents <= 0` pour
+dire "montant inconnu" casserait le jour d'une vente à 0 € légitime,
+c'est à dire le jour où quelqu'un utilise le code `GRATUIT`.
+
+**Et deux listes de chemins qui cherchent la même chose finissent
+toujours par diverger.** Le webhook lisait `order.total_price`, le
+tableau de bord non : une vente pouvait être commissionnée au bon
+montant et affichée à zéro. Les deux passent maintenant par
+`PAID_AMOUNT_PATHS`. `pricePlan.amount` en est volontairement EXCLU :
+c'est le prix du plan, pas la somme encaissée. Il ne sert qu'à deviner
+le palier (`AMOUNT_PATHS`).
+
+**Quand un tarif change, Systeme.io crée un nouveau plan, donc un nouvel
+id, donc DEUX lignes à ajouter** : `OFFER_TO_PLAN` et `PRICE_PLANS`. Le
+test `tests/logic/sio-price-plans.test.mts` exige que les deux tables
+soient d'accord.
+
+## Une fiche par client, et le tiroir qui a disparu (22 août 2026)
+
+Béné : "Tu trouves ça pratique ? lisible ? facile à utiliser ? Quand
+j'aurai 200000 clients, je fais comment ? Retrouver toutes ses infos,
+pouvoir mettre à jour ses infos, le rembourser, savoir d'où il vient, ce
+qu'il a comme accès, ce qu'il a payé ?"
+
+J'avais empilé : une liste pour REGARDER (état, Atelier, argent) et une
+autre pour AGIR (palier, lien de connexion, suppression), puis un tiroir
+dépliant dans la première. Un tiroir sert à jeter un oeil, pas à
+travailler, et deux listes des mêmes personnes finissent toujours par se
+contredire.
+
+**Règle : la liste reste une liste, et mène à `/admin/clients/<email>`.**
+Tout ce qu'on FAIT sur une personne se passe sur sa fiche. Une adresse
+plutôt qu'une fenêtre : elle se garde en favori, elle se partage avec
+quelqu'un, elle survit à un rafraîchissement, et un ticket de support
+peut la citer (l'email d'alerte le fait).
+
+L'état et le rattachement des ventes passent par `buildPeople`, la MÊME
+fonction que la liste. Une fiche qui recalcule afficherait "Abonné" là où
+le tableau dit "Part bientôt".
+
+**D'où vient la personne :** `readProvenance` (`lib/admin/provenance.ts`)
+lit le PREMIER appel reçu pour son adresse et en sort le tunnel
+d'entrée. `part-tiquiz-gratuit` vient d'une affiliée, `tiquiz-gratuit`
+vient d'elle. Le plus ancien, jamais le plus récent : le plus récent
+dirait par où elle est repassée. Le journal ne remonte qu'au 7 août, et
+l'écran le DIT au lieu d'afficher un tiret.
+
+## Le bouton Rembourser qui ne pouvait pas exister (22 août 2026)
+
+"Il est où le fucking bouton rembourser ??"
+
+Il n'y en avait pas, et il ne POUVAIT pas y en avoir : toutes ses ventes
+d'aujourd'hui passent par Systeme.io, qui encaisse et garde l'argent. Le
+bouton n'existe que sur nos propres encaissements, et il n'y en a encore
+aucun.
+
+**Règle : un bouton absent se justifie sur la ligne.** La colonne Payé
+dit "à rembourser dans Systeme.io" ou "à rembourser depuis l'Atelier".
+Un bouton absent sans un mot se lit comme un bug, et elle a passé du
+temps à le chercher. Même famille que le `ok: false` muet du 3 août.
+
+## Le support : le centre d'aide est chez Tipote, le ticketing chez nous
+
+Le centre d'aide EXISTE (57 articles, servis par `app.tipote.com/support`,
+partagés par les deux apps, cf. `lib/help.ts`). Ce qui manquait, c'était
+le chemin vers un humain.
+
+- `/support` : formulaire dans les 7 langues, **PUBLIQUE**. Celle qui a
+  le plus besoin d'aide est celle qui n'arrive pas à se connecter : la
+  renvoyer vers `/login` serait un cul-de-sac parfait. La ligne est dans
+  le middleware, avec la même justification que `/depart/`.
+- Les tickets vivent dans la base de TIQUIZ (`support_tickets`), pas chez
+  Tipote : ils doivent apparaître sur la fiche du client, à côté de ses
+  accès et de ses paiements. Une donnée dans une autre base est une
+  donnée qu'on ne croisera jamais.
+- La file est triée de façon que **ce qui attend le plus longtemps passe
+  devant** (`trierFile`). Trier du plus récent enterrerait ceux qu'on a
+  déjà fait attendre. Au delà de 24 h sans réponse, la ligne rougit.
+- **L'ordre compte : on ENVOIE l'email d'abord, on enregistre ensuite.**
+  L'inverse laisserait Béné convaincue d'avoir répondu et la cliente
+  devant une boîte vide, en silence.
+- Ce que la cliente a écrit est repris dans l'email de réponse, donc
+  ÉCHAPPÉ (`renderTiquizMessage`) : sinon un `<` casse le message et un
+  `<script>` volontaire devient une injection chez quelqu'un d'autre.
+
+## Après un paiement pris chez nous (22 août 2026)
+
+Trois choses doivent suivre un paiement. Une était là, deux manquaient.
+
+1. **La facture** : déjà émise par Stripe (`invoice_creation`).
+2. **L'email d'accès venait de SUPABASE.** `grantPlan` appelait
+   `signInWithOtp`, donc Supabase envoyait SON gabarit, configuré pour
+   l'autre app. C'est exactement le reproche du 22 août ("je reçois les
+   trucs tipote"). On génère le jeton et on envoie NOTRE email.
+   **INTERDIT : `signInWithOtp` dans un chemin qui envoie un email.**
+3. **Le tag Systeme.io n'était pas posée.** Ses automatisations sont
+   bâties dessus : un client payé chez nous et non taggé sort de
+   toutes ses séquences sans que rien ne le signale. `poserTagAchat`
+   utilise SA clé, celle de ses Paramètres (`resolveApiKey`), et ne crée
+   JAMAIS un tag manquant : un tag créé par nous avec une
+   faute se retrouverait en double dans sa liste.
+
+Les deux sont best-effort et POSTÉRIEURES au plan : "il a payé le client,
+il doit recevoir ses accès, point barre".
+
+**PayPal sur Tiquiz n'est pas le PayPal de l'Atelier.** L'Atelier vend un
+achat unique (API Orders, déjà branché dans formaquiz). Tiquiz vend des
+ABONNEMENTS : il faut l'API Subscriptions, donc des produits et des plans
+créés chez PayPal, et un cycle de vie d'abonnement à écouter. Ce n'est
+pas un copier-coller, et ça ne se vérifie pas sans les identifiants.
+
+## Vérifier DANS QUEL DOSSIER on regarde (ma faute, 22 août 2026)
+
+J'ai annoncé à Béné qu'il n'y avait "rien dans Tiquiz, ni CGV ni mentions
+légales, zéro page". C'était faux. Je lisais les fichiers de
+`tipote-app` : le répertoire de travail du shell PERSISTE entre deux
+commandes, et un `cd` fait dix minutes plus tôt s'appliquait encore.
+
+Tiquiz a son corpus légal, écrit pour lui, en 5 langues :
+`lib/legal/{legal-notice,privacy,terms,terms-of-use,cookies,affiliate}.ts`
+et les pages `/legal`, `/terms`, `/privacy`, `/cookies`. Ma recherche
+`find app -ipath "*cgv*"` n'a rien trouvé parce que les routes sont
+nommées en anglais.
+
+**Deux leçons, et la deuxième est la vraie :**
+- `pwd` avant de conclure quoi que ce soit sur un dépôt, et un chemin
+  ABSOLU dans les commandes qui traversent plusieurs dépôts ;
+- **ne pas conclure "ça n'existe pas" d'une recherche qui n'a rien
+  trouvé.** Une recherche vide veut dire "je n'ai pas trouvé", pas "il
+  n'y a rien", et la différence a produit un rapport faux.
+
+**Ce qui manquait vraiment était plus précis** : nos CGV disent à
+l'article 5 "cette renonciation est recueillie avant paiement", et le bon
+de commande n'affichait ni les CGV ni la renonciation. Le texte annonçait
+quelque chose que l'écran ne faisait pas. Encore une moitié de décision.
+
+## Elle a payé, elle n'a pas demandé à se connecter (Béné, 23 août 2026)
+
+Premier vrai paiement sur notre bon de commande, en conditions réelles.
+Le plan s'ouvre, le compte est créé, l'email part. Et Béné : "j'ai bien
+reçu un lien de connexion mais pas le mail de bienvenue : il faut
+vérifier qu'une personne qui était en gratuit et passe en payant reçoit
+bien ce qu'il faut."
+
+Il n'y avait pas de mail de bienvenue, et il n'y en avait jamais eu.
+`grantPlanByEmail` appelait `sendMagicLinkEmail`, donc le seul message
+qu'une cliente recevait après avoir payé s'intitulait "Tiquiz : ton lien
+de connexion" et commençait par **"Tu as demandé à te connecter à Tiquiz
+sans mot de passe"**. Elle n'avait rien demandé : elle avait payé. Aucune
+phrase ne confirmait l'achat, ne nommait le plan ouvert, ni ne disait où
+se gèrent la carte et les factures.
+
+**Et le cas le plus fréquent était le pire.** Une cliente déjà inscrite
+en gratuit qui passe en payant recevait un lien de connexion vers un
+compte qu'elle savait déjà avoir : donc rien du tout, du point de vue de
+sa commande. Béné n'a vu que la moitié du problème parce qu'elle avait
+supprimé son compte gratuit avant de tester, ce qui l'a mise dans le cas
+"compte créé".
+
+**C'est le drame de l'Atelier du 7 août, jamais porté ici** : "l'email de
+montée de palier n'est plus l'email de bienvenue". On souhaitait la
+bienvenue à quelqu'un qui avait déjà le produit, sans jamais lui
+confirmer que sa commande avait ouvert ce qu'il venait de payer.
+
+**Règle : `lib/email/planOpenedContent.ts`, et la SITUATION est un
+paramètre obligatoire.**
+
+| Situation | Ce que la cliente lit |
+|---|---|
+| `nouveau-compte` | bienvenue, le plan nommé, le lien d'entrée (elle n'a pas de mot de passe) |
+| `montee-de-palier` | sa commande confirmée, le plan nommé, et que ses quiz et ses leads sont intacts |
+
+On ne peut pas appeler la fonction sans avoir dit de quel cas on parle :
+c'est la seule protection qui survit au prochain qui touchera au fichier.
+`created` (le compte a-t-il été créé par cet achat) est la source, et il
+sortait déjà de `grantPlanByEmail`, personne ne le lisait.
+
+Les deux messages portent le lien de connexion : le plus court chemin
+vers son tableau de bord reste le même, c'est le TEXTE autour qui
+change. Et le nom du plan vient du CATALOGUE (`OWNER_CATALOG`, donc de ce
+qui a été affiché sur le bon de commande), jamais d'un payload.
+
+`tests/logic/apres-paiement.test.mts` fige les 7 langues, les deux
+situations, l'absence de la phrase "tu as demandé à te connecter", et
+qu'aucune variable `{plan}` ne reste à trou.
+
+## Annuler n'est pas rembourser (Béné, 23 août 2026)
+
+"Je veux annuler et rembourser mon achat test depuis mon dashboard
+admin. Il me faut un bouton pour annuler l'abo directement (l'user doit
+aussi pouvoir le faire en toute autonomie) et un différent pour
+rembourser (ce qui sera plus rare)."
+
+En allant les écrire, DEUX bugs d'argent sont sortis. Les deux étaient
+invisibles tant que personne n'avait payé pour de vrai chez nous.
+
+**1. Annuler coupait l'accès et laissait le prélèvement tourner.**
+`/api/billing/cancel` ne connaissait QUE Systeme.io. Une abonnée Stripe
+qui cliquait "Annuler mon abonnement" tombait dans la branche "aucun
+abonnement actif", **qui retirait son plan en local et répondait ok**.
+Accès fermé, carte prélevée tous les mois. La pire combinaison possible,
+et elle attendait depuis le jour où nous avons encaissé nous mêmes.
+
+**2. Rembourser ne touchait pas à l'abonnement.** On rendait l'argent, on
+fermait l'accès, et Stripe re-prélevait le mois suivant quelqu'un qui
+n'avait plus rien. Ça ne se voit qu'un mois plus tard, sur son relevé.
+
+Les deux sont le défaut de Véronique dans une autre famille : une logique
+écrite pour un cas (Systeme.io) appliquée telle quelle à un autre (nos
+propres encaissements).
+
+**Les deux gestes, et ils ne se confondent jamais :**
+
+| Geste | L'argent | L'accès | Le défaut |
+|---|---|---|---|
+| annuler | reste encaissé | tenu jusqu'à la fin de la période PAYÉE | `fin-de-periode` |
+| rembourser | repart | fermé tout de suite | l'abonnement s'arrête en `immediat` |
+
+**Règle : `lib/checkout/cancelSubscriptions.ts` décide, pour les DEUX
+boutons.** La fiche client (`/api/admin/clients/abonnement`) et l'écran
+de réglages (`/api/billing/cancel`) appellent la même fonction. Deux
+écrans qui décideraient chacun de leur côté finiraient par se
+contredire, et ici la contradiction se compte en euros prélevés.
+
+**`quand` est un paramètre obligatoire**, jamais deviné. Le défaut est la
+fin de période : elle a payé son mois, on ne le lui reprend pas.
+
+**Et on regarde les DEUX fournisseurs.** Une même personne peut avoir un
+abonnement Systeme.io (ses ventes historiques) et un abonnement Stripe
+(notre bon de commande). N'en arrêter qu'un laisse l'autre tourner.
+
+**INTERDIT : retirer un plan parce qu'on n'a "rien trouvé".** "Je n'ai
+rien trouvé" et "je n'ai pas pu regarder" sont deux réponses différentes.
+On n'aligne le plan sur gratuit que si les deux contrôles ont pu
+s'exécuter. Un contrôle en erreur ne touche à rien et le dit.
+
+Au passage : `hasActiveSubscription` ne listait que `monthly` et
+`yearly`, donc une abonnée `monthly_plus` ou `yearly_plus` ne voyait
+AUCUN bouton pour arrêter son abonnement. Les quatre paliers vendus
+vivent dans `OWNER_CATALOG`, et ce sont eux.
+
+**La clé Stripe restreinte doit avoir Abonnements en ÉCRITURE**, sinon
+l'annulation répond `missing_permission`. L'écran le dit en toutes
+lettres au lieu d'un "erreur serveur" qui enverrait chercher un bug dans
+le code. Test : `tests/logic/subscription-cancel.test.mts`.
+
+## Un lien légal ne fait JAMAIS quitter la page (Béné, 24 août 2026)
+
+"Pour toutes les pages créées dans Tiquiz et Tipote : un lien vers la
+politique de confi etc. doit s'ouvrir dans un nouvel onglet et JAMAIS
+faire quitter la page à un visiteur !! D'autant que sur le quiz, la
+personne doit tout recommencer suivant les situations... c'est infernal
+et le genre de choses pratiques auxquelles tu dois penser. Je ne sais pas
+quand ça a sauté mais en tous cas je l'ai demandé et ça a été codé, puis
+retiré."
+
+**Ça n'avait pas sauté : ça n'avait jamais été posé** pour les liens
+écrits par les créatrices. Le code DISAIT le faire. `sanitizeRichText`
+portait `ADD_ATTR: ["target"]` sous le commentaire "Force links to open
+safely", et **`ADD_ATTR` ne fait qu'AUTORISER l'attribut à survivre au
+nettoyage : il n'en ajoute aucun.** Un lien posé dans n'importe quel
+champ riche (consentement, page de résultat, bouton, pied de page)
+sortait donc sans `target`, donc dans le même onglet. Le visiteur à la
+question 7 qui va lire la politique de confidentialité perdait toutes
+ses réponses, et il ne revenait pas : c'est juste avant de laisser son
+email.
+
+Encore une règle écrite en commentaire, donc pas une règle (comme le
+`w-full h-auto` des images de réponse, 4 août).
+
+**Règle, et elle tient en deux moitiés :**
+
+1. **Le sanitizer pose le `target`** (HOOK 3 de `lib/richText.ts`,
+   `afterSanitizeAttributes`), sur tout `<a>` qui a un `href`, avec
+   `rel="noopener noreferrer"` (sans `noopener`, la page ouverte garde
+   une poignée sur la nôtre via `window.opener`). C'est là et pas dans
+   les composants : un lien peut venir de n'importe quel champ de
+   n'importe quel écran, et une règle recopiée dans chaque composant
+   finit toujours par en oublier un.
+2. **Nos liens légaux écrits en dur** utilisent `<a target="_blank">` et
+   jamais `<Link>` de Next, qui fait une navigation INTERNE, c'est à dire
+   exactement ce qu'on ne veut pas.
+
+**Endroits à respecter :** `components/quiz/PublicQuizClient.tsx` (les 3
+branches de `ConsentText`), `components/legal/LegalFooterLinks.tsx` (sous
+les formulaires de connexion et d'inscription),
+`app/commande/[produit]/CommandeClient.tsx` (un paiement en cours),
+`app/support/page.tsx`.
+
+**Ce qui n'est PAS visé :** la navigation ENTRE pages légales. On n'y
+perd rien, et forcer un onglet à chaque clic y serait juste pénible.
+
+Garde-fou : `tests/logic/liens-legaux.test.mts`, qui tient les deux
+moitiés (il SANITISE vraiment, il ne relit pas la source) et qui exige
+que les écrans surveillés portent encore des liens légaux : un test qui
+ne peut plus échouer ment. Le module quiz de Tipote est jumeau : le même
+test y vit.
+
+## Une seule file de tickets, une porte commune (Béné, 23 août 2026)
+
+"S'il n'a pas reçu ses accès, comment il accède à
+`quiz.tipote.com/support` ? Pas con hein ??? Je veux un service de
+ticketing dans le centre d'aide commun à toutes les app, essentiellement
+pour Tiquiz et L'Atelier qui sont vendus en ce moment, avec ticket relié
+à la fiche client si elle existe."
+
+**Sur le détail, notre formulaire était déjà public** (aucun compte
+demandé, c'est écrit dans `app/support/page.tsx`). Sur le fond elle a
+raison : quelqu'un dont rien ne marche ne sait pas sur QUELLE app écrire,
+et il ne devrait pas avoir à le savoir.
+
+**Et surtout, il y avait DEUX files.** `support_tickets` chez Tipote
+depuis le 12 mars (les escalades du robot d'aide, avec la conversation)
+et `support_tickets` ici depuis le 22 août (le formulaire). Deux bases,
+deux écrans d'admin, aucun des deux ne connaissant L'Atelier. Une demande
+pouvait attendre des jours dans celle qu'on ne regardait pas.
+
+**Règle : la PORTE est commune, la FILE est unique et vit ici.**
+
+| Où | Quoi |
+|---|---|
+| `app.tipote.com/support` | les 57 articles, le robot, ET le formulaire de contact (7 langues, sélecteur de produit) |
+| `quiz.tipote.com/support` | le formulaire dans l'app, qui pré-remplit l'adresse quand une session existe |
+| l'Atelier, menu "Besoin d'aide ?" | mène au centre d'aide avec `?produit=atelier` |
+| **la file** | `support_tickets` de TIQUIZ, affichée dans `/admin` et sur la fiche client |
+
+La file vit ici et pas chez Tipote pour la raison déjà écrite le 22 août :
+le ticket doit s'afficher sur la FICHE CLIENT, à côté des accès, des
+paiements et du statut Atelier, et c'est l'admin de Tiquiz qui porte
+cette fiche. **Une donnée dans une autre base est une donnée qu'on ne
+croisera jamais.**
+
+**Le chemin :** le centre d'aide POSTe sur son `/api/support/ticket`
+(Tipote), qui relaie vers `/api/partner/support-ticket` (ici) avec
+`x-partner-secret`. Le secret ne protège rien de confidentiel (l'autre
+porte est publique) : il sert à SAUTER LA LIMITE PAR IP, parce qu'un
+relais serveur à serveur arrive toujours de la même adresse et couperait
+tout le centre d'aide dès la sixième personne. Tipote applique SA limite,
+sur l'IP réelle, avant de relayer.
+
+**Si le relais échoue, on écrit dans la table locale de Tipote et on crie
+dans le journal.** Elle a vu "envoyé" : la demande doit exister quelque
+part. L'écran d'admin de Tipote garde donc l'historique, et porte un
+bandeau qui dit où est la file vivante. Sans ce bandeau, Béné
+surveillerait un écran qui ne bouge plus.
+
+**`product` est validé, jamais écrit tel quel** (`lib/support/produit.ts`,
+alias `formaquiz` et `quizing` acceptés). Valeur inconnue -> `tiquiz`, le
+défaut de la colonne : un ticket mal taggé reste lisible, un ticket
+refusé est une cliente sans réponse.
+
+**Et l'écriture se replie sur l'ancienne forme** si la migration n'est
+pas encore passée : PostgREST rejette l'écriture ENTIÈRE sur une colonne
+inconnue, donc sans repli un déploiement en avance perdrait TOUS les
+tickets en silence (drame `quiz_events.meta`, 15 jours de stats perdues).
+
+Test : `tests/logic/support-ticketing.test.mts` ici,
+`tests/logic/support-relay.test.mts` côté Tipote.
+
+## PayPal sur Tiquiz : des ABONNEMENTS, pas un achat unique (23 août 2026)
+
+Béné avait prévenu : "ce n'est pas un copier-coller de l'Atelier."
+L'Atelier vend un achat unique et utilise l'API Orders (une commande,
+une capture, terminé). Tiquiz vend des abonnements : il faut un produit,
+un plan de facturation, un abonnement, et un cycle de vie à écouter.
+Les deux se ressemblent en surface et ne font pas le même métier ;
+recopier l'un sur l'autre aurait vendu un paiement unique de 17 € au
+lieu d'un abonnement mensuel, et personne ne l'aurait vu avant le
+deuxième mois.
+
+**Ce n'était pas une nouveauté pour autant.** `lib/paypalRest.ts` fait
+tourner des abonnements PayPal en production depuis des mois pour les
+REVENDEURS, depuis leurs propres comptes. `lib/checkout/paypalOwner.ts`
+est la même mécanique appliquée au compte de Béné avec NOTRE catalogue.
+On ne l'importe pas : il tire `resellerPayments` donc `supabaseAdmin`,
+qui exige les variables d'environnement au chargement et rend le tout
+intestable. **La plomberie REST est dupliquée, les décisions ne le sont
+pas.**
+
+**Les quatre garanties du webhook sont celles de Stripe** : signature
+vérifiée avant tout (PayPal ne signe pas avec un secret partagé, on lui
+REDEMANDE s'il a émis l'événement, et ça exige
+`PAYPAL_WEBHOOK_ID_OWNER`), idempotence par `webhook_logs`, relecture de
+l'abonnement chez PayPal, et le plan qui vient du catalogue.
+
+**Ce qui coupe et ce qui ne coupe pas :**
+
+| Événement | Effet |
+|---|---|
+| `BILLING.SUBSCRIPTION.ACTIVATED` | ouvre le plan, rattache l'abonnement, paie l'affiliée |
+| `CANCELLED` / `EXPIRED` | ferme l'accès |
+| `SUSPENDED` | **ne ferme RIEN**, journalisé fort |
+| `PAYMENT.SALE.COMPLETED` | l'échéance, enregistrée, aucun effet sur l'accès |
+| `PAYMENT.SALE.REFUNDED` | ferme l'accès ET arrête l'abonnement |
+
+`SUSPENDED` arrive après trois échecs de prélèvement. Couper là mettrait
+dehors quelqu'un dont la carte vient d'expirer et qui va la changer :
+même règle que Stripe sur `invoice.payment_failed`.
+
+**L'adresse SAISIE voyage dans le `custom_id`, et elle gagne.** PayPal
+renvoie l'adresse du COMPTE PayPal, qui n'est pas toujours celle utilisée
+chez nous (compte du conjoint, adresse pro). Ouvrir l'accès sur celle-là
+fabrique un compte orphelin, ce que l'Atelier a rencontré le 7 août sur
+les commandes de bonus. `custom_id` est borné à 127 caractères par
+PayPal : quand ça déborde on lâche le `sa`, JAMAIS l'adresse (une
+attribution retombe sur la conversion par email, un accès perdu ne
+retombe sur rien).
+
+**PayPal ne connaît pas la fin de période.** `cancel` arrête le
+prélèvement tout de suite, et c'est tout ce qu'il sait faire. On ne fait
+donc pas semblant : le `quand` de `cancelSubscriptions.ts` décide ce que
+NOUS faisons de l'accès, pas ce que PayPal fait du prélèvement.
+
+**La commission est sur le HT, comme partout ailleurs** (Béné,
+31 août 2026 : "pour l'affiliation on fait uniquement 40 % etc. sur le
+HT. Débrouille toi pour que sur PayPal ça marche aussi, il y a forcément
+un moyen de calculer chez nous la TVA si concerné ou pas"). Voir la
+section "Une vente PayPal paie sur le HT" plus bas : ça remplace sa
+décision du 22 août ("pour paypal : oui on garde le TTC").
+
+**Le branchement se fait par `npm run paypal:setup`**, jamais à la main :
+l'identifiant de webhook se relève dans l'interface PayPal, se recopie
+dans un `.env`, et une faute de frappe ne se voit nulle part (le
+paiement s'ouvre, l'argent rentre, aucun accès ne s'ouvre parce que la
+vérification échoue en silence). Le script crée le webhook, affiche la
+ligne à coller, et n'imprime jamais un secret.
+
+**`PAYPAL_ENV_OWNER` absente vaut BAC À SABLE.** Des identifiants réels
+envoyés à l'API du bac à sable sont refusés avec un message qui ne dit
+pas pourquoi. `check:prod` le signale, et crie aussi quand Stripe est en
+réel pendant que PayPal est en bac à sable : l'écran annonce un seul
+mode, donc un des deux boutons ment.
+
+Test : `tests/logic/paypal-owner.test.mts`.
+
+## Le mois offert : l'essai du fournisseur, pas un palier prêté (23 août 2026)
+
+Béné : "garder le mois offert aux affiliés pour qu'ils puissent créer du
+contenu et tester ET qu'ils puissent [offrir] un mois gratuit pour tester
+à tous leurs affiliés comme argument de vente 'passe par mon lien et
+reçois un mois offert'. Bien sûr, ils ne peuvent pas cumuler mois offert
+par l'affilié PLUS mois offert EN TANT qu'affilié : au total c'est un
+mois offert, point barre. Il faut aussi tracker les tricheurs qui veulent
+s'autoaffilier : même adresse email, même adresse IP etc."
+
+Puis, la précision qui change la mécanique : "s'il a un test tiquiz plus
+activé 15j il le garde mais on lui ajoute 30 jours de l'abonnement qu'il
+choisit : s'il prend mensuel il a 30j gratos à mensuel. S'il prend
+mensuel plus : il a 30j gratos à mensuel plus."
+
+**Le premier jet était faux et compliqué.** Il posait un `monthly_plus`
+prêté et devait ADDITIONNER des jours dans `affiliate_trial_*`, les
+mêmes colonnes que les 15 jours de l'Atelier, avec toute la gymnastique
+qui va avec (ne pas écraser `pre_plan`, repousser `expires_at`...).
+
+**La bonne lecture est plus simple : c'est l'essai gratuit du
+fournisseur, sur l'abonnement choisi.** `trial_period_days` chez Stripe,
+un cycle de facturation `TRIAL` à 0 chez PayPal. Le client choisit son
+palier, il n'est pas prélevé pendant 30 jours, puis il paie le prix de
+CE palier. Et le cumul se règle tout seul : les 15 jours de l'Atelier
+vivent dans `affiliate_trial_*` et continuent de tourner sans qu'on y
+touche. **Le mois offert ne réécrit JAMAIS `plan` ni
+`affiliate_trial_*`**, c'est ce que fige le test.
+
+**Les deux règles, dans `lib/trial/moisOffert.ts` :**
+
+1. **Un seul mois par personne, point barre.** `free_month_granted_at`
+   n'est jamais effacé : sans ça il suffirait d'attendre l'expiration
+   pour en reprendre un.
+2. **Les tricheurs.** Auto-affiliation REFUSÉE, alias Gmail compris
+   (`bene+x@gmail.com` et `b.e.n.e@gmail.com` sont la même boîte : c'est
+   le moyen le plus simple de tricher, et comparer les adresses brutes
+   ne le voit pas). Même IP : on ACCORDE et on SIGNALE. Béné a demandé
+   de *tracker* les tricheurs, pas de fermer la porte à un client
+   honnête : une IP partagée, c'est aussi un couple, deux collègues, une
+   salle de formation.
+
+**Le fait est ÉCRIT, jamais déduit.** Le nombre de jours offerts voyage
+dans `subscription_data[metadata][free_month_days]` (Stripe) et dans le
+`custom_id` (PayPal). Déduire d'un `sa` présent serait faux : un `sa`
+peut être là sans qu'aucun essai n'ait été ouvert (déjà eu son mois,
+auto-affiliation refusée), et marquer un cadeau jamais fait priverait
+ces gens du leur.
+
+**Et il se consomme à l'ACHAT, pas au bon de commande.** Un checkout
+abandonné ne doit pas brûler le mois de quelqu'un qui n'a rien acheté.
+
+**Le trou assumé, et il est nommé :** sur le formulaire carte, l'adresse
+est saisie DANS Stripe, donc on ne peut pas toujours vérifier le
+non-cumul avant. Connectée ou via PayPal (qui demande l'adresse avant),
+le contrôle est complet ; anonyme, on accorde et on vérifie après. Un
+deuxième mois est alors marqué `free_month_flag = 'deja_recu'` et remonte
+dans l'admin. **On ne reprend rien** : reprendre un essai commencé, c'est
+prélever quelqu'un qui ne s'y attend pas.
+
+`AFFILIATE_INTERNAL_SECRET` sert au passage à demander à Tipote QUI
+possède un lien (`/api/affiliate/proprietaire`) : la table `affiliates`
+vit là-bas, et la copier ici donnerait deux registres, donc deux réponses
+différentes le jour où l'un prend du retard.
+
+Test : `tests/logic/mois-offert.test.mts`.
+
+## Le mois offert ne s'ouvre QUE sur un lien du système courant (24 août 2026)
+
+Béné, le 23 : "on le met sur l'espace affilié en expliquant que c'est
+uniquement avec le système d'affiliation en cours et pas sur les anciens
+liens systeme io (qui restent valides mais ne seront plus ceux à
+utiliser dans le futur)". Et : "uniquement sur les liens affiliés
+n'oublie pas, c'est pas pour celui qui tombe sur la page de vente tout
+seul".
+
+**La première version passait par un marqueur `?mo=1`, et Béné l'a
+refusée le lendemain** : "je ne veux surtout pas de sa dans les nouveaux
+liens sinon y'a forcément un moment où on va merder, trouver autre chose
+nom de zeus ! Y'a pas que ce système, c'est celui de systeme io c'est
+tout !!"
+
+Elle avait raison, et sa correction a SUPPRIMÉ le problème au lieu de le
+contourner. Le marqueur n'existait que parce que les deux générations de
+liens portaient le même `?sa=` et étaient donc indiscernables. Depuis que
+nos liens portent `?ref=jocelyne` (cf. la section suivante), **le nom du
+paramètre dit à lui seul la génération du lien** :
+
+| Le lien porte | D'où il vient | Commission | Mois offert |
+|---|---|---|---|
+| `?ref=` | l'espace affilié, aujourd'hui | oui | **oui** |
+| `?sa=` | un ancien tunnel Systeme.io | oui | non |
+
+`essaiPourCeCheckout({ ref })` ne prend donc QUE le code public. Un
+checkout arrivé par un ancien lien n'a rien à lui passer : pas de
+cadeau, et il commissionne exactement comme avant. `lib/affiliate/
+moisOffertLien.ts` a été SUPPRIMÉ, et avec lui le cookie `tq_mo`.
+
+**Un marqueur en moins, c'est un endroit en moins où on pouvait
+l'oublier.** C'est la leçon générale : quand une décision demande un
+drapeau à maintenir, se demander d'abord si la donnée qu'on a déjà ne
+répond pas toute seule.
+
+**Sans destination sur NOTRE domaine, le cadeau reste mort.** Les
+tunnels Systeme.io ne nous transmettent rien de ce qu'on ajoute à
+l'URL. D'où le slug `tiquiz_direct` (`https://tiquiz.fr/`), le seul par
+lequel un `?ref=` peut arriver jusqu'à notre middleware.
+
+Le nombre de jours vit dans le module PUR
+(`JOURS_MOIS_OFFERT_ANNONCE`) : il est lu par la décision serveur ET par
+l'écran qui l'annonce, et deux nombres écrits séparément finissent
+toujours par diverger.
+
+**Admin :** les mois offerts et ceux qui méritent un oeil remontent dans
+`/admin` et sur la fiche client (`buildMoisOffertDigest`). Deux cas
+échappent au moteur PAR CONSTRUCTION, et c'est pour ça qu'ils doivent
+s'afficher : `deja_recu` (sur le formulaire carte, l'adresse est saisie
+DANS Stripe, donc inconnue avant le paiement) et `meme_ip` (accordé
+volontairement, une IP partagée c'est aussi un couple ou deux
+collègues). **On montre, on ne reprend rien.**
+
+## Le lien d'affiliation porte `?ref=`, l'ancien `?sa=` reste lu (24 août 2026)
+
+`sa` reste la CLÉ INTERNE des commissions (tout l'historique est
+dessus) ; il ne sort plus dans une URL publique. Côté Tiquiz, on LIT les
+deux, **dans des champs séparés** :
+
+| Où | Nos liens | Anciens liens |
+|---|---|---|
+| URL | `?ref=jocelyne` | `?sa=sa0016...` |
+| cookie | `tq_ref` | `tq_sa` |
+| corps du checkout | `ref` | `sa` |
+| metadata Stripe | `affiliate_code` | `affiliate_ref` |
+| `custom_id` PayPal | 6e champ | 3e champ |
+
+**Ils ne se devinent JAMAIS l'un l'autre.** Deviner à la forme
+marcherait aujourd'hui et casserait le jour où une affiliée choisit un
+code qui ressemble à un `sa`. Le client nomme le champ, le serveur lit
+celui qu'on lui donne.
+
+**Les nouveaux champs du `custom_id` PayPal sont AJOUTÉS EN FIN** : un
+abonnement en cours le jour du déploiement se relit exactement comme
+avant, aux mêmes positions. C'est testé.
+
+`lib/affiliate/refLien.ts` porte le format (jumeau de `sanitizeRef` côté
+Tipote : un code accepté là-bas et refusé ici serait une affiliée jamais
+payée, sans le moindre symptôme) et la règle habituelle, **l'URL gagne
+sur le cookie** : c'est le DERNIER lien qui a fermé la vente.
+
+## L'audit du 24 août : quatre trous dans les chaînes paiement
+
+Béné : "je n'envoie rien en prod ni sur supabase pour le moment et tu me
+fais un audit complet de tout ce qui pourrait merder... Je veux un
+système fiable et stable."
+
+Garde-fou commun : `tests/logic/audit-24-aout.test.mts`.
+
+### 1. UN RÉESSAI DE WEBHOOK NE POUVAIT PAS REPASSER (le plus grave)
+
+La ligne de journal était écrite AVANT le travail, et **tout conflit sur
+l'index valait "déjà traité"**. Or l'index du 20 août couvrait tous les
+statuts.
+
+Conséquence : dès que le traitement ÉCHOUAIT (Supabase indisponible une
+seconde, Stripe injoignable, une colonne manquante), la route répondait
+502 pour demander un réessai, et **ce réessai était refusé par notre
+propre journal** : ligne existante -> doublon -> 200 -> le fournisseur
+arrête de réessayer.
+
+**Une vente encaissée dont le premier traitement ratait n'ouvrait donc
+JAMAIS l'accès**, et le symptôme était l'absence de symptôme. Huit
+chemins de nos deux webhooks répondaient 502 en comptant sur un réessai
+qui ne pouvait pas arriver.
+
+**La correction : le statut fait partie du verrou.**
+
+```
+(source, event_id) where status in ('processing','processed')
+```
+
+C'est exactement la forme de l'index de la migration 012, qui protège le
+webhook Systeme.io depuis mars et qui n'avait pas été reprise. Une ligne
+`error` en SORT, donc le réessai suivant peut reprendre.
+
+Trois cas, tous nécessaires : rien en base -> on travaille ; `processed`
+-> vrai doublon ; `processing` -> quelqu'un travaille (409, réessaie
+plus tard) ou son travail est mort en route (> 2 min -> on reprend).
+
+**Et la décision est sortie dans un module PUR** (`verrouRegles.ts`) :
+`log.ts` importe `supabaseAdmin`, donc aucun test ne pouvait l'importer,
+donc rien ne la testait. C'est LITTÉRALEMENT là que le bug s'était
+installé. `maintenant` est un paramètre : un test qui dépend de
+l'horloge clignote.
+
+**Le marquage est obligatoire à TOUTES les sorties**, exception
+comprise. D'où la séparation `POST` / `traiterEvenement` : un `return`
+oublié au milieu de deux cents lignes laisserait l'événement bloqué.
+
+### 2. REMBOURSER UNE ÉCHÉANCE N'ARRÊTAIT PAS L'ABONNEMENT
+
+L'identifiant client venait UNIQUEMENT de la session de paiement. Une
+ÉCHÉANCE d'abonnement n'en a pas (c'est une facture, pas une session) :
+`vente` valait `null` sur tout remboursement mensuel, donc l'abonnement
+n'était pas arrêté. Accès fermé, et Stripe prélevait le mois suivant.
+
+Le bug d'argent du 23 août, par une autre porte. Repli sur
+`readCustomerId(charge.customer)`, qui gère les deux formes de Stripe et
+existait déjà : ne pas s'en servir n'était pas une précaution, c'était
+un trou.
+
+### 3. RIEN NE LIAIT `SALES_HOSTS` ET `OWN_HOSTS`
+
+Un domaine de vente absent d'`OWN_HOSTS` est pris par le portier pour le
+domaine d'une créatrice : **404 sur le bon de commande ET sur son
+`/api/commande/session`**. Le commentaire disait "à garder en phase", et
+rien ne le vérifiait : la mécanique des deux listes qui divergent,
+quatre fois payée dans ce dépôt.
+
+### 4. UNE PORTE PARTENAIRE COMPARAIT SON SECRET AVEC `!==`
+
+`support-ticket` était la seule ; les autres utilisent `safeEqual`. Une
+comparaison naïve s'arrête au premier caractère différent : son TEMPS
+raconte combien de caractères sont justes.
+
+### 5. UN APPEL VERS L'AUTRE APP POUVAIT BLOQUER UN WEBHOOK
+
+`commissionnerVente` tourne DANS le webhook de paiement et n'avait aucun
+délai maximum. Une panne de Tipote gardait la requête ouverte jusqu'à ce
+que la plateforme la tue. `proprietaireDuLien` avait le sien : deux
+appels vers la même app, un seul protégé.
+
+## Monter de palier : le prorata chez Stripe, un abonnement neuf chez PayPal (23 août 2026)
+
+Béné : "l'user paye 17€ pour le mois et veut upgrader à tiquiz plus : on
+retire les 17€ qu'il a payés déjà pour lui faire payer le complément
+pour le mois en cours et la bonne somme le mois d'après ?" Puis : "Pour
+stripe oui on met le prorata en route. Pour paypal : on dit rien, on
+facture et on upgrade point barre."
+
+**LE BUG D'ARGENT QUE ÇA FERME.** L'écran des formules envoyait vers le
+bon de commande du palier voulu. Un abonné qui cliquait ouvrait donc un
+**DEUXIÈME abonnement** pendant que le premier continuait de le
+prélever, et il ne s'en apercevait qu'au relevé suivant. Même famille
+que les deux bugs d'argent du 23 août (annuler qui coupait l'accès en
+laissant le prélèvement, rembourser qui laissait l'abonnement tourner).
+
+**Le SENS du changement ne se lit pas sur le prix.** Un palier porte
+DEUX axes : le niveau (base / Plus) et la facturation (mois / année).
+L'annuel coûte 170 € d'un coup mais revient moins cher au mois : un
+classement par prix rangerait "mensuel -> annuel" dans les descentes, et
+refuserait le passage à l'année. La règle est donc sur les deux axes
+(`sensDuChangement`, `lib/checkout/planChange.ts`) : monter de niveau =
+montée ; à niveau égal, mois -> année = montée ; tout le reste =
+descente.
+
+**Une descente est ACCEPTÉE, et elle prend effet à l'ÉCHÉANCE** (Béné,
+29 août : "je veux que le downgrade soit pris en compte sans
+désabonnement côté user"). Cette page a dit le contraire jusqu'au
+31 août, et c'était périmé, pas faux à l'origine : la descente était
+refusée jusqu'au 29. L'ancien refus était mauvais commercialement, il
+fallait résilier pour descendre et beaucoup ne revenaient pas.
+
+Ce qu'il ne faut PAS faire, en revanche, c'est l'appliquer tout de
+suite : elle a payé sa période au tarif fort, on ne lui reprend pas ce
+qu'elle a acheté (règle du 23 août). Chez Stripe, la descente passe donc
+par un CALENDRIER à deux phases (`programmerDescente`) ; chez PayPal
+elle est refusée avec sa raison (`descente_paypal`), parce que PayPal
+n'a pas de calendrier. Un changement déjà programmé se VOIT et se défait
+(`lireDescenteProgrammee` / `annulerDescenteProgrammee`) : le découvrir
+un matin sans se souvenir de l'avoir demandé serait pire que pas de
+descente du tout.
+
+**Le piège du calendrier, et il vaut de l'argent :** les metadonnées
+d'une phase sont posées SUR L'ABONNEMENT au moment où la phase commence.
+N'y écrire que `product` risquait d'effacer `affiliate_code`,
+`free_month_days` et la remise en attente le jour de la bascule.
+`metadonneesDeLaPhaseSuivante()` REPORTE tout ce que l'abonnement porte,
+puis réécrit `product` et `source`. Voir la section du 31 août.
+
+**Le montant vient de Stripe, jamais d'une soustraction faite par nous.**
+`GET /api/billing/change-plan?produit=` demande la facture que Stripe
+émettrait (`/v1/invoices/create_preview`). Un montant affiché différent
+du montant prélevé est pire que pas de montant du tout. **GET n'a pas le
+droit de facturer** : un préchargement de navigateur fait des GET.
+
+**PayPal ne sait pas faire de prorata**, et ce n'est pas un raccourci :
+il n'a pas d'équivalent de `proration_behavior`. On ouvre un abonnement
+neuf au palier demandé, et on arrête l'ancien **UNE FOIS le nouveau
+ACTIVÉ**, dans le webhook. L'ordre n'est pas un détail : arrêter d'abord
+laisserait sans rien quelqu'un qui n'irait pas au bout de l'accord
+PayPal. Le lien entre les deux voyage dans le `custom_id` (5e champ,
+`remplace`) : le perdre laisserait la personne prélevée DEUX fois, donc
+il ne se sacrifie JAMAIS, contrairement au `sa`.
+
+**Le plan s'ouvre par le WEBHOOK, pas par la route.**
+`ouvertureDemandee()` rend `null` dès que rien n'a bougé : Stripe envoie
+`customer.subscription.updated` pour à peu près tout (une carte changée,
+une TVA renseignée), et ouvrir à chaque fois enverrait un email de
+confirmation à quelqu'un qui vient de mettre sa carte à jour. Un accès à
+VIE n'est jamais remplacé par un abonnement.
+
+`PLANS_A_VIE` vivait en deux exemplaires (`cancelSubscriptions.ts` et
+`admin/people.ts`) : la liste est maintenant dans
+`lib/checkout/plansAVie.ts`. Test : `tests/logic/plan-change.test.mts`.
+
+## Une facture légale, et PayPal n'en émet aucune (Béné, 24 août 2026)
+
+"Dans la fiche contact de mes clients j'ai aussi besoin de savoir :
+l'entreprise (si concerné), l'adresse, le pays, la tva (si concerné),
+prénom, nom, adresse email, bref tout ce qu'il faut pour une facture
+légale et que je puisse mettre à jour si demande du client : lui aussi
+doit avoir ces infos et pouvoir les mettre à jour. PayPal envoie des
+factures auto ? Si non il faut qu'on les créée... stripe le fait c'est
+bien mais paypal j'ai un doute."
+
+**Son doute était fondé, et ça se vérifie chez nous sans interroger
+PayPal :** `lib/checkout/paypalOwner.ts` n'appelle AUCUN point d'entrée
+de facturation, et l'abonnement qu'on crée ne porte ni adresse ni numéro
+de TVA. Aucune facture n'existait donc pour une vente PayPal, quoi que
+PayPal envoie de son côté. Un avis de paiement n'est pas une facture :
+ni numérotation, ni identité complète du vendeur, ni adresse de
+l'acheteur, ni ventilation de TVA. Stripe, lui, en émet vraiment
+(`invoice_creation` en paiement unique, et un abonnement facture tout
+seul à chaque échéance).
+
+**Règle : on n'émet QUE pour PayPal.** Émettre aussi pour Stripe ferait
+deux factures pour une seule vente, avec deux numérotations. Notre série
+`TQ-<année>-NNNN` ne couvre donc que les ventes PayPal (et les pièces
+créées à la main). L'écran client le DIT au lieu d'afficher une liste
+incomplète : les factures carte se téléchargent dans le portail Stripe,
+déjà branché juste au dessus.
+
+### Deux tables, et la différence est la clé de tout
+
+| | Ce que c'est | Qui l'écrit |
+|---|---|---|
+| `facturation_clients` | les infos ACTUELLES, pour les factures À VENIR | le client, Béné, le bon de commande, Stripe |
+| `factures` | ce qui a été émis, FIGÉ, identité de l'acheteur RECOPIÉE dedans | la fonction SQL `emettre_facture`, personne d'autre |
+
+Ce n'est pas une précaution d'ingénieur, **c'est la loi** : une facture
+émise ne se modifie pas. Un client qui déménage garde son ancienne
+adresse sur ses anciennes factures ; une erreur se corrige par un AVOIR
+suivi d'une nouvelle facture. Un écran qui lirait l'adresse COURANTE
+réécrirait tout l'historique au premier déménagement, sans que personne
+ne le voie. **Les deux écrans le disent en toutes lettres**, sinon
+quelqu'un qui corrige son adresse attend de voir ses anciennes factures
+changer, ne voit rien, et conclut que le bouton ne marche pas (scénario
+Jocelyne du 1er août).
+
+### La numérotation : pas une séquence Postgres
+
+Une séquence saute des numéros dès qu'une transaction est annulée, c'est
+même sa raison d'être. Une numérotation de factures doit être
+**chronologique et continue** : un trou est exactement ce qu'un contrôle
+cherche. D'où `facture_compteurs` + la fonction `emettre_facture`, qui
+alloue le numéro ET insère dans la MÊME transaction.
+
+**Elle ne lève jamais sur un doublon : elle rend la facture déjà émise.**
+PayPal rejoue ses webhooks à la moindre erreur, et deux factures pour un
+encaissement coûtent infiniment plus cher qu'une facture manquante.
+L'index `(provider, sale_ref, genre)` le garantit côté base.
+
+**La série est l'année du PAIEMENT, pas l'année courante** : un webhook
+rejoué le 2 janvier pour un encaissement du 31 décembre doit tomber dans
+la série de décembre.
+
+### La TVA : quatre cas, et le piège est le premier
+
+`resoudreTva()` (`lib/facture/tva.ts`) décide, personne d'autre.
+
+| Acheteur | Régime | Taux |
+|---|---|---|
+| France | TVA française | 20 % |
+| UE, numéro de TVA valide | autoliquidation | 0 % |
+| UE, sans numéro | guichet unique OSS | le taux de SON pays |
+| hors UE | hors champ (art. 259 B) | 0 % |
+
+**LE PIÈGE : une entreprise FRANÇAISE avec un numéro de TVA paie quand
+même.** L'autoliquidation n'existe pas entre deux entreprises du même
+pays. Se tromper là, c'est facturer 0 % à tous les clients pros français
+et payer la TVA de sa poche au redressement. C'est testé nommément.
+
+**Le prix est TTC** (décision du 12 août), donc le HT est
+`total / (1 + taux)` et la TVA est la DIFFÉRENCE. Arrondir les deux
+séparément donne une facture dont les lignes ne font pas le total.
+
+**`TAUX_UE` se périme.** Un État change son taux quand il veut, et ça
+arrive plusieurs fois par an dans l'Union. La table porte `TAUX_MAJ`, une
+date : à revérifier une fois par an sur la liste de la Commission. Un
+taux faux ne se voit sur aucun écran, il se voit à la déclaration.
+
+**Ce qu'on ne fait PAS : valider un numéro de TVA auprès de VIES.** On
+vérifie sa FORME (et que son préfixe correspond au pays de l'adresse, la
+Grèce mise à part qui écrit `EL`). Un numéro bien formé mais inexistant
+produirait une autoliquidation injustifiée, donc de la TVA à notre
+charge : ces factures sortent marquées `tva-a-valider-vies` et remontent
+sur la fiche client. Brancher VIES est le prochain pas.
+
+### On émet toujours, on ne retient jamais
+
+"Il a payé le client, il doit recevoir ses accès, point barre" (7 août)
+vaut aussi pour sa facture. Adresse absente, pays inconnu, numéro
+illisible : on émet, au taux français, et la colonne `a_completer` porte
+ce qui manque. L'admin voit la liste ; personne n'attend une adresse
+pour avoir sa facture.
+
+### Où l'adresse est collectée, et pourquoi pas ailleurs
+
+- **Stripe** la collecte déjà (`billing_address_collection: "required"`
+  + `tax_id_collection`). Le webhook la RÉCUPÈRE dans
+  `facturation_clients` : la redemander serait présenter un formulaire
+  vide à quelqu'un qui vient de le remplir.
+- **PayPal** ne demande rien et ne rend rien d'exploitable. Le bon de
+  commande la demande donc AVANT d'ouvrir PayPal. Après le retour serait
+  trop tard : celui qui ferme son onglet a payé quand même.
+- **`completerFacturation` ne remplace jamais le bloc entier**
+  (`fusionnerAcheteur`, champ par champ) : Stripe ne collecte pas la
+  société, et effacerait celle saisie la semaine d'avant.
+
+### Endroits à respecter
+
+`lib/facture/{tva,identite,construire,paypalVente,stripeAcheteur,pays}.ts`
+(purs et testés), `lib/facture/store.ts` (aucune décision, il importe
+`supabaseAdmin` donc aucun test ne peut l'importer),
+`components/facturation/ChampsFacturation.tsx` (LE formulaire, partagé
+par les trois écrans : bon de commande, réglages, fiche admin),
+`app/facture/[numero]/page.tsx`,
+`app/api/commande/paypal/webhook/route.ts`,
+`app/api/commande/webhook/route.ts`, `app/api/compte/mes-infos/route.ts`,
+`app/api/admin/clients/[email]/route.ts`,
+`supabase/migrations/20260824_facturation.sql`.
+Test : `tests/logic/facturation.test.mts`.
+
+**Pas de moteur PDF, et c'est volontaire.** Une facture électronique n'a
+pas à être un PDF : ce qui compte, c'est son contenu, sa numérotation et
+le fait qu'elle ne change plus. La page `/facture/<numero>` rend ce qui a
+été figé, et le navigateur sait l'enregistrer en PDF. Ajouter un moteur,
+c'est une dépendance de plus dans `npm ci`, un binaire à embarquer dans
+la sortie standalone, et un chemin de plus qui casse en production sans
+casser en local (leçon `pdf-parse`, 7 août).
+
+## Sortir de Systeme.io : l'état des lieux vit dans UN fichier
+
+Béné, 24 août 2026 : "note où on s'arrête et ce qu'il reste à faire pour
+qu'à terme mon système remplace complètement Systeme io pour les ventes
+et l'affiliation sauf pour les emails."
+
+**`ROADMAP_SORTIE_SIO.md`**, à la racine de ce dépôt. Il couvre les TROIS
+dépôts (les ventes ici, l'affiliation chez Tipote, l'Atelier chez
+formaquiz) et il vit à un seul endroit : trois copies d'un état des lieux
+divergeraient en une semaine, et c'est le motif de ce dépôt depuis trois
+mois.
+
+**Le point à retenir sans ouvrir le fichier :** les emails restent chez
+Systeme.io, donc notre système doit continuer de leur PARLER. Or
+`poserTagAchat` échoue quand le contact n'existe PAS chez eux, ce qui est
+le cas normal de quelqu'un qui achète sur notre bon de commande. Il sort
+donc de toutes les séquences, en silence, et le problème grossit à chaque
+vente prise chez nous. C'est le chantier 1.
+
+Y est aussi noté, à discuter le 25 août : alléger le Supabase de Tiquiz
+(section 9), avec la requête de tailles à passer AVANT toute décision.
+
+## L'audit du 26 août : le mois offert commissionnait à l'envers
+
+Béné : "tu peux auditer tout le parcours de vente tiquiz et l'atelier,
+paypal et stripe plus tout le système d'affiliation ?"
+
+Le détail complet vit dans l'`AGENTS.md` de Tipote (l'affiliation y vit).
+Ce qui concerne CE dépôt tient en trois points.
+
+### LA COMMISSION EST RÉCURRENTE : chaque mois, pas une fois
+
+Béné, en relisant l'audit : "chez nous on paye bien 40% chaque mois où
+[le client] reste abonné, pas une seule fois... ! On arrête de payer
+s'il se barre c'est tout. S'il arrête son abonnement ou s'il demande un
+remboursement : pas de com pour son affilié. Mais sinon on paye tous les
+mois..."
+
+**Le code faisait exactement l'inverse, des deux côtés :**
+
+| | Ce qui se passait |
+|---|---|
+| PayPal | commission à l'ACTIVATION, donc UNE fois, et sur un mois offert avant le premier euro |
+| Stripe | commission au CHECKOUT, donc UNE fois, et JAMAIS sur un mois offert (montant zéro) |
+
+**Règle : une commission par ENCAISSEMENT, aucune sur une ouverture.**
+Stripe commissionne chaque `invoice.paid`, PayPal chaque
+`PAYMENT.SALE.COMPLETED`. Le checkout ne commissionne plus que les
+produits SANS échéance (`product.interval === null`), sinon le premier
+mois compterait deux fois, sous deux clés différentes que l'unicité ne
+verrait pas.
+
+**LA CLÉ EST LE PAIEMENT, JAMAIS L'ABONNEMENT.** C'est le coeur : avec
+l'abonnement pour clé, la deuxième échéance tombe sur la contrainte
+d'unicité et l'affilié ne touche plus rien à partir du deuxième mois.
+La facture Stripe et la vente PayPal sont donc les références, et le
+moyen de paiement préfixe la clé (`stripe:` / `paypal:`) au lieu du
+`stripe:` universel d'avant, qui marchait par accident.
+
+**Trois cas se règlent alors tout seuls, sans un drapeau de plus :**
+- le MOIS OFFERT : la facture d'essai vaut 0, donc pas de commission ;
+  la première vraie échéance en crée une ;
+- l'ARRÊT de l'abonnement : plus d'échéance, donc plus de commission ;
+- la MONTÉE DE PALIER : la facture suivante porte le nouveau montant,
+  donc la commission suit.
+
+C'est la leçon générale du 24 août, appliquée ici : quand une décision
+demande un drapeau à maintenir, se demander d'abord si la donnée qu'on a
+déjà ne répond pas toute seule.
+
+**Un remboursement n'annule que l'échéance remboursée.** Les mois déjà
+encaissés ont été gagnés et restent acquis : elle dit "on arrête de
+payer s'il se barre", pas "on reprend ce qui a été versé". La charge
+Stripe porte `invoice`, le remboursement PayPal porte `sale_id` : on
+essaie les deux clés, une seule existe en base.
+
+### Un remboursement annule la commission, un impayé aussi
+
+`annulerCommissionVente()` (`lib/affiliate/ownerSale.ts`) est la
+contrepartie de `commissionnerVente`, avec la MÊME clé
+(`stripe:<reference>`). Elle ne jette jamais : un remboursement doit
+aboutir même si Tipote ne répond pas.
+
+**`charge.dispute.*` n'était écouté nulle part.** Un impayé laissait
+l'accès ouvert, l'abonnement actif ET la commission en route : on perdait
+la vente, le service rendu et la commission, les trois d'un coup. On agit
+sur `funds_withdrawn` (l'argent est VRAIMENT parti), jamais sur `created`
+(une contestation se conteste, et couper l'accès de quelqu'un qui va
+gagner son litige nous ferait perdre un client pour rien).
+
+**La mécanique est un PARAMÈTRE** (`surRemboursement(event, motif)`) :
+sur un litige, `data.object` est un LITIGE, il n'a ni `amount_refunded`
+ni `refunded`, donc `readRefundOutcome` y répondrait "aucun
+remboursement" et on ne ferait rien.
+
+### La base de commission est DITE
+
+`commissionnerVente` envoie `base: "ht"` : `commissionBaseCents` a déjà
+retiré la TVA, et sans ce champ Tipote la rabotait une deuxième fois.
+
+Et `moisOffert.ts` ne redéfinit plus la règle des alias d'adresse : elle
+vit dans `lib/affiliate/memeAdresse.ts`, partagée avec l'attribution des
+commissions. Enfermée ici, elle ne gardait que le CADEAU.
+
+Test : `tests/logic/audit-26-aout.test.mts`.
+
+## Le cookie d'affiliation dure UN AN (Béné, 26 août 2026)
+
+"Son cookie est posé pour 1 an sur le device de son prospect."
+
+`REF_MAX_AGE_SECONDS` et `SA_MAX_AGE_SECONDS` valaient 90 jours. Un
+prospect qui cliquait en janvier et achetait en juin ne payait plus
+personne, alors que le programme promet un an. Un quiz se partage
+longtemps, et une décision d'abonnement se prend rarement le jour du
+clic.
+
+Les deux cookies portent la MÊME durée : deux durées différentes
+donneraient deux réponses pour la même promesse selon le lien emprunté.
+
+## Une inscription gratuite rattache son affilié, à VIE
+
+"S'il s'inscrit en free sur son lien : il reste son affilié à vie."
+
+**Cette règle ne marchait QUE via Systeme.io.** Leur optin appelle
+`sio-conversion` chez Tipote, qui écrit le rattachement. Notre propre
+inscription (`/api/auth/signup`) ne lisait ni le cookie, ni le `?ref=`,
+et n'écrivait rien du tout.
+
+Un affilié qui envoyait quelqu'un sur NOS pages perdait donc son
+prospect à l'expiration du cookie : il avait fait le travail (amener
+l'inscrit) et ne touchait rien sur la vente qui arrivait trois mois plus
+tard. **Et le problème grossissait à chaque inscription prise chez
+nous**, c'est à dire à mesure qu'on sort de Systeme.io.
+
+`rattacherInscrit()` (`lib/affiliate/rattacherInscrit.ts`) est appelée
+APRÈS la création du compte, et ne jette jamais : le rattachement
+compte, l'inscription compte plus. Sans lien affilié dans les cookies,
+elle ne fait AUCUN aller-retour réseau, parce que c'est le cas normal et
+le plus fréquent.
+
+Le registre vit chez Tipote (`POST /api/affiliate/rattacher`, secret
+partagé), pas ici : le copier donnerait deux registres, donc deux
+réponses différentes le jour où l'un prend du retard.
+
+**Le PREMIER rattachement gagne**, et un affilié exclu n'en crée aucun :
+c'est à vie, donc ce n'est pas l'endroit où être permissif.
+
+Test : `tests/logic/audit-26-aout.test.mts`.
+
+## Une commission récurrente tenait à la version d'API de Stripe (31 août 2026)
+
+Béné : "je vais démarcher de très gros affiliés, je ne peux pas me
+permettre de proposer un système instable."
+
+**Aucun appel de ce dépôt n'envoie d'en-tête `Stripe-Version`.** Les
+réponses arrivent donc dans la version PAR DÉFAUT DU COMPTE, et les
+webhooks dans la version choisie SUR L'ENDPOINT. Les deux se règlent
+dans le tableau de bord de Stripe, pas chez nous, et elles peuvent
+changer sans qu'une ligne de code bouge.
+
+**MESURÉ sur le serveur le 31 août, pas déduit :** le compte et les deux
+endpoints sont en **`2020-08-27`**, et une facture payée porte encore
+`subscription` et `tax` à la RACINE. Rien n'est donc cassé aujourd'hui,
+et il faut le dire dans ce sens là : ce qui suit est un FILET pour le
+jour où Béné accepte la mise à jour d'API que Stripe lui proposera, pas
+la correction d'une panne en cours.
+
+Ce filet n'est pas théorique pour autant, parce que Stripe a DÉPLACÉ
+trois champs que ce dépôt lit pour payer les affiliés, et que les trois
+échoueraient EN SILENCE :
+
+| Ce qu'on lisait | Où c'est passé | Ce que ça coûte |
+|---|---|---|
+| `invoice.subscription` | `invoice.parent.subscription_details.subscription` | `invoice.paid` sort en "ce n'est pas un abonnement" : **plus AUCUNE commission récurrente**, l'affilié touche le 1er mois et plus rien |
+| `invoice.tax` | `invoice.total_taxes[].amount` | la taxe vaut zéro, la commission se calcule sur le TTC : **1,13 € de trop par vente et par mois** |
+| `subscription.current_period_end` | `subscription.items.data[].current_period_end` | la date annoncée à qui descend de palier disparaît |
+
+Le deuxième est exactement l'écart du 26 août, par une autre porte. Et
+le premier est le plus grave parce que **zéro erreur ne s'écrirait nulle
+part** : le webhook répondrait 200, la vente serait encaissée, l'accès
+s'ouvrirait, et seule l'affiliée verrait qu'il ne se passe plus rien
+chez elle. Une mise à jour d'API acceptée d'un clic un mardi soir se
+paierait en commissions manquantes découvertes des semaines plus tard.
+
+**Règle : `lib/checkout/formeStripe.ts` lit les DEUX formes, personne ne
+lit un champ Stripe à la main.** `abonnementDeLaFacture`,
+`taxeDeLaFacture`, `finDePeriodeAbonnement`, `metaAbonnementDeLaFacture`,
+`montantAbonnement`. Pur, donc testé.
+
+**On n'ÉPINGLE PAS une version, et c'est délibéré.** Épingler nos appels
+sortants ne dit rien de la version des webhooks REÇUS : ça ne fermerait
+que la moitié de la porte, et ça créerait une deuxième valeur à
+maintenir. Une lecture tolérante ne casse jamais ce qui marchait, et
+elle marche déjà le jour où Béné accepte la mise à jour d'API que Stripe
+lui propose.
+
+**Et pour SAVOIR au lieu de supposer :**
+
+```bash
+npm run check:stripe
+```
+
+Il dit la version des événements récents, la version de CHAQUE endpoint
+de webhook, la forme réelle d'une facture payée, et surtout **les
+événements manquants avec ce que chacun coûte**. Un événement absent de
+l'abonnement d'un endpoint ne produit AUCUNE erreur : il n'arrive
+simplement jamais. Le test exige que sa liste reste d'accord avec
+`OWNER_SUBSCRIPTION_EVENTS`.
+
+**Et c'est LÀ qu'il a trouvé quelque chose de vraiment cassé**, le jour
+même de son écriture, alors que la version d'API allait bien :
+
+| Endpoint | Manquait | Ce que ça coûtait |
+|---|---|---|
+| `quiz.tipote.com` | `charge.dispute.created` + `charge.dispute.funds_withdrawn` | un impayé gardait son accès ET sa commission : le trou que l'audit du 26 août croyait avoir fermé côté CODE était resté ouvert côté CONFIG |
+| `quiz.tipote.com` | `customer.subscription.trial_will_end` | la remise promise après le mois offert ne se posait jamais |
+| `quizing.tipote.com` (l'Atelier) | les deux `charge.dispute.*` | idem, sur l'achat unique |
+
+**La leçon, et elle est plus grande que Stripe :** on avait écrit le code
+des litiges le 26 août, écrit le test, mis à jour cette page, et
+personne n'avait vérifié que le fournisseur ENVOYAIT l'événement. Un
+`if` qui attend un événement jamais émis est indiscernable d'un `if` qui
+marche. C'est la version « configuration » du garde-fou non fusionné du
+23 août : **écrire un garde-fou n'est pas la dernière étape, vérifier
+qu'il reçoit quelque chose l'est.**
+
+**Deux apps, deux listes, et le contrôle a failli crier pour rien.** Son
+premier jet réclamait `invoice.paid` à l'Atelier, qui vend un ACHAT
+UNIQUE et n'écoute aucun événement d'abonnement : cinq fausses alertes
+sur sept, et une alerte fausse emporte les vraies avec elle. Le tableau
+`SERVEURS` porte donc, par hôte, ce que l'app vend. Un hôte inconnu fait
+dire "je ne sais pas ce que cette app vend", jamais "il manque des
+événements".
+
+C'est la leçon d'Ivan (7 août), réappliquée : **on regarde ce qu'il y a,
+on ne raisonne pas sur ce qu'il devrait y avoir.** `refFacture`
+(`lib/checkout/sales.ts`) le faisait DÉJÀ pour `payment_intent` : la
+moitié du problème était connue, et l'autre moitié vivait dans le
+fichier qui paie.
+
+**L'Atelier n'est PAS concerné** : il vend un achat unique, son webhook
+Stripe n'écoute ni `invoice.*` ni `customer.subscription.*`. Vérifié, pas
+supposé. Le jour où il vendra un abonnement, ce fichier se porte là-bas.
+
+### Un changement de palier perdait l'affiliée
+
+Deux chemins, deux fuites, et le repli qui les cachait à moitié.
+
+**PayPal ne sait pas changer le palier : on ouvre un abonnement NEUF.**
+Son `custom_id` naissait sans `affiliate_code` ni `affiliate_ref`, donc
+chaque `PAYMENT.SALE.COMPLETED` suivant remontait une vente sans lien.
+`change-plan` recopie maintenant les deux depuis l'abonnement remplacé,
+et c'est un PARAMÈTRE OBLIGATOIRE de `monterViaPaypal` : l'oublier ne
+casse rien de visible, ça arrête juste de payer quelqu'un.
+
+**Stripe passe par un calendrier sur une descente**, et les metadonnées
+de la phase 1 sont posées sur l'abonnement au moment de la bascule (voir
+la section "Monter de palier").
+
+**Le repli qui rend ces deux trous discrets, et pourquoi il ne suffit
+pas :** `attributeSale` retrouve l'affiliée par la CONVERSION en base
+quand le lien manque. Mais cette conversion n'est écrite qu'à la
+PREMIÈRE commission attribuée. Quelqu'un qui change de palier pendant
+son mois offert n'en a jamais eu une seule : son affiliée n'était plus
+jamais payée, sans qu'une ligne le dise.
+
+Test : `tests/logic/audit-31-aout.test.mts`.
+
+## Équipes dans le PLUS : ce qui est noté, et ce qui bloque (Béné, 29 août 2026)
+
+"Imaginons une entreprise qui a besoin d'avoir plusieurs
+collaborateurs : ils auraient accès aux quiz, sondages etc. et l'admin
+pourrait décider de ne pas ouvrir les accès à la partie facturation ou
+aux leads. Pour un prestataire, on lui ouvre des accès pour qu'il mette
+le quiz en place et suive les statistiques, place les pixels, mais on
+veut pas qu'il voit forcément nos leads ni nos détails de facturation.
+Uniquement pour le Plus. 5 places pour le prix actuel, au delà +50 €/mois,
+au delà de 10 encore +100 €/mois."
+
+Pas urgent, c'est pour démarcher de plus grosses structures. Trois
+choses à ne pas perdre en attendant.
+
+**1. LE MULTIPROFIL N'EST PAS UNE ÉQUIPE, et c'est le piège.** Les
+projets (`project_id`, phase 6) partitionnent le CONTENU d'UNE personne.
+Une équipe partitionne les DROITS de plusieurs personnes sur le même
+contenu. Bâtir l'un sur l'autre donnerait "un projet = un collaborateur",
+donc un prestataire qui voit tout ou rien selon le projet, ce qui est
+exactement ce qu'elle refuse.
+
+**2. LE DROIT LE PLUS DUR EST CELUI DES LEADS.** Ce sont des données
+personnelles chiffrées (`lib/piiCrypto.ts`, une clé par créatrice). Un
+membre sans droit "leads" ne doit pas les voir, mais il doit voir les
+STATISTIQUES, qui se calculent sur les mêmes lignes. Le droit se pose
+donc sur la lecture des CHAMPS (email, nom, réponses nominatives), pas
+sur la table : un gate au niveau de l'écran laisserait l'API ouverte,
+et c'est par l'API qu'on récupère un export.
+
+**3. LA FACTURATION EST DÉJÀ SÉPARABLE.** `facturation_clients`,
+`factures` et le portail Stripe sont des écrans à part : c'est le droit
+le plus simple à poser, et probablement celui par lequel commencer.
+
+**Sur le prix, mon avis, qu'elle a demandé.** La marche de 5 à 6 places
+coûte +50 €/mois, soit +263 % pour UN siège de plus : c'est le genre de
+marche où on n'ajoute jamais la 6e personne, on partage un mot de passe,
+et le revendeur perd la vente ET le contrôle des accès. Un prix PAR
+SIÈGE au delà des 5 inclus (par exemple +10 €/mois par siège) rapporte
+la même chose à 10 places, se dit en une phrase à un acheteur, et ne
+crée aucune raison de tricher. Les paliers restent utiles pour les gros
+volumes, mais posés plus haut (au delà de 20, 50).
+
+
+## Le simulateur d'affiliation répond enfin à la question posée (31 août 2026)
+
+Béné : "la calculatrice sur la page affiliation est bordélique : je veux
+voir combien je gagne chaque mois en fonction de mes affiliés, et de
+leurs plans. Et en dessous, je veux voir l'option : augmenter mes
+commissions OU faire baisser mon abonnement. Le visiteur doit voir que
+ça existe mais là on l'aide à être séduit par le programme c'est tout."
+
+Le "bordélique" est précis, et il tenait en trois choses :
+
+1. **le résultat était SUR 12 MOIS**, alors que la question d'un affilié
+   est mensuelle. Il fallait diviser de tête, et pas par 12 pour un
+   filleul annuel ;
+2. **tous les filleuls avaient le MÊME plan**, alors qu'elle écrit "de
+   LEURS plans" au pluriel : une audience mélange forcément du mensuel
+   et de l'annuel, et c'est le mélange qui donne le vrai chiffre ;
+3. **il ARBITRAIT entre les deux récompenses** ("ce que tu as intérêt à
+   choisir"), et pour ça il demandait SON abonnement au visiteur avant
+   de lui montrer un seul chiffre. Un formulaire qui interroge quelqu'un
+   sur un abonnement qu'il n'a pas encore, sur la page qui doit le
+   convaincre, c'est une porte fermée.
+
+**Règle : `simulerParPlan()` (`lib/site/recompenseAffiliation.ts`), un
+CURSEUR par palier, un total MENSUEL, et les deux options MONTRÉES en
+dessous.** L'arbitrage se fait dans l'espace affilié, une fois inscrit,
+avec ses vrais filleuls.
+
+### Le palier était calculé, il n'était pas MONTRÉ (même jour)
+
+Elle a relu l'écran : "elle prend en compte l'augmentation de palier ?
+Il faut ! [...] la calculatrice elle doit prendre en compte le taux
+suivant le nb d'affiliés. Aussi fais la plus ergonomique, avec des
+curseurs et pas des boutons plus moins."
+
+**Le taux ÉTAIT pris en compte** : `simulerParPlan` appelle
+`tauxCommissionPct` sur le TOTAL des filleuls, et c'est testé depuis le
+premier jet. Ce qui manquait, c'est qu'on ne le VOYAIT nulle part :
+l'écran affichait un montant sans la mécanique qui le fait monter, donc
+il se lisait comme un simple produit, donc rien ne donnait envie de
+pousser plus loin. Un barème invisible ne motive personne.
+
+L'écran dit maintenant trois choses en même temps : le taux courant, ce
+que la marche a déjà ajouté par rapport aux 40 % de départ, et la
+MARCHE SUIVANTE (`prochaineMarcheCommission`, dans le lib, pure et
+testée). Les deux cartes du bas affichent la valeur atteinte à ce
+nombre de filleuls, au lieu d'un "jusqu'à 70 %" abstrait.
+
+**Le seuil ne se réécrit PAS dans le composant.** La marche s'ouvre au
+PREMIER filleul de la dizaine (1 -> 45 %, 11 -> 50 %), c'est le
+découpage de `tauxCommissionPct`, et deux formules pour le même barème
+finissent toujours par diverger. Le test compare la marche annoncée à ce
+que `tauxCommissionPct` rendra vraiment : annoncer un palier que le
+barème ne donnera pas se découvre au premier versement.
+
+**Les boutons plus/moins demandaient dix clics pour atteindre la
+première marche.** Avec un curseur, le chiffre bouge pendant qu'on
+tire : la mécanique se comprend sans la lire. Le champ numérique reste
+à côté, parce que le curseur s'arrête à 100 et que quelqu'un qui vise
+plus doit pouvoir l'écrire.
+
+Trois choses à ne pas défaire :
+
+- **le taux s'applique au TOTAL des filleuls**, jamais palier par
+  palier : c'est ce que fait `attributeSale` chez Tipote, où
+  `recompense_commission_pct` est posé sur l'AFFILIÉ et pas sur la
+  vente. Découper donnerait un taux plus bas que celui versé ;
+- **une échéance ANNUELLE est LISSÉE sur douze mois**, et l'écran le
+  dit. C'est la seule façon d'additionner deux récurrences ; annoncer
+  56,67 € le mois de l'échéance et 0 € les onze autres serait exact et
+  inutilisable ;
+- **le total est arrondi UNE fois**, sur la somme non arrondie. Arrondir
+  chaque ligne puis les additionner ferait que le total affiché n'est
+  pas la somme des lignes affichées, et c'est le genre d'écart qu'un
+  affilié relève.
+
+`simuler()` a été RETIRÉ, pas laissé sans appelant : une fonction morte
+qui arbitre est un piège que le prochain passage rebranche en croyant
+réparer.
+
+Test : `tests/logic/simulateur-affiliation.test.mts`.
+
+### ET L'ÉCART QUE ÇA A RÉVÉLÉ : le blog annonce 20 % de trop
+
+Le simulateur calcule sur le **HT** (`horsTaxes`), comme le système
+paie : `COMMISSION_BASE = "ht"`, décision de Béné du 19 août. Le blog,
+lui, est écrit sur le **TTC**.
+
+| | le blog annonce | Stripe verse (40 % du HT) |
+|---|---|---|
+| 1 filleul mensuel | 6,80 €/mois | **5,67 €/mois** |
+| 30 filleuls mensuels | 204 €/mois | **170,10 €/mois** |
+| 1 filleul annuel | 68 €/an | **56,67 €/an** |
+| 50 filleuls annuels | 3 400 €/an | **2 833,50 €/an** |
+
+C'est mot pour mot le drame du 19 août, transposé au blog : l'app
+promettait 32,90 € et payait 27,42 €, et la cause était la même, un
+montant écrit à la main à côté d'un montant calculé.
+
+**TRANCHÉ LE 31 AOÛT : c'est le HT, partout.** "Pour l'affiliation on
+fait uniquement 40 % etc. sur le HT." Le blog a été recalculé
+(`lib/blog/faitsProgramme.ts`, dix corrections, `npm run blog:reparer`)
+et un test exige désormais que le blog et le simulateur annoncent le
+MÊME montant au centime. PayPal aussi paie sur le HT : voir "Une vente
+PayPal paie sur le HT".
+
+**Il restait une deuxième nuance, et elle joue dans l'autre sens :** le
+blog annonce **40 %**, alors qu'à 30 filleuls le taux réel est **55 %**,
+donc 233,70 €/mois au lieu des 170,10 € affichés. Le blog sous-vend
+maintenant le programme. C'est un choix de communication, pas une
+erreur : 40 % est bien le taux de DÉPART, et le simulateur montre la
+montée. À reprendre avec Béné si elle veut que le blog en parle.
+
+## Le blog vit dans le dépôt, pas dans une base (Béné, 29 août 2026)
+
+"Sinon oui mon blog sur tiquiz.fr/blog. Je vais supprimer les anciennes
+versions dans la foulée. Profites-en pour mettre à jour l'affiliation,
+les liens, les prix etc..."
+
+Dix articles importés depuis Systeme.io, servis sur `tiquiz.fr/blog`.
+`content/blog/*.json` porte le contenu, `lib/blog/` les décisions,
+`public/blog/img/` les visuels. Dix articles qui changent trois fois par
+an n'ont rien à faire dans une base : un fichier se relit dans une revue
+de code, se déploie avec le reste, et ne peut pas disparaître parce
+qu'une migration n'a pas été passée.
+
+**L'import lit le MODÈLE de la page, jamais le HTML rendu.** Chaque page
+Systeme.io embarque `window.__PRELOADED_STATE__` : le contenu bloc par
+bloc, avec son type. C'est du JavaScript et pas du JSON (`\x3c`, `\'`) :
+c'est Node qui sait le lire, pas un remplacement de chaînes fait à la
+main. Deux racines existent, `BlogPostBody` ET `BlogPageBody` : oublier
+la seconde a sorti l'étude de cas Jocelyne à zéro bloc, sans un mot.
+
+**Trois pièges de l'import, tous invisibles sans un contrôle explicite :**
+
+1. **L'ORDRE des remplacements décide de la justesse.** Mis en premier,
+   `9 €/mois -> 17 €/mois` transforme "1 filleul à 9 €/mois = 3,60 €" en
+   "1 filleul à 17 €/mois = 3,60 €" : le prix devient juste et le calcul
+   devient faux, ce qui est pire que de n'avoir rien touché. Les phrases
+   qui portent une ARITHMÉTIQUE se corrigent entières, AVANT les
+   remplacements génériques.
+2. **Deux motifs qui se chevauchent : le plus long d'abord.** Un motif
+   court consomme sa cible et le long ne trouve plus rien, en silence.
+3. **Une même lettre s'écrit de deux façons** (`à` précomposé ou `a` +
+   accent combinant). On normalise en NFC avant toute comparaison,
+   sinon un remplacement échoue sans bruit.
+   Et une espace INSÉCABLE (`1 800 €`) ne se tape pas : on l'exprime.
+
+Le pipeline REFUSE de finir en silence : il compte les corrections
+appliquées, liste celles qui n'ont trouvé aucune cible, et cherche ce
+qui ne devrait plus exister (ancien prix, ancien lien, tiret cadratin,
+chevron, point médian). `tests/logic/blog.test.mts` rejoue ces contrôles
+sur le contenu déployé.
+
+**Le lien vers l'Atelier menait chez Systeme.io, et cette exception a
+été LEVÉE le 30 août.** Elle disait que l'Atelier tenait son propre
+registre d'affiliés et ne lisait que `?sa=`, donc que repointer le lien
+changerait QUI est payé. Vérifié ligne par ligne dans son dépôt le
+30 août : ce n'est plus vrai. `atelierduquiz.fr` est un hôte de vente,
+son middleware capte le `?ref=`, et `commissionnerVente` interroge le
+registre CENTRAL de Tipote en premier (`source_app: "atelier"`). Les
+liens du blog pointent donc sur `atelierduquiz.fr`, et le test l'exige
+dans ce sens là.
+
+**Les images sont chez nous, recompressées** (82 fichiers, 24,3 Mo ->
+5,7 Mo). Les GIF passent en WebP **animé** : `sharp(buf, {animated:
+true})`, sinon on ne garde que la première image et le GIF devient une
+capture fixe sans que rien ne le signale. Hotlinker le CDN de
+Systeme.io aurait tué tous les visuels le jour de la résiliation.
+
+**Ce qui manquait pour ranker sur "tiquiz".** La page de vente ne
+portait AUCUNE donnée structurée : elle était un document parmi d'autres
+contenant le mot. Elle déclare maintenant `Organization`, `WebSite` et
+ses offres (`lib/sales/servePage.ts`), **uniquement sur le domaine
+public** : deux pages qui prétendent être le site officiel se feraient
+concurrence sur la même requête. Les prix viennent du CATALOGUE, jamais
+recopiés.
+
+**À faire quand elle en aura le temps :** plusieurs visuels portent
+`www.tipote.fr/tiquiz` incrusté dans l'image. Ça ne casse rien, mais ça
+envoie le lecteur vers une adresse qui va disparaître.
+
+## La page d'article du blog, refaite sur le modèle Typeform (Béné, 30 août 2026)
+
+Elle a listé dix défauts en regardant une page d'article, et neuf
+viennent d'UN chiffre : **le corps de l'article faisait 1168 px de
+large**. Mesuré, pas déduit. À 18 px, ça fait 150 caractères par ligne
+et l'oeil perd le début de la ligne suivante, ce qu'elle décrit par "le
+contenu est mal réparti, dur à lire". Les images héritaient de cette
+largeur, d'où "certaines images sont d'une taille disproportionnée c'est
+carrément n'importe quoi".
+
+**La page est maintenant une grille : 720 px de lecture, 320 px de rail
+collant.** Le rail porte ce qui doit rester sous les yeux (sommaire,
+partage, invitation) ; le bas de page porte ce qu'on choisit après avoir
+fini de lire.
+
+### Les trois défauts d'images, et pourquoi la largeur n'était que le premier
+
+| Ce qu'on affichait | Mesuré |
+|---|---|
+| `gwenn.webp` (200 px) en `w-full` | agrandie **5,8 fois** |
+| `publicite-quiz.webp` (842 x 1808) | **2508 px de haut**, deux écrans et demi |
+| `schema-...-large.webp` **PUIS** `-mobile.webp` | le même schéma deux fois, la 2e étirée sur 2151 px |
+
+Le troisième est le vrai "n'importe quoi" et aucune largeur ne l'aurait
+corrigé : ses schémas existent en DEUX versions dessinées exprès, et
+l'import les a transformées en deux blocs image ordinaires. Il fallait
+comprendre qu'ils n'en font qu'un.
+
+- `lib/blog/imagesArticle.ts` : `normaliserImages()` retire les doublons
+  voisins puis apparie les variantes en un `<picture>`. **L'extension
+  peut différer** entre les deux versions (`.svg` et `.webp`) : c'est le
+  cas réel du corpus.
+- `lib/blog/dimensionsImage.ts` : la taille naturelle, lue dans les
+  premiers octets (WebP VP8 / VP8L / VP8X, PNG, JPEG, GIF) et dans le
+  `viewBox` des SVG. **Pas de dépendance** : la lecture a lieu au build,
+  sur des fichiers du dépôt, et une librairie de plus est un chemin de
+  plus qui casse en prod sans casser en local (leçon `pdf-parse`).
+- `tailleAffichage()` borne par la colonne ET par la hauteur (760 px).
+  Une capture en portrait se borne par sa HAUTEUR : c'est ce qui
+  manquait. Le ratio est conservé, on RÉDUIT, on ne recadre jamais.
+- CSS : `width: auto; height: auto` + les deux `max-*`. **Poser
+  `width: 100%` avec un `max-height` ÉCRASERAIT l'image**, ce qui est
+  pire que le problème d'origine.
+
+### Le bouton bleu sur bleu : c'était de la spécificité CSS
+
+"Un bouton texte bleu sur couleur bleu c'est carrément de la merde."
+Elle a raison et c'était mesurable : `.tq-site .tiquiz-blog a` pèse
+0,3,0 et `.tq-bouton` 0,1,0, donc le libellé prenait le bleu foncé des
+liens d'article. **#0B3FA8 sur #1D6BF0 = 1,93:1**, quand le minimum
+lisible est 4,5:1.
+
+`tq-bouton-plein` (globals.css) monte la spécificité au lieu d'un
+`!important` : le prochain bouton posé dans un article portera la classe
+sans avoir à connaître cette histoire.
+
+Au passage, l'encart de fin d'article n'est plus un aplat marine ("les
+encarts bleu sont moches j'en veux pas") : fond blanc, filet HORIZONTAL
+à la couleur de marque, texte à l'encre du site.
+
+### AUCUN APLAT DE COULEUR SOUS DU TEXTE, NULLE PART (Béné, 31 août 2026)
+
+"Supprime l'arrière plan bleu sous le texte c'est pas adapté, pas beau,
+j'en veux pas, NULLE PART. Au pire mets carrément le texte en couleur,
+mais dans les couleurs Tiquiz pas couleurs des vignettes. **Notre
+branding c'est celui des pages de vente tiquiz.fr et atelierduquiz.fr
+pas les vignettes.**"
+
+**Troisième fois que la remarque sort**, et c'est ça qui fait qu'elle
+devient une règle et un test plutôt qu'une correction de plus :
+
+- 3 août : "l'encart est tout pété" ET "il est de la même couleur que
+  les boutons, ça entraîne de la confusion" (les quatre temps de la page
+  de résultat) ;
+- 30 août : "les encarts bleu sont moches j'en veux pas en plus ils
+  rendent le texte illisible" (la fin d'article) ;
+- 31 août : le simulateur, le bloc de fin de la page affiliation, celui
+  du blog, et le surligneur de titre.
+
+**Le motif est toujours le même : on prend les couleurs d'un VISUEL et
+on les applique à une INTERFACE.** Sa dernière phrase le nomme mieux que
+tous les audits : le branding vient des PAGES DE VENTE, pas des
+vignettes d'articles. Un dessin de 1200 px peut porter trois mots dans
+un bloc bleu et vivre sur un fond marine ; une page qui doit se LIRE,
+non.
+
+**Règle : fond blanc ou crème, texte à l'encre, et le bleu ne sert plus
+qu'à quatre choses** : un bouton, une pastille numérotée, un FILET
+HORIZONTAL, et un CHIFFRE. Le seul fond sombre qui reste est le PIED de
+page (`.tq-pied`), le geste Typeform qu'elle a montré elle même, où
+rien ne se lit longtemps.
+
+**`.tq-surb` est devenu une COULEUR DE TEXTE** ("au pire mets carrément
+le texte en couleur"). C'était un dégradé bleu avec du blanc dessus,
+recopié des vignettes ; c'est maintenant le mot en bleu de marque, plus
+lourd que le reste du titre. Aucun appel n'a bougé, les sept titres
+concernés gardent leur emphase.
+
+**INTERDIT :** `bg-[var(--tq-marine)]` sur un bloc de contenu, un
+`bg-[var(--tq-bleu)]` avec du padding sous du texte, et le `text-white`
+qui en découle. `tests/logic/branding-site.test.mts` les refuse sur les
+sept écrans du site public, et exige que `.tq-surb` n'ait plus de
+`background`.
+
+Un filet reste HORIZONTAL, jamais vertical : une décoration à gauche
+déplace ce qu'elle décore, et les bords ne s'alignent plus (règle du
+3 août, mesurée à 20 px).
+
+### Pinterest ne recevait PAS l'image, et le viewer de quiz non plus
+
+"Aucune image ne peut être repartagée sur Pinterest, les images ne sont
+pas conformes." Deux causes, et la première vivait dans le viewer :
+
+1. **Le lien Pinterest n'a jamais porté de `media=`.** Il était écrit
+   dans `PublicQuizClient.tsx`, au milieu d'un composant de 5000 lignes,
+   donc hors de portée de tout test : il y est resté des mois. Sans
+   `media`, Pinterest ouvre son formulaire SANS image et demande au
+   visiteur d'en choisir une.
+2. **Le format.** Pinterest est un flux VERTICAL : une image 16/9 y
+   occupe trois fois moins de hauteur que ses voisines, donc elle ne
+   circule pas. Les couvertures font 1200 x 675.
+
+**Règle : `lib/partage/urlsReseaux.ts` construit les URL, pour le blog
+ET pour le viewer de quiz.** `media` est un CHAMP du contexte, jamais
+deviné, et un chemin relatif n'est jamais envoyé (Pinterest ne connaît
+pas notre domaine). `absolutiser()` refuse toute origine locale, comme
+`resolveAppUrl` : un `??` protège du manquant, jamais du faux.
+
+`npm run blog:epingles` construit une épingle **1000 x 1500** par
+article (`public/blog/pin/<slug>.jpg`, committées) : sa couverture
+nette, posée sur elle-même floutée et assombrie, avec son logo en pied.
+**On ne dessine AUCUN texte** : ses couvertures portent déjà leur titre
+dans sa typographie, et le réécrire avec la police que trouve le serveur
+donnerait une épingle qui change d'allure selon la machine.
+
+### Le TL;DR est un chapeau, pas un paragraphe
+
+Il vit dans le PREMIER bloc HTML, mélangé au texte
+(`<p><strong><em>TL;DR</em></strong></p>` suivi du résumé).
+`extraireResume()` (`lib/blog/gabarit.ts`) le sort et retire le libellé.
+Neuf articles sur dix en ont un ; l'étude de cas de Jocelyne n'en a pas,
+et on n'en fabrique PAS : un résumé tiré des premières phrases répète
+mot pour mot le paragraphe juste en dessous.
+
+### Les liens qui mentaient (et le script qui les répare)
+
+"Certains liens sont débiles comme 'C'est pour ça que Tiquiz existe' qui
+mène vers l'affiliate center et pas vers Tiquiz."
+
+- **7 liens de lecture** menaient à `affiliate.tipote.com/signup` ;
+- **4 URL étaient MORTES**, concaténées par l'import :
+  `systeme.io/fr?sa=<id>fr/blog/exemples-lead-magnets` ;
+- **7 liens externes en `http://`** ;
+- **46 guillemets collés** : l'import a remplacé les chevrons `«` `»` par
+  des guillemets droits et a emporté l'espace qui les entourait.
+
+`npm run blog:reparer` (idempotent, `--verifie` pour compter seulement)
+corrige les quatre familles. **La décision se prend sur le COUPLE
+(destination, texte du lien)** : `affiliate.tipote.com` est une
+destination JUSTE quand la phrase parle du programme et FAUSSE quand
+elle dit "teste Tiquiz". Un remplacement à l'aveugle sur l'URL aurait
+cassé les liens légitimes de l'article d'affiliation.
+
+La règle de reponctuation vit dans `lib/blog/reponctuation.ts`, et le
+TEST APPELLE LA MÊME FONCTION que le script : le contenu est propre
+quand la réparation ne change rien. Deux copies de la règle finiraient
+par ne plus être d'accord.
+
+**L'exception "le lien de l'Atelier reste chez Systeme.io" est LEVÉE.**
+Elle datait du 25 août et disait que l'Atelier tenait son propre
+registre et ne lisait que `?sa=`. Vérifié dans son dépôt le 30 août :
+`atelierduquiz.fr` est un hôte de vente, son middleware capte le `?ref=`,
+et `commissionnerVente` interroge le registre CENTRAL de Tipote en
+premier avec `source_app: "atelier"`.
+
+### Les commentaires : modérés par défaut, et rendus par le serveur
+
+Sa raison est le référencement. Une liste chargée après coup par le
+navigateur n'est pas dans le HTML servi : pour un moteur, l'article n'a
+alors aucun commentaire. La liste est donc **rendue par le serveur**, et
+le JSON-LD porte `commentCount` (uniquement quand il y en a : annoncer
+`0` sur dix articles dit le contraire de ce qu'on cherche).
+
+- **L'adresse email ne sort jamais.** Elle n'est pas dans le `select` de
+  la lecture publique : c'est la règle des IBAN du 25 août.
+- **Le champ piège** plutôt qu'un captcha (qui fait fuir une lectrice sur
+  cinq et envoie ses données à un tiers). Le piège attrapé répond 200 :
+  dire à un robot qu'il est repéré lui apprend à ne plus l'être.
+- **On ne compte PAS les noms de domaine nus** comme des liens. Ce blog
+  parle d'outils, "Systeme.io" apparaît dans toute discussion normale, et
+  les compter refuserait les commentaires les plus intéressants. Un
+  garde-fou qui crie pour rien finit désactivé.
+
+**LE PIÈGE QUI A ÉTÉ ÉVITÉ DE JUSTESSE, et il vaut pour tout ce dépôt :**
+`lib/supabaseAdmin.ts` LÈVE au chargement du module quand une variable
+manque. Un `import` en tête de `commentairesStore.ts` faisait donc
+répondre **500 à toute la page d'article** sans base, alors que le blog
+n'a jamais eu besoin de base pour s'afficher. Constaté en lançant le
+serveur, pas déduit. Le client est chargé par `await import(...)` DANS
+le try : une base absente coûte la section commentaires, jamais
+l'article.
+
+🚨 Migration : `supabase/migrations/20260830_blog_commentaires.sql`.
+
+### Tout mettre en attente ne modérait rien : ça éteignait la section (31 août 2026)
+
+Béné : "qui les valide, quand et comment ? J'ai voulu tester et il était
+écrit 'votre commentaire est en cours de validation'. Sauf que, ben
+c'est pas fait la suite ? On peut regarder ce que font les blogs les
+plus modernes et fiables en ce moment et calquer sur leur comportement ?
+Peut être une auto modération (pas de liens, pas de discours négatifs ou
+déplacés, pas de spam). L'idée c'est de permettre aux gens de laisser
+des commentaires (mais JE DOIS ÊTRE ALERTÉE pour savoir qu'il y en a) et
+de montrer aux moteurs de recherche et à l'IA que mon blog intéresse le
+public."
+
+**Elle a raison, et le défaut n'était pas un morceau manquant : c'était
+la posture.** Le 30 août, la règle écrite ici disait "rien n'est public
+par défaut", et la file de modération existait bel et bien. Mais
+personne ne relève une file tous les jours, et RIEN ne disait qu'il y
+avait quelque chose dedans : en pratique, aucun commentaire n'aurait
+jamais été publié. Un blog dont la section commentaires reste vide dit à
+Google et aux modèles exactement le contraire de ce qu'elle cherche, et
+la lectrice qui ne voit jamais son message ne revient pas.
+
+**Règle : trois issues, pas deux** (`lib/blog/commentaires.ts`,
+`jugerCommentaire` rend `statut` + `motifs`). C'est le comportement des
+blogs qui marchent, Akismet et le défaut de WordPress compris.
+
+| Issue | Quand | Béné |
+|---|---|---|
+| `publie` | aucun signal douteux | prévenue, rien à faire |
+| `en_attente` | un signal l'a retenu | prévenue, elle tranche |
+| `refuse` | propos haineux | ça n'atteint jamais la page |
+
+**UN LIEN RETIENT TOUJOURS.** C'est sa règle ("pas de liens"), et c'est
+la seule qui protège vraiment : le spam de commentaire n'existe que pour
+poser un lien. Un lecteur honnête qui cite une source attend quelques
+heures, ce n'est pas cher payé. Les autres signaux : tournure de spam
+(`ressembleAuSpam`), plus de 60 % de majuscules, huit fois le même
+caractère, un "nom" de plus de cinq mots.
+
+**ON RETIENT, ON NE REFUSE PAS, sauf haine.** Un doute mal placé qui
+REFUSE fait perdre un vrai lecteur sans que personne ne le sache ; un
+doute mal placé qui RETIENT coûte un clic. Les deux erreurs n'ont pas le
+même prix.
+
+**Et les filtres ne crient PAS pour rien.** "Putain c'est génial" est un
+compliment : `proposInterdits` ne vise que ce qui s'attaque à une
+personne ou à un groupe. `ressembleAuSpam` cherche des TOURNURES de
+placement ("gagner de l'argent facile", "backlinks pas cher", un numéro
+WhatsApp), jamais un mot isolé : "j'ai fait un quiz sur les casinos"
+doit passer. Un filtre qui rougit pour rien finit désactivé, et on se
+retrouve sans filtre du tout (leçon du filet genre-neutre, 24 août).
+
+**L'ALERTE PART DANS LES DEUX CAS**
+(`lib/email/commentaireBlogAlerte.ts`), et l'OBJET dit lequel : elle
+trie sa boîte sans ouvrir. Un commentaire auto-publié n'appelle aucune
+action, mais il apparaît sur SON site sous SON nom : ne l'alerter que
+sur les cas douteux lui ferait découvrir les autres par hasard, des
+semaines plus tard. Quand la lectrice a laissé son adresse, elle est en
+`reply_to` : répondre à un commentaire est la meilleure façon de faire
+revenir quelqu'un, et aller chercher son adresse dans l'admin est
+exactement ce qui fait qu'on ne le fait jamais.
+
+`objetAlerte` vit dans le module PUR et pas dans le module d'email :
+celui-ci porte `import "server-only"`, donc aucun test ne peut le
+charger. C'est le piège qui avait caché le verrou des webhooks le
+24 août.
+
+**Le MOTIF est affiché dans l'admin, jamais deviné.** Sans lui, Béné
+relit chaque message pour comprendre ce qui l'a arrêté. Un commentaire
+reçu AVANT l'auto-modération n'a pas de motif : l'écran dit "reçu avant
+l'auto-modération", il n'en invente pas un.
+
+**Les deux écritures se replient sur l'ancienne forme** si la colonne
+`motifs` n'est pas encore en prod, en écriture ET en lecture. Sans le
+repli en lecture, la file reviendrait VIDE, et un écran vide se lit "il
+n'y a rien à faire" alors qu'il veut dire "je n'ai pas pu regarder" (ce
+sont deux réponses différentes, règle du 23 août).
+
+🚨 Migration : `supabase/migrations/20260831_blog_commentaires_moderation.sql`.
+
+### Ce que le filet de tests fige
+
+`tests/logic/article-blog.test.mts` (31 tests) et les cinq nouveaux tests
+de `blog.test.mts`. Ils portent ce qu'ELLE a vu : une image agrandie 5,8
+fois, une capture de 2508 px de haut, le même schéma affiché deux fois,
+un lien de lecture vers l'espace affilié, un guillemet collé, une épingle
+qui n'est pas en 1000 x 1500.
+
+### Les textes alternatifs : 43 % du blog n'en avait aucun (31 août 2026)
+
+Cette page annonçait **80 %**. C'était faux, et je corrige plutôt que
+d'empiler : mesuré, c'est **33 images sur 76**, soit 43 %, concentrées
+sur deux articles (17 raisons, l'étude de cas de Jocelyne).
+
+**Un `alt` vide, c'est trois choses perdues d'un coup :** une lectrice
+aveugle n'entend rien (ou s'entend épeler
+`mjaxntazmgewmtkwodgyywezytzimjvinmzknti3mjg0mge4owu.webp`), Google ne
+sait pas ce qu'il y a dans le schéma, et un modèle de langue non plus.
+C'est exactement ce que Béné vise en parlant de GEO : ChatGPT et Claude
+lisent le `alt`, jamais le pixel. Or les schémas de ce blog portent
+l'essentiel de l'argumentaire (l'email contre les réseaux, le tunnel de
+Jocelyne, les chiffres de sa campagne) : sans texte, ce contenu
+n'existait pour aucun des trois.
+
+Les 33 textes ont été écrits en REGARDANT chaque image, une par une.
+Ils vivent dans `lib/blog/altImages.ts`, la même mécanique que
+`faitsProgramme.ts` : un module, `npm run blog:reparer` qui l'applique,
+et un test qui exige qu'il ne reste aucune image sans texte. Écrit à la
+main dans le JSON, un `alt` disparaîtrait au prochain import.
+
+**La clé est le CHEMIN de l'image, pas sa position** : une image déplacée
+garde son texte, et les deux variantes desktop/mobile d'un même schéma
+sont couvertes d'un coup.
+
+**On n'ÉCRASE jamais un `alt` existant.** Trois portent encore "tiquiz
+amazon" sur des visuels sans rapport, hérités de Systeme.io ; les
+remplacer en masse ferait perdre les bons. Ils se corrigent un par un,
+en les ajoutant à la table.
+
+Le test dit aussi ce qu'un `alt` NE doit pas être : pas de "image de"
+(un lecteur d'écran annonce déjà que c'en est une), pas plus de 200
+caractères, pas de tiret cadratin. Il a attrapé deux de mes propres
+textes en les écrivant.
+
+### Ce qui reste ouvert, et qui n'est pas du code
+
+- **Plusieurs visuels portent `tipote.fr/tiquiz` incrusté dans l'image**
+  (les schémas SVG en pied, la bannière de l'étude de cas). Ça ne casse
+  rien, mais ça envoie le lecteur vers une adresse qui va disparaître.
+  Seule Béné peut les redessiner.
+
+## Les nouvelles couvertures, et le chiffre qui a survécu au dessin (31 août 2026)
+
+Béné a livré dix couvertures neuves, une par article, aux noms exacts des
+slugs. Converties en WebP 1200 de large dans `public/blog/img/<slug>.webp`
+(668 Ko -> 553 Ko), épingles Pinterest reconstruites
+(`npm run blog:epingles`, 10/10), et le dossier source retiré de
+`public/` : servi tel quel, il aurait exposé 11 Mo de PNG à
+`/blog/nouvelles%20couvertures%20articles/`, crawlables et en double.
+
+**Neuf sur dix règlent le problème de l'adresse périmée** : elles portent
+`tiquiz.fr/blog` au lieu de `tipote.fr/<slug>`. Vérifié en les
+REGARDANT, pas en le supposant.
+
+**La dixième rejoue les deux erreurs de l'ancienne**, et c'est un dessin
+donc aucun test ne peut le voir :
+`rente-mensuelle-affiliation-tiquiz.png` annonce **108 €/mois pour 30
+filleuls** (c'est 30 x 9 € x 40 %, l'ancien tarif : le bon chiffre est
+204 €) et montre le lien **`tipote.fr/tiquiz?sa=TON_ID`**, c'est à dire
+le domaine Systeme.io ET le paramètre que Béné a banni le 24 août. Un
+lien qui atterrit là ne paie plus personne. À redessiner ; l'épingle
+Pinterest en hérite.
+
+### Et le même 108 € vivait ENCORE dans la FAQ de l'article
+
+En vérifiant le chiffre du dessin contre le texte, la FAQ portait cinq
+faits dont **quatre faux**. Deux familles, et la seconde coûte le plus
+cher.
+
+**Des calculs restés au tarif d'avant le 6 août.** "Avec 30 filleuls
+actifs sur le mensuel, ta rente s'élève à 108 € par mois", alors que la
+phrase JUSTE AU DESSUS annonce 6,80 € par filleul (donc 204 €) et que le
+corps de l'article dit 204 €. Le même article se contredisait à deux
+paragraphes d'écart. Idem pour "1 800 € par an" sur 50 filleuls annuels,
+quand le corps dit 3 400 €. C'est le piège de l'import nommé le 29 août :
+la passe corrige les PRIX et laisse les CALCULS faits avec l'ancien prix.
+
+**Des promesses que le système contredit.** "versée automatiquement le 10
+de chaque mois" (c'est ENTRE le 10 et le 13), et surtout **"Pas de seuil
+de versement à atteindre"** alors qu'il y en a un, 20 €, plus un délai de
+30 jours. L'espace affilié le dit correctement depuis le 26 août ; le
+blog promettait l'inverse. Ça ne se découvre qu'au premier virement, et
+c'est le blog qui recrute : un gros affilié lit ici, constate là-bas, et
+ne revient pas. Même famille que les CGV du 22 août, dont l'article 5
+annonçait une renonciation que l'écran ne recueillait pas.
+Le kit annonçait aussi "un dashboard de suivi de ta rente sur Systeme
+io" : il vit sur `affiliate.tipote.com` depuis que le registre est chez
+nous.
+
+**Règle : `lib/blog/faitsProgramme.ts`**, appliqué par
+`npm run blog:reparer` et vérifié par `tests/logic/blog.test.mts`, qui
+appelle LA MÊME fonction : le contenu est propre quand la réparation ne
+change plus rien. Les montants se CALCULENT (`RENTE_PAR_FILLEUL`), ils ne
+se recopient pas, sinon le prochain changement de tarif laissera encore
+des calculs à l'ancien prix. Et **les faits passent AVANT la
+reponctuation** : reponctuer d'abord change les espaces autour des `€`,
+donc plus aucune phrase entière ne serait reconnue.
+
+**LA FAUTE QUE J'AI FAITE EN L'ÉCRIVANT, et qui vaut plus que la règle :**
+le motif de "1 800 € par an" portait une espace ORDINAIRE, l'article une
+INSÉCABLE. Le remplacement ne trouvait rien. **Et le contrôle échouait de
+la même façon, avec le même littéral : il répondait "aucun fait faux" sur
+un article qui portait encore le mauvais chiffre.** Un contrôle qui ne
+distingue pas ce qu'il est censé distinguer est pire qu'un contrôle
+absent (leçon des clés Supabase, 22 août). Les motifs acceptent
+maintenant n'importe quelle espace, et un test le fige.
+
+**Reste à trancher par Béné, pas par le code :** la FAQ promet des
+commissions sur Tipote "quand Tipote sort", avec des prix (19 € à
+917 €/mois) et un exemple à 39,60 €/mois. Tipote n'est pas en vente, et
+la règle du 8 juin dit qu'on n'en parle NULLE PART en affiliation.
+
+
+## Une vente PayPal paie sur le HT, comme une vente carte (Béné, 31 août 2026)
+
+"Pour l'affiliation on fait uniquement 40 % etc. sur le HT. Débrouille
+toi pour que sur PayPal ça marche aussi, il y a forcément un moyen de
+calculer chez nous la TVA si concerné ou pas et le montant de la
+commission, de manière fiable et stable."
+
+**Elle avait raison : le moyen existait déjà, il n'était pas branché.**
+
+### Ce que le code faisait, et pourquoi ça ne se voyait pas
+
+Le webhook PayPal envoyait `amountTaxCents: 0` et, deux lignes plus
+bas, `base: "ht"` à Tipote. **Le champ disait "hors taxes", le nombre
+était TTC.** Tipote faisait confiance au champ et ne retirait rien.
+
+Un paramètre obligatoire ne protège de rien quand on lui ment. C'est la
+limite de la règle du 1er août ("quand un cas a deux mécaniques, la
+mécanique est un PARAMÈTRE OBLIGATOIRE") : elle force l'appelant à
+DIRE, elle ne l'empêche pas de dire faux.
+
+| | ce qui était versé | ce qui est dû |
+|---|---|---|
+| Tiquiz mensuel, 17 € | 6,80 € | **5,67 €** |
+| Tiquiz annuel, 170 € | 68 € | **56,67 €** |
+| l'Atelier, 47 € à 70 % | 32,90 € | **27,42 €** |
+
+Les deux derniers chiffres de la troisième ligne sont EXACTEMENT ceux du
+drame du 19 août, où l'app annonçait 32,90 € et payait 27,42 €. On avait
+corrigé ce que l'app ANNONCE ; le chemin PayPal, lui, versait encore les
+32,90 €.
+
+### Le moyen : c'est la facture qu'on émet déjà
+
+Depuis le 24 août, **c'est NOUS qui émettons la facture d'une vente
+PayPal** (PayPal n'en émet aucune). `construireFacture` résout donc déjà
+le régime de TVA de l'acheteur (son pays, son numéro, la réponse de
+VIES) et décompose le TTC : France 20 %, autoliquidation 0 %, guichet
+unique au taux de SON pays, hors UE 0 %.
+
+`facturerEcheance` / `facturerVente` RENDENT maintenant la facture
+qu'elles viennent de construire, et la commission lit son `tvaCents`
+(`lib/facture/taxeVentePaypal.ts`). **Montant facturé et montant
+commissionné sortent du MÊME calcul, par construction** : les
+recalculer séparément est le défaut sorti six fois dans ce dépôt, et
+ici la contradiction se compterait en euros versés.
+
+**On ne devine JAMAIS un taux.** Un acheteur belge, un professionnel en
+autoliquidation et un acheteur hors UE n'ont pas la même taxe : un
+`0.2` posé quelque part les paierait tous les trois faux. Le test
+l'interdit dans les deux webhooks.
+
+### Sans facture, on retient et on crie
+
+Le seul cas sans facture est celui où tout a échoué. On ne rend PAS
+zéro : zéro veut dire "vente sans TVA", et ce serait faux neuf fois sur
+dix. On retient le taux du pays du vendeur, ce que `resoudreTva` fait
+déjà d'un pays inconnu, et **le journal le dit**.
+
+**Le sens du repli est ce qui compte** : retenir une TVA sur une vente
+qui n'en portait pas SOUS-paie l'affiliée, ce qui se corrige au lot
+suivant ; l'inverse SUR-paie, et un virement parti ne revient pas
+(règle de Tipote, 26 août).
+
+Corollaire : une taxe LÉGITIMEMENT à zéro (autoliquidation, hors UE)
+n'est pas un repli. Les confondre sous-paierait de 20 % chaque vente
+professionnelle.
+
+### Au passage, côté Atelier
+
+La commission utilisait `commande.amountTotalCents` (ce qu'on avait
+enregistré à la création de la commande) pendant que la facture
+utilisait le montant de la CAPTURE (ce qui a vraiment été payé, une
+remise comprise). Décomposer une TVA calculée sur un total et la retirer
+d'un AUTRE donne une base fausse qui a l'air juste. L'encaissement passe
+maintenant devant.
+
+Test : `tests/logic/commission-ht-paypal.test.mts`, dans les deux dépôts.
+
+
+## Poser un tag chez Systeme.io ne déclenche RIEN (mesuré le 31 août 2026)
+
+Béné : "tout bascule sur le nouveau système et les nouvelles pages,
+nouveau blog, nouveaux domaines, il faut bien que ce soit ça qui
+s'affiche pour les nouveaux partout."
+
+En allant basculer le bouton d'essai gratuit de la page de vente, une
+vérification a arrêté le geste, et c'est la bonne nouvelle du jour :
+elle a évité de casser ses emails.
+
+### Ce qui a été mesuré, dans son compte, par leur API
+
+| Question | Réponse de l'API |
+|---|---|
+| combien de règles d'automatisation | **51**, toutes actives |
+| combien se déclenchent sur `tag_added` | **aucune** |
+| sur quoi se déclenchent-elles | `form_subscribed`, toutes |
+
+🚨 **CETTE MESURE EST INVALIDE, ET LA CONCLUSION QUI EN A ÉTÉ TIRÉE
+AUSSI (corrigé le 31 août au soir).** Béné a envoyé la capture d'une
+règle « Tag "newsletter" ajouté -> S'abonner à la campagne Pépites
+365 », active dans son tableau de bord. Elle n'apparaît **nulle part**
+dans la réponse de l'API, même sans aucun filtre.
+
+**L'API de Systeme.io ne sait pas représenter ces règles.** Sur les 51
+qu'elle rend, aucune ne porte l'action « s'abonner à une campagne »,
+alors que ses tunnels en font évidemment. Elle ne montre donc qu'un
+SOUS-ENSEMBLE, et son silence ne veut rien dire.
+
+**C'est exactement la règle du 22 août, que j'ai enfreinte :** ne pas
+conclure "ça n'existe pas" d'une recherche qui n'a rien trouvé. Une
+recherche vide dit "je n'ai pas trouvé", pas "il n'y a rien". Je l'ai
+fait deux fois, le 31 août matin sur `tiquiz-free` et le soir sur
+`newsletter`, en présentant les deux comme des faits mesurés.
+
+**Ce qui est VRAI, et vérifié :** au moins une règle `tag_added` existe
+et abonne à une campagne. Poser le tag `newsletter` SUFFIT donc à
+inscrire quelqu'un à Pépites 365.
+
+**Ce qui reste INCONNU :** si `tiquiz-free` et les tags de vente
+ont la leur. **Le seul endroit où ça se vérifie est son tableau de bord**
+(https://systeme.io/dashboard/automation-rules), pas l'API. Ne plus
+jamais écrire ici qu'une règle n'existe pas sur la foi de cet outil.
+
+### Ce que ça casse déjà, en production
+
+- **`tiquiz.fr/signup`** (l'inscription gratuite, revenue chez nous le
+  27 août) : le compte est créé, le rattachement affilié est posé, le
+  contact est créé chez Systeme.io avec `tiquiz-free`... et il ne reçoit
+  rien. L'AGENTS.md de Tipote affirmait "ses séquences email partent
+  comme avant" : c'était faux, et c'est corrigé là-bas.
+- **`poserTagAchat` après une vente sur notre bon de commande** : même
+  chose. Le tag est posée, aucune séquence ne part.
+
+Le code d'`app/api/auth/signup/route.ts` le disait déjà, depuis le
+25 août : "aucune règle n'écoute encore `tiquiz-free`". C'est la
+documentation qui a écrit le contraire, et c'est elle qu'on relit.
+
+### Ce qu'on NE fait pas, et pourquoi
+
+**Le bouton d'essai gratuit de la page de vente reste sur leur optin**
+(`SALES_LINKS_LEFT_ALONE`). Le basculer sur `tiquiz.fr/signup`
+donnerait l'attribution affiliée et retirerait la séquence email : on
+échangerait un problème contre un autre, sur le chemin le plus
+fréquenté du site.
+
+**Le vrai déblocage est chez Béné, en deux minutes** : créer une règle
+d'automatisation avec le déclencheur "tag ajouté" sur `tiquiz-free`
+(puis sur les tags de vente), qui inscrit à la campagne. Une fois
+qu'elle existe, le bouton bascule et tout marche des deux côtés.
+
+**Règle générale : un tag posé par l'API n'est pas une séquence
+déclenchée.** Les deux se ressemblent et ne sont pas la même chose. Ce
+dépôt a écrit trois fois "son workflow écoute ce tag" sans
+l'avoir vérifié une seule fois. C'est la leçon d'Ivan (7 août), et celle
+des événements Stripe manquants (31 août) : **écrire le code n'est pas
+la dernière étape, vérifier que le fournisseur envoie ou écoute quelque
+chose l'est.**
+
+### RÉSOLU LE 1er SEPTEMBRE : les deux règles existent, et elles marchent
+
+Béné : "c'est ok côté systeme io note le quelque part, le signup ajoute
+le tag tiquiz free, et de mon côté j'ai un workflow qui envoie la
+campagne tiquiz free."
+
+| Le tag | Sa règle chez Systeme.io | Qui le pose chez nous |
+|---|---|---|
+| `tiquiz-free` | -> campagne **Tiquiz free** | `tiquiz.fr/signup` |
+| `tiquiz-clients` | -> campagne **Tiquiz abonnement** | `grantPlanByEmail`, toute vente encaissée par nous |
+
+**Ce n'est plus un inconnu, c'est un fait**, et il ferme le trou décrit
+plus haut : l'inscription gratuite envoie bien sa séquence.
+
+**LE PALIER NE DÉCLENCHE RIEN, ET C'EST LA TROUVAILLE.** Béné, le même
+jour : "il faut que tu ajoutes le tag tiquiz-clients pour faire partir
+la campagne tiquiz abonnement à chaque vente sur notre système." Son
+workflow n'écoute pas `tiquiz-mensuel` : il écoute `tiquiz-clients`. Un
+client payé sur notre bon de commande portait donc son palier, et
+n'entrait dans AUCUNE séquence. `readSioClientTag` (`lib/sio/tags.ts`)
+décide, `grantPlanByEmail` pose les deux tags SÉPARÉMENT (une panne
+n'emporte pas l'autre), et un échec CRIE dans le journal.
+
+**Le tag s'AJOUTE au palier, il ne le remplace pas** : ses segments et
+ses filtres sont bâtis sur `tiquiz-mensuel` et compagnie. Et `free` en
+est exclu : il a déjà SA campagne, et marquer client quelqu'un qui n'a
+rien payé fausserait le seul segment qui compte pour ses relances.
+
+**MESURÉ le 1er septembre avant d'écrire une ligne** : le tag existe
+dans son compte (id 2156863, créé le jour même). On ne CRÉE jamais un
+tag (règle du 22 août) : un nom inventé ou mal orthographié se
+retrouverait en double et sa règle continuerait de pointer l'autre.
+
+**Et l'API reste aveugle, re-vérifié le même jour :** interrogée sur les
+règles `tag_added`, elle rend **zéro**, alors que ces deux règles
+existent et fonctionnent. Son silence ne veut toujours rien dire. Le
+seul endroit où une règle se vérifie est son tableau de bord.
+
+**QUESTION CLOSE LE 3 SEPTEMBRE.** Béné : "c'est ok j'ai vérifié tu peux
+le noter pour arrêter de m'en reparler stp ?" Elle a passé en revue ses
+règles d'automatisation dans son tableau de bord. **Ne plus lui reposer
+la question**, et ne plus ouvrir de tâche là dessus : le sujet est
+tranché par elle, pas par une mesure de notre côté, et c'est le seul
+endroit où il POUVAIT l'être.
+
+**Ce qui reste ouvert :** une vente arrivée par un TUNNEL Systeme.io ne
+passe pas par `grantPlanByEmail`, donc elle ne reçoit pas
+`tiquiz-clients` de notre part. Chez elle, une règle "tag
+`tiquiz-mensuel` ajouté -> ajouter `tiquiz-clients`" couvrirait ces
+ventes là sans une ligne de code.
+
+
+## Toutes les images en 403 : le garde-fou était à l'étage du dessous (31 août 2026)
+
+Béné : "toutes les images sont cassées c'est pas normal", puis "j'ai
+même plus les favicon putain", puis "a priori tous les champs pour
+ajouter des images ont disparu de tiquiz !!! Tu as fait quoi ???". Et,
+en même temps, une vraie cliente : "Damien a perdu tous ses visuels de
+quiz".
+
+**Trois symptômes, UNE cause, et AUCUN fichier perdu.**
+
+### Ce qui s'est passé
+
+Les images ont été basculées sur le serveur des vidéos cette semaine,
+pour économiser Supabase. Le bloc qui sert `/assets/` a été écrit dans
+`infra/nginx/videos.*.conf`... alors que c'est **Caddy** qui répond sur
+`videos.quiz.tipote.com`. nginx ne voit jamais ces requêtes.
+
+`/assets/<image>.webp` tombait donc dans le `handle` des VIDÉOS, qui
+exige un lien signé (`forward_auth` -> `/_validate-secure-link`). Aucune
+image n'en porte, donc Caddy répondait `403 forbidden` à TOUTES les
+images de TOUTES les créatrices, d'un coup.
+
+**Deux fautes empilées, et il fallait les deux corrections :** même avec
+une signature valide, la racine du site est `/srv/popquiz-videos`, donc
+l'image aurait été cherchée dans le dossier des vidéos.
+
+### LE 403 ÉTAIT LE DIAGNOSTIC, et c'est ce qu'il faut retenir
+
+Un fichier absent rend **404**. Un **403** dit que le refus vient de
+l'AUTHENTIFICATION, pas du disque. Partir chercher des fichiers perdus
+aurait été chercher au mauvais endroit pendant des heures, alors que
+tout était sur le serveur, refusé à la porte.
+
+Confirmé par deux sondes qui distinguent les deux blocs, avant d'écrire
+la moindre ligne : `OPTIONS /assets/x.webp` répondait **204** (le bloc
+`/assets` n'a aucun gestionnaire d'`OPTIONS`, celui des vidéos oui), et
+le corps du 403 faisait 9 octets, `forbidden`, donc Caddy et pas nginx.
+
+### Le troisième symptôme n'en était pas un
+
+"Tous les champs pour ajouter des images ont disparu" : ils n'ont pas
+bougé. `QuizDetailClient` rend l'aperçu **à la place** du bouton d'ajout
+dès qu'une image existe (`imgUrl ? <img> : <label>Image de la
+question</label>`). Un aperçu en 403 se lit donc "le champ a disparu".
+**Un symptôme rapporté est une observation, jamais un diagnostic.**
+
+### Les garde-fous, et pourquoi il en faut deux
+
+| Quand | Quoi | Ce qu'il attrape |
+|---|---|---|
+| avant le push | `tests/logic/assets-servis.test.mts` | le Caddyfile ne sert plus `/assets/`, ou depuis le mauvais dossier, ou derrière la signature |
+| après le déploiement | `npm run check:assets` | la CONFIG VIVANTE refuse encore |
+
+**`check:assets` distingue ce qu'il est censé distinguer**, et c'est
+tout son intérêt (leçon des clés Supabase, 22 août) : il demande un nom
+qui n'existe PAS exprès. **404 = la route est saine**, 403 = la panne.
+Il n'a donc besoin ni d'un vrai fichier, ni d'un secret. Vérifié le jour
+même contre la production : il sort en rouge sur la panne en cours.
+
+**`handle` et PAS `handle_path`** dans le Caddyfile : ce sont deux
+directives différentes dans l'ordre de Caddy, et l'attrape-tout des
+vidéos est un `handle`. Avec la même directive, l'ordre d'écriture fait
+foi, et il se lit dans le fichier.
+
+**Et le chemin ne vit plus qu'à un endroit** : `DOSSIER_ASSETS_DEFAUT`
+(`lib/storage/cheminAsset.ts`, module pur donc testable). Il était écrit
+dans la route d'envoi et dans nginx, sans que rien ne les compare.
+
+### La leçon, plus grande que cette panne
+
+C'est la version « mauvais serveur » du garde-fou non fusionné du
+23 août. **Écrire un bloc de configuration n'est pas la dernière étape ;
+vérifier que c'est bien LUI qui répond l'est.** Le fichier était juste,
+correctement commenté, testé par l'oeil, et adressé à un serveur qui ne
+voit jamais ces requêtes.
+
+## Le formulaire de la newsletter : 502 muet, et la campagne qui n'est pas abonnée (31 août 2026)
+
+Béné teste `tiquiz.fr/newsletter` : "Je n'ai pas réussi à t'inscrire".
+La console dit `api/newsletter: 502`. Le reste de ses messages de
+console (des `preload ... not used`) est du bruit sans rapport.
+
+### 1. CINQ CAUSES ÉCRASÉES EN UN SEUL `false`
+
+`poserTagParNom` rendait un booléen. Un `false` pouvait vouloir dire :
+pas de compte administrateur, aucune clé Systeme.io connectée, contact
+impossible à créer, tag introuvable, ou pose refusée. **Un
+booléen ne dit pas où chercher**, et le journal disait "vérifier la clé
+API et l'existence du tag", c'est à dire DEUX pistes sur cinq.
+
+C'est le drame du 19 août ("trois causes, un seul message : le 404
+muet") dans une autre famille. `poserTagParNomDetaille` rend une
+RAISON ; `poserTagParNom` reste un booléen pour les webhooks de vente,
+qui ne doivent jamais bloquer un accès payé.
+
+La raison SORT aussi dans la réponse HTTP : sans elle, diagnostiquer
+demande un accès au serveur. Aucune de ces valeurs n'est un secret,
+elles nomment un état de configuration.
+
+### 2. CE QUI A ÉTÉ MESURÉ DANS SON COMPTE, ET QUI CHANGE LA CONCLUSION
+
+| Question | Réponse |
+|---|---|
+| le tag `newsletter` existe-t-il | **oui**, id 263284, créé en 2022 |
+| le contact de test a-t-il été créé | **NON** : l'échec est à la création |
+| une règle écoute-t-elle `tag_added` sur ce tag | **OUI**, vérifié par Béné dans son tableau de bord (l'API ne la voit pas) |
+| la règle 1273770 fait quoi | déclencheur `form_subscribed`, action `add_tag` |
+| "Pépites 365" est-elle une campagne | **oui**, id 1172338 |
+
+**J'ai conclu de ce relevé que poser le tag ne déclencherait rien.
+C'ÉTAIT FAUX.** Béné a envoyé la capture de sa règle « Tag
+"newsletter" ajouté -> S'abonner à la campagne Pépites 365 », active.
+L'API ne la rend pas, même sans filtre : elle ne sait pas représenter
+ces règles (aucune des 51 qu'elle montre ne porte l'action « abonner à
+une campagne »).
+
+**Donc, pour la newsletter : poser le tag SUFFIT.** La chaîne est
+complète dès que le 502 est réparé.
+
+**Et la vraie leçon est sur la MÉTHODE, pas sur Systeme.io.** L'API
+n'a aucun point d'entrée pour abonner un contact à une campagne (ça,
+c'est vérifié : seul `assign_contact_tag` existe), et j'en ai déduit
+qu'elle ne pouvait pas non plus me MONTRER une règle qui le fait. Un
+outil qui ne sait pas FAIRE quelque chose ne sait pas forcément le
+VOIR non plus : son silence n'est pas une réponse. La vérification se
+fait dans son tableau de bord.
+
+### 3. UNE ADRESSE QUE J'AI REMPLACÉE ALORS QU'ELLE ÉTAIT BONNE
+
+Le message d'échec disait "écris à hello@tiquiz.fr". J'ai affirmé que
+cette adresse n'existait nulle part ailleurs et je l'ai remplacée.
+Béné : "si on l'a mise en place hier, c'est l'adresse qu'on utilise
+pour tiquiz et l'atelier maintenant, c'est réglé sur cloudflare, resend
+et dans le .env."
+
+Ma source était un COMMENTAIRE périmé de `lib/email/tiquizShell.ts`,
+qui disait que l'expéditeur "reste hello@tipote.com" alors que le code
+juste en dessous lit `SUPPORT_FROM_EMAIL`. Le commentaire a été
+corrigé, et l'écran lit maintenant `adresseExpediteur()`, c'est à dire
+LA MÊME SOURCE que l'expéditeur des emails.
+
+**Un commentaire n'est pas une mesure.** C'est la troisième fois que ce
+dépôt paie une règle écrite en commentaire et démentie par le code
+(le `w-full h-auto` des images de réponse, l'`ADD_ATTR: ["target"]` des
+liens légaux, et celle-ci).
+
+**Une adresse écrite à la main dans un message d'erreur est une adresse
+que personne ne vérifiera jamais**, parce qu'on ne lit ce message que le
+jour où quelque chose est déjà cassé.
+
+
+## L'inscription newsletter : TROIS blocages empilés, et aucun n'était celui qu'on croyait (31 août 2026)
+
+Suite de la section précédente. Béné, après trois déploiements : "j'ai
+mis la clé, elle est valide, une clé systeme.io fonctionnelle (pas
+celle de mon compte tiquiz utilisateur). Pas mieux."
+
+Elle avait raison à chaque fois, et à chaque fois la cause était
+ailleurs. Les trois se cachaient l'une derrière l'autre : chaque
+correction découvrait la suivante.
+
+### 1. LE CHEMIN QUI MÈNE À LA CLÉ, PAS LA CLÉ
+
+La sonde de production répondait `aucune_cle`, et j'en ai conclu qu'il
+fallait poser la clé dans le `.env`. Béné : "ma clé systeme io elle
+n'est pas dans le .env, elle est dans mon compte Tiquiz." Elle y était
+bien. Ce qui cassait, c'est ce qui mène à elle.
+
+Pour aller la chercher, on résout d'abord l'identifiant du compte
+ADMINISTRATEUR, et on le cherchait dans `profiles.email`. Cette colonne
+est **NULLABLE et aucun déclencheur ne la remplit**
+(`001_initial_schema.sql`) : un compte ouvert avant que `grantPlan` ne
+l'écrive n'y a aucune adresse. Chercher un admin là, c'est chercher
+dans un annuaire à moitié rempli.
+
+`auth.users` est la seule table où une adresse est garantie :
+`idProprietaireViaAuth` l'interroge en repli, sur les deux adresses
+admin, avec la même pagination que `grantPlanByEmail`.
+
+### 2. UNE CLÉ REFUSÉE SE LISAIT "CONTACT IMPOSSIBLE"
+
+Une fois la clé trouvée, la sonde répondait `contact_impossible`, ce qui
+envoie chercher du côté du contact. Or un 401 rend `null` sur la
+RECHERCHE comme sur la CRÉATION : les deux se lisaient pareil. C'est le
+défaut que ce fichier existe pour corriger, une couche plus bas.
+
+`cle_refusee` (401/403) est maintenant une raison à part.
+
+**ET ON N'ARBITRE PAS ENTRE LES DEUX CLÉS.** Il en existe deux (son
+compte Tiquiz, et le `.env`), et rien dans le code ne peut savoir
+laquelle marche. Choisir un ordre définitif serait un pari dans les deux
+sens : faire gagner le `.env` fait gagner une valeur périmée le jour où
+elle change sa clé dans l'écran Paramètres ; faire gagner la base est ce
+qui bloquait. **On les essaie**, un refus passe à la suivante, et le
+journal dit laquelle a été acceptée. Jamais deux fois la même valeur :
+sinon le journal dirait "deux clés refusées" pour une seule.
+
+### 3. ET LE TAG ÉTAIT HORS DE PORTÉE DEPUIS LE DÉBUT
+
+C'est la trouvaille qui compte, et elle est MESURÉE dans son compte, pas
+déduite :
+
+| Question | Réponse |
+|---|---|
+| combien de tags | plus de 100 (`hasMore: true`) |
+| les 100 plus récentes s'arrêtent quand | **24 mars 2025** |
+| quand a été créée `newsletter` | **30 juillet 2022** |
+| quand ont été créées `tiquiz-free`, `tiquiz-mensuel`... | avril 2026 |
+
+`trouverTag` demandait `?limit=200`. **Le maximum accepté par
+Systeme.io est 100.** Le tag `newsletter` était donc INTROUVABLE,
+et l'inscription ne pouvait pas aboutir **même avec une clé
+parfaitement valide**. Les tags de VENTE, elles, sont dans la
+première page : c'est exactement pour ça que le tagging des achats
+marchait et que celui de la newsletter n'avait jamais eu la moindre
+chance.
+
+On pagine (`startingAfter`), borné à 30 pages : un webhook de paiement
+ne reste pas ouvert indéfiniment.
+
+**C'est la leçon des 51 règles d'automatisation, payée deux fois dans
+la même semaine : une liste tronquée ne dit pas qu'elle est tronquée.**
+Ici elle le disait (`hasMore`), et personne ne le lisait.
+
+### La méthode qui a fini par trancher
+
+Les trois causes ont été trouvées en INTERROGEANT son compte Systeme.io,
+pas en relisant le code : le contact de test n'existait pas, le même
+corps de création (`{email, locale}`) était accepté par l'API, la liste
+des tags s'arrêtait en mars 2025. Trois mesures, trois minutes.
+
+Le contact créé pour ce test a été supprimé après.
+
+Test : `tests/logic/newsletter-cle.test.mts`.
+
+
+## Un 5xx devant un formulaire perd sa raison (mesuré le 31 août 2026)
+
+Béné : "le test d'inscription gratuite avec un ref ne fonctionne pas :
+`/api/auth/signup` 502. Du coup c'est top, on attire du trafic et les
+gens peuvent même pas s'inscrire, ça inspire vachement confiance."
+
+**Le compte ÉTAIT créé.** Vérifié en sondant la production puis en
+regardant son compte Systeme.io : le contact portait déjà `tiquiz-free`
+à la seconde près. Le seul geste qui avait échoué était le DERNIER,
+l'envoi de l'email par Resend. Et l'écran annonçait l'inverse.
+
+### Pourquoi l'écran mentait
+
+La route répondait **502**, et Cloudflare, qui sert nos six domaines
+(relevé le même jour : `server: cloudflare` sur les six), **remplace le
+corps d'un 502** par sa propre page, `error code: 502` en text/plain.
+Le `res.json()` du formulaire échouait donc, `reason` valait
+`undefined`, et l'écran affichait sa phrase par défaut : "Erreur lors
+de la création du compte."
+
+La phrase JUSTE existait déjà (`errEmailFailed` : "ton compte est créé
+mais l'email de confirmation n'est pas parti"). Elle n'arrivait jamais.
+Et un deuxième essai répondait "adresse déjà inscrite", ce qui achevait
+de faire croire à un système cassé.
+
+**Mesuré deux fois le même jour**, sur deux routes indépendantes : le
+formulaire de la newsletter le matin, l'inscription l'après-midi. Un
+400 de validation, lui, revient avec notre JSON intact.
+
+### La règle
+
+**Un refus MÉTIER sur un chemin lu par un NAVIGATEUR répond 200 avec
+`ok: false` et sa raison.** Les 4xx restent (ils passent intacts et ils
+disent la bonne chose). Un 5xx ne se justifie que là où un FOURNISSEUR
+doit réessayer, c'est à dire dans un webhook : un navigateur ne
+réessaie rien tout seul, donc le statut ne lui sert à rien et le corps
+lui sert à tout.
+
+Corrigés le 31 août : `auth/signup` (4 sorties), `newsletter`,
+`commande/session`, `commande/paypal`, `depart`. Garde-fou :
+`tests/logic/corps-avale-par-cloudflare.test.mts`, qui exige aussi que
+les webhooks GARDENT leurs 5xx.
+
+**Restent en 5xx, volontairement :** les écrans d'`/admin` (Béné y a
+accès au serveur).
+
+🚨 **ET CETTE PAGE A DIT UNE CHOSE FAUSSE ICI (corrigé le 1er septembre).**
+Elle écrivait que les routes de génération IA gardaient leurs 5xx "dont
+`aiFailure.ts` traduit déjà le statut côté client". **`aiFailure.ts`
+n'existait pas dans ce dépôt** : il ne vivait que dans formaquiz. La
+doc décrivait donc comme actif un garde-fou absent, ce qui est pire
+qu'une doc muette, et c'est exactement la faute du 23 août (un
+garde-fou écrit sur une branche et jamais fusionné, décrit ici comme
+en place pendant 24 heures).
+
+Il existe maintenant (`lib/aiFailure.ts`), il est le jumeau de celui de
+l'Atelier, et il ne porte AUCUNE phrase : l'interface existe en 7
+langues, donc le serveur rend la RAISON et l'écran la traduit. La route
+des générateurs répond 200 avec `ok: false`, jamais 5xx.
+
+**FAIT LE 3 SEPTEMBRE : les six chemins IA y passent aussi.**
+`/api/quiz/generate`, `rebalance`, `rewrite`, `gender-variants`,
+`idea-chat` et `/api/embed/quiz/generate` répondaient encore en 500,
+502, 503 ou 504 : leur raison n'atteignait jamais la créatrice.
+
+**ET LE DÉFAUT ÉTAIT PIRE QUE LE STATUT.** `/api/quiz/generate`
+renvoyait `{ error: "Claude API key missing on the server." }` et le
+client AFFICHAIT ce champ tel quel : une créatrice espagnole lisait une
+phrase technique en anglais. Le rééquilibrage, lui, faisait
+`setRebalanceError(data?.error ?? "Une erreur est survenue.")`, donc une
+phrase FRANÇAISE écrite en dur dans une interface qui existe en
+7 langues. C'est la faute des replis "Résultat 4" du 1er septembre.
+
+**Règle : `lib/ia/echecIa.ts` répond, `hooks/useEchecIa.ts` traduit.**
+Le serveur rend une RAISON, jamais une phrase. Les 9 raisons vivent dans
+le namespace `erreursIa` des 7 fichiers de `messages/`, en phrases
+NEUTRES : les mêmes servent la génération d'un quiz, un rééquilibrage et
+les générateurs. Une raison inconnue retombe sur `generic`, elle
+n'affiche JAMAIS sa clé.
+
+**LE DISCRIMINANT EST LE `Content-Type`, PAS LE STATUT**
+(`lib/ia/lireEchecIa.ts`). Ces routes STREAMENT : un flux répond
+`text/event-stream`, un échec `application/json`. Le client testait
+`res.ok` puis lisait `res.body` ; avec un 200 nu il aurait cherché un
+flux qui n'existe pas, donc attendu un quiz qui n'arrive jamais. C'est
+le piège de ce chantier, et il ne se voit pas en lisant le statut.
+
+**Deux routes gardent leur corps tel quel, et c'est délibéré.**
+`gender-variants` affiche déjà une phrase traduite avec le CODE entre
+parenthèses pour le diagnostic (design commenté sur place), et la démo
+de la page de vente porte des messages de déploiement en français. Là,
+seul le statut empêchait le corps d'arriver : le corps ne change pas.
+
+**Le 429 reste un 429**, comme tous les 4xx : ils passent intacts à
+travers Cloudflare et ils disent la bonne chose.
+
+Le test `corps-avale-par-cloudflare.test.mts` couvre maintenant les 11
+chemins, exige les 9 raisons dans les 7 langues, et refuse qu'un écran
+recopie le champ `error` du serveur. Vérifié en rejouant trois versions
+d'avant : les trois rougissent. **Le module quiz de Tipote est jumeau :
+les 5 mêmes routes y portaient les mêmes 5xx, la correction y vit
+aussi.**
+
+### Et ce qu'il reste à faire, qui n'est PAS du code
+
+Resend refuse l'envoi. La cause exacte est dans le journal, à une
+commande :
+
+```bash
+pm2 logs tiquiz-prod --nostream --lines 200 | grep -i "signup\|Resend"
+```
+
+`sendTiquizEmail` écrit `Resend a refuse <statut> <corps>`. Le suspect
+le plus probable est le domaine `tiquiz.fr`, basculé le 30 août :
+tant qu'il n'est pas VÉRIFIÉ chez Resend (SPF et DKIM posés dans
+Cloudflare et validés), tout envoi depuis `hello@tiquiz.fr` est refusé,
+y compris les liens de connexion.
+
+## Un segment d'URL n'est PAS décodé par Next (31 août 2026)
+
+Béné ouvre une fiche client depuis le pilotage. Le titre affiche
+`blagardette%2Btestaffi2%40gmail.com`, et surtout la ligne "Amené par"
+ne s'affiche jamais.
+
+Ce n'était pas un défaut cosmétique. La ligne se cherche dans une table
+indexée par l'adresse RÉELLE :
+
+```
+attributions["blagardette%2Btestaffi2%40gmail.com"]  ->  undefined
+```
+
+Et comme **`@` s'encode toujours en `%40`** dans un segment d'URL, la
+recherche échouait pour TOUT LE MONDE, pas seulement pour les adresses à
+`+`. Le suivi d'affiliation avait donc l'air de ne connaître personne,
+alors que la donnée était là.
+
+**Et la cause est un commentaire qui affirmait le contraire :** la page
+portait "Next décode déjà le segment : `a%40b.fr` arrive en `a@b.fr`."
+C'est faux. Sa jumelle `app/admin/clients/[email]` décodait, elle. Un
+garde-fou qui ne protège qu'un des deux jumeaux ne protège personne, et
+une règle écrite en commentaire n'est pas une règle : c'est la
+quatrième fois que ce dépôt paie exactement ça.
+
+**Règle : `lireEmailParam()` (`lib/admin/emailParam.ts`), et pas un
+`decodeURIComponent` recopié.** Il ne LÈVE jamais (`decodeURIComponent`
+jette `URIError` sur un `%` isolé, et une fiche qui répond 500 est pire
+qu'une adresse imparfaite), et il normalise en minuscules, puisque
+c'est sous cette forme que l'adresse sert de clé partout ailleurs.
+
+**Le `+` n'est PAS converti en espace.** C'est dans une QUERY qu'il vaut
+une espace, pas dans un CHEMIN. Le convertir casserait toutes les
+adresses en `+alias`, c'est à dire exactement celles avec lesquelles on
+teste l'affiliation.
+
+L'autre moitié de cette panne vit chez Tipote : l'attribution ne se
+construisait que sur les ventes, jamais sur les inscriptions gratuites.
+
+## Le repli d'expéditeur partait d'un domaine non vérifié (31 août 2026)
+
+Béné : "je n'ai reçu que l'email de bienvenue venant de Systeme.io, pas
+celui qu'on est censés envoyer."
+
+`REPLI_EXPEDITEUR` valait `hello@tipote.com`, et le commentaire à côté
+justifiait ce choix : "c'est le domaine vérifié de longue date chez
+Resend". **Relevé dans son compte Resend le 31 août, c'est faux.** Les
+domaines vérifiés sont `tiquiz.fr`, `atelierduquiz.fr` et
+**`send.tipote.com`** : `tipote.com` tout court n'y est pas.
+
+Donc, dès que `SUPPORT_FROM_EMAIL` manque dans le processus, l'app écrit
+depuis un domaine que Resend REFUSE, et **plus aucun email ne part**,
+liens de connexion compris.
+
+C'est le `??` du 2 août dans une autre robe : **une valeur par défaut
+qu'on n'a jamais essayée n'est pas un garde-fou, c'est une hypothèse.**
+Et le test la figeait, avec pour justification "un repli doit être ce
+qui marche à coup sûr" : personne n'avait vérifié que ça marchait.
+
+Le repli est maintenant `hello@tiquiz.fr`. Le contrôle de démarrage
+(`lib/env/expediteur.ts`) continue de crier quand la variable manque :
+un repli qui marche reste un repli silencieux.
+
+## Une clé Resend appartient à un COMPTE, pas au domaine qu'on regarde (31 août 2026)
+
+Deux sources se contredisaient, et les deux disaient vrai :
+
+| Source | Ce qu'elle disait |
+|---|---|
+| le tableau de bord de Béné | `tiquiz.fr` -> **Verified** |
+| `pm2 logs tiquiz-prod` | `The tiquiz.fr domain is not verified` |
+
+**Une clé Resend appartient à un compte (et à une équipe).** Le tableau
+de bord montre le compte qu'on REGARDE ; l'API répond pour le compte de
+la clé qu'on ENVOIE. Quand les deux diffèrent, un domaine peut être
+parfaitement vérifié d'un côté et inconnu de l'autre, et **rien à
+l'écran ne le dit**.
+
+Pendant ce temps, AUCUN email ne partait, et le journal le montre sur
+cinq chemins différents : `signupEmail`, `magicLinkEmail`,
+`passwordResetEmail`, `responseNotification`, `resellerEmail`. Une
+inscription créait bien le compte et laissait la personne dehors.
+
+**Règle : on ne déduit pas d'un tableau de bord ce que l'API répondra.**
+
+```bash
+npm run check:resend
+```
+
+Il demande à Resend, AVEC LA CLÉ QUE L'APP UTILISE VRAIMENT, la liste
+des domaines qu'elle voit, et la compare à l'adresse d'expédition
+résolue. Il existe dans les TROIS dépôts, parce qu'un garde-fou qui ne
+protège qu'un des jumeaux ne protège personne. Il n'imprime jamais la
+clé, seulement son préfixe et sa longueur (règle du 22 août).
+
+C'est la même leçon que les images en 403 : **quand un changement
+déplace l'endroit d'où quelque chose est SERVI, la dernière étape n'est
+pas d'écrire la configuration, c'est d'aller lire la réponse.**
+
+### CE QUI A RÉELLEMENT DÉBLOQUÉ, ET CE QUE MON CONTRÔLE A DIT DE FAUX
+
+Le contrôle a répondu **401** sur la clé du serveur. Béné l'a remplacée
+par celle du compte où `tiquiz.fr` est vérifié, et **les emails
+partent**.
+
+Mais le message que ce contrôle affichait était FAUX, et il faut le
+dire : il annonçait "elle est révoquée, mal recopiée, ou elle n'a pas
+le droit de lire", en mettant les trois sur le même plan. Or **une clé
+Resend en `Sending access` répond 401 sur `/domains` tout en
+fonctionnant parfaitement** : elle sait envoyer, elle n'a pas le droit
+de lister. Sa capture d'écran le montrait d'ailleurs, colonne
+Permission.
+
+Le geste a été le bon par chance, pas par diagnostic. **Un contrôle qui
+ne distingue pas ce qu'il est censé distinguer est pire qu'un contrôle
+absent** (leçon des clés Supabase, 22 août), et je venais de la refaire
+dans l'outil écrit pour l'appliquer. Le script nomme désormais les deux
+causes, dit où trancher (la colonne Permission), et rappelle que le
+journal du serveur, lui, dit toujours la vérité.
+
+**Et ça vaut aussi pour Tipote**, qui retombe sur `hello@tipote.com`
+alors que le compte relevé ce jour là vérifie `send.tipote.com` et pas
+`tipote.com`. On ne l'a PAS changé : quelle adresse Tipote doit employer
+est une décision de Béné, pas une déduction. Le contrôle est là pour
+qu'elle la prenne en connaissance de cause.
+
+### Le bloc de qualification : trois passages, et le troisième est le bon (2 septembre 2026)
+
+Béné, sur le premier jet : "le quiz est moche, il prend trop de place :
+il faut pouvoir le voir sans scroller. En plus les questions sont
+balourdes, elles ne permettent pas vraiment de déterminer si OUI ou NON
+Tiquiz est fait pour le visiteur."
+
+Puis, sur le deuxième (les trois questions en colonnes) : "est-ce que
+toi, en tant que visiteur tu comprends que c'est un quiz et que tu dois
+cliquer pour savoir si Tiquiz est fait pour toi ?? C'est moche pas
+ergonomique, pas un 'vrai' quiz, pas pratique, trop compliqué, trop
+restrictif, pas assez bien écrit."
+
+**Six reproches, UNE cause : j'avais fait un FORMULAIRE, pas un quiz.**
+Un quiz pose UNE question, on clique, on avance, on obtient un résultat.
+Un formulaire montre tout d'un coup et attend qu'on remplisse. Corriger
+le premier jet en resserrant la mise en page (les colonnes) n'a réglé
+que la hauteur, et a laissé les cinq autres reproches intacts.
+
+| Ce qu'elle a vu | Ce qui le causait |
+|---|---|
+| on ne comprend pas qu'il faut cliquer | des libellés plats, bord gris clair, aucune affordance |
+| pas un "vrai" quiz | trois questions ensemble, aucune progression, aucun résultat qui ARRIVE |
+| trop compliqué | six options à lire avant de bouger le doigt |
+| trop restrictif | UNE réponse discordante sur trois donnait un refus sec |
+| pas assez bien écrit | du vocabulaire d'outil ("branches conditionnelles poussées") |
+| moche | trois colonnes serrées à 16 px de gouttière |
+
+**Ce qui change, et les quatre points comptent :**
+
+1. **UNE question à la fois**, avec une barre de progression et
+   "Question 1 sur 3". C'est ce qui fait qu'un quiz se lit comme un quiz.
+2. **Deux gros boutons** pleine largeur, fond bleu clair, flèche à
+   droite, qui montent au survol. On ne peut plus les prendre pour du
+   texte.
+3. **TROIS verdicts**, plus deux. Le refus sec sur une seule réponse
+   était le "trop restrictif" : quelqu'un qui veut des leads ET une
+   maquette au pixel près se faisait renvoyer, alors que Tiquiz lui va
+   très bien sur l'essentiel. Trois réponses discordantes restent un
+   vrai non ("Franchement, non."), et le bloc garde donc sa capacité à
+   faire sortir quelqu'un.
+4. **Un bouton Recommencer**, en `<input type="reset">` NATIF : sans
+   lui, on ne peut plus rien changer une fois la troisième réponse
+   donnée. Le `<form>` n'existe que pour ça, et il est sûr : la page
+   capturée n'en contient aucun autre (mesuré), donc pas d'imbrication.
+
+**LES TROIS REFUS SONT VRAIS, et ce sont exactement les trois secondes
+options** : un résultat rédigé sur mesure pour chaque visiteur (Tiquiz
+attribue un profil PRÉÉCRIT, `lib/quizScoring.ts`), des logiques
+conditionnelles avancées (le parcours est linéaire), un design au pixel
+près. Une question de qualification qui ne peut faire sortir personne
+n'en est pas une : c'est ce qui avait tué le tout premier jet ("tu vends
+quelque chose ?", "tu es prêt à relire l'IA ?").
+
+**Le bloc dit le POSITIONNEMENT, c'est son vrai sujet.** Béné : "Tiquiz
+c'est pour les personnes qui veulent capturer des leads et il est
+optimisé pour ça, pas pour établir un diagnostic ultra personnalisé ni
+pour évaluer finement une personne. [...] c'est UNE partie du système
+complet." On ne vend pas un outil de diagnostic, on vend la PORTE
+D'ENTRÉE d'un système, et les trois verdicts le disent.
+
+**ZÉRO JAVASCRIPT, et ce n'est pas un caprice** : c'est un script qui a
+tué la FAQ de cette page le matin même. Boutons radio + CSS `:has()`
+pour l'enchaînement et les verdicts, `<input type="reset">` pour
+repartir. Un bloc qui n'a besoin de rien ne peut pas se casser quand on
+retire quelque chose.
+
+**LA HAUTEUR EST RÉSERVÉE AUTOUR DE LA CARTE, PAS DEDANS.** Mesuré à
+1280x900 et 1440x800 : **763 px dans les CINQ états** (repos, question
+2, et les trois verdicts), donc la page ne bouge pas d'un pixel au
+moment exact où on la lit. Posée DANS la carte, la réserve affichait
+140 px de vide sous une question courte ; dehors, c'est du fond blanc,
+donc invisible. Et la ligne "Recommencer" vit hors de la carte, donc
+`min-height` ne l'absorbe pas : elle est en `visibility:hidden`, pas en
+`display:none`, sinon la page se décalait de 37 px.
+
+**Et la mesure porte sur le GESTE, pas sur l'état au repos** (la leçon
+de la FAQ, le même jour) : la sonde CLIQUE vraiment, vérifie que
+l'étape 1 disparaît, que l'étape 2 s'affiche, que la jauge avance de
+32 px à 187 px, que les trois combinaisons donnent les trois verdicts et
+que Recommencer remet tout à zéro.
+
+**Ce que ce bloc n'est PAS :** un quiz Tiquiz. Aucune capture d'email,
+aucun tag, aucun profil, rien qui parte nulle part, et le test l'exige.
+
+Garde-fou : les trois tests de `tests/logic/page-vente-v2.test.mts`,
+vérifiés en rejouant QUATRE versions d'avant (les trois étapes affichées
+d'un coup, le verdict nuancé retiré, la reprise en `display:none`, les
+options sans relief) : les quatre rougissent.
+
+**Et ma faute en écrivant le test, qui est la sixième de la semaine :**
+mes assertions CSS passaient par `texteVisible()`, qui retire le
+`<style>`. Elles portaient donc sur une chaîne d'où la règle testée
+avait été enlevée. `regles()` lit le fichier sans les commentaires mais
+AVEC le CSS. Un contrôle qui ne distingue pas ce qu'il est censé
+distinguer est pire qu'un contrôle absent, et il faut le rappeler à
+chaque helper de test qu'on écrit, pas seulement aux clés d'API.
+
+### Les portraits : 1024 x 1024 pour un affichage en 48 x 48 (2 septembre 2026)
+
+Béné : "oui vas y pour les portraits en faisant attention de ne rien
+dégrader en qualité pour aucun des devices et moteurs de recherche."
+
+**1286 Ko -> 95 Ko, 93 % de moins, sur 22 fichiers.** Les portraits de
+témoignages faisaient 1024 x 1024 et s'affichent en 48 x 48 : vingt et
+une fois trop grands.
+
+**LA TAILLE D'AFFICHAGE EST MESURÉE, PAS SUPPOSÉE.** Le maximum relevé
+sur QUATRE largeurs (390, 768, 1280, 1920), **toutes images différées
+forcées à charger** : une image encore différée rend 0 x 0, ce qui la
+ferait passer pour non affichée, et une image petite sur un ordinateur
+peut être grande sur un téléphone.
+
+**La cible est TROIS fois l'affichage** (`DENSITE_COUVERTE`). Deux fois
+couvre les écrans Retina courants ; trois fois couvre aussi les
+téléphones à très forte densité, et sur une vignette de 48 px la
+différence entre 96 et 144 pixels coûte quelques kilo-octets. On ne
+descend jamais en dessous, et on ne dépasse jamais la taille réelle :
+on ne fabrique pas de pixels. `fit: "inside"` et
+`withoutEnlargement: true` : on RÉDUIT, on ne recadre jamais.
+
+**Quatre choses ne sont PAS touchées, et c'est ce qui répond à sa
+phrase :**
+
+1. **les SVG.** Ils sont VECTORIELS, donc déjà parfaits à toutes les
+   densités : les rasteriser serait exactement la dégradation qu'elle
+   demande d'éviter. `a787cf8c0b74.svg` (47 Ko) et `22617289340f.svg`
+   (97 Ko) sont du vrai vectoriel, 28 et 77 tracés, zéro bitmap dedans.
+   **Vérifié dans les fichiers, pas supposé** ;
+2. **les GIF animés** : une conversion qui ne demande pas l'animation ne
+   garde que la première image, et ça ne se voit qu'en ligne ;
+3. **l'`og:image`** (`c7c793ad598e.gif`), celle que les moteurs et les
+   réseaux affichent en aperçu. Le test l'exige ;
+4. **les fichiers d'origine.** On écrit un fichier NOUVEAU
+   (`<nom>-<largeur>.webp`) : la vraie page de vente sert les siens, et
+   le chantier ne change rien à ce qui est en ligne.
+
+Et une image dont la marge est faible reste intacte : on ne réduit que
+si le réel fait au moins DEUX fois la cible et que le fichier pèse au
+moins 10 Ko. Les trois captures 1500 x 999 affichées à 314 px sont donc
+laissées telles quelles.
+
+```bash
+npm run vente:images              # construit les fichiers reduits
+npm run vente:images -- --verifie # dit ce qu'il ferait, n'ecrit rien
+```
+
+Le script REFUSE de construire si le fichier ne fait pas la taille que
+la table annonce (l'image a été remplacée depuis la mesure), si la cible
+n'est pas plus petite que le réel, ou si elle passe sous trois fois
+l'affichage. La table pourrait être éditée à la main : le contrôle est
+refait à l'exécution.
+
+### ET LA SONDE A TROUVÉ DEUX IMAGES CASSÉES, exposées par le retrait du bundle
+
+En vérifiant qu'aucune image n'était dégradée, deux rendaient
+`naturalWidth === 0` : **elles ne s'affichaient pas du tout.**
+
+La capture porte des `data:image/png;base64,/9j/...`. Le préfixe `/9j/`
+est la signature d'un JPEG : ces images ANNONCENT du PNG et contiennent
+du JPEG. Sur une adresse `data:`, le type déclaré fait foi, donc le
+navigateur refuse de décoder. Le bundle React de Systeme.io
+reconstruisait ces balises et masquait le problème ; sans lui, elles
+sont nues.
+
+**Elles sont dans la capture d'ORIGINE** (4 sur la vraie page, 2 sur la
+v2) : on ne les a pas fabriquées. On corrige la DÉCLARATION, pas les
+pixels.
+
+**Et l'une des deux est TRONQUÉE à la source** : son base64 ne finit pas
+par `ffd9`, la marque de fin d'un JPEG. Les octets manquent, rien ne
+peut les rendre. Ce sont des aperçus flous de préchargement
+(`tqz-opt-lo`, "optimized low quality"), donc invisibles pour la
+lectrice : on retire la balise et ses 3,5 Ko de base64. **Le script
+REFUSE de retirer une image tronquée qui porterait un texte
+alternatif** : une image qui dit quelque chose se signale, elle ne
+disparaît pas en silence.
+
+**La leçon est celle du 22 août, encore : on mesure la page RENDUE, pas
+le fichier.** Ces deux images étaient cassées depuis le retrait du
+bundle, et aucun test de contenu ne pouvait le voir.
+
+Test : les 7 cas ajoutés à `tests/logic/page-vente-v2.test.mts`.
+
+## Le nom d'un écran s'écrit UNE fois, dans la barre du haut (2 septembre 2026)
+
+Béné : "y'a trop de titres sur une même page c'est tout en doublon : à
+quoi ça sert ?? Il faut uniformiser ça."
+
+Cinq écrans passaient leur titre à `AppShell` (qui le rend en `<h1>`
+dans la barre) PUIS le réécrivaient en `<h2>` dans un bandeau bleu, mot
+pour mot. **Vérifié chaîne par chaîne avant de retirer quoi que ce
+soit** : les cinq paires étaient identiques (Mes projets, Statistiques,
+Mes leads, Mes Popquiz, Paramètres). Il n'y avait donc rien à perdre,
+seulement une ligne à ne plus répéter.
+
+**Règle : `components/ui/page-banner.tsx`, et le bandeau n'a PAS de
+prop de titre.** Ce qu'il porte est ce que la barre ne peut pas dire :
+la phrase qui explique l'écran, le compteur vivant ("83 leads
+capturés"), et les boutons d'action.
+
+**Le bandeau est un COMPOSANT, pas un gabarit à recopier.** Les cinq
+écrans portaient le même bloc copié-collé (`gradient-primary rounded-xl
+px-5 py-4 ...`), donc cinq occasions de diverger, et c'est exactement
+comme ça que le doublon s'est installé partout à la fois. Le test
+interdit qu'un écran le redessine à la main.
+
+**Exception : la page d'aide hors session.** Sans session il n'y a pas
+de barre, donc pas de titre : il revient dans la page, et c'est le seul
+endroit où le `<h1>` est écrit deux fois dans le fichier.
+
+## Aide et contact : UNE entrée, et le tour guidé passe en haut
+
+Béné, le même jour : "sur Tiquiz il y a trop de trucs dans la sidebar :
+aide + contact c'est au même endroit = un seul item" et "réactiver le
+tour guidé : mets le dans la head bar à côté de 'mon espace'."
+
+Deux entrées répondaient à la même question ("j'ai besoin d'aide"), la
+première vers le centre d'aide de Tipote, la seconde vers notre
+formulaire. **Deux portes pour un besoin, c'est un choix à faire avant
+même d'avoir expliqué son problème.** Il ne reste que `/support`, qui
+porte les deux : le centre d'aide en premier (une réponse tout de suite
+vaut mieux qu'une réponse demain) et le formulaire dessous, avec
+l'adresse déjà remplie quand la session existe.
+
+**Le tour guidé, lui, était introuvable la moitié du temps.** Son
+entrée vivait au pied de la sidebar ET ne s'affichait QUE si la carte
+d'invitation avait été fermée ou le tour désactivé : tant qu'on n'avait
+rien fermé, il n'existait aucun moyen visible de le relancer.
+`RestartTourButton` vit maintenant dans la barre, à côté du sélecteur
+de projet, et **il est toujours là**. Un raccourci qui apparaît et
+disparaît selon un état qu'on ne contrôle pas ne se mémorise pas ; une
+place fixe se retient. L'état décide du GESTE (réactiver ou rouvrir
+l'accueil du tour), jamais de la présence.
+
+## Mes projets : un aller-retour PAR PROJET, en série (2 septembre 2026)
+
+Béné : "la page 'mes projets' est très longue à charger : il n'y aurait
+pas un souci ?"
+
+Il y en avait un, et **il était écrit noir sur blanc au dessus du code
+qui le causait.** `GET /api/quiz` agrège les leads en UN appel SQL
+(`quiz_leads_summary`) et pose `leads_count` sur chaque ligne, sous ce
+commentaire : "le dashboard n'a plus besoin de faire un fetch par quiz
+(N+1)". `QuizzesClient` faisait exactement ça, et EN SÉRIE : un
+`await fetch("/api/quiz/<id>")` par projet, chacun ramenant le quiz
+ENTIER (questions, résultats, leads) pour n'en garder qu'un nombre.
+Vingt projets, vingt requêtes à la queue leu leu, et la page blanche
+pendant ce temps.
+
+**Cinquième fois que ce dépôt paie une règle écrite en commentaire et
+démentie par le code** (le `w-full h-auto` des images de réponse,
+l'`ADD_ATTR: ["target"]` des liens légaux, le "Next décode déjà le
+segment" du pilotage, le brouillon de question d'Adeline, et celui-ci).
+
+Le test tient les DEUX moitiés : le client ne redemande plus chaque
+projet, ET la route agrège toujours. Ne vérifier que la première
+afficherait zéro lead partout sans que rien ne rougisse.
+
+Garde-fou : `tests/logic/barre-et-titres.test.mts`.
+
+## Le brouillon d'une question ne suit PAS le visiteur (retour Adeline, 1er septembre 2026)
+
+"On peut revenir en arrière, ce qui est un plus, mais lorsqu'on le fait
+ça efface les cases suivantes déjà remplies."
+
+**RIEN N'ÉTAIT EFFACÉ EN BASE**, et c'est ce qui rendait le retour
+difficile à croire : `answers` n'est jamais tronqué, aucune ligne de
+code ne coupe le tableau. Ce qui suivait le visiteur, c'était le
+BROUILLON, c'est à dire l'état de SAISIE de la question affichée.
+
+Il vivait dans QUATRE variables globales au composant (`freeTextDraft`,
+`multiOptionsDraft`, `autreTexte`, `autreChoisi`), jamais remises à la
+question courante. Cinq symptômes, un seul défaut :
+
+| Ce qu'elle a vu | Ce qui se passait |
+|---|---|
+| "ça efface les cases suivantes déjà remplies" | le texte tapé en Q3 arrivait pré-rempli en Q4 ; valider ÉCRASAIT la réponse déjà donnée |
+| des cases cochées sans les avoir cochées | la sélection d'un multi-choix restait d'une question à l'autre |
+| revenir puis cliquer décoche tout | le premier clic repartait d'un brouillon VIDE au lieu de la sélection affichée |
+| impossible de tout décocher | l'affichage retombait sur la réponse enregistrée dès que le brouillon était vide |
+| le texte du "Autre" invisible au retour | l'option était surlignée, le champ restait FERMÉ |
+
+**LA CAUSE COMMUNE : la question affichée et l'état de saisie n'étaient
+reliés par rien.** La remise à zéro était recopiée dans les
+gestionnaires de navigation, et il en manquait : la flèche retour vidait
+le texte libre, le swipe AVANT non, et les cases cochées n'étaient
+vidées nulle part.
+
+**Et un commentaire l'annonçait déjà**, posé sur `multiOptionsDraft` :
+"Reset whenever currentQ changes (handled in commitAnswer + an effect
+below)". **Cet effet n'a jamais existé.** Quatrième fois que ce dépôt
+paie une règle écrite en commentaire et démentie par le code (le
+`w-full h-auto` des images de réponse, l'`ADD_ATTR: ["target"]` des
+liens légaux, le "Next décode déjà le segment" du pilotage).
+
+**Règle : `lib/quiz/brouillonReponse.ts` décide, et UN SEUL effet
+applique.** `brouillonPourQuestion(reponse, autreIdx)` rend les quatre
+champs de saisie depuis la réponse de la QUESTION COURANTE ; l'effet
+tourne sur `[currentQ, step, quiz, resumed]`. Plus aucune remise à zéro
+dans un gestionnaire de navigation : c'est ce qui en oubliait un.
+
+**Et le brouillon est le SEUL à décider de l'affichage.** Les deux
+replis du genre `brouillon.length > 0 ? brouillon : réponse
+enregistrée` sont SUPPRIMÉS, pas assouplis : **un brouillon vide est une
+intention, pas une absence.** C'est ce repli qui rendait "tout décocher"
+et "effacer mon texte" impossibles.
+
+`answers` est volontairement HORS des dépendances de l'effet : valider
+une réponse le modifie, et relancer l'effet là remettrait le brouillon
+de la question qu'on vient de quitter. `resumed` y est, pour le seul cas
+où la reprise d'un brouillon local ne change pas l'index.
+
+**Le filet de captures ne pouvait rien voir** : il photographie un écran
+au repos, et ce bug ne vit que dans l'enchaînement des gestes. Le
+garde-fou est `tests/logic/brouillon-question.test.mts`, vérifié en
+rejouant la version d'avant (il rougit).
+
+Le module quiz de Tipote est jumeau : la correction y vit aussi.
+
+## Le menu sous une réponse dit le NOM du profil (retour Christian, 1er septembre 2026)
+
+"Les différents résultats n'apparaissent pas sous les réponses. Seuls
+apparaissent « Résultat 1, Résultat 2 » etc."
+
+Il avait raison, et le menu ne POUVAIT rien afficher d'autre : les deux
+sélecteurs posés sous chaque réponse de l'éditeur jetaient le profil et
+n'en gardaient que le rang.
+
+```
+editResults.map((_, ri) => <option>…Résultat {ri + 1}</option>)
+                  ^^^ le profil, ignoré
+```
+
+Aucun titre, si bien écrit soit-il, ne pouvait apparaître. Sur un quiz à
+six profils, "Résultat 4" ne dit rien : la créatrice branche ses
+réponses au hasard, ou remonte vérifier l'ordre à chaque clic. C'est le
+geste le plus répété de tout l'éditeur.
+
+**LA RÈGLE EXISTAIT DÉJÀ, recopiée à la main quatre fois dans le MÊME
+fichier** (`stripHtml(extractResultLabel(cleanPlaceholdersForLabel(t)))`
+plus un repli). Deux endroits ne l'ont jamais eue. Une règle recopiée
+finit toujours par en oublier un : c'est le `mx-auto` du sous-titre, les
+images de réponse, les réseaux de partage, la sixième fois.
+
+**Règle : `lib/quiz/resultLabel.ts`, `resultChoiceLabel(titre,
+secours)`, et personne ne recompose.** Les trois étapes comptent et
+l'ordre aussi : placeholders interpolés à VIDE (sinon le menu affiche
+"Bonjour {name}, tu es le..."), puis `extractResultLabel` (retire le
+", tu es le·la" et les marques inclusives), puis `stripHtml` (un
+`<option>` ne rend pas de HTML, il montrerait les balises).
+
+**`secours` est OBLIGATOIRE.** Un profil encore sans titre doit rester
+choisissable : une entrée vide dans un menu est pire que "Résultat 3".
+
+Ici les quatre autres endroits passaient déjà par la clé traduite
+`quizEditor.previewResult` ; côté Tipote, trois replis étaient écrits en
+français DANS LE CODE, et une créatrice espagnole lisait "Résultat 4".
+
+**Exception assumée :** `titleForVisual` compose les deux mêmes
+fonctions pour le titre d'une IMAGE générée, sans repli et avec sa
+propre capitalisation. Ce n'est pas un libellé d'interface, et le
+confondre casserait la génération d'images. Le test vise la composition
+SUIVIE D'UN REPLI, pas la composition elle-même.
+
+Test : `tests/logic/nom-du-profil.test.mts`. Le module quiz de Tipote est
+jumeau : la correction y vit aussi.
+
+### Et un projet qui n'est pas à vous ne téléporte plus personne
+
+Béné, en essayant d'ouvrir le quiz de Christian : "je n'arrive pas à
+accéder à ses quiz, je ne sais pas pourquoi, et pire : ça me redirige
+directement vers mon dashboard et pas vers une page 'ce quiz n'est pas
+disponible'."
+
+On DISAIT bien quelque chose, un toast, mais `router.push("/dashboard")`
+partait dans la foulée : elle changeait d'écran avant d'avoir lu la
+raison, et se retrouvait sur son tableau de bord sans savoir pourquoi.
+Un toast qui accompagne une navigation n'est pas un message, c'est un
+reflet.
+
+**Règle : les quatre éditeurs affichent un ÉCRAN** (titre, phrase, et
+UNE sortie nommée qui passe par `projectBackHref`, donc la hiérarchie et
+jamais l'historique). Plus aucune redirection sur un chargement qui
+échoue. Seul le mode EMBED garde le toast : il n'a pas de tableau de
+bord où retourner.
+
+**On ne distingue pas "supprimé" de "pas à toi", et c'est voulu** : la
+route répond 404 dans les deux cas pour ne pas révéler qu'un projet
+existe. La phrase dit donc les deux possibilités, plus la seule chose
+qui inquiète vraiment : rien n'a été modifié.
+
+**Trouvé au passage** : deux de ces quatre écrans affichaient
+`toast.error("Quiz not found")`, écrit en dur EN ANGLAIS dans une
+interface qui existe en 7 langues. Les clés `unavailableTitle` et
+`unavailableBody` sont posées dans les 7 fichiers.
+
+## Deux liens, le même mot, deux gestes opposés (retour Christian, 1er septembre 2026)
+
+Béné : "est-ce que c'est bien expliqué, la différence entre le lien de
+partage pour FAIRE le quiz et celui pour COPIER le quiz dans son compte ?"
+
+Non, et l'écran faisait tout pour les confondre :
+
+| Le geste | Où | Comment il s'appelait |
+|---|---|---|
+| donner le lien pour RÉPONDRE au quiz | onglet de l'éditeur | "Partager", icône `Share2` |
+| donner une COPIE du quiz à quelqu'un | carte de Mes projets | "Partager ce quiz", icône `Share2` |
+| se dupliquer le quiz à soi même | carte de Mes projets | "Dupliquer", icône `CopyPlus` |
+
+**Même mot, même icône, et le deuxième est le seul qui donne son
+travail.** Un créateur qui colle ce lien à son audience installe son
+quiz dans le compte de chaque personne qui clique. Le texte du panneau
+était juste et complet, mais il fallait l'ouvrir pour le découvrir :
+l'entrée, elle, disait le contraire.
+
+**Règle : le geste se nomme par son VERBE, pas par sa famille.**
+"Donner une copie du quiz", icône `Gift`, distincte des deux autres. Et
+la première ligne du panneau pose le contraste AVANT le bouton
+(`partageQuiz.notPublicLink`, 7 langues) : "ce n'est PAS le lien pour
+faire passer le quiz, celui-là est dans l'onglet Partager de l'éditeur".
+
+**Trois gestes voisins ne peuvent pas porter deux icônes.** Le premier
+jet remplaçait `Share2` par `CopyPlus`... qui est déjà l'icône de
+"Dupliquer". On déplaçait la collision au lieu de la retirer.
+
+## Vérifier que le bouton du quiz porte bien l'identifiant (Béné, 1er septembre 2026)
+
+"On peut vérifier que l'url du CTA du quiz se voit bien attribuer l'id
+de l'affilié au bon format ? Il faut récupérer l'id dans l'url
+(`?sa=sa...`) et l'ajouter à l'url du CTA."
+
+```bash
+npm run check:cta-affilie -- "https://quiz.tipote.com/q/mon-quiz?sa=sa0007..."
+```
+
+Il va chercher le VRAI quiz sur le serveur et imprime l'adresse que
+portera chaque bouton (fin de quiz, chaque profil, quiz fermé). Il
+appelle les MÊMES fonctions que le viewer (`lireAffiliateDuQuiz` puis
+`attacherAffiliate`) : un script qui réécrirait la règle finirait par
+dire le contraire de ce que le visiteur voit, c'est le défaut sorti six
+fois dans ces dépôts.
+
+**LE PIÈGE QU'IL EXISTE POUR ATTRAPER : un `sa` mal formé est jeté SANS
+BRUIT.** C'est voulu, cette valeur finit dans un versement. Mais à
+l'écran rien ne le montre : le bouton mène quelque part, il ne porte
+simplement rien. Le script dit la longueur reçue et la forme attendue
+("sa" + 20 à 80 caractères hexadécimaux, `lib/affiliate/saFormat.ts`).
+
+**Ce qu'il ne peut PAS vérifier, et il le dit :** la deuxième moitié
+appartient au vendeur. Systeme.io pose SON cookie quand le visiteur
+atterrit sur SA page ; nous, on ne fait que coller l'identifiant sur le
+bouton. Et leur API n'expose AUCUN moyen d'assigner un affilié à un
+contact (mesuré : l'écriture d'un contact n'accepte que des champs et
+une langue). Un contact créé par notre capture d'email affichera donc
+toujours "Affilié : Aucun" tant que la personne n'a pas cliqué le
+bouton.
+
+## Une valeur d'URL n'est pas un motif de recherche (1er septembre 2026)
+
+Dans un LIKE Postgres, **`_` remplace n'importe quel caractère** et `%`
+n'importe quelle suite. Or `_` est parfaitement légal partout : dans une
+adresse email, et rien n'empêche quelqu'un de le taper dans une URL.
+
+La passe du 31 août avait couvert les recherches de COMPTE, chez Tipote
+seulement, et cette page n'en disait rien : **un garde-fou qui ne protège
+qu'un des deux jumeaux ne protège personne**, et une règle absente de
+cette page est une règle que le prochain passage ne connaît pas.
+
+Le même joker vivait sur `slug`, `hostname` et `code`, tous lus dans une
+URL publique. **18 fichiers ici, 29 côté Tipote.** Le plus coûteux :
+
+**`/q/mon_quiz` pouvait servir le quiz d'une AUTRE créatrice**, ou n'en
+servir aucun : deux lignes trouvées font échouer `maybeSingle`, donc un
+404 sur un quiz qui existe et qui tourne peut être en publicité payante.
+
+**ON ÉCHAPPE, ON NE PASSE PAS À `.eq`.** `.eq` serait plus simple, mais
+la casse des valeurs stockées n'est pas garantie (imports Systeme.io,
+slugs historiques) : empêcher un accès serait PIRE que le bug corrigé.
+`echapperMotifLike` (`lib/db/motifLike.ts`) ne change RIEN au
+comportement, sauf exactement le cas fautif. Le `\` s'échappe EN
+PREMIER, sinon on échapperait les barres qu'on vient d'ajouter.
+
+**Le garde-fou BALAIE tout le dépôt, il ne surveille pas une liste de
+fichiers.** Une liste oublie le prochain fichier écrit, et c'est
+exactement comme ça que ces endroits sont arrivés. Vérifié en rejouant
+la version d'avant (le test rougit).
+
+Test : `tests/logic/email-pas-un-motif.test.mts`.
+
+## Une entité HTML sans balise autour (retour Christian, 1er septembre 2026)
+
+Le titre de son 4e résultat revenait de la base ainsi, et s'affichait tel
+quel sur sa page de résultat :
+
+```
+Ce n'est pas parce que tu n'es pas doué...&nbsp ;
+```
+
+**C'était nous.** La typographie française insère une espace devant `;`,
+`?`, `!` et `:`. Elle a donc coupé l'entité `&nbsp;` en deux.
+
+**Le garde-fou existait, et il a été contourné par la DÉTECTION.**
+`applyFrenchTypographyToHtml` découpe correctement sur les balises ET les
+entités ; c'est `applyFrenchTypography` qui choisissait entre les deux
+versions, et sa règle était :
+
+```
+const LOOKS_LIKE_HTML = /<[a-z!/][^>]*>/i;
+```
+
+**Une chaîne peut porter une ENTITÉ sans porter la moindre balise**, et
+c'était exactement son cas. Elle partait donc vers la version texte brut,
+celle qui ne sait pas ce qu'est un `&nbsp;`.
+
+**Règle : on ne choisit plus.** `applyFrenchTypography` passe TOUJOURS par
+le découpage. Sur du texte sans balise ni entité, les deux rendaient déjà
+le même résultat (un seul `fixFragment` sur toute la chaîne) : il n'y
+avait donc rien à arbitrer, seulement une occasion de se tromper. C'est
+la leçon écrite vingt lignes plus haut dans le même fichier ("quand une
+erreur ne coûte rien à commettre et détruit du travail en silence, on
+rend l'erreur IMPOSSIBLE"), appliquée à la détection elle-même.
+`LOOKS_LIKE_HTML` est SUPPRIMÉE, pas laissée sans appelant.
+
+**Et un champ déjà cassé se répare au prochain enregistrement.**
+`reparerEntitesCassees()` recolle `&nbsp<espace>;` avant le découpage :
+une entité coupée en deux ne redevient jamais une entité toute seule, et
+la cliente n'a aucun moyen de savoir d'où sort ce texte. Même geste que
+`applyFieldFontSize`, qui répare un champ abîmé au premier clic (1er
+août).
+
+**LISTE FERMÉE d'entités, et c'est voulu** : `nbsp`, `amp`, `lt`, `gt`,
+`quot`, `apos` et les formes numériques. `M&M ;` est de la prose
+parfaitement légitime, et le recoller réécrirait ce que la cliente a
+écrit.
+
+### Et ce qui est déjà cassé en base s'affiche juste, sans migration
+
+Béné, en lisant la première correction : "ce genre de souci on l'a eu
+mille fois et il revient toujours, il faut vraiment le corriger et s'en
+débarrasser définitivement, j'en ai marre de corriger toujours les mêmes
+choses."
+
+Corriger à l'ENREGISTREMENT ne suffisait pas : le texte abîmé est DÉJÀ en
+base chez des clientes. Il aurait fallu que chacune rouvre et
+ré-enregistre chaque champ, un par un, pour faire disparaître un texte
+qu'elle n'a jamais tapé.
+
+**`sanitizeRichText` et `stripHtml` réparent donc au PASSAGE.** Tout ce
+qui s'affiche est juste, immédiatement, sans toucher à une seule ligne de
+la base et sans migration. La base garde sa valeur abîmée jusqu'au
+prochain enregistrement du champ, qui la recolle pour de bon.
+
+**Et le vrai invariant est l'IDEMPOTENCE.** Une règle qui INSÈRE une
+espace tourne à CHAQUE enregistrement : si sa sortie n'est pas un point
+fixe, le texte dérive un peu plus à chaque sauvegarde et personne ne voit
+rien avant que ce soit illisible. C'est ça, "il revient toujours". Le
+test l'exige maintenant sur une batterie de cas (deux fois ET trois fois,
+parce qu'un cycle de période 2 passerait un test qui n'applique que deux
+fois), plus une liste de chaînes techniques qui ne doivent pas bouger
+d'un caractère : une URL avec `?`, un `style="color:red"`, `12:30`,
+`&nbsp;`, `&amp;`, `&#233;`.
+
+Test : les 7 cas ajoutés à `tests/logic/french-typography.test.mts`,
+vérifiés en rejouant la détection d'avant (5 rougissent).
+
+## L'onglet Automatisation : ce qu'il faut créer dans Systeme.io (Béné, 1er septembre 2026)
+
+"Un onglet Automatisation, en plus de créer, partager, résultats, qui
+explique le workflow et les tags précis à créer dans Systeme.io pour
+envoyer ce qu'il faut à qui en a besoin. **Pas un truc générique, un truc
+réel** qui explique selon le bonus offert, le CTA, les profils de
+résultats."
+
+**CE QUE ÇA RÉPARE, ET C'EST LE TROU LE PLUS CHER DU PRODUIT.** Tiquiz
+POSE des tags sur le contact Systeme.io. Mais poser un tag
+ne déclenche RIEN tant qu'aucune règle d'automatisation ne l'écoute, et
+ces règles se créent à la main dans leur tableau de bord (mesuré le
+31 août). Une créatrice met son quiz en ligne, capte 40 adresses, et il
+ne se passe rien. Elle n'en conclut pas qu'il lui manque une règle : elle
+en conclut que Tiquiz ne sert à rien.
+
+**Règle : `lib/automatisation/planSysteme.ts` décide, et il n'annonce que
+ce qui part VRAIMENT.** C'est tout l'enjeu du "pas générique" : les six
+familles de tags n'ont pas les mêmes conditions, et une liste qui
+les récite toutes enverrait la créatrice construire des workflows sur des
+tags qu'elle n'aura jamais.
+
+| Tag | Part quand |
+|---|---|
+| profil (`sio_tag_names`) | QUIZ seulement, un sondage n'a pas de résultat |
+| `sio_capture_tag` | SONDAGE seulement |
+| par réponse (`options[].sio_tag_name`) | SONDAGE seulement |
+| score (`score-<tranche>`, `<axe>-<tranche>`) | si `sio_score_tags` est coché |
+| `sio_share_tag_name` | dès qu'il est RENSEIGNÉ, sans regarder `virality_enabled` |
+| formation / communauté | **rien à créer** : Tiquiz ouvre l'accès lui même |
+
+**Le dernier cas est le piège inverse** : une règle de plus ouvrirait
+l'accès DEUX fois, et ça ne se voit qu'en recevant deux emails. La carte
+dit donc de ne rien faire.
+
+**Les tags de score sont CALCULÉS au moment de la réponse**, à partir
+des libellés de la créatrice. L'écran en fait donc UNE LIGNE PAR VALEUR
+POSSIBLE (`tagsDeScorePossibles`) : une ligne = une règle à créer.
+Annoncer un motif obligeait à le déplier de tête. Et `slugifyAxisLabel`
+n'accepte que `[a-z0-9_]` : "En route" donne `score-en_route`, avec un
+SOULIGNÉ. Deviner un tiret ferait créer une règle sur un tag qui
+n'arrive jamais.
+
+**Le module ne rend AUCUNE phrase**, seulement des données (le type de
+groupe, le tag exact, le contexte) : l'interface existe en 7 langues, et
+c'est l'écran qui écrit. Le nom du tag est CLIQUABLE-COPIABLE : c'est le
+seul endroit où une faute de frappe casse tout en silence.
+
+### LA RECETTE EST DITE UNE FOIS, PAS UNE FOIS PAR TAG (même jour)
+
+Premier jet : une carte par tag, chacune répétant les trois mêmes clics.
+Béné : "empiler les conseils qui disent la même chose t'es sûr que c'est
+le plus lisible, pratique, intelligent ? Genre 1 : les profils et 2 : le
+bonus de partage. Et ensuite tu n'en répètes pas, tu fais un truc facile
+à lire sans avoir besoin de scroller pendant mille ans."
+
+Elle avait raison, et c'est mesurable : les trois clics sont IDENTIQUES
+pour tous les tags. Un quiz à six profils affichait donc **dix-huit
+lignes de marche à suivre pour six informations**.
+
+**Le module rend des GROUPES** (`groupes`, pas `etapes`), chacun avec sa
+liste de tags. L'écran écrit la recette UNE seule fois, en haut, et
+chaque groupe ne porte plus que ses noms de tags. L'ordre des groupes
+est celui du parcours, et le groupe "rien à créer" passe en dernier :
+c'est une note, pas une tâche. Le test interdit que `recette1/2/3`
+apparaisse plus d'une fois dans le composant.
+
+**Et la page NE DÉFILAIT PAS.** L'éditeur est en
+`h-screen ... overflow-hidden` : sans conteneur défilant, tout ce qui
+dépasse est simplement inatteignable. Le panneau porte donc
+`flex-1 overflow-y-auto`, et le test le fige.
+
+### LE NOM D'UN PROFIL PASSE PAR `resultChoiceLabel`
+
+Ce qu'elle a lu à l'écran, mot pour mot :
+
+```
+Le profil "<div class="rt-field-fs" style="--rt-fs-m&nbsp;: 24px">Team Capture..."
+```
+
+Le titre d'un profil est du texte RICHE : il porte des balises et des
+variables. **La règle avait été écrite le matin même** (retour
+Christian, `lib/quiz/resultLabel.ts`) et je l'ai oubliée le lendemain,
+dans le module qui l'aurait le plus utilisée. **Une règle qui n'est pas
+APPELÉE ne protège de rien** : ce n'est plus "elle n'existe pas", c'est
+"elle existe et personne ne l'appelle", ce qui est pire parce qu'on
+croit le sujet réglé.
+
+Le module lui passe un secours VIDE (il ne traduit pas) et porte le
+`rang` à côté : un profil encore sans titre s'affiche "Profil 2" dans la
+langue de la créatrice.
+
+### LA CLÉ SYSTEME.IO AVAIT BIEN ÉTÉ SORTIE DE LA COLONNE
+
+Béné : "en réorganisant la sidebar on a viré le choix de la clé Systeme
+io du coup j'ai une erreur. Dans l'onglet partager c'était juste pour le
+bonus de partage et donc le tag de partage."
+
+**J'ai d'abord répondu qu'elle n'y avait jamais été. C'était faux**, et
+`git log` le dit en une commande :
+
+| Date | Onglet qui portait le sélecteur |
+|---|---|
+| jusqu'au 24 août | `create`, donc la COLONNE |
+| 25 août | `share`, à l'intérieur du bloc `virality_enabled` |
+| 1er septembre | `create`, remis dans "Gestion du quiz" |
+
+C'est la refonte de la colonne en `SettingsSection` (25 août) qui l'a
+emporté dans l'onglet Partager, avec le bloc du bonus de partage. Une
+créatrice qui ne propose pas de bonus n'avait donc **aucun moyen** de
+choisir sa clé pendant une semaine, et rien ne le disait.
+
+**La leçon vaut plus que la correction : quand on REGROUPE un écran, on
+compte ce qui entre et ce qui sort.** Sept sections entraient, six sont
+ressorties, et personne n'a compté. Et quand quelqu'un dit "on a viré
+X", `git log -S "X"` répond en dix secondes : je l'ai contredite de
+mémoire avant de mesurer.
+
+`QuizSioKeyPicker` prend une `variante` (`"carte" | "colonne"`), et le
+rendu de la colonne reprend l'idiome des autres réglages (un `<h3>` à la
+même taille, l'aide en `text-[11px]`, le select pleine largeur). Une
+carte au milieu de sept sections plates se voit comme une pièce
+rapportée. **Il n'y en a plus qu'UN seul endroit** : le groupe "Gestion
+du quiz", pour le quiz comme pour le sondage.
+
+### ET LE BANDEAU ROUGE ACCUSAIT UNE COLONNE QUI N'EST PAS LA CLÉ
+
+Sur sa capture, le panneau annonçait "Aucune clé Systeme.io n'est reliée
+à ce quiz" sur un quiz dont les tags partaient très bien.
+
+`quiz.sio_api_key_id` est une **SURCHARGE par quiz** (le cas du
+freelance qui envoie les leads d'UN quiz vers le compte de son client).
+Vide, elle veut dire "pas de surcharge" : `resolveApiKey` retombe sur la
+clé par défaut du compte, puis sur n'importe laquelle, puis sur la clé
+historique. Le bandeau sortait donc chez **presque tout le monde**.
+
+C'est le `??` du 2 août dans une autre robe : **une colonne vide ne veut
+pas dire "pas de clé", elle veut dire "pas de surcharge".**
+
+**Règle : le fait est un PARAMÈTRE OBLIGATOIRE** (`cleReliee`), et il se
+lit là où on demande VRAIMENT ses tags à Systeme.io, c'est à dire dans
+`SioTagsProvider`. Le panneau construit donc son plan lui même : il est
+le seul à être DANS le provider. `cleRelieeDepuisTags` est pure :
+des tags reçus (liste vide comprise) -> la clé répond ; `noApiKey` ->
+on le dit ; une erreur ou rien encore -> **`null`, et on se tait**.
+Un avertissement affiché à tort fait chercher au mauvais endroit, ce qui
+est exactement ce qu'on répare.
+
+### PORTÉ DANS TIPOTE le 1er septembre
+
+L'onglet, le module et les 7 langues vivent des deux côtés. **Une seule
+phrase diffère, et c'est voulu** : Tipote n'a pas de clé par quiz (pas
+de table `sio_api_keys`), la sienne vit dans Réglages > Connexions, pour
+tout le compte. `manqueCle` y renvoie donc là bas.
+
+**Ce qui manque est dit à part, et le bloquant passe devant** : sans clé
+Systeme.io reliée, aucun contact n'est créé et aucun tag n'est
+posée, donc tout le reste de l'écran serait un plan pour rien.
+
+**On ne réclame le tag de partage QUE si un bonus de partage est promis**
+(`virality_enabled`). Les simples boutons de partage de la page de
+résultat sont vrais par défaut : crier là dessus ferait rougir l'écran de
+presque tout le monde, et un avertissement qui sort pour rien finit
+ignoré.
+
+**Endroits à respecter :** `lib/automatisation/planSysteme.ts` (pur),
+`components/quiz/AutomatisationPanel.tsx`, `QuizDetailClient.tsx` et
+`SurveyDetailClient.tsx` (le 4e onglet). Le filet de captures ne couvre
+pas l'éditeur : le garde-fou est
+`tests/logic/plan-automatisation.test.mts`.
+
+**Porté dans Tipote le 1er septembre** : même onglet, même module,
+mêmes 7 langues. Voir plus bas la seule phrase qui diffère.
+
+## Les trois générateurs de contenu (Béné, 1er septembre 2026)
+
+"Pour les générateurs oui on va le faire pour les membres + et les
+beta/lifetime, ça doit être visible pour les membres gratuits et sans
+plus : s'ils veulent s'en servir on leur propose d'upgrader. On doit le
+faire BIEN, sur une page générateurs : l'user choisit quel générateur il
+veut utiliser (3 cartes cliquables), ensuite un nouvel onglet s'ouvre,
+l'user choisit le quiz pour lequel il veut créer, comme sur l'Atelier."
+Et : "fais ça bien, pas à l'arrache comme pour l'onglet automatisation."
+
+| Le générateur | Ce qu'il écrit | Il marche sur |
+|---|---|---|
+| le BONUS | le bonus entier, comment le fabriquer, les textes qui le remettent | un quiz dont les profils sont remplis |
+| les EMAILS | une séquence post-quiz, écrite pour UN profil | idem |
+| la PROMO | des emails d'invitation et des posts | tout, sondage compris |
+
+### CE QUE LA CRÉATRICE SAISIT : SON OFFRE, ET RIEN D'AUTRE
+
+C'est la leçon de l'Atelier reprise telle quelle (Béné, 5 août : "on ne
+réutilise pas assez les données du quiz"). Le titre, la promesse
+d'accueil, le ton (tu/vous), la langue, les profils, leurs tags et
+l'adresse publique sont RELUS CÔTÉ SERVEUR à chaque appel
+(`lib/generateurs/briefQuiz.ts`). Un formulaire qui redemande ce qu'on
+sait produit des réponses vagues, donc un contenu vague.
+
+Le brief ne transite JAMAIS par le client : sans ça, n'importe qui
+pourrait annoncer un autre quiz que le sien et faire écrire du contenu
+sur des profils qui ne lui appartiennent pas.
+
+### DEUX ÉTAPES, ET UN MORCEAU À LA FOIS
+
+`pistes` rend trois pistes en JSON court, `produire` rend UN morceau.
+Générer tout d'un coup, c'est exactement ce qui a sorti du JSON BRUT à
+l'écran devant des élèves de l'Atelier le 3 août : la réponse coupée à
+la limite de tokens, `JSON.parse` qui échoue, et l'écran qui montre
+notre panne au lieu du livrable.
+
+**L'INDEX D'UN MORCEAU EST RECALCULÉ, jamais recopié du modèle.** Il
+rend parfois deux "email 1", ou saute de 1 à 3 : une numérotation à trou
+fait écrire deux fois le même email et en oublier un autre, en silence.
+
+**Et les morceaux s'écrivent EN SÉRIE, jamais en parallèle** : trois
+appels simultanés donnent un 429 et deux morceaux sur trois vides
+(drame Fabienne, Atelier, 4 août). Un morceau qui échoue n'emporte pas
+les suivants, et ce qui est déjà écrit reste à l'écran.
+
+**Les trois blocs du BONUS sont imposés par nous**, pas choisis par le
+modèle : il en oublierait un une fois sur trois, et la créatrice se
+retrouverait avec un bonus qu'elle ne sait pas livrer. Pour les deux
+autres, le nombre est une décision éditoriale : c'est la piste qui le
+porte, bornée par `MAX_PIECES`.
+
+### LE SOCLE EST CACHÉ, DONC IL N'INTERPOLE RIEN
+
+`lib/prompts/generateurs/socle.ts` est le SEUL bloc marqué
+`cache_control`, et il décrit les TROIS générateurs alors qu'un appel
+n'en sert qu'un : un socle par générateur donnerait trois préfixes,
+donc trois caches à réchauffer.
+
+**Le cache d'Anthropic est un PRÉFIXE EXACT.** Une seule valeur du brief
+glissée dans le socle, et il change à chaque appel : on paie alors
+l'ÉCRITURE du cache (1,25 fois le prix) sans jamais le relire, c'est à
+dire pire que pas de cache. Le test interdit toute interpolation et
+mesure sa longueur (en dessous de 1024 tokens, Anthropic ignore le
+`cache_control` EN SILENCE). La seule preuve que ça marche est dans les
+compteurs `usage` que la route journalise.
+
+### CE QUI EST DIT AU MODÈLE, ET POURQUOI
+
+- **La langue est NOMMÉE**, jamais laissée en code ISO : `pt-BR` fait
+  écrire du portugais européen une fois sur deux. Une langue inconnue ne
+  retombe PAS sur le français (leçon du robot d'aide, 31 août).
+- **Le ton du quiz est imposé**, pas redemandé.
+- **Le lien du quiz n'est donné QUE là où il doit apparaître** : dans la
+  promo et dans les textes de remise. Le CONTENU du bonus se lit hors
+  ligne, y coller l'adresse renverrait le lecteur vers le quiz qu'il
+  vient de finir.
+- **Un champ vide est OMIS**, jamais rendu avec un tiret : une ligne
+  "OFFRE : -" apprend au modèle qu'il a le droit d'en inventer une.
+
+### CE QUE L'ÉCRAN NE DÉCIDE PAS
+
+Quel générateur marche sur quel projet (`blocageGenerateur`), quels
+morceaux il produit (`piecesDeLaPiste`), comment se rend le Markdown
+(`markdownVersHtml`) : tout vit dans `lib/generateurs/`, en fonctions
+pures et testées. **Un projet bloqué est MONTRÉ, avec sa raison** : le
+griser sans un mot se lit comme un bug (règle du 22 août).
+
+**Le rendu s'affiche, le Markdown reste copiable à côté** : montrer
+`## Titre` et `**gras**` serait la même faute que le JSON brut. Et ce
+texte vient d'un modèle, donc d'ailleurs : tout est échappé,
+guillemets compris, et un `href` qui n'est pas http, https ou mailto
+n'est jamais rendu cliquable.
+
+### LE VERROU EST DANS LA ROUTE, PAS À L'ÉCRAN
+
+L'écran MONTRE les trois cartes à tout le monde et propose de monter de
+palier ; c'est `app/api/generateurs/route.ts` qui refuse
+(`canUseAIAnalysis`, donc beta / lifetime / mensuel PLUS / annuel PLUS).
+Un gate posé seulement à l'écran laisse la porte de l'API grande
+ouverte, et c'est par l'API qu'on récupère le contenu.
+
+### L'ADRESSE PUBLIQUE VIT DÉSORMAIS À UN SEUL ENDROIT
+
+`lib/quiz/urlPublique.ts`. La règle était enfermée dans
+`hooks/useShareDomain.ts`, donc côté navigateur seulement ; les
+générateurs tournent côté serveur et mettent cette adresse dans des
+emails et des posts. Une deuxième écriture aurait donné deux adresses
+pour le même quiz, et c'est celle du contenu généré qui serait partie
+dans une campagne. Le hook appelle la fonction, le serveur aussi.
+
+**Le domaine perso de la créatrice gagne** : c'est celui qu'elle
+partage. Et `surDomainePerso` est un PARAMÈTRE, jamais deviné à la
+forme de l'adresse.
+
+**Endroits à respecter :** `lib/generateurs/{catalogue,briefQuiz,blocs,offre,markdown}.ts`,
+`lib/prompts/generateurs/{socle,consignes}.ts`, `lib/aiFailure.ts`,
+`lib/quiz/urlPublique.ts`, `app/api/generateurs/route.ts`,
+`app/generateurs/`. Test : `tests/logic/generateurs.test.mts`.
+**Le module vit dans les DEUX dépôts** : toute évolution se porte des
+deux côtés, y compris les DEUX écrans, identiques à l'octet près.
+
+**Les deux différences assumées, et elles sont chez Tipote :** il ouvre
+les générateurs à tout compte payant (il n'a pas de palier "PLUS"), et
+ils y CONSOMMENT DES CRÉDITS (Tiquiz n'en a pas). Le compteur est donc
+une PROP optionnelle de l'écran, nulle ici, et `lib/generateurs/credits.ts`
+ne vit QUE là bas : un module mort ici serait un piège que le prochain
+passage rebrancherait en croyant réparer. Le barème et le calcul qui
+l'a produit sont dans l'`AGENTS.md` de Tipote.
+
+## Les générateurs, deuxième passage (Béné, 2 septembre 2026)
+
+Quatre reproches, et le premier rendait la fonctionnalité entièrement
+inutilisable.
+
+### 1. LE GÉNÉRATEUR NE TROUVAIT PAS LA CLÉ ANTHROPIC
+
+"Le générateur de bonus ne fonctionne pas j'ai un message d'erreur c'est
+relou." L'écran disait "L'écriture n'est pas disponible pour le moment.
+On est prévenus.", c'est à dire `not_configured`, c'est à dire "aucune
+clé".
+
+Il y en avait une, et toutes les autres fonctions IA la trouvaient très
+bien. **La route des générateurs lisait `ANTHROPIC_API_KEY` TOUT COURT,
+quand les NEUF autres endroits lisent `ANTHROPIC_API_KEY` PUIS
+`CLAUDE_API_KEY_OWNER`.** Sur le serveur, c'est la seconde qui porte la
+valeur : les générateurs étaient donc le seul écran incapable d'écrire
+quoi que ce soit.
+
+**Neuf copies de la même résolution, et la dixième était fausse.** Une
+règle recopiée finit toujours par en oublier un : c'est le `mx-auto` du
+sous-titre, les images de réponse, les réseaux de partage, les libellés
+de profil. Ici l'oubli coûtait une fonctionnalité entière, et en
+silence, parce qu'un écran qui dit "pas disponible" a l'air de parler
+d'une panne passagère. `lib/ai/cleAnthropic.ts` est le seul endroit,
+et le test l'exige des dix appelants.
+
+**Chez Tipote c'est pire, et le module y est donc indispensable :**
+TROIS noms circulent (`CLAUDE_API_KEY_OWNER`, `ANTHROPIC_API_KEY`,
+`ANTHROPIC_API_KEY_OWNER`) et deux fichiers ne les lisent pas dans le
+même ordre. Là bas le module les essaie tous, et **CRIE quand deux
+portent des valeurs DIFFÉRENTES** : l'ordre déciderait sinon laquelle
+est facturée, et c'est une question pour un humain.
+
+### 2. UN GÉNÉRATEUR D'EMAILS ÉCRIT DES EMAILS, PAS DES PISTES
+
+"Le générateur d'emails ne génère pas 'des pistes' mais des emails
+putain t'as fait n'imp."
+
+Elle a raison, et c'est la faute du 1er août : une mécanique écrite pour
+un cas, appliquée telle quelle à un autre. J'avais fait passer les TROIS
+générateurs par "trois pistes au choix", alors que ça ne veut dire
+quelque chose que pour UN.
+
+L'Atelier fait la distinction depuis le début : son labo BONUS a bien
+ses pistes (la créatrice choisit QUEL bonus elle fabrique), son funnel
+EMAILS n'en a aucune (un bouton, cinq emails). Parce qu'il n'y a rien à
+choisir : une séquence post-quiz a toujours les mêmes cinq temps.
+
+| Générateur | Pistes ? | Pourquoi |
+|---|---|---|
+| bonus | OUI | le bonus est une CRÉATION : trois idées valent mieux qu'une imposée |
+| emails | NON | la séquence a des temps fixes, elle se déroule |
+| promo | NON | annoncer un quiz est une routine, pas une création |
+
+**Règle : `lib/generateurs/sequences.ts`.** Les cinq temps de la
+séquence sont ceux de l'Atelier, MOT POUR MOT (`lib/funnelSequence.ts`
+là bas) : ils ont été corrigés par les retours de vraies élèves et ils
+sont enseignés dans la formation. Les réécrire ici donnerait deux
+méthodes pour la même chose, et Tiquiz serait celui qui se trompe. La
+promo a son propre plan, trois emails et quatre publications, chacune
+par un angle DIFFÉRENT (quatre posts qui disent la même chose autrement,
+c'est un post publié quatre fois).
+
+**`piecesDeLaPiste` ignore ce que le modèle déclare** dès qu'un plan
+fixe existe, et la route REFUSE l'étape des pistes sur ces générateurs :
+un écran resté sur l'ancienne version dépenserait des jetons (et des
+crédits, côté Tipote) pour rien.
+
+**L'intention part dans le PROMPT, le rôle s'affiche TRADUIT.**
+`resume` porte la consigne au modèle, en français ; `cle` est traduite
+par l'écran dans les 7 langues. Afficher `resume` tel quel serait le
+"Résultat 4" du 1er septembre.
+
+### 3. PLUSIEURS ÉTAPES QUI S'ENCHAÎNENT, PAS UNE PAGE QUI EMPILE
+
+"Tu n'as pas repris la belle mise en page facile de l'Atelier [...] fais
+plutôt plusieurs étapes qui s'enchaînent qu'une longue page qui empile
+les infos."
+
+L'écran affichait TOUT en même temps : le projet, le profil, l'offre,
+les pistes et les contenus. À l'ouverture, quatre sections dont trois
+qu'on ne peut pas encore remplir.
+
+**Règle : `lib/generateurs/parcours.ts`**, et les étapes dépendent du
+générateur (c'est tout l'intérêt) :
+
+```
+bonus  : projet -> réglages -> pistes -> contenus
+emails : projet -> réglages -> contenus
+promo  : projet -> contenus
+```
+
+Faire traverser une étape vide à la promo serait un clic pour rien. Le
+fil des étapes en haut se reclique : **revenir en arrière doit être
+aussi facile que d'avancer**, sinon on recommence tout pour corriger un
+mot. Et une étape qu'on ne peut pas franchir DIT ce qui manque, elle ne
+se contente pas d'un bouton gris.
+
+**Sur l'étape des pistes il n'y a pas de bouton "Suivant"** : on avance
+en CHOISISSANT une piste. Un bouton à côté mènerait à un écran de
+contenus sans rien à écrire.
+
+### LE PROJET SE CHOISIT DANS UN MENU, PAS DANS UNE GRILLE (3 septembre)
+
+Béné : "générateurs : menu déroulant au lieu des cartes de quiz."
+
+Une carte par projet donne une page interminable dès qu'on en a vingt,
+et le geste ici est un CHOIX dans une liste, pas une exploration. Les
+autres grilles restent (les profils, les pistes, les contenus) : là on
+COMPARE, donc la carte a un sens.
+
+**CE QUI NE DEVAIT PAS SE PERDRE : un projet bloqué DIT pourquoi.** Le
+griser sans un mot se lit comme un bug, et la créatrice cherche (règle
+du 22 août). Une `<option>` tient sur une ligne, donc la raison y est
+dite en version COURTE (`projet.bloqueCourt`, 3 raisons x 7 langues) ;
+la version longue reste celle des écrans qui ont la place.
+
+**Et le cul-de-sac muet a été fermé au passage.** L'écran testait
+`projets.length === 0` pour afficher "aucun de tes projets ne peut
+encore servir à ce générateur" : la phrase parle de ce qui est
+UTILISABLE, le test parlait de ce qui EXISTE. Avec des cartes ça se
+voyait à peine ; avec un menu, une liste dont toutes les options sont
+grisées serait un cul-de-sac sans un mot. `utilisables` filtre donc sur
+`blocageGenerateur`, et c'est lui que l'écran teste.
+
+**Le nombre de questions est passé SOUS le menu** : c'est la seule chose
+que la carte disait et qu'une `<option>` ne peut pas porter.
+
+Les deux écrans restent identiques à l'octet près dans les deux dépôts.
+Test : le bloc "le choix du projet" de
+`tests/logic/generateurs-parcours.test.mts`, vérifié en rejouant deux
+versions d'avant (la grille remise, la raison retirée).
+
+### ON LANCE DEPUIS LES RÉGLAGES, ON ATTERRIT SUR LES PISTES (3 septembre)
+
+Béné : "cette étape est inutile : autant générer les trois pistes
+directement ! Pourquoi t'as pas repris exactement ce qu'on a codé dans
+l'atelier ? C'est tellement pratique, on l'a déjà testé, amélioré,
+peaufiné. Les prompts, mises en pages, fonctionnement, présentation,
+tout était parfait, pourquoi partir sur autre chose ?"
+
+**Elle a raison sur les deux, et le deuxième reproche est le vrai.**
+
+L'étape des pistes s'ouvrait VIDE : un titre, une phrase, et un bouton
+"Proposer trois pistes". Deux clics pour un seul geste, et un écran qui
+ne sert qu'à porter son propre bouton.
+
+**Le labo de l'Atelier n'a JAMAIS fait ça, et ça se lit en une ligne**
+(`app/(app)/labo-bonus/BonusLabClient.tsx`) : son écran de brief FINIT
+par le bouton "Proposer 3 pistes", et `askPistes` fait
+`setStep("pistes")`. On arrive donc sur un écran qui MONTRE les trois
+pistes. Le mien avait la même liste d'étapes et le bouton du mauvais
+côté de la césure.
+
+| | l'Atelier, depuis le début | ici, avant le 3 septembre |
+|---|---|---|
+| le bouton qui lance | au pied du brief | sur l'écran d'après |
+| l'écran des pistes | montre les trois pistes | vide, avec un bouton |
+| la recommandation | AU DESSUS des cartes | en dessous, donc lue trop tard |
+
+**Les trois sont alignés sur l'Atelier**, ses phrases comprises ("Trois
+pistes, tu en choisis une", "Elles sont volontairement différentes.
+Prends celle qui te ressemble, pas la plus impressionnante.").
+
+**Ce qui NE devait pas se perdre : le prix de la relance.** "Proposer
+trois autres pistes" REFACTURE, et une relance gratuite en apparence est
+la meilleure façon de vider un compteur sans comprendre pourquoi. Le
+bouton de relance reste donc sur l'écran des pistes, en `outline` (sur
+un écran qui montre déjà trois pistes, un bouton plein tire l'oeil vers
+le geste qui coûte), et le coût est dit AUX DEUX endroits : au pied des
+réglages avant de lancer, et à côté de la relance. Le test compte les
+deux occurrences.
+
+**LA LEÇON, ET ELLE EST SUR MOI.** Le module `parcours.ts` porte en
+commentaire "L'Atelier fait l'inverse depuis le début (`library ->
+brief -> pistes -> produce`), et c'est ce qu'elle demande ici". J'avais
+donc lu son parcours, recopié la LISTE des étapes, et réécrit ce qui se
+passe DANS chacune. **Reprendre la structure d'un écran qui marche n'est
+pas la reprendre : ce qui marche est dans le détail des gestes.** Quand
+un écran de l'Atelier fait déjà le travail, on va le LIRE, geste par
+geste, avant d'en écrire un autre.
+
+Test : le bloc "les pistes : le lancement vit au pied des réglages" de
+`tests/logic/generateurs-parcours.test.mts`, vérifié en rejouant la
+version d'avant (deux tests rougissent).
+
+### PAREIL QUE L'ATELIER, NI PLUS NI MOINS (Béné, 3 septembre 2026)
+
+"Au final je veux exactement la même chose sur l'atelier et sur tiquiz.
+Pareil. Ni plus, ni moins. En visible et en invisible pour les users."
+
+Le passage a été fait geste par geste, en lisant son labo au lieu de
+lire sa liste d'étapes. Ce qui différait, mesuré :
+
+| Le geste | l'Atelier | ici, avant |
+|---|---|---|
+| l'écran de production | une GRILLE de dossiers, un clic ouvre, la flèche remonte | tout empilé |
+| le titre de l'écran | celui de la piste, sa punchline, l'avancement | "Les contenus" |
+| corriger un texte | l'éditeur, sur place | lecture seule |
+| exporter | PDF par bloc | rien |
+| choisir une piste | n'écrit RIEN, chaque dossier a son bouton | écrivait tout d'un coup |
+| la relance | AJOUTE une piste, max 6 | remplaçait les trois |
+
+**Quatre modules sont IMPORTÉS, pas réécrits**, et ils sont identiques à
+l'octet près dans les trois dépôts : `lib/bonus/document.ts`,
+`accents.ts`, `markdownHtml.ts`, `printable.ts`, plus
+`components/BonusDocument.tsx`. Le garde-fou est une commande :
+
+```bash
+cmp lib/bonus/document.ts ../formaquiz/lib/bonus/document.ts
+```
+
+Deux copies d'une même règle finissent toujours par diverger, et ici la
+divergence coûte un PDF qui ne ressemble plus à l'écran.
+
+**LA PREUVE QUE CE N'EST PAS THÉORIQUE, trouvée en portant.** La mise en
+forme en ligne vivait en DEUX exemplaires chez lui, `inline()` dans
+`BonusDocument.tsx` et `inline()` dans `printable.ts`, et le commentaire
+du second annonçait "la MEME mise en forme qu'a l'ecran". **Elles
+avaient déjà divergé** : l'écran n'échappait pas le guillemet double,
+l'impression si. Or c'est une règle de SÉCURITÉ (ce texte vient d'un
+modèle et finit dans un `innerHTML`).
+
+Elle vit maintenant dans `lib/bonus/document.ts`, en un seul exemplaire,
+avec la cible en PARAMÈTRE (`"ecran"` ouvre un onglet, `"impression"`
+non). Et surtout elle est enfin TESTABLE : enfermée dans un `.tsx`, elle
+ne l'était pas, donc rien ne vérifiait qu'un `javascript:` était refusé.
+Les deux tests de l'Atelier qui la surveillaient lisaient sa SOURCE avec
+des regex, donc ils figeaient une écriture et pas un comportement : ils
+APPELLENT la fonction désormais, des deux côtés.
+
+**Ce qui change pour la créatrice, et qu'il faut assumer :** les emails
+et la promo ne s'écrivent plus d'un seul bouton. Chaque morceau a le
+sien, comme les trois blocs du bonus dans l'Atelier. C'est plus de clics
+et c'est le prix de "pareil" ; c'est aussi ce qui évite de facturer sept
+contenus à quelqu'un qui en voulait deux.
+
+🚨 **Fichier SUPPRIMÉ : `lib/generateurs/markdown.ts`.** C'était NOTRE
+rendu, à côté de celui de l'Atelier : le même contenu s'affichait de
+deux façons selon l'écran où on le lisait. La bibliothèque
+(`/generateurs/mes-contenus`) passe par le même rendu que la production.
+Supprimé et pas laissé sans appelant : un module mort est un piège que
+le prochain passage rebranche en croyant réparer.
+
+Test : `tests/logic/generateurs-parcours.test.mts`, bloc "l'écran de
+production suit le labo de l'Atelier", vérifié en rejouant la version
+d'avant (l'édition retirée, le PDF retiré, l'avancement recompté : les
+trois rougissent).
+
+### Le repli sans section perdait la mise en forme (même jour)
+
+Béné, en lisant le portage : "ça ne va pas supprimer ce qui s'écrivait
+en markdown ? Les users doivent voir en beau, bien mis en forme comme
+sur l'atelier."
+
+**Elle avait raison de se méfier, et le trou était PLUS grave que ça.**
+
+Le rendu branchait sur `hasStructure(doc)` : un document sans aucun
+titre de section retombait sur un affichage de `{b.text}` TEL QUEL.
+Mesuré sur un email réel :
+
+| ce que le modèle écrit | ce que le repli affichait |
+|---|---|
+| `Tu es **Team Capture**.` | `Tu es **Team Capture**.` |
+| `[le quiz](https://...)` | `[le quiz](https://...)` |
+| `- un point` puis `- deux` | **rien du tout** |
+
+La dernière ligne est la pire : un bloc qui n'était pas un paragraphe
+rendait la chaîne vide, donc la LISTE DISPARAISSAIT de l'écran.
+
+**Et c'était le cas le PLUS FRÉQUENT ici.** Les trois blocs d'un bonus
+portent toujours des `##`, donc ça ne se voyait pas dans l'Atelier. Un
+email et un post court n'en ont pas : les deux générateurs à plan fixe
+tombaient donc systématiquement dans le repli.
+
+**Règle : `BonusDocument` est appelé SANS CONDITION**, sur l'écran de
+production comme dans la bibliothèque. Il rend déjà `doc.lead` avec le
+même moteur que les sections (gras, italique, liens, listes, étapes,
+code) et sans carte autour : le repli n'apportait rien, il retirait.
+
+**Le markdown reste la source de vérité et ne bouge pas d'un octet** :
+c'est lui qui est stocké, lui que l'éditeur relit par le pont, lui que
+le PDF imprime, et lui qu'elle colle dans Systeme.io. Ce qui a changé,
+c'est le RENDU, et il est désormais celui de l'Atelier partout.
+
+**LA LEÇON :** le commentaire du repli disait "un texte sans aucune
+section retombe sur un rendu simple : forcer une carte unique qui
+contient tout n'apporterait rien". La phrase était plausible et fausse,
+puisque `BonusDocument` ne force aucune carte sur le lead. **Un repli se
+juge sur ce qu'il REND, jamais sur ce que son commentaire annonce.**
+
+Test : le cas "un contenu SANS titre de section garde sa mise en forme"
+de `tests/logic/generateurs-parcours.test.mts`, vérifié en rejouant le
+repli d'avant (il rougit).
+
+### L'ÉTAPE DU BRIEF MANQUAIT ENTIÈREMENT (Béné, 3 septembre 2026)
+
+Captures de l'Atelier à l'appui : "mais t'as pas du tout reproduit sur
+Tiquiz ce qu'on a sur l'atelier !! C'est où l'étape pour choisir quand
+sera envoyé le bonus, le type de bonus, pour un partage ou un quiz
+complété ??? Je t'ai pas demandé de l'à peu près je t'ai demandé
+PAREIL."
+
+**Elle avait raison, et ce n'était pas un détail de mise en page : les
+DEUX choix qui décident de ce que le bonus doit ÊTRE n'existaient pas.**
+
+| Le réglage | l'Atelier | ici, avant |
+|---|---|---|
+| ce que reçoit chaque profil (`plan`) | 3 cartes cliquables | rien |
+| l'offre payante | plusieurs, une par profil, avec pastilles | UNE seule |
+| la couverture des profils | avertissement nommant les profils | rien |
+| quand le bonus est remis (`declencheur`) | 2 cartes cliquables | rien |
+| le profil du contenu | dans le DOSSIER, avec "(écrit)" par profil | dans les réglages |
+
+**Et mon propre `lib/generateurs/offre.ts` disait noir sur blanc "on ne
+reprend PAS ça ici, pas encore".** Le "pas encore" était un mauvais
+calcul dès le départ : le retour de Monique (Atelier, 5 août) décrit un
+quiz qui ORIENTE vers trois offres, ce qui est exactement ce que Tiquiz
+vend. Renvoyer les trois profils vers la même offre, c'est dire
+l'inverse de ce que le quiz vient de leur dire.
+
+**CE MODULE EST UNE RÉIMPLÉMENTATION, ET JE LE DIS.** Les quatre autres
+modules du labo sont portés à l'octet près, un `cmp` le prouve.
+`lib/bonus/offers.ts` ne peut pas l'être : il parle anglais
+(`BonusOffer.promise`) et tout `lib/generateurs/` parle français. J'ai
+d'abord tenté un pont, et il tenait sur un `as unknown as` entre deux
+formes DIFFÉRENTES, c'est à dire un mensonge que le compilateur ne
+pouvait plus contredire (règle du 7 août). Il n'y a donc qu'UNE forme, en
+français, et c'est le COMPORTEMENT qui est figé :
+`tests/logic/offres-par-profil.test.mts` rejoue les cas de son
+`bonus-offers.test.mts` un par un.
+
+**Quatre choses à ne pas défaire :**
+
+1. **Le plan est posé AVANT les offres** (Béné, Atelier, 5 août : "c'est
+   ce que reçoit chaque profil qui doit aller en premier"). Ce n'est pas
+   qu'une question de logique : ce choix décide si les pastilles de
+   profils existent dans les cartes d'offre, donc elles apparaissent
+   APRÈS lui, dans le sens de lecture.
+2. **Trois valeurs pour le plan, pas deux réglages.** "Un bonus ou
+   plusieurs ?" et "une offre ou plusieurs ?" feraient quatre
+   combinaisons dont une est INCOHÉRENTE : un bonus commun qui devrait
+   mener vers trois offres. La quatrième est impossible par
+   construction.
+3. **La clé d'un contenu décliné porte le PROFIL** (`contenu-1:2`).
+   Sans lui, écrire le 2e profil écrase le 1er, et elle ne s'en aperçoit
+   qu'en rouvrant. Et un dossier décliné n'est "Prêt" que quand TOUS ses
+   profils sont écrits : le dire dès le premier ferait croire le bonus
+   terminé alors qu'il en manque trois.
+4. **Le serveur REFUSE une couverture incomplète** (`couverture_offres`),
+   il ne devine pas. L'écran prévient déjà, mais un bonus écrit pour un
+   profil qui ne mène nulle part fait travailler la créatrice pour rien.
+   Une offre INUTILISÉE, elle, ne bloque pas : c'est presque toujours
+   une case oubliée, pas une faute.
+
+**Et le déclenchement part dans le PROMPT**, pas seulement à l'écran : à
+la fin du quiz le bonus prolonge un résultat qu'on vient de lire ; après
+un partage il récompense un geste, donc il doit valoir le geste. Le
+taire laisse le modèle écrire pour le cas moyen.
+
+**Ce qui reste différent, et c'est assumé :** le plan et le déclencheur
+sont gatés sur `estBonus`. "Quand vas-tu envoyer ce bonus ?" ne veut
+rien dire pour une séquence d'emails ou pour de la promo, et le labo de
+l'Atelier EST le bonus. C'est un PARAMÈTRE du générateur, jamais déduit
+de la présence d'une offre.
+
+Test : `tests/logic/offres-par-profil.test.mts`, vérifié en rejouant la
+version d'avant (8 tests rougissent).
+
+### J'AI RELEVÉ SES PHRASES UNE PAR UNE (Béné, 3 septembre 2026)
+
+"Tu peux pas chercher par toi-même ce qui ne serait pas strictement
+identique pour le corriger ? Tu as TOUS les codes pour le faire."
+
+Si, et c'est ce qu'il fallait faire depuis le début au lieu d'attendre
+qu'elle ouvre l'écran. La méthode, reproductible :
+
+1. extraire chaque phrase VISIBLE de son labo (commentaires retirés) ;
+2. la chercher dans nos 7 fichiers de langue, en normalisant les
+   accents, les apostrophes et les variables ;
+3. lire ce qui reste.
+
+**26 phrases sans équivalent.** Après tri, deux vrais gestes manquants
+et une série de mots.
+
+**LES DEUX GESTES :**
+
+| Ce qui manquait | Ce que ça coûtait |
+|---|---|
+| **le temps par personne** d'une piste (`needsHerTime` chez lui) | le socle interdit déjà ce qui demande son temps à CHAQUE visiteur, mais un format peut en valoir la peine. Le prix se DIT : caché derrière le mot "personnalisé", il ne se découvre qu'au quarantième lead, c'est à dire quand le quiz commence à marcher |
+| **"L'étape de partage n'est pas encore activée sur ton quiz"** | on proposait un déclenchement qui n'existe pas sur ce quiz là, donc un bonus que personne ne recevrait jamais. La carte lit maintenant `virality_enabled` en base |
+
+**ET TROIS DÉFAUTS TROUVÉS EN CHERCHANT :**
+
+- **les trois dossiers du bonus n'avaient AUCUNE phrase.** Mes cartes
+  affichaient `piece.resume`, qui est VIDE sur le bonus : trois cartes
+  sans un mot pour dire ce qu'il y a dedans. "Pour toi / pour ton
+  visiteur" est exactement ce qui évite d'ouvrir les trois pour savoir
+  lequel est lequel (`aides.*`, ses phrases).
+- **un dossier vide décrivait l'écran au lieu de dire le geste.** "Rien
+  n'a encore été écrit" contre "Génère ton guide de création"
+  (`vides.*`).
+- **une offre de trois mots passait.** Son labo refuse en dessous de 10
+  caractères, avec la phrase qui dit quoi corriger.
+
+**LES MOTS, alignés sur les siens** : "Proposer 3 pistes", "Je cherche
+tes pistes...", "Je prends celle-ci", "Ton offre payante", "C'est vers
+elle que ton bonus doit ramener", "Autorise les pop-ups", "La copie a
+échoué. Sélectionne le texte et copie-le à la main."
+
+**CE QUI RESTE DIFFÉRENT, ET C'EST ASSUMÉ :**
+
+- **nos messages d'erreur sont plus riches que les siens.** Il dit "La
+  génération n'a pas abouti. Réessaie dans un instant." ; nous rendons
+  une RAISON parmi neuf, traduite en 7 langues, qui dit quoi faire
+  (saturé, trop long, hors quota, pas configuré...). C'est la règle du
+  3 août, et reculer là dessus serait une régression.
+- 🚨 **"la BIBLIOTHÈQUE ne rouvre pas un projet" A ÉTÉ CORRIGÉ le
+  3 septembre**, et cette ligne le disait encore. C'était le dernier
+  écart avec son labo, et il demandait une migration : voir la section
+  suivante. Une note d'état des lieux se relit quand on corrige ce
+  qu'elle décrit, sinon le prochain passage agit sur une dette déjà
+  soldée (leçon du 31 août).
+
+**LA LEÇON DE MÉTHODE, et elle vaut pour les prochains portages :**
+comparer deux écrans à l'oeil rate ce qui n'est PAS là. Relever les
+phrases de l'un et les chercher dans l'autre trouve les absences, qui
+sont exactement ce qu'un coup d'oeil ne voit pas.
+
+Test : le bloc "les mots et les gestes de son labo" de
+`tests/logic/offres-par-profil.test.mts`, vérifié en rejouant la version
+d'avant (6 tests rougissent).
+
+**Et deux fois de suite, mon propre test était faux avant le code.** Le
+premier figeait le JSX au caractère près, donc il rougissait sur une
+correction juste. Le second regardait LIGNE PAR LIGNE, donc il
+rougissait sur un garde posé à la ligne d'au dessus. Un test qui mesure
+la présence ou l'ORDRE de quelque chose dans un fichier retire d'abord
+les commentaires, sinon il tombe sur sa propre explication.
+
+**Et le lendemain, une TROISIÈME fois, dans le même fichier :** le test
+du contenu par profil figeait le ternaire du JSX, donc il est sorti
+rouge le jour où la règle a quitté le composant pour un module pur,
+c'est à dire sur une correction juste. **Un garde-fou qui fige une
+FORMULATION empêche de corriger la formulation** : il vise maintenant le
+COMPORTEMENT (`morceauParProfil` appelée avec ses cas), et il n'exige de
+la source que le fait qu'elle DÉLÈGUE.
+
+### ON REPREND UN CONTENU LÀ OÙ ON L'A LAISSÉ (Béné, 3 septembre 2026)
+
+"Oui fais la migration." C'était le dernier écart avec le labo de
+l'Atelier, et le plus cher des trois.
+
+`generateur_contenus` gardait les MORCEAUX depuis le 2 septembre, donc
+plus rien n'était perdu à un rafraîchissement. Mais elle ne gardait pas
+de quoi CONTINUER : ni le brief (le plan, le déclenchement, les offres),
+ni les pistes proposées, ni celle qui a été choisie. La bibliothèque
+LISAIT le travail sans pouvoir le reprendre. Corriger un email, en
+générer un sixième, ou écrire le contenu du 3e profil demandait de tout
+resaisir et de REPAYER les pistes.
+
+**On ÉTEND la table, on n'en ajoute pas une deuxième.** Une deuxième
+donnerait DEUX bibliothèques pour la même chose, et c'est la divergence
+que ces dépôts paient en boucle depuis juin (deux files de tickets, deux
+registres d'affiliés, deux rendus markdown). La ligne EST le projet :
+elle porte déjà le générateur, le quiz, son titre recopié et les
+morceaux.
+
+**LE PROFIL VIT SUR LE MORCEAU, PAS SUR LA LIGNE.** Le contenu d'un
+bonus décliné s'écrit une fois par profil, alors que son mode d'emploi
+et ses textes de remise sont les mêmes pour tout le monde. Mettre le
+bonus dans une ligne PAR PROFIL séparerait un guide de son contenu, et
+la reprise rouvrirait un projet à moitié. C'est un PARAMÈTRE du
+générateur (`demandeUnProfil` pour la ligne, `morceauParProfil` pour le
+morceau), jamais une déduction.
+
+### ET LE SERVEUR NE SAVAIT PAS POUR QUI IL ÉCRIVAIT
+
+Trouvé en branchant la reprise, et c'est un vrai bug d'argent.
+
+La règle "le contenu d'un bonus décliné s'écrit une fois par profil"
+vivait DANS `GenerateurClient`, en une ligne de JSX. L'écran la
+connaissait donc, et le serveur non : `corpsCommun` n'envoyait
+`profilIndex` que pour les emails. Le serveur recevait la même demande
+pour les trois profils, rendait **trois fois le même texte**, et l'écran
+le rangeait sous trois clés différentes. Trois clics, trois générations
+facturées, un seul contenu.
+
+**Règle : `morceauParProfil(generateur, plan, bloc)` et
+`cleMorceau({...})` vivent dans `lib/generateurs/blocs.ts`**, et les
+DEUX côtés les appellent : l'écran quand il range ce qu'il vient
+d'écrire, le serveur quand il rouvre un contenu. Deux façons de composer
+une clé finiraient par ne plus se retrouver, et un contenu déjà écrit
+s'afficherait comme jamais généré, donc se regénérerait.
+
+C'est la règle du 1er août, dans sa forme la plus littérale : une règle
+enfermée dans un composant n'est pas testable, donc elle n'est pas
+testée.
+
+### QUATRE CHOSES À NE PAS DÉFAIRE
+
+1. **Le repli si la migration n'est pas encore passée.** PostgREST
+   rejette l'écriture ENTIÈRE sur une colonne qu'il ne connaît pas :
+   sans repli, un déploiement en avance ferait perdre TOUS les contenus
+   générés, en silence, alors que la bibliothèque marchait la veille
+   (drame `quiz_events.meta`). On réessaie sans les trois colonnes, et
+   on CRIE : la reprise attend la migration, le contenu non.
+2. **Une ligne d'AVANT la migration ne se reprend pas, et l'écran le
+   DIT.** `brief` vaut `{}` par défaut, donc `projet` vaut `null`, donc
+   `peutEtreRepris` répond non. On ne fabrique pas un brief vide qui
+   rouvrirait un écran sans rien dedans, et le bouton absent se justifie
+   sur la ligne (règle du 22 août).
+3. **Le JSONB est LIBRE, donc le contrôle est dans `projet.ts`.**
+   Ajouter un champ au brief ne doit pas demander une migration (même
+   choix que `bonus_projects` chez lui). On borne la FORME et la TAILLE,
+   jamais la liste des champs, et `assainirProjet` ne lève JAMAIS : une
+   valeur illisible en base ne doit pas rendre un contenu impossible à
+   rouvrir.
+4. **On atterrit sur les CONTENUS, et le fil des étapes reste
+   reclicable.** Ouvrir sur l'étape du projet obligerait à retraverser
+   trois écrans déjà remplis pour corriger un mot.
+
+**Le filtre par personne est DANS la requête** de `lireContenuParId`,
+pas dans un `if` au dessus : c'est lui qui empêche de rouvrir le travail
+de quelqu'un d'autre avec un identifiant deviné. Et on ne distingue pas
+"ça n'existe pas" de "ce n'est pas à toi".
+
+🚨 Migration : `supabase/migrations/20260903_generateurs_reprise.sql`,
+**sur les DEUX Supabase** (Tiquiz et Tipote).
+
+Test : `tests/logic/reprise-generateurs.test.mts`, vérifié en rejouant
+deux versions d'avant (le repli retiré, le brief vide accepté : les deux
+rougissent), plus le cas "le serveur SAIT pour quel profil il écrit" de
+`offres-par-profil.test.mts`.
+
+### 4. LES CONTENUS SE RETROUVENT
+
+"Il faut aussi que les users retrouvent leurs créations dans
+'générateurs' : ajoute une étape avec le choix -> 'mes contenus
+générés' > 3 blocs pour classer les 3 types de contenus générés OU
+'générer de nouveaux contenus' > 3 générateurs."
+
+Un contenu généré vivait dans l'onglet du navigateur et nulle part
+ailleurs : un rafraîchissement, et le travail était perdu. Côté Tipote
+il était même PAYÉ en crédits, donc perdu et facturé.
+
+- `/generateurs` : les deux cartes ;
+- `/generateurs/nouveau` : les trois générateurs ;
+- `/generateurs/mes-contenus` : trois blocs, un par générateur.
+
+**Trois choses à ne pas défaire :**
+
+1. **On enregistre APRÈS CHAQUE MORCEAU, pas à la fin.** Une génération
+   dure une minute et demie : l'onglet fermé au septième morceau ne doit
+   pas tout emporter. Une LIGNE par livraison, pas par morceau : une
+   séquence de cinq emails est UN contenu, et cinq lignes obligeraient
+   chaque lecteur à les recoller dans le bon ordre.
+2. **`quiz_id` est en ON DELETE SET NULL et le titre est RECOPIÉ.** Un
+   quiz supprimé ne doit pas emporter les emails écrits pour lui : ils
+   sont peut-être déjà programmés dans Systeme.io. C'est la règle de la
+   facture émise (24 août).
+3. **Un bloc VIDE reste affiché.** Sa présence dit que le générateur
+   existe : le masquer ferait croire qu'il n'y en a que deux.
+
+**L'enregistrement est BEST-EFFORT et ne lève jamais** : le texte est
+déjà à l'écran, faire échouer la réponse pour un souci de base ferait
+perdre les deux. Et la lecture distingue "je n'ai pas pu regarder" de
+"il n'y a rien" : un écran vide se lit "je n'ai rien créé", et ce serait
+faux.
+
+🚨 Migration : `supabase/migrations/20260902_generateurs_contenus.sql`,
+**sur les DEUX Supabase** (Tiquiz et Tipote).
+
+### 5. ET LA LANGUE : j'avais réécrit une table de SEPT à côté des CENT
+
+"Pense au multilangues, on doit offrir la même qualité à toutes les
+langues prises en charge et les contenus + bonus sont générés dans la
+langue du quiz bien sûr."
+
+`consigneLangue` portait une table de sept langues, celles de
+l'INTERFACE. Un quiz écrit en japonais ou en swahili en sortait donc
+avec `la langue de code "ja"`, alors que `buildLanguageDirective`
+(`lib/quizLanguages.ts`) existe depuis des mois et rend "Japanese
+(日本語)" plus ses NOTES RÉGIONALES ("voiture" vs "char", "ordenador" vs
+"computadora"). C'est ce que reçoit déjà la génération de quiz : deux
+qualités de consigne pour deux écrans du même produit, et c'est le
+générateur qui écrivait moins bien.
+
+Test : `tests/logic/generateurs-parcours.test.mts`, dans les deux
+dépôts. Le test de la CLÉ, lui, diffère : Tipote lit trois noms.
+
+### 6. ET LE PROMPT DU BONUS N'ÉTAIT PAS CELUI DE L'ATELIER (3 septembre 2026)
+
+Béné : "t'es sûr d'avoir utilisé les mêmes prompts pour les générateurs
+de bonus et les emails ? Je les trouve moins bien que sur l'Atelier...
+tu utilises bien Claude ? Le meilleur modèle rapport qualité prix ?"
+
+**LE MODÈLE EST HORS DE CAUSE, ET C'EST MESURÉ.** Les trois dépôts
+appellent `resolveAnthropicModel(process.env.ANTHROPIC_MODEL, "sonnet")`,
+donc `claude-sonnet-4-6`, avec la MÊME fonction et la même table. Le
+labo bonus de l'Atelier (`app/api/me/bonus/route.ts`) et les générateurs
+d'ici tournent sur le même modèle : il ne peut pas expliquer un écart.
+
+**LES PROMPTS, EUX, N'ÉTAIENT PAS LES MÊMES.** Seuls les CINQ TEMPS de
+la séquence emails l'étaient (vérifié caractère par caractère entre
+`lib/funnelSequence.ts` et `lib/generateurs/sequences.ts` : cinq
+intentions identiques). Tout le reste est une RÉÉCRITURE, et cette page
+laissait croire l'inverse.
+
+Ce qui manquait, compté dans `socle.ts` + `consignes.ts` avant
+correction, zéro occurrence de chacun :
+
+| Ce qui manquait | Ce que ça coûte |
+|---|---|
+| **les 4 PILIERS d'un bonus qui convertit** (urgence, spécificité, accessibilité, CONTINUITÉ) | rien ne disait au modèle qu'un bonus doit ouvrir un vide que seule l'offre comble. D'où des bonus qui se suffisent à eux mêmes, donc qui ne vendent pas |
+| **le test qui tranche** ("si un concurrent pouvait publier le même texte en changeant son logo") | c'est le critère le plus dur et le seul qui produise du contenu qu'on ne peut pas confondre |
+| **les puces promesses en DEUX temps** (bénéfice + conséquence concrète) | sans lui, le modèle rend un SOMMAIRE. "Un modèle d'email" au lieu de "tu écris ton email du lundi en dix minutes" |
+| **le moment psychologique dans le persona** | le modèle écrivait du contenu de blog, correct, qui ignore que la personne vient de recevoir un résultat sur elle même |
+
+**Les trois premiers viennent de l'Atelier, mot pour mot ou presque**
+(`lib/prompts/bonus.ts` : `FOUR_PILLARS`, `VALUE_CRITERIA`,
+`PROMISE_BULLETS`). Ils ont été écrits là bas, corrigés par les retours
+de vraies élèves, et enseignés dans la formation : les réécrire ici
+donnait deux méthodes pour la même chose, et c'est Tiquiz qui se
+trompait.
+
+**OÙ ILS VIVENT, ET CE N'EST PAS INDIFFÉRENT.** Ce qui vaut pour les
+TROIS générateurs (le test du logo, les puces promesses, le moment
+psychologique) va dans le SOCLE, donc dans le bloc caché : il ne coûte
+presque rien à partir de la deuxième lecture. Les 4 PILIERS sont
+bonus-spécifiques et vivent dans `consignes.ts`, la partie variable :
+dans le socle, ils seraient facturés sur chaque email et chaque post,
+qui n'en ont que faire. Le test l'exige dans les deux sens.
+
+**LA LEÇON, ET ELLE EST SUR MOI :** j'avais écrit ici "les cinq temps
+sont ceux de l'Atelier, mot pour mot", ce qui était vrai, et cette
+phrase a servi de preuve que TOUT venait de l'Atelier, ce qui était
+faux. **Une phrase exacte sur une moitié laisse croire l'autre moitié.**
+C'est la même faute que la mesure des règles d'automatisation : dire ce
+qu'on a vérifié, et dire aussi ce qu'on n'a pas vérifié.
+
+Test : les 4 cas ajoutés à `tests/logic/generateurs.test.mts` (les deux
+dépôts), vérifiés en rejouant la version d'avant : les 4 rougissent.
+
+### LE CACHE : ce qui se paie une fois, et ce qui se paie à chaque appel (4 septembre 2026)
+
+Béné : "beaucoup de choses sont reprises d'un user à l'autre alors on
+doit pouvoir économiser quelque part ?" Puis, sur le TTL : "fais au mieux
+pour le jour où on aura 1000 utilisateurs intensifs."
+
+**Elle avait raison, et j'avais d'abord répondu à côté.** J'ai commencé
+par dire que le préfixe caché ne laissait plus rien à gagner. Mesuré, il
+en restait un tiers.
+
+#### CE QUI BLOQUAIT, ET IL ÉTAIT INVISIBLE
+
+Le socle est mis en cache depuis le 1er septembre. La consigne, non. Et
+elle ne POUVAIT pas l'être : elle portait **le profil, la piste choisie
+et l'adresse du quiz**, c'est à dire des FAITS. Mesuré avant correction :
+**0 des 15 consignes de production n'était la même d'une créatrice à
+l'autre.** 383 jetons repayés plein tarif à chaque appel, sur un texte
+dont seules 3 lignes changeaient.
+
+L'en-tête de `messagePourLeModele` disait pourtant déjà la règle : "le
+système dit les règles, le message dit le cas". Trois blocs de FAITS
+vivaient dans les RÈGLES.
+
+#### LA STRUCTURE, DU PLUS STABLE AU MOINS STABLE
+
+| | quoi | qui |
+|---|---|---|
+| 1, caché | le SOCLE, 2841 jetons | UNE entrée pour tout le monde, les trois générateurs, toutes les langues |
+| 2, caché | la CONSIGNE, ~281 jetons | 18 entrées, une par (générateur, bloc, rang) |
+| 3, plein tarif | la langue et le ton, 73 jetons | par créatrice |
+| message | son brief, ses offres, le profil, la piste, l'adresse | par appel |
+
+**MESURÉ, entrée effective d'un appel de production :**
+
+| | avant | après |
+|---|---|---|
+| cache chaud (le trafic dense) | 842 j | **569 j (-32 %)** |
+| cache froid (aujourd'hui) | | **-9 % (bonus) à -17 % (promo)** |
+
+C'est gagnant dans les DEUX régimes, et c'est ce qui a tranché : sortir
+les faits ne coûte rien tout de suite et rapporte un tiers à l'échelle.
+
+#### LE TTL RESTE À 5 MINUTES, ET C'EST LA RÉPONSE À "1000 UTILISATEURS"
+
+C'est le contraire de ce qu'on croit. **Une LECTURE relance le compteur
+sans rien coûter.** Donc dès que deux appels qui partagent le préfixe
+partent à moins de 5 minutes d'écart, l'entrée ne meurt jamais. À
+1000 utilisateurs intensifs, les 19 entrées restent chaudes en
+permanence, et le TTL d'une heure ne ferait que **doubler le prix de
+l'écriture (2x au lieu de 1,25x) pour rien**.
+
+Le TTL d'une heure sert au cas INVERSE : un trafic creux, avec des trous
+de plus de 5 minutes. Et même là il lui faut **3 lectures par entrée**
+pour rentrer dedans. À mesurer avant de le poser, jamais par principe.
+
+#### CE QUE J'AI TESTÉ ET QUI AURAIT COÛTÉ PLUS CHER
+
+- **Un socle par générateur.** Mesuré : le bloc qui décrit les trois ne
+  fait que **11 % du socle** (301 jetons). On récupérerait 200 jetons une
+  fois par session en créant trois caches à réchauffer.
+- **Mettre la langue et le ton avant le point de cache.** Ça
+  multiplierait les entrées par les 100 langues du catalogue fois deux
+  formes d'adresse, pour gagner 73 jetons.
+
+#### ET LA LEÇON DE MESURE, QUI EST SUR MOI
+
+Ma première mesure disait "5 consignes sur 5 identiques" côté emails.
+**Elle était fausse** : mon faux brief portait `locale` alors que le
+champ s'appelle `langue`, donc `consigneLangue` recevait `undefined` des
+deux côtés et rendait la même chose. J'ai bâti une conclusion sur un
+test qui ne distinguait pas ce qu'il était censé distinguer, dans la
+séance même où je citais cette règle.
+
+**Un faux jeu de données ne se voit pas : il rend le test VERT.** Une
+mesure de comparaison doit d'abord prouver qu'elle sait voir une
+différence quand il y en a une.
+
+#### Le garde-fou
+
+`tests/logic/cache-des-prompts.test.mts`, vérifié en rejouant la version
+d'avant (une adresse remise dans la consigne, un seul point de cache :
+les deux rougissent). Il tient quatre choses : le socle n'interpole rien,
+les 15 consignes sont identiques d'une créatrice à l'autre, il y a
+exactement DEUX points de cache et le bloc variable n'en porte aucun, et
+le TTL reste à 5 minutes avec sa raison écrite à côté.
+
+**Le cache échoue EN SILENCE** : une variable qui repasse dans le préfixe
+ne casse rien, ne lève rien, n'affiche rien. Elle multiplie juste la
+facture sans que personne ne le voie.
+
+#### Ce qui reste vrai, et qu'il ne faut pas perdre de vue
+
+**La sortie coûte 5 fois l'entrée au jeton, donc 73 à 79 % de la
+facture.** Tout ce qui précède optimise la moitié pas chère.
+
+🚨 Cette page ajoutait ici « le seul levier qui pèse est la longueur des
+morceaux, et il est déjà réglé ». **Il ne l'était pas** : voir la
+section suivante, écrite le jour même.
+
+### LA SORTIE : rien n'est tronqué, rien n'est annulé (4 septembre 2026)
+
+Béné, d'abord : "comment on peut régler le problème des tokens en sortie
+sans perdre en qualité ?" Puis, en relisant ce que j'avais fait :
+
+> "tout ce que je veux c'est que rien ne doit tronqué ni annulé : si la
+> sortie doit faire 20000 mots ben elle en 20000 c'est tout. Un email qui
+> demande à faire XX mots ben il sort XX mots, on ne détruit jamais la
+> qualité."
+
+**MON PREMIER JET FAISAIT EXACTEMENT LES DEUX CHOSES QU'ELLE INTERDIT**,
+et c'est la vraie leçon de la journée :
+
+1. j'avais **RABOTÉ** le contenu d'un bonus de 1800 à 1500 mots, pour
+   qu'il tienne sous un plafond technique. C'est "détruire la qualité
+   pour économiser", et ça ne se voit sur aucun écran ;
+2. j'avais ajouté un **REFUS** quand le texte dépassait quand même. Un
+   refus, c'est une annulation : elle repart avec rien, après avoir
+   attendu une minute et demie.
+
+**On économise sur ce qui ne sert à rien, jamais sur le livrable.**
+
+#### CE QUI A ÉTÉ RELEVÉ AVANT DE TOUCHER À QUOI QUE CE SOIT
+
+| | |
+|---|---|
+| la sortie | 5x l'entrée au jeton, donc **73 à 79 % de la facture** |
+| `thinking` | **jamais activé** par les générateurs : aucun jeton caché |
+| le préambule | déjà interdit par le socle |
+| la **conclusion** | **pas interdite**, donc payée : "n'hésite pas à adapter" |
+| la longueur | annoncée dans le TEXTE de 3 consignes sur 6, absente des 3 autres |
+| le plafond | un ternaire dans la route, à l'autre bout du fichier |
+
+**Le bonus lui même, le plus gros poste de sortie, n'annonçait AUCUNE
+longueur** : le modèle écrivait au jugé, sans savoir s'il devait rendre
+deux pages ou dix.
+
+#### LA SEULE LIMITE QUI EXISTE VRAIMENT EST UNE LIMITE DE TEMPS
+
+Mesuré en production côté Atelier (`app/api/me/bonus/route.ts`, 5 août) :
+**au delà de ~4500 jetons de sortie, UN appel dépasse les 85 secondes du
+budget et rend ZÉRO ligne.** Ce n'est pas une limite de CONTENU, c'est le
+temps qu'une requête a le droit de durer derrière Cloudflare.
+
+Confondre les deux est ce qui m'a fait raboter le bonus. La bonne réponse
+n'est pas d'écrire moins, c'est d'écrire en **PLUSIEURS TRANCHES** :
+
+- le texte déjà écrit repart en dernier message `assistant` (prefill),
+  donc le modèle **REPREND** au caractère près au lieu de recommencer ;
+- ce qui est déjà écrit n'est jamais réécrit, donc **jamais repayé** ;
+- l'écran enchaîne les tranches tout seul, et quand il en faut encore
+  plus, il propose "Écrire la suite" au lieu de constater ;
+- **un échec en cours de route ne jette rien** : on rend ce qui existe.
+
+`MAX_TRANCHES = 6` x `TRANCHE_MAX = 4500`, c'est ~18000 mots pour UN
+morceau, et au delà le bouton est toujours là. **Il n'y a plus aucun
+chemin qui rend un texte coupé sans moyen de le finir.**
+
+#### LES LONGUEURS SONT UNE DÉCISION ÉDITORIALE, PAS UN BUDGET
+
+| | mots |
+|---|---|
+| bonus, le contenu | 1200 à 1800 |
+| bonus, le guide | 400 à 700 |
+| bonus, les textes de remise | 250 à 450 |
+| un email de séquence | 200 à 300 |
+| un email de promo | 150 à 250 |
+| un post | 90 à 150 |
+
+Un email de 250 mots fait 250 mots parce que c'est la bonne longueur d'un
+email, pas parce que ça coûte moins cher. **Et la consigne autorise
+explicitement à dépasser** ("si le sujet demande plus, tu écris plus et
+tu vas au bout") : elle ne dit jamais "coupe", parce qu'une consigne qui
+demande de raccourcir fait rendre un SOMMAIRE à la place d'un contenu.
+
+Le test fige ces six fourchettes : les baisser fait rougir.
+
+#### CE QU'ON RETIRE VRAIMENT, ET ÇA NE COÛTE AUCUNE LIGNE DE CONTENU
+
+La **conclusion du modèle** sur son propre travail ("j'espère que ça te
+convient", "n'hésite pas à adapter"), deux à trois phrases par morceau,
+payées à chaque fois. C'est la seule économie de ce chantier, et elle ne
+retire rien à personne.
+
+**Et resserrer un plafond n'économise RIEN** : on paie ce qui est ÉCRIT,
+jamais ce qui était permis. Ça n'ajoute que du risque de couper.
+
+#### CE QUE JE N'AI PAS MESURÉ, ET QUI SE DIT
+
+**L'économie réelle en jetons de sortie ne peut pas se mesurer d'ici sans
+dépenser ses crédits d'API.** Ce qui est mesuré : les six morceaux
+savent enfin quelle longueur viser, et la conclusion est interdite. Ce
+qui est attendu, pas constaté : une baisse de la facture de sortie.
+
+#### ET LE PREFILL ASSISTANT RÉPOND 400 SUR NOTRE MODÈLE
+
+C'est la mauvaise surprise de la journée, et elle a été trouvée AVANT
+qu'elle ne la voie, en relisant la documentation de l'API au lieu de me
+fier à ce que je croyais savoir.
+
+Pour faire reprendre un texte, le réflexe est le **prefill** : reposer
+ce qui est déjà écrit en dernier message `assistant`, et le modèle
+continue au caractère près. C'est ce que j'avais écrit et poussé.
+
+**Le prefill est RETIRÉ de toute la famille 4.6 et des modèles 5**, et
+les générateurs tournent sur `claude-sonnet-4-6`
+(`resolveAnthropicModel(..., "sonnet")`). Chaque suite aurait donc reçu
+un **400**, que `classifyUpstream` traduit en `refused`, donc l'écran
+aurait dit "La demande a été refusée. Ce n'est pas de ton côté" à chaque
+fois qu'un contenu dépasse une tranche. La première tranche marchait,
+c'est tout.
+
+**Règle : la suite part dans le MESSAGE** (`CONSIGNE_DE_SUITE`), avec le
+texte déjà écrit et trois interdictions qui comptent autant que la
+demande : ne rien répéter, ne pas réécrire le début, ne pas annoncer
+"voici la suite". Sans elles, le modèle recommence son texte, donc on
+paie deux fois le même contenu.
+
+**Et sans prefill, on ne peut pas reprendre au milieu d'un mot.** Une
+tranche s'arrête où le plafond tombe : `couperPourReprendre()` ramène
+donc le texte au dernier paragraphe (sinon à la dernière phrase finie),
+et ces quelques lignes sont réécrites par la suite. **Rien n'est perdu :
+la couture est propre.** Un texte sans aucune frontière est gardé
+ENTIER, parce qu'une couture imparfaite vaut toujours mieux qu'un texte
+jeté.
+
+**LA LEÇON, ET ELLE EST SUR MOI :** j'ai poussé un mécanisme que je
+n'avais jamais exécuté, en me fiant à un réflexe. Les tests étaient
+verts, `tsc` était vert, et le code ne pouvait pas marcher. **Un vert
+local ne prouve rien sur un contrat d'API** (c'est déjà la leçon de
+`pdf-parse`, 7 août), et la question de Béné, "pas de mauvaise surprise
+à attendre ?", est exactement celle qu'il faut se poser AVANT de dire
+que c'est fini.
+
+Test : `tests/logic/sortie-generateurs.test.mts` (les deux dépôts),
+vérifié en rejouant SIX versions d'avant (le bonus raboté à 1500, le
+refus sur un texte qui continue, **le prefill assistant remis**, la
+reprise sans frontière propre, un échec qui jette le déjà écrit, le
+bandeau sans bouton) : les six rougissent.
+
+## Le nom d'un fichier ne dit pas ce qu'il y a dedans (1er septembre 2026)
+
+Béné a livré 29 visuels neufs pour remplacer les schémas du blog.
+**Trois d'entre eux étaient décalés d'un cran par rapport à leur nom :**
+`optin-vs-quiz.png` porte le schéma "97 % de tes visiteurs s'évaporent",
+`triple-effet-quiz.png` porte "Opt-in classique vs Quiz interactif".
+Les poser au nom du fichier aurait mis deux schémas au mauvais endroit
+dans le même article, et aucun test ne peut voir ça.
+
+**Règle : un visuel se place en le REGARDANT, jamais d'après son nom.**
+C'est la même règle que les `alt`, et pour la même raison.
+
+**Trois visuels ne sont PAS posés**, et la raison est écrite à côté :
+`comparatif-outils-popquiz` et `tableaucomparatif-videos interactives`
+annoncent **9 €/mois ou 90 €/an** (tarif d'avant le 6 août), et le
+second a en plus sa colonne "Note" décalée d'une ligne (Tiquiz y est
+noté "Vimeo Interactive"). `rente-mensuelle-tiquiz` annonce 9 €/mois ET
+une commission de 50 % sur Tipote, c'est à dire les deux choses que
+Béné demandait de retirer de cet article. Un dessin ne se corrige pas
+en code : ils sont à redessiner.
+
+**Ce qui reste à redessiner, tous visuels confondus :** les trois ci
+dessus, plus quatre schémas qui portent encore `— tipote.fr/tiquiz` en
+pied (`ia generation`, `profile-tag-mapping`, `viralite-share-bonus`, et
+`svg-4-triple-effet-quiz-fr.webp` qui n'a pas de remplaçant).
+
+### Et le remède documenté qui ne marchait pas
+
+`poserAlt` disait "on n'écrase JAMAIS un `alt` existant" et, dans la
+même phrase, que "les mauvais se corrigent en les ajoutant à la table".
+**Les deux ne pouvaient pas être vrais** : un `alt` importé de
+Systeme.io ("tiquiz avis", "qui viral tiquiz") existe, donc il bloquait
+la correction, donc l'ajouter à la table ne faisait rien.
+
+**LA TABLE GAGNE désormais sur ce qu'elle NOMME**, et la protection qui
+comptait reste : une image absente de la table garde son texte, on ne
+perd aucun `alt` correct venu de l'import.
+
+## L'article qui recrute les affiliés ne promet que ce qui est payé (1er septembre 2026)
+
+Béné : "rente mensuelle tiquiz : il manque tous les tableaux et les
+images .. bref l'article est pourri et cassé".
+
+**1. LES TABLEAUX AVAIENT DISPARU À L'IMPORT.** Trois titres se
+suivaient sans rien entre eux ("2.1", "2.2", "2.3"), et la section 8
+annonçait "voici une comparaison" avant d'enchaîner sur "Verdict :".
+L'import n'a pas su lire les blocs tableau de Systeme.io et les a
+laissés tomber, en silence.
+
+**Règle : `lib/blog/tableauxRente.ts` CALCULE les tableaux**, avec les
+mêmes fonctions que le simulateur de la page d'affiliation
+(`tauxCommissionPct`, `commissionCentsAuTaux`). Cet article a déjà
+annoncé 108 €/mois pour 30 filleuls et 1 800 €/an pour 50 filleuls
+annuels : un tableau tapé à la main serait faux au premier changement
+de tarif, de taux ou de base.
+
+**On ne reconstruit PAS le comparatif avec les 4 autres programmes.**
+Je n'ai vérifié aucun de leurs taux, et le verdict annonçait "Systeme io
+reste plus élevé en taux (60 %)". La section compare maintenant les
+CRITÈRES d'une rente solide et ce que Tiquiz répond sur chacun : tout y
+est vérifiable dans notre code.
+
+**2. SIX ENDROITS PROMETTAIENT TIPOTE.** La section 4 entière annonçait
+50 % à vie sur des plans de 19 à 917 €/mois, plus "×14 sur ta rente".
+Tipote n'est pas en vente : ni les plans, ni le taux, ni le ×14 ne sont
+vérifiables. Elle parle maintenant de l'**Atelier du Quiz** (70 %, donc
+27,42 €, calculés depuis le catalogue) et du **barème qui monte de 40 à
+70 %**. Ce qui viendra plus tard est annoncé **sans date, sans prix et
+sans taux**, et l'article le dit explicitement.
+
+**3. SIX ENDROITS ANNONÇAIENT UN VERSEMENT "LE 10 DE CHAQUE MOIS" ET
+"SANS SEUIL".** Il y a un seuil de 20 € et un délai de 30 jours, et le
+versement a lieu ENTRE le 10 et le 13. L'espace affilié le dit
+correctement depuis le 26 août ; le blog promettait l'inverse, y compris
+dans sa `description`, c'est à dire la seule phrase lue avant le clic.
+
+**4. LE PLANCHER ÉTAIT ÉCRIT COMME UN PLAFOND.** 40 % est la première
+marche. L'article SOUS-vendait le programme, ce qui est l'autre façon de
+mentir.
+
+**Les MOTS CLÉS passent maintenant par la même correction que le texte**
+(`motsCles: a.motsCles.map(texte)`) : deux d'entre eux portaient une
+promesse fausse et échappaient au pipeline. Un chiffre faux reste faux
+quand il sert de mot clé.
+
+Test : `tests/logic/rente-affiliation-blog.test.mts`.
+
+## Une décoration à gauche n'est pas le seul défaut de mise en page
+
+Les tableaux se posent APRÈS le paragraphe qui les annonce, jamais juste
+sous le titre : un tableau tombé entre un titre et sa phrase
+d'introduction se lit comme un bloc venu de nulle part. Les ancres de
+`TABLEAUX` sont donc des FRAGMENTS DE TEXTE pour ces cas là, et un `id`
+de titre seulement quand le titre est suivi directement du tableau.
+
+Et **`corrigerFaits` tourne AVANT `poserTableaux`** : une ancre doit
+correspondre au texte CORRIGÉ, pas au texte importé.
+
+## Le SEO de tiquiz.fr : quatre défauts qu'on ne voit pas depuis le code (1er septembre 2026)
+
+Les quatre ont été constatés EN LIGNE, pas déduits.
+
+**1. La page servait DEUX balises `<title>`.** `stripHeadTags` visait
+`<title>` NU, alors que Systeme.io publie
+`<title data-react-helmet="true">`. Le retrait ne mordait pas, et Google
+choisissait lui même. **Et corriger ça seul aurait coûté le mot clé :**
+c'est le titre de la capture qui portait "Systeme.io", la requête la
+plus rentable du produit. Le titre du code le nomme désormais.
+
+**2. Quatre liens seulement menaient chez nous**, les quatre boutons de
+commande. Le reste partait chez `www.tipote.fr` : les cinq liens légaux,
+l'affiliation, l'Atelier, le LOGO, et `www.tipote.fr/tiquiz`, c'est à
+dire SA PROPRE COPIE. Depuis la page qui doit remplacer l'ancienne, un
+lien vers l'ancienne la désigne comme celle qui fait autorité.
+
+**LES DESTINATIONS SONT NOS VRAIES ROUTES, et c'est le piège de ce
+correctif.** Les chemins de Systeme.io (`/mentions-legales`, `/cgv`,
+`/cgu`, `/politique-de-confidentialite`, `/politique-de-cookies`)
+n'existent PAS chez nous : les recopier aurait posé cinq 404 dans le
+pied de page de la page qui vend, c'est à dire le drame du centre
+d'aide du 24 août. Nos pages sont `/legal`, `/terms`, `/terms-of-use`,
+`/privacy` et `/cookies`.
+
+**On traite aussi les liens ÉCHAPPÉS** (`href=\"...\"`) : trois liens
+vers l'Atelier vivaient dans le modèle JSON de la page, et ce sont ceux
+que l'éditeur relit pour reconstruire le bloc.
+
+**`SALES_SITE_LINKS` est une LISTE, pas une règle.** "Tout ce qui pointe
+sur tipote.fr revient chez nous" serait faux : l'optin gratuit et les
+tunnels beta et US y vivent pour de bonnes raisons
+(`SALES_LINKS_LEFT_ALONE`).
+
+**3. Google lisait `tiquiz.fr` en ANGLAIS.** `DEFAULT_LOCALE` vaut "en"
+et un robot n'envoie jamais de cookie : `tiquiz.fr/legal` répondait
+"Legal Notice · Tiquiz". Le français est désormais le défaut **sur les
+domaines de vente seulement** ; un visiteur qui a une préférence a un
+cookie, et ce cookie gagne toujours.
+
+**4. L'accueil du blog plafonnait à 7 articles sur 10.** Les trois plus
+anciens n'étaient atteignables que par leur rubrique. Pas de
+pagination : elle les enfermerait derrière un clic.
+
+**Le garde-fou des adresses en dur exempte les CLÉS, pas le fichier.**
+`SALES_SITE_LINKS` NOMME ces adresses pour ne plus les servir, et une
+clé de correspondance ne peut pas passer par une constante sans cesser
+de correspondre. Une DESTINATION écrite en dur dans ce même fichier fait
+toujours rougir le test, vérifié en la rejouant.
+
+Tests : `tests/logic/tete-page-vente.test.mts` et
+`tests/logic/liens-site-page-vente.test.mts`, qui portent sur la VRAIE
+capture. Un test qui n'exercerait qu'une chaîne écrite à la main aurait
+été vert le jour du bug.
+
+## Le hub intégrations : capter la recherche entre un concurrent et Systeme.io (Béné, 1er septembre 2026)
+
+"On va créer un hub intégrations pour aller capter les intentions de
+recherches entre les outils concurrents et systeme io pour introduire
+Tiquiz."
+
+**POURQUOI CES PAGES MARCHENT.** Sur `tally + systeme.io`, la première
+page de Google est faite de sept plateformes d'automatisation et de rien
+d'autre. Même schéma sur Typeform, Jotform, Google Forms, Interact.
+Aucune page en français. C'est le seul endroit du web où quelqu'un se
+demande, exactement à cet instant, comment faire arriver un formulaire
+dans Systeme.io.
+
+**LA RÈGLE QUI LES REND SOLIDES : chaque page résout vraiment le problème
+posé, y compris quand la réponse est "prends Zapier".** La page Tally
+explique la méthode gratuite avec du code AVANT de parler de nous. Une
+page d'intégration qui n'explique pas l'intégration est une page de vente
+déguisée, et ça se voit en dix secondes.
+
+**Ce qui est en ligne :** le hub (`/integrations`), Zapier, Tally,
+Typeform. Google Forms, Jotform et Interact sont MONTRÉS dans le
+comparatif du hub, sans lien : une ligne manquante se lit comme un oubli,
+mais un lien vers une page non écrite, c'est cinq 404 dans un pied de
+page (drame du centre d'aide, 24 août). Le test l'exige dans les deux
+sens.
+
+### AUCUN PRIX N'EST ÉCRIT À LA MAIN
+
+Le document de départ annonçait "Zapier Professional 19,99 $/mois", à dix
+endroits. **La capture fournie le même jour affiche "À partir de
+29,99 $/mois"** sur la page de tarifs française. Écrire 19,99 au dessus
+d'une image qui dit 29,99 détruit la page en dix secondes.
+
+`ZAPIER.professionnelParMois` (`lib/site/integrations.ts`) porte donc ce
+que la capture MONTRE, et le prix de Tiquiz vient du CATALOGUE
+(`OWNER_CATALOG`), c'est à dire de ce que le bon de commande encaisse.
+C'est la leçon de `faitsProgramme.ts` : un montant recopié est un montant
+faux au premier changement de tarif, et ici il vit dans un tableau de
+comparaison, donc à l'endroit exact où un lecteur le vérifie.
+
+Le test refuse tout `\d,\d\d $` dans ce qui S'AFFICHE. Il ignore les
+COMMENTAIRES, où l'écart avec le document est expliqué : une exemption
+sans raison écrite à côté est une exemption que le prochain passage prend
+pour un oubli.
+
+### LES TABLEAUX SONT DE VRAIES BALISES `<table>`
+
+Jamais une capture. Une image n'est ni extraite par un moteur, ni
+sélectionnable, ni lisible sur un téléphone : elle rate les trois d'un
+coup. `Tableau` (`components/site/Integrations.tsx`) rend un `<table>`
+dans une boîte `overflow-x-auto` : c'est le tableau qui défile, jamais la
+page.
+
+### LE FAIT QUI PORTE TOUTES CES PAGES, ET IL EST VÉRIFIÉ
+
+**Tiquiz CRÉE le tag Systeme.io quand il manque.** Ce n'est pas une
+formule commerciale : `app/api/quiz/[quizId]/public/route.ts` fait
+`POST /tags` sur un nom introuvable avant de le poser sur le contact.
+C'est exactement ce que ni Zapier (qui ne propose que les tags déjà
+créés) ni un webhook maison (qui doit chercher l'ID, pas le nom) ne font.
+
+**À NE PAS CONFONDRE avec `poserTagParNom`** (les ventes et la
+newsletter), qui ne crée JAMAIS un tag : celui-là tourne avec la clé de
+Béné, et un nom mal orthographié se retrouverait en double dans SA liste
+(règle du 22 août). Deux chemins, deux clés, deux comportements opposés,
+et c'est voulu.
+
+### LA CAPTURE DE ZAPIER PORTAIT SON ADRESSE EMAIL
+
+Le champ "Account" de la capture fournie affichait `blagardette@gmail.com`
+en clair. Floutée avant conversion, vérifiée illisible dans le WebP
+publié.
+
+**Règle : une capture fournie se REGARDE avant d'être publiée**, champ
+par champ. Une adresse, un identifiant de compte ou une clé d'API se
+lisent très bien sur une image, et une page publique est indexée pour
+toujours. C'est la même règle que "un visuel se place en le regardant,
+jamais d'après son nom".
+
+### Le pied de page a une cinquième colonne, donc une grille imbriquée
+
+Une seule grille pour la marque ET les colonnes de liens obligeait à
+recompter les colonnes à chaque page ajoutée : la 5e aurait écrasé les
+autres. Les colonnes de liens vivent maintenant dans leur propre grille et
+passent à la ligne toutes seules.
+
+**Endroits à respecter :** `lib/site/integrations.ts` (pur, il porte les
+chiffres et les deux constructeurs de JSON-LD),
+`components/site/Integrations.tsx`, `app/(site)/integrations/`,
+`lib/site/pagesPubliques.ts` (sitemap + llms.txt) et `lib/site/nav.ts`
+(le pied de page). Test : `tests/logic/hub-integrations.test.mts`,
+vérifié en rejouant un prix en dur et une capture absente (il rougit).
+
+### Google Forms et Interact, et les logos officiels (1er septembre, le soir)
+
+**LA PAGE INTERACT EST LA SEULE DU HUB DONT TOUT L'ARGUMENT EST LA PAROLE
+D'UN CONCURRENT.** Ses trois citations ont donc été relevées sur la page
+d'aide EN LIGNE, pas recopiées du document de départ :
+
+- « A Zapier Pro account » (section « Before you start ») ;
+- « You must create a tag in Systeme.io for each quiz result you want to
+  use, or it won't appear as a selectable option in Zapier. » ;
+- « Repeat this Zap setup for each quiz result tag you want to apply in
+  Systeme.io (one Zap per result tag). »
+
+L'adresse est affichée sous la citation, et le test exige que les deux
+phrases restent MOT POUR MOT. Une citation approchée est indéfendable, et
+c'est la page qu'un concurrent lira en premier.
+
+**L'exception « étiquette » de cette page est OBLIGATOIRE.** La capture
+de leur documentation est traduite par le navigateur : elle affiche
+"étiquette" là où nous écrivons "tag". Sans une légende qui le dit, le
+lecteur croit lire deux notions différentes. Le test tolère le mot sur
+CETTE page seulement, et seulement si la légende dit "traduite par le
+navigateur". Même forme que l'aide de l'éditeur qui doit montrer
+"cher·e".
+
+**LA CAPTURE MOBILE DE GOOGLE FORMS PORTAIT ENCORE SON ADRESSE EMAIL.**
+Le compte Google connecté s'affiche au dessus du formulaire intégré.
+Floutée avant conversion, vérifiée illisible dans le WebP publié.
+Deuxième fois en deux jours : **une capture fournie se REGARDE champ par
+champ, à chaque livraison**, pas seulement la première.
+
+**LA PAGE GOOGLE FORMS N'A PAS DE TABLEAU, ET C'EST VOULU.** Elle répond
+à deux questions distinctes (afficher le formulaire, envoyer les
+réponses), elle ne compare pas des outils. Le test porte donc sur
+`PAGES_QUI_COMPARENT` : exiger un tableau partout en ferait poser un qui
+ne dit rien.
+
+**UN LOGO EST UN MOT, PAS UNE ICÔNE CARRÉE.** Le document demandait du
+96 x 96 : "Typeform" y serait écrasé et "Google Forms" étiré. `Logo`
+(`components/site/Integrations.tsx`) borne la HAUTEUR et laisse
+`width: auto`, avec les dimensions naturelles sur la balise pour que le
+navigateur réserve la place. C'est la règle des images de réponse d'un
+quiz (4 août), et le test l'exige.
+
+**Zapier n'est PAS dans `OUTILS`.** Le hub compare des outils de
+FORMULAIRE ; Zapier est le TRANSPORT que presque tous exigent. Le mettre
+dans le tableau reviendrait à comparer un camion à des colis : sa carte
+est posée à la main, et son logo vit dans `LOGO_ZAPIER`.
+
+**Un fichier livré ne dit pas ce qu'il contient**, une fois de plus :
+`tryinteract.com.png` ne montre pas Interact, c'est le visuel Tiquiz
+"le tag se règle directement sur le profil". Placé en le REGARDANT.
+
+### Jotform, et la relecture du 1er septembre au soir
+
+**JOTFORM EST LE SEUL CAS OÙ L'INTÉGRATION EXISTE... SUR LE PAPIER**, et
+c'est ce qui rend la page utile. Trois faits, mesurés et pas recopiés :
+
+1. le bouton « Use this integration » de `jotform.com/integrations/
+   systemeio` mène à `jotform.com/build/?integration=Zapier&app=
+   systeme.io&clientID=...` (relevé sur la page en ligne) ;
+2. le schéma de LEUR page fait passer la connexion par une pastille
+   "zapier" entre Jotform et systeme.io ;
+3. l'écran Intégrations de leur constructeur ouvre un panneau **ZAPIER**
+   qui demande de connecter un compte Zapier avant de proposer ses
+   modèles.
+
+La deuxième est la plus solide des trois : elle vient d'eux et elle se
+lit sans connaître Zapier. **Et l'`alt` fourni avec la capture disait
+autre chose** (« ouvre une adresse contenant integration=Zapier », qui
+n'est pas visible sur l'image) : un texte alternatif décrit ce qu'on
+VOIT, pas ce qu'on sait.
+
+**On ne dit pas que Jotform ment.** Le raccourci fait vraiment gagner la
+configuration du Zap ; il ne fait pas gagner l'abonnement. C'est la
+règle « ne pas retirer les passages qui reconnaissent ce que les
+concurrents font mieux ».
+
+### LES TITRES : sa relecture en annonçait deux trop longs, il y en avait quatre
+
+Mesuré, suffixe « · Tiquiz » compris (le gabarit du site l'ajoute) :
+
+| Page | Avant | Après |
+|---|---|---|
+| le hub | 69 | **54** |
+| Interact | 67 | **56** |
+| Typeform | 63 | **53** |
+| Zapier | 61 | 61, laissé tel quel |
+
+Les deux premiers étaient dans sa liste. Typeform n'y était pas et
+dépassait quand même : "Connecter" saute plutôt que le mot clé, et la
+forme rejoint celle des titres Interact et Jotform.
+
+**LA BORNE DU TEST EST À 62, PAS À 60, ET LA RAISON EST ÉCRITE À CÔTÉ.**
+Le titre Zapier tombe à 61, et "autour de 60" n'est pas un couperet :
+raccourcir de deux caractères une phrase validée pour gagner un pixel
+serait une réécriture, pas une correction. Le contrôle attrape ce qui
+dépasse VRAIMENT.
+
+### Le blog ne pointait PAS vers le hub, et il le contredisait
+
+La consigne demandait des liens entrants « dans le CORPS des deux
+articles cités », et le document de suivi les annonçait comme posés.
+**Mesuré : aucun des dix articles ne contenait la chaîne
+`/integrations`.** Une page liée seulement depuis le pied de page dépend
+de la patience d'un robot.
+
+**Et le paragraphe où il fallait poser le lien était faux trois fois**
+(`comment-creer-quiz-systeme-io`) : « Typeform Plus à 50 €/mois, plus
+Zapier à 217 €/mois. Total : 717 €/mois. Sur 5 ans, près de 5 000 €. »
+
+- **50 + 217 = 267**, pas 717 : l'addition était fausse à l'écran ;
+- **aucun des deux totaux ne donne 5 000 € sur 5 ans** (717 x 60 =
+  43 020), et « 450 € au lieu de 5 000 € » est faux des deux côtés
+  (170 x 5 = 850) ;
+- **217 €/mois contredisait notre propre page Zapier**, qui annonce
+  29,99 $. Poser le lien depuis ce paragraphe aurait mis les deux
+  chiffres à un clic l'un de l'autre.
+
+C'est le drame de la FAQ de la rente (31 août) dans un autre article :
+une passe corrige les PRIX et laisse les CALCULS faits avec les anciens.
+`lib/blog/liensIntegrations.ts` CALCULE les montants (Typeform Plus à
+79 $/mois relevé sur `typeform.com/pricing`, Zapier lu dans `ZAPIER`,
+Tiquiz lu dans `OWNER_CATALOG`) et pose les trois liens sur des ANCRES
+DE TEXTE, jamais sur un index de bloc. `motif()` est désormais exporté
+par `faitsProgramme.ts` : deux constructions de motif finiraient par ne
+plus être d'accord, et c'est le contrôle qui mentirait le premier.
+
+**Les devises ne se convertissent pas.** Typeform et Zapier facturent en
+dollars, Tiquiz en euros : convertir demanderait un taux de change
+inventé, faux le lendemain.
+
+### Le schéma du hub inclut Jotform depuis le 1er septembre au soir
+
+Nouvelle version fournie par Béné (1586 x 992). Les coins sont arrondis
+et TRANSPARENTS : les aplatir sans rogner sortait quatre angles sombres,
+et échantillonner un coin pour la couleur de fond rendait du noir. On
+rogne 6 px, on aplatit sur `rgb(241, 242, 251)` relevé DANS l'image, et
+l'`og:image` est en `fit: contain` sur ce même fond, donc la bande ne se
+voit pas. L'`alt` nomme maintenant Jotform, Pabbly et n8n : il décrit ce
+que le schéma montre.
+
+**Ce qui reste à écrire :** ScoreApp, Outgrow, Riddle, Calendly et une
+page sur les tags Systeme.io.
+
+## Une vente d'un AUTRE produit ouvrait un abonnement Tiquiz (1er septembre 2026)
+
+Béné, capture du pilotage à l'appui : "des ventes non identifiées sur le
+dashboard c'est des abonnements tiquiz via systeme io **et un autre
+abonnement qui n'a rien à voir**".
+
+Elle décrivait un défaut d'affichage. Il y en avait deux, et le second
+coûte de l'argent tous les mois.
+
+### 1. LE TABLEAU DE BORD JETAIT UN NOM QU'IL AVAIT SOUS LA MAIN
+
+`buildSioSales` ne lisait le plan tarifaire QUE pour combler un montant
+manquant (`const tarif = duPayload == null ? readPricePlan(offre) : null`).
+Une vente qui portait sa somme n'était donc jamais nommée : elle sortait
+en "Produit non identifié" alors que Systeme.io dit très bien de quoi il
+parle ("Le Pacte™ - 24 €/mois"). Le tarif répond à DEUX questions, le
+montant et le nom, et une seule était posée.
+
+### 2. ET SURTOUT : CHAQUE ÉCHÉANCE OUVRAIT UN ACCÈS TIQUIZ
+
+Son compte Systeme.io ne vend pas que Tiquiz et l'Atelier. **Relevé dans
+son compte le 1er septembre : Le Pacte™ (2502221, mensuel), Hacktube,
+Reddit Business, Youtube Influence, Podcast Automation...** Toutes ces
+ventes arrivent sur le MÊME webhook, avec le même genre d'événement.
+
+Depuis le 7 août, une vente confirmée sur une offre INCONNUE ouvre un
+accès Tiquiz, et cette règle reste juste : "il a payé le client, il doit
+recevoir ses accès, point barre". Mais elle a été écrite pour un compte
+qui ne vendait que nous. Appliquée à celui là, elle ouvrait un
+abonnement Tiquiz à chaque personne qui achète Le Pacte, **et à chaque
+échéance**, sans qu'une seule ligne d'erreur ne s'écrive.
+
+**LE REPLI PAR LE MONTANT EST LE PIRE DES DEUX.** Trois de ses autres
+produits coûtent EXACTEMENT le prix d'un palier Tiquiz :
+`inferPlanFromAmount` ouvrait donc un palier PRÉCIS et FAUX, ce qui
+ressemble à un routage réussi. Un repli qui se trompe franchement se
+voit ; un repli qui se trompe avec assurance, non.
+
+### La distinction qui décide, et une seule ferme la porte
+
+**"Je n'ai pas trouvé cette offre" et "je SAIS que ce n'est pas Tiquiz"
+sont deux réponses différentes** (c'est la règle du 23 août, appliquée à
+un catalogue au lieu d'un contrôle).
+
+| L'offre reçue | Ce qu'on fait |
+|---|---|
+| inconnue | on ouvre, exactement comme depuis le 7 août |
+| connue, Tiquiz | on ouvre au bon palier |
+| connue, un AUTRE produit | **rien**, et on le DIT dans le journal |
+
+`venteHorsTiquiz()` (`lib/sio/produitVendu.ts`, pur) lit `PRICE_PLANS`,
+la table RELEVÉE dans son compte. Le troisième cas n'est pas un refus
+déguisé : le client a bien reçu ce qu'il a acheté, chez Systeme.io. Lui
+ouvrir Tiquiz en plus n'est pas un cadeau, c'est un compte payant de
+plus dans les compteurs et une personne qui reçoit les emails d'un
+produit qu'elle n'a pas commandé.
+
+**La garde passe AVANT `createUser`**, pas avant le seul repli : sinon
+un acheteur du Pacte se voyait quand même créer un compte Tiquiz vide.
+Le test vérifie cet ORDRE dans le fichier.
+
+**Ce module ne vit pas dans `webhookInference.ts`** parce que
+`pricePlans.ts` importe déjà son type `TiquizPlan` : l'y mettre
+fabriquerait un cycle d'imports pour une décision de trois lignes.
+
+### Tipote n'est PAS concerné, et c'est vérifié
+
+Son webhook Systeme.io (`app/api/systeme-io/webhook/route.ts` là bas)
+n'a AUCUN repli : `inferPlanFromOffer` rend `null` sur une offre
+inconnue et le profil n'est pas touché ("pas de fallback par nom : c'est
+fragile et inutile"). Le trou est propre à Tiquiz, qui a le repli du
+7 août. Lu ligne par ligne le 1er septembre, pas supposé.
+
+### Et pour SAVOIR au lieu de déduire
+
+```bash
+npm run check:ventes-sio
+```
+
+Il LIT `webhook_logs` et imprime, appel par appel : l'identifiant du
+plan **et le chemin où il a été trouvé**, le montant et son chemin, le
+palier que le routage ouvrirait aujourd'hui, et le produit affiché.
+
+**Ce qu'il existe pour trancher :** "aucun identifiant reçu" et "un
+identifiant qu'on ne connaît pas" sont deux pannes différentes, qui ne
+se corrigent pas au même endroit (une ligne dans `OFFER_ID_PATHS` d'un
+côté, dans `OFFER_TO_PLAN` ou `PRICE_PLANS` de l'autre), et l'écran
+d'admin les affiche toutes les deux "offre inconnue". Quand aucun chemin
+connu ne répond, il BALAIE le payload entier et dit où l'identifiant se
+trouve vraiment. Une liste de chemins qui a cessé de correspondre ne le
+dit jamais toute seule : c'est la leçon des 100 tags et des 51 règles
+d'automatisation, une liste tronquée ne s'annonce pas.
+
+**Ce qui reste ouvert, et qui n'est pas du code :** `3198235` ("Tiquiz
+mensuel" à 9 €) **n'existe plus dans son compte** (mesuré le
+1er septembre), alors que des renouvellements à ce tarif continuent
+d'arriver. La ligne reste dans `OFFER_TO_PLAN`, elle ne coûte rien et
+elle protège l'historique. Pourquoi ces échéances n'arrivent pas avec un
+identifiant routable est la question que `check:ventes-sio` existe pour
+répondre, sur le serveur, là où le journal vit.
+
+Test : `tests/logic/ventes-hors-tiquiz.test.mts`.
+
+## Pinterest : hors d'un article, il n'y avait RIEN à épingler (1er septembre 2026)
+
+Béné : "le format des images ne me permet pas de les partager sur
+pinterest (liste des articles, hub ...) et je manque de la visibilité à
+cause de ça."
+
+**Mesuré sur la production avant de toucher au code**, et le défaut
+était plus bête que le format :
+
+| Page | Ce qu'elle déclarait |
+|---|---|
+| `/blog` | **AUCUNE `og:image`**, rien du tout |
+| `/blog/rubrique/<x>` | **AUCUNE** non plus |
+| `/integrations` | une `og:image` 1200 x 630, donc PAYSAGE |
+| un article | l'épingle 1000 x 1500 + `data-pin-media` |
+
+Le travail du 30 août n'avait donc couvert qu'UNE page sur quatre. Le
+sommaire du blog et les rubriques ne sortaient même pas sur LinkedIn ou
+Facebook : partagées, elles s'affichaient nues.
+
+**Règle : `attributsEpingle()` / `attributsEpinglePour()`
+(`lib/blog/partage.ts`), et personne ne recompose ces attributs.**
+
+**`data-pin-url` EST LE MORCEAU QU'ON NE PEUT PAS OUBLIER.** Épinglée
+depuis la liste, une carte pointerait sinon vers `/blog` : le lecteur
+qui clique atterrit sur un sommaire au lieu de l'article que l'image lui
+a promis, et l'épingle ne ramène personne. C'est ce qui distingue une
+carte de liste de la page d'un article, où l'adresse de la page est déjà
+la bonne.
+
+**Le fond de l'épingle s'assombrit SELON la source, et c'est mesuré.**
+`brightness: 0.55` avait été réglé sur ses couvertures d'articles, dont
+la luminosité moyenne va de 22 à 40 sur 255. Le schéma du hub est à
+236 : le même réglage n'en faisait pas un fond sombre, il en faisait un
+fond GRIS, délavé. Le seuil est posé à 120, loin des deux groupes : il
+ne départage rien à la limite, il constate un écart qui existe. **Les
+dix épingles d'articles sont inchangées à l'octet près**, vérifié.
+
+**Les six pages d'outil (Tally, Typeform, Jotform...) n'ont PAS
+d'épingle, et c'est écrit dans le générateur.** Leur `og:image` est une
+CAPTURE D'ÉCRAN d'un service tiers : en faire une épingle ferait
+circuler la page de tarifs de Zapier sous le nom de Béné. Et on ne peut
+pas en dessiner une, parce que ce générateur refuse d'écrire du texte
+dans une image (la police dépend de la machine qui construit). Elles
+attendent un visuel d'elle, et le script le DIT au lieu de recevoir en
+silence une épingle qu'elle n'aurait pas choisie.
+
+### La revendication du domaine
+
+`PINTEREST_DOMAIN_VERIFY` sur le serveur, lue à chaque rendu (aucun
+rebuild). Son nom et sa photo s'affichent alors sur chaque épingle qui
+vient de `tiquiz.fr`, y compris celles épinglées par quelqu'un d'autre.
+
+**Le code est VALIDÉ, pas cru sur parole** : c'est la règle du 2 août,
+un `??` protège du MANQUANT jamais du FAUX. Une balise `p:domain_verify`
+mal formée fait échouer la revendication EN SILENCE, ce qui se découvre
+des mois plus tard. Valeur absente : aucune balise, et on se tait.
+Valeur posée et illisible : aucune balise, et ça CRIE dans `pm2 logs`
+(`instrumentation.ts`). Le message dit la LONGUEUR, jamais la valeur.
+
+Le cas le plus probable est prévu : Pinterest met la balise ENTIÈRE dans
+le presse papier, donc `codeVerificationPinterest` accepte aussi
+`<meta ... content="...">` et en extrait le contenu.
+
+### Ce qui n'était PAS notre bug, et qu'il faut savoir lire
+
+Sa console montrait `429` sur `/resource/PinResource/create/` et
+"Impossible de traiter votre demande". **Un 429 est une limite de débit
+de Pinterest sur SON compte**, pas un refus de notre image : les
+fichiers répondent `200` (vérifié en production avec l'agent de
+Pinterest, épingle et couverture). Les `#__PWS_DATA__ was not found in
+the DOM` viennent du script de Pinterest lui même, sur leur propre page.
+
+**Un symptôme rapporté est une observation, jamais un diagnostic** (même
+leçon que "les champs image ont disparu" du 31 août, qui était un 403).
+Ici les deux étaient vrais en même temps : le 429 bloquait ses essais
+du moment, ET il n'y avait vraiment rien à épingler hors d'un article.
+
+Test : `tests/logic/epingles-pinterest.test.mts`, vérifié en rejouant la
+version d'avant (il rougit).
+
+## Le sitemap existait, le flux non (1er septembre 2026)
+
+Béné : "j'ai un sitemap ? Un feed ? Pour automatiser le flux des
+articles ou je sais pas quoi..."
+
+**Mesuré sur la production avant de répondre :**
+
+| Adresse | |
+|---|---|
+| `/sitemap.xml` | **200**, 29 adresses, les 10 articles dedans |
+| `/llms.txt` | **200** |
+| `/rss.xml`, `/feed.xml`, `/atom.xml`, `/blog/rss.xml` | **404**, tous |
+
+### Ce qu'un sitemap ne sait pas faire
+
+Un sitemap dit à un MOTEUR quelles pages existent. Il ne porte ni titre,
+ni texte, ni image, ni date lisible : **personne ne peut en tirer un
+post ou une épingle**. C'est pour ça qu'il ne remplace pas un flux, et
+que les deux coexistent partout.
+
+Un flux est la prise sur laquelle se branche ce qui automatise : Zapier,
+Make, n8n et Pabbly savent tous surveiller une adresse RSS et fabriquer
+quelque chose à chaque nouvel article.
+
+### LA DÉCISION QUI COMPTE : l'image du flux est l'ÉPINGLE
+
+`<enclosure>` porte l'épingle 1000 x 1500, pas la couverture 1200 x 675.
+C'est le champ que lisent les automatisations quand elles demandent
+"l'image de cet article", et le premier usage de ce flux est de publier
+sur Pinterest, où une image en 16/9 ne circule pas.
+
+**La couverture n'est pas perdue** : elle est DANS la description, donc
+un lecteur de flux et un aperçu email l'affichent normalement. Chacune à
+sa place.
+
+Sans épingle construite, l'article sort SANS `enclosure` plutôt qu'avec
+une couverture paysage : une automatisation qui recevrait le mauvais
+format publierait une épingle qui ne circule pas, et personne ne verrait
+jamais pourquoi.
+
+### Trois détails qui cassent un flux en silence
+
+1. **L'échappement.** Un seul `&` non échappé rend le flux ENTIER
+   illisible, et aucun lecteur ne dit quelle ligne l'a cassé.
+   L'esperluette s'échappe EN PREMIER, sinon on échappe celles qu'on
+   vient d'ajouter (même piège que `echapperMotifLike`).
+2. **La date est à MIDI**, jamais à minuit. `publieLe` est une date
+   courte sans heure : à minuit UTC, un fuseau à l'ouest fait afficher la
+   VEILLE, donc un article du 1er passe pour le 31 chez la moitié des
+   lecteurs.
+3. **`length="0"` dans l'`enclosure`** est toléré partout, donc personne
+   ne le remarque : on lit la vraie taille sur le disque. Le test le
+   refuse, c'est le genre de valeur qu'on écrit sans y penser.
+
+### L'adresse porte `.xml`, et le flux s'annonce
+
+`/blog/rss.xml` et pas `/blog/rss` : un flux se colle dans un outil qui
+attend un fichier, et beaucoup refusent une adresse sans extension.
+
+Il est déclaré sur le sommaire, les rubriques ET les articles
+(`alternates.types`) : un flux qui n'est annoncé nulle part n'existe que
+pour qui connaît déjà son adresse. Et dans `llms.txt`, parce que sa liste
+d'articles est figée au déploiement alors que le flux dit toujours l'état
+du jour.
+
+**AUCUNE base n'est touchée**, et c'est délibéré : le blog s'affiche sans
+Supabase (leçon du 30 août, où un `import` de `supabaseAdmin` faisait
+répondre 500 à toute la page d'article). Un flux qui tombe le jour d'une
+panne de base est un flux sur lequel on ne peut pas compter.
+
+Test : `tests/logic/flux-blog.test.mts`, vérifié en rejouant un mauvais
+type de contenu (il rougit).
+
+**TRANCHÉ LE MÊME SOIR, et ça ferme la question :** Béné, "on s'en fout
+de vérifier dans systeme io c'est plutôt pour partager sur les réseaux
+etc". Le flux sert donc les automatisations de PARTAGE (Zapier, Make,
+n8n, Pabbly vers Pinterest et les réseaux), pas l'email. Ce qui n'est
+toujours pas vérifié, c'est si Systeme.io sait lire un RSS, et ce n'est
+plus une question à se poser.
+
+## La page de vente servie n'était pas la page affichée (2 septembre 2026)
+
+Béné : "je voudrais mettre à jour la page de vente de tiquiz pour
+qu'elle reflète sa vraie valeur. [...] je ne veux pas que tu la mettes
+directement en ligne, il faut que tu construises une version de travail
+en dupliquant la page actuelle et en me montrant ce que tu fais dessus.
+Elle ne doit pas être indexée ni rien, je veux juste voir sa version en
+ligne pour corriger. [...] La page doit dérouler toutes les infos dans
+un ordre logique, agréable à découvrir, devancer les objections, avoir
+des enchaînements fluides : il n'est pas question d'empiler les infos à
+ajouter de manière aléatoire."
+
+### LA TROUVAILLE, ET ELLE VAUT POUR TOUTE PAGE CAPTURÉE
+
+**Le HTML que nous servons est IGNORÉ.** Les trois fichiers
+`/v/tiquiz/*.js` sont le bundle React de l'éditeur Systeme.io
+(`webpackChunk_publisher_dist_publisher_sales`), et il RECONSTRUIT la
+page depuis `window.__PRELOADED_STATE__`, c'est à dire depuis le modèle,
+pas depuis le document.
+
+Mesuré dans un vrai Chromium sur la v2 déjà construite : le navigateur
+recevait **23 sections dans le nouvel ordre**, le DOM en rendait **19
+dans l'ancien**, sans aucun bloc neuf, avec le popup de la vente bêta
+revenu. Aucune erreur visible. Une page qui ignore tout ce qu'on lui
+écrit.
+
+**MA PREMIÈRE SONDE AVAIT CONCLU L'INVERSE, et c'est la leçon.** Je
+l'avais lancée sur la page D'ORIGINE, dont l'ordre du DOM est par
+construction celui du modèle : elle ne pouvait pas distinguer « React ne
+touche à rien » de « React réécrit à l'identique ». **Un test qui ne
+distingue pas ce qu'il est censé distinguer est pire qu'un test absent**
+(leçon des clés Supabase, 22 août), et la sonde qui tranche est celle
+qui tourne sur une page DÉLIBÉRÉMENT différente.
+
+**Le bundle est donc retiré de la v2**, et ça ne coûte rien. Comparé
+écran par écran, avec et sans : la bascule mensuel / annuel (17 € et
+29 € -> 170 € et 290 €), le sélecteur de langue, les 10 ancres du menu
+dont aucune morte, les 22 animations au défilement, et la FAQ (1608 px,
+4886 caractères, dépliée) sont IDENTIQUES. La FAQ méritait d'être
+mesurée : elle n'a jamais été un accordéon, ni avec le bundle ni sans,
+et le supposer aurait fait renoncer pour une régression imaginaire.
+
+Deux choses s'améliorent : **1429 Ko -> 669 Ko**, et **22 erreurs React
+-> 0**. Le prix à payer est un aller simple : une page sans son modèle
+ne se rouvre plus dans l'éditeur Systeme.io. Ce n'est pas un problème,
+elle est servie par nous, mais ça se dit au lieu de se faire en silence.
+
+### UN CHANTIER EXIGE LA CLÉ, MÊME SUR LE DOMAINE PUBLIC
+
+`isSalesOpen` répond OUI à tout ce qui arrive sur un hôte de vente :
+c'est voulu, `tiquiz.fr` doit servir sa page sans clé. Mais la route
+d'aperçu sert N'IMPORTE QUEL slug de `PAGES` : ajouter `tiquiz-v2` à
+cette table aurait publié le chantier sur `tiquiz.fr`, indexable, avec
+la mesure d'audience et les données de marque. Et ça se serait vu à
+quoi ? À rien.
+
+`lib/sales/chantier.ts` nomme donc les CHANTIERS, pas les pages
+publiques : **un oubli laisse une page fermée**, ce qui est le sens sûr
+de l'erreur. Retirer un slug de cette liste est le geste qui le publie.
+
+### LA PAGE SE CONSTRUIT, ELLE NE SE RETOUCHE PAS
+
+```bash
+npm run vente:v2               # construit content/sales/tiquiz-v2.html
+npm run vente:v2 -- --verifie  # dit ce qu'il ferait, n'ecrit rien
+```
+
+`content/sales/tiquiz.html` fait 1,4 Mo d'une traite : une retouche à la
+main dedans ne se relit pas et se perd à la prochaine capture. Le plan
+vit dans `lib/sales/planV2.ts` (pur, testé), les blocs neufs dans
+`content/sales/v2/*.html`, et le script REFUSE de finir en silence : une
+section absente du plan, un id disparu, un bloc manquant, une correction
+qui ne mord pas, le popup ou le bundle introuvables -> il s'arrête.
+
+**Ce qui rend le réordonnancement possible est mesuré, pas supposé :**
+les 19 sections sont des frères, chacun dans exactement la même
+enveloppe `<div class="sc-iHGNWg iintFh">`. On les déplace ENTIÈRES : le
+CSS de la page cible des `#section-<id>`, et couper dedans casserait la
+mise en page sans qu'un test puisse le voir.
+
+### CE QUI A CHANGÉ DANS L'ORDRE, ET POURQUOI
+
+Le défaut n'était pas le contenu, c'était la PROGRESSION. Le visiteur
+lisait six blocs de bénéfices avant de savoir COMMENT l'outil marche :
+le mécanisme (les 4 étapes) vivait au 11e rang, enfoui dans le plus gros
+bloc de la page. Et cinq bénéfices à la suite, tous de la même forme
+(visuel, texte, bouton), font un plateau : on décroche au troisième.
+
+Le mécanisme remonte donc au 5e rang, juste après la douleur, et les
+blocs neufs coupent le plateau. Le test fige les deux règles : le
+mécanisme passe devant tous les bénéfices, et la qualification passe
+entre la preuve et le prix.
+
+### LES QUATRE BLOCS NEUFS, ET LEUR SOURCE
+
+| Bloc | Ce qu'il ferme | Vérifié dans |
+|---|---|---|
+| le funnel quiz | chacun repart vers SON offre | `lib/quiz/resultCta.ts`, `lib/quizScoring.ts` |
+| où vit ton quiz | « je suis sur WordPress », « je n'ai pas de site » | `lib/quiz/urlPublique.ts`, l'embed |
+| quand ça tourne | pixels, automatisation, affiliés, générateurs | `lib/effectivePixels.ts`, `lib/automatisation/planSysteme.ts`, `lib/quiz/affiliateRelay.ts`, `lib/generateurs/` |
+| c'est pour toi si | la qualification, avant le prix | trois refus VRAIS, dont l'examen noté qui n'existe pas |
+
+**Chaque bloc porte sa justification en commentaire, et le test
+l'exige.** Sans elle, le prochain passage prend une affirmation vérifiée
+pour une formule commerciale et la réécrit.
+
+**Et « 100+ langues » était faux.** Compté dans `lib/quizLanguages.ts` :
+le catalogue porte EXACTEMENT 100 entrées, qui couvrent 83 langues
+distinctes plus leurs variantes régionales. « 100+ » sur-compte d'une
+unité, « 100 langues » sur-compte les langues distinctes de 17. La page
+dit donc **« 100 langues et variantes »**, et le test compare le chiffre
+affiché au module qui le sert.
+
+**L'INTERFACE EST EN 7 LANGUES, PAS 5.** Béné en annonçait 5 dans sa
+liste du 1er septembre ; `i18n/config.ts` en porte 7
+(fr, en, es, it, ar, pt, pt-BR). La page SOUS-vendait, ce qui est
+l'autre façon de mentir.
+
+Test : `tests/logic/page-vente-v2.test.mts`, vérifié en rejouant la
+version d'avant (il rougit sur le bundle remis).
+
+### Le deuxième passage (2 septembre, l'après-midi)
+
+Sa relecture a trouvé quatre choses, et l'une d'elles était une
+régression que j'avais causée.
+
+**LA FAQ NE S'OUVRAIT PLUS, ET MA MESURE DISAIT LE CONTRAIRE.** Béné :
+"je ne peux pas cliquer sur les éléments de la faq". Elle avait raison.
+L'accordéon d'origine est piloté par le bundle React ; en le retirant,
+je l'ai figé. J'avais pourtant comparé la FAQ avant et après, et écrit
+« identique » : hauteur au repos 1608 px, texte 4886 caractères, des
+deux côtés. **Je n'avais jamais cliqué.** Refait avec un clic :
+
+```
+ORIGINE  1608 px -> 1730 px   ça s'ouvre
+V2       1608 px -> 1608 px   immobile
+```
+
+Deuxième fois dans le même chantier, sur la même page, qu'un contrôle ne
+distingue pas ce qu'il est censé distinguer. La règle est écrite depuis
+le 22 août ; ce qui manquait ici, c'est de **mesurer le GESTE, pas
+l'état au repos**. Un écran interactif se teste en le touchant.
+
+**La FAQ est refaite en `<details>` natif**, sans une ligne de
+JavaScript : elle ne peut plus se casser en retirant un script, elle
+s'ouvre au clavier, et Ctrl+F ouvre le bon panneau. Seize questions en
+cinq groupes (24 Ko -> 14 Ko).
+
+**ET ELLE EST CONSTRUITE À PARTIR DU JSON-LD.** La page portait déjà un
+`FAQPage` avec les 16 questions ; écrire la FAQ visible à côté aurait
+donné deux listes, donc Google à qui on raconte autre chose qu'à la
+lectrice. Le script LIT les données structurées et fabrique la section
+avec. **Ma propre sonde a d'ailleurs attrapé la suite du piège** : le
+JSON-LD vivait DANS la section, donc la remplacer l'emportait. Il est
+maintenant reconstruit depuis les questions CORRIGÉES et reposé avec
+elle.
+
+**Une seule liste d'avantages pour la grille ET le bon de commande.**
+`lib/checkout/avantages.ts`. Le bon de commande avait sa propre liste de
+six lignes, IDENTIQUE pour les quatre paliers : quelqu'un qui achetait
+« mensuel Plus » à 29 € lisait exactement ce que lisait celui qui
+achetait « mensuel » à 17 €. Il annonce maintenant ce que Plus ajoute,
+et les trois nouveautés (pixels, guide d'automatisation, quiz partagé
+par les affiliés) sont dans les six colonnes de tarif ET sur le bon de
+commande, depuis la même source. Le test interdit qu'un texte y soit
+recopié à la main.
+
+**« C'est pour toi » est devenu un quiz de trois questions.** Béné :
+"on avait un quiz rapide en 3 questions à l'époque, ce serait plus
+logique non ?". Elle a raison : la page qui vend des quiz doit en faire
+vivre un. Trois questions, un verdict qui sait dire NON, et **zéro
+script** (radios + CSS `:has()`), parce que c'est un script qui vient de
+tuer la FAQ. Il ne capture rien et ne prétend pas être un quiz Tiquiz.
+
+**Ce que la relecture a corrigé sur la forme :** le padding des blocs
+neufs (70 px alors que toute la page est à 100 px, mesuré), et leurs
+boutons (trois familles de boutons sur une page, ramenées à celle de la
+page : #5A6EF6, rayon 999px, animation `tqButtonPulse`).
+
+### Le troisième passage (2 septembre, le soir) : quatre reproches, quatre causes
+
+"Le logo en bas il descend sur les liens et les icônes sur les boutons
+sont chelou partout. Pareil pour les listes à puces. Peut être qu'on peut
+modifier ou supprimer la partie sur le premier outil de quiz connecté à
+Systeme io ?" Plus, séparément : "les liens légaux doivent toujours
+s'ouvrir dans une nouvelle page, on ne veut pas que le visiteur perde la
+page ni le bon de commande aussi."
+
+**1. LES ICÔNES : j'avais enfreint ma propre règle du matin même.** En
+retirant Font Awesome, les 144 icônes de la CAPTURE ont été dessinées en
+SVG. Mes DEUX blocs neufs, eux, posaient encore des caractères Unicode
+en `content` : `\2713` (la coche) et `\2192` (la flèche). Les deux
+rendent très bien dans Inter et Open Sans sur MA machine, et dans aucune
+des deux sur la sienne : ces glyphes n'existent dans ni l'une ni l'autre,
+donc le navigateur va les chercher où il peut, et sur Windows il rend le
+carré vide.
+
+**Un caractère qui dépend des polices installées n'est pas une icône,
+c'est un pari.** Le test vise donc les `content` qui portent un point de
+code dans TOUS les blocs neufs, pas la présence d'un masque : c'est la
+faute qu'on refait, pas la correction qu'on oublie.
+
+**2. LE LOGO DU PIED DE PAGE : un `width` est une PLACE RÉSERVÉE, pas la
+taille d'un fichier.** L'étape des portraits réécrivait `width` avec la
+largeur du fichier réduit, sous ce commentaire : "un `width` qui ment sur
+la taille reelle est exactement ce qu'un controle finit par relever".
+C'était faux en HTML, et ça a coûté exactement ce que Béné a vu.
+
+| | déclaré | rendu |
+|---|---|---|
+| capture | `width="108"`, aucune hauteur | 108 x 56 |
+| avant correction | `width="324" height="167"` | **108 x 167** |
+| après | `width="108" height="56"` | 108 x 56 |
+
+Sa classe le borne à 108 px : le CSS gagnait sur la largeur, l'attribut
+restait seul sur la hauteur, donc le logo était ÉTIRÉ sur 167 px au lieu
+de 56 et recouvrait les liens légaux sur 92 px. MESURÉ dans Chromium :
+2 images sur 104. Après correction, le bas du logo tombe à 25565 et les
+liens commencent à 25584.
+
+**ET MA PREMIÈRE SONDE EN ACCUSAIT UNE TROISIÈME.** Elle lisait les
+largeurs CSS sans écarter les MEDIA QUERIES, donc elle comparait
+l'attribut d'une image à sa largeur MOBILE. Septième fois de la semaine
+qu'un contrôle ne distingue pas ce qu'il est censé distinguer, et la
+première où je l'ai vu avant de corriger un fichier innocent. Le test
+retire les blocs `@media` avant de lire quoi que ce soit.
+
+**J'avais aussi commencé par écrire la mauvaise correction** : faire lire
+au poseur de dimensions la largeur du CSS. Mesuré ensuite : **zéro image
+de la page est dans ce cas** (aucune n'a une largeur CSS sans attribut
+`width`). C'était donc une branche que rien n'exerce, c'est à dire le
+piège que ce fichier décrit ailleurs (`simuler()`, 31 août). Retirée, et
+la vraie cause corrigée à sa place.
+
+**3. LE WIDGET « 1er outil quiz connecté à Systeme.io » : on retire le
+spectacle, pas le différenciateur.** `#tqz-scoop-widget` faisait 18,1 Ko
+à lui seul (cinq scènes animées, dix-huit confettis en CSS, un script de
+boucle) et racontait le parcours que la page explique DÉJÀ trois fois
+autour de lui : la section qui le porte EST le mécanisme, "où vit ton
+quiz" dit où le quiz est servi, "quand ça tourne" dit ce qui part chez
+Systeme.io tag par tag.
+
+`content/sales/v2/mention-systeme-io.html` garde la PHRASE : "connecté à
+Systeme.io" est la requête la plus rentable du produit (elle porte le
+`<title>` et tout le hub `/integrations`), et c'est le seul argument que
+ni Tally, ni Typeform, ni Interact ne peuvent écrire.
+
+**On remplace le CONTENU du bloc `#rawhtml-21bf9dec`, jamais la
+section** : la retirer emporterait le comparatif et les 4 étapes, c'est à
+dire ce que Béné dit justement être bien expliqué. Et **la boucle
+d'animation part avec** : la garder laisserait un
+`getElementById("tqz-scoop-widget")` qui rend `null` pour toujours. Elle
+est COMPTÉE dans `SCRIPTS_RETIRES.widget`, pas ignorée : le contrôle qui
+vérifie qu'aucun de ses scripts n'a été perdu compare un nombre, et un
+nombre qu'on ajuste à la main le jour où il rougit ne protège plus rien.
+
+**4. LES LIENS LÉGAUX : une TROISIÈME moitié de la règle du 24 août.**
+Celle là portait deux moitiés (le sanitizer pour le texte riche, nos
+liens écrits en dur). La page de vente n'était couverte par AUCUNE des
+deux : elle est CAPTURÉE, et on ne réécrit que ses adresses au moment de
+la servir.
+
+MESURÉ sur la page construite : **10 ancres légales, 6 en
+`target="_self"`, 4 sans rien, ZÉRO en `_blank`.**
+
+**Et le premier jet n'en aurait corrigé que 4 sur 10.** Il gardait tout
+`target` déjà écrit, "parce que la capture pourrait en porter un que
+quelqu'un a choisi". C'était une SUPPOSITION, et le relevé la contredit :
+`_self` est ce que l'éditeur de Systeme.io écrit mécaniquement sur chaque
+lien, ce n'est le choix de personne. `_self` se remplace donc ; un
+`target` NOMMÉ (`_parent`, `_top`, un nom de fenêtre) reste, lui,
+puisqu'il ne s'obtient pas par défaut.
+
+**`ouvrirLiensLegauxDansUnOnglet` tourne HORS du `if (opts.siteLinks)`.**
+Sur un chantier relu derrière la clé d'aperçu, `siteLinks` vaut null,
+donc les liens portent encore les adresses de Systeme.io : ils font
+quitter la page encore plus sûrement. `estLienLegal` les reconnaît, et
+la liste se DÉDUIT de `SALES_SITE_LINKS` (toute clé dont la destination
+est une de nos pages légales) : une deuxième liste écrite à la main
+finirait par ne plus dire la même chose que la première.
+
+**TROUVÉ AU PASSAGE, ET C'ÉTAIT UN 404 :** le bandeau cookies pointait
+sur `/politique-de-cookies`, le chemin de Systeme.io. Nos pages
+s'appellent `/legal`, `/terms`, `/terms-of-use`, `/privacy` et
+`/cookies` : ce lien répondait 404, sur l'encart où on demande justement
+au visiteur de faire confiance. C'est le drame du centre d'aide du
+24 août, à un lien près. `rewriteSiteLinks` ne pouvait rien : il ne
+connaît que les adresses ABSOLUES, et celle ci est écrite en relatif dans
+la configuration JavaScript du bandeau.
+
+Tests : les 4 cas ajoutés à `tests/logic/page-vente-v2.test.mts` et les
+5 de `tests/logic/liens-legaux.test.mts`, vérifiés en rejouant les trois
+versions d'avant (l'ancien garde sur `_self`, la coche Unicode, la
+largeur du fichier) : les trois rougissent.
+
+### Ce que la mesure a trouvé en plus, sur le référencement
+
+**La page servait DEUX `<h1>`, tous les deux VISIBLES en même temps**, à
+1280 px comme à 390 px. Ce ne sont pas les versions large et mobile d'un
+même titre : ce sont les deux moitiés d'une phrase (« Booste ton
+trafic » et « Grâce aux quiz interactifs ») découpées en deux titres de
+niveau 1. Un moteur ne sait alors plus quel est le sujet de la page. La
+deuxième moitié devient un paragraphe, et garde exactement sa taille et
+sa couleur (elles viennent du conteneur, pas de la balise).
+
+**65 images sur 105 passent en chargement différé**, les huit premières
+exceptées : différer une image du premier écran la fait arriver plus
+tard, donc dégrade exactement la mesure qu'on cherche à améliorer.
+Mesuré : 1585 Ko d'images téléchargées au chargement, contre 280 Ko
+après.
+
+### 🚨 J'AI ANNONCÉ « 2552 Ko de CSS, de loin le premier poste de
+lenteur ». C'ÉTAIT FAUX, et je l'ai écrit ici comme un fait.
+
+`performance.getEntriesByType("resource")` range sous
+`initiatorType: "css"` **tout ce qu'une feuille de style va CHERCHER**,
+polices et images de fond comprises. J'ai lu ce total comme le poids du
+CSS. Mesuré autrement, la page porte **316 Ko de CSS en ligne et 13 Ko
+liés**, et la couverture CDP (`CSS.startRuleUsageTracking`) dit que
+**100 % des 2428 règles suivies servent**. Il n'y avait rien à
+dégraisser.
+
+**Le poids était ailleurs, et il a été retiré :**
+
+| Poste | Avant | Après |
+|---|---|---|
+| 5 « SVG » de fond (chacun embarque 4 bitmaps en base64) | 1638 Ko | **260 Ko** en WebP |
+| polices Font Awesome, pour 4 icônes | 911 Ko téléchargés (1769 Ko déclarés en 15 `@font-face`) | **0**, les icônes sont dessinées |
+| images du premier chargement | 1585 Ko | **280 Ko** (65 différées sur 105) |
+| **la page entière** | **8551 Ko, 72 requêtes, 2708 ms** | **1556 Ko, 21 requêtes, 544 ms** |
+
+**La leçon est celle du 22 août, refaite dans un autre outil : un
+chiffre lu dans un outil n'est pas une mesure tant qu'on n'a pas
+vérifié ce qu'il COMPTE.** Et j'ai accusé un fichier innocent pendant
+deux jours, exactement comme la clé anon en août.
+
+**Les 4 icônes sont DESSINÉES À LA MAIN** (`lib/sales/iconesV2.ts`,
+24x24, un cercle, une coche, une flèche, une caméra) et posées en
+`mask-image`. Recopier les tracés de Font Awesome serait recopier du
+code sous licence pour éviter d'en charger la police. Le test borne la
+longueur de chaque tracé : un tracé importé se voit à sa longueur.
+
+**Un masque CSS ne lit que le canal ALPHA.** Ma coche blanche par
+dessus le disque était OPAQUE, donc elle faisait partie du masque : les
+106 coches de la grille de tarifs sont sorties en pastilles pleines. La
+coche est DÉCOUPÉE dans le disque par un `<mask>` SVG, et le test
+l'exige (`<mask>` présent, aucun `stroke="#fff"`).
+
+**Et la grille de tarifs écrit ses classes en guillemets SIMPLES**
+(`class='fas fa-check-circle'`). Mon marquage ne lisait que les doubles :
+38 icônes sur 128. Les deux formes sont lues, et le test le fige.
+
+**Les 104 images portent toutes un texte alternatif**
+(`lib/sales/altImagesV2.ts`, 34 fichiers classés en les REGARDANT sur
+une planche-contact). 18 portent un texte, 18 sont déclarées
+décoratives, et **un `alt` vide est une décision ÉCRITE** : sans la
+raison à côté, le prochain passage prend le vide pour un oubli. On
+n'écrase JAMAIS un `alt` existant. Le logo du pied de page annonçait
+« Logo Tipote » : c'est le logo Tiquiz, et il double le nom écrit à côté,
+donc son texte est vide.
+
+**79 images sur 105 portent leurs dimensions**, lues dans les premiers
+octets par `lib/blog/dimensionsImage.ts`. Les 25 illisibles sont
+laissées telles quelles : inventer une taille déformerait l'image au
+lieu de réserver sa place. Le test refuse une moitié de dimensions
+(`width` sans `height`), qui déforme à coup sûr.
+
+## Le quiz de la démo se retrouve dans le compte (Béné, 2 septembre 2026)
+
+"Il faut qu'ils génèrent un beau quiz, super pertinent, qui donne envie
+d'aller plus loin, et qu'ils le retrouvent derrière, comme la plupart
+des saas le font : un aperçu gratuit alléchant qui demande de créer un
+compte pour continuer."
+
+Et la remarque qui a débloqué la chose : "ça doit être beaucoup plus
+simple maintenant que la page de vente est aussi sur notre serveur."
+Elle a raison, et c'est exactement ce qui rend le correctif possible.
+
+### CE QUI SE PASSAIT, ET C'EST MESURÉ
+
+Le quiz n'était pas perdu : `/api/embed/quiz/generate` crée une VRAIE
+ligne dans `quizzes`, sans propriétaire, marquée du jeton de session, et
+aucun cron ne la purge. Ce qui se perdait, c'était le JETON, et il
+voyageait par deux chemins qui fuyaient tous les deux.
+
+**1. Le `localStorage` écrit DANS l'iframe.** MESURÉ dans Chromium 141,
+deux domaines distincts, comme sur la vraie page :
+
+```
+réglages par défaut     écrit "abc123"        relu "abc123"
+cookies tiers bloqués   écrit SecurityError   relu null
+```
+
+Dès que les cookies tiers sont bloqués (**le défaut de Safari et de
+Firefox**), l'iframe n'a PAS le droit d'écrire, et le `try/catch` autour
+avale l'erreur : personne ne le sait, à commencer par nous.
+
+**2. Le `?tq_session=` collé sur l'URL du bon de commande.** Sauf que
+cette adresse était `www.tipote.fr/tiquiz`, un tunnel Systeme.io, qui ne
+transmet pas la query. C'est la raison même du rapatriement des 8
+destinations affiliées (25 août), reproduite ici sans que personne ne
+fasse le rapprochement. Et même arrivé chez nous, `tq_session` n'était
+lu qu'à UN endroit, le tableau de bord.
+
+Donc : Chrome par défaut, ça marchait. Safari et Firefox, la personne
+repartait de zéro dans son compte alors que son quiz existait en base,
+complet, à côté.
+
+### LA RÈGLE : le jeton voyage par une NAVIGATION, le rattachement se
+fait CÔTÉ SERVEUR
+
+`lib/embed/reprise.ts` (pur, testé) décide où l'on envoie quelqu'un qui
+veut garder son quiz : **notre inscription, sur le domaine où il est
+déjà**. Le jeton part dans une navigation de PREMIER NIVEAU, donc plus
+aucune dépendance au stockage du navigateur, donc plus aucune différence
+entre Chrome, Safari et Firefox.
+
+`lib/embed/rattacherQuiz.ts` fait le transfert, et **il n'y en a qu'un**.
+`/api/auth/signup` l'appelle (le chemin normal désormais) et
+`/api/embed/quiz/claim` aussi (le filet du tableau de bord). Deux
+endroits qui transféreraient chacun de leur côté finiraient par se
+contredire : c'est le défaut sorti six fois dans ce dépôt, et ici la
+contradiction se compte en quiz perdus.
+
+**Quatre choses à ne pas défaire :**
+
+1. **Les adresses sont RELATIVES** (`/embed/preview`, `/signup`). La
+   page de vente est servie sur `tiquiz.fr` en public ET sur le domaine
+   de l'app quand on relit un chantier avec la clé d'aperçu : une
+   adresse absolue serait juste dans un cas et fausse dans l'autre, et
+   l'erreur ne se verrait qu'en cliquant.
+2. **L'iframe n'est plus TIERS.** Il pointait sur `quiz.tipote.com`
+   depuis `tiquiz.fr` ; il pointe maintenant sur la même origine. Ce
+   n'est pas ce qui répare le trou (le jeton ne dépend plus du
+   stockage), mais ça retire la cause qui l'avait créé.
+3. **Le rattachement passe APRÈS la création du compte**, best-effort,
+   et il ne jette jamais : un transfert qui échoue ne doit pas priver
+   quelqu'un de son inscription. Même règle que `rattacherInscrit`.
+4. **Le transfert pose le propriétaire AVANT de marquer la session.**
+   Marquer d'abord laisserait une session "réclamée" dont le quiz n'a
+   toujours pas de propriétaire, c'est à dire un quiz que plus aucun
+   appel ne peut rattraper (le filet refuse une session déjà réclamée).
+   C'est la règle des lots de versement du 25 août : on crée la pièce
+   avant de la solder.
+
+**Le cas "j'ai déjà un compte" ne rattache RIEN**, et c'est voulu : une
+adresse déjà inscrite ne prouve pas qu'elle appartient à la personne
+devant l'écran. Le lien de connexion porte donc le jeton
+(`urlConnexionReprise`), vise le domaine de l'APP (le tableau de bord
+n'existe pas sur le domaine de vente), et c'est `EmbedAutoClaim` qui
+rattache une fois la session ouverte. Ce composant reste, mais il n'est
+plus le chemin principal : c'est le filet.
+
+**Le bouton s'appelle "Garder mon quiz", plus "Débloquer Tiquiz"** : le
+geste se nomme par ce qu'il fait pour la personne, pas par ce qu'il nous
+rapporte.
+
+### TROUVÉ AU PASSAGE, ET C'EST UN VRAI TROU
+
+**Le `?redirect=` de la connexion était poussé tel quel.** Une valeur du
+genre `https://ailleurs.example` emmenait la personne hors de chez nous
+**juste après son mot de passe**, c'est à dire à la seconde exacte où
+une fausse page de connexion est rentable. `redirectionSure` n'accepte
+qu'un chemin interne, et refuse le **double slash** : `//ailleurs.example`
+est une adresse ABSOLUE pour le navigateur, et elle commence bien par
+`/`. C'est le cas qu'on rate toujours, et le test le rejoue.
+
+**Et la démo écrivait avec un budget PLUS PETIT que l'app.**
+`max_tokens` valait 6000 côté embed et 8000 côté app, alors que l'embed
+laisse demander jusqu'à 10 questions et 5 profils. Un quiz qui touchait
+le plafond revenait TRONQUÉ, donc `JSON.parse` échouait, donc le
+visiteur lisait **"JSON IA invalide"** sur l'écran même qui doit lui
+donner envie. Le budget vit maintenant dans le module qui porte le
+prompt (`QUIZ_GENERATION_MAX_TOKENS`), et le cas restant DIT quoi faire
+au lieu d'accuser le format. Le prompt, lui, était déjà le même des deux
+côtés : c'est vérifié, pas supposé.
+
+### ET LA FAUTE QUE J'AI FAITE EN ÉCRIVANT LE TEST
+
+Mon contrôle "le cas tronqué est traité AVANT la lecture du JSON"
+cherchait `JSON.parse` dans le fichier ENTIER. Il tombait sur ma propre
+explication écrite juste au dessus du contrôle, et sortait **rouge sur
+un fichier parfaitement correct**. Un contrôle qui ne distingue pas ce
+qu'il est censé distinguer est pire qu'un contrôle absent, et c'est la
+cinquième fois de la semaine. Les tests qui mesurent un ORDRE dans un
+fichier retirent d'abord les commentaires.
+
+**Endroits à respecter :** `lib/embed/reprise.ts` (pur),
+`lib/embed/rattacherQuiz.ts` (les écritures, aucune décision),
+`app/api/auth/signup/route.ts`, `app/api/embed/quiz/claim/route.ts`,
+`app/signup/page.tsx` + `components/auth/SignupForm.tsx`,
+`components/auth/LoginForm.tsx`, `components/dashboard/EmbedAutoClaim.tsx`,
+`public/embed/bridge.js`, et la correction de l'iframe dans
+`lib/sales/planV2.ts`. Test :
+`tests/logic/reprise-quiz-embed.test.mts`, vérifié en rejouant les trois
+versions d'avant (elles rougissent).
+
+**Ce chantier n'a PAS de jumeau chez Tipote** : il n'a ni page de vente
+capturée, ni `embed_quiz_sessions`. Vérifié, pas supposé.
+
+## La connexion Google, et les trois choses qu'elle aurait fait perdre (2 septembre 2026)
+
+Béné : "on pourra bosser sur l'optin et login via Google ?", puis "sans
+rien casser ni perdre de ce qui existe, je ne veux pas de mauvaise
+surprise."
+
+### LE PIÈGE, ET IL ÉTAIT ENTIER
+
+`supabase.auth.signInWithOAuth` crée le compte **DANS Supabase**, sans
+passer par `/api/auth/signup`. Or c'est cette route, et elle seule, qui
+faisait les trois choses qui comptent après une inscription :
+
+| | Ce qu'un bouton branché naïvement aurait coûté |
+|---|---|
+| `rattacherInscrit` | l'affiliée qui a amené la personne n'est JAMAIS rattachée, donc jamais payée sur la vente qui suit |
+| `poserTagPlan(email, "free")` | aucun contact chez Systeme.io, donc **aucune campagne** : la personne s'inscrit et ne reçoit rien |
+| le rattachement du quiz | le quiz de la démo reste orphelin en base |
+
+**Aucun des trois ne produit d'erreur visible.** C'est exactement la
+forme de panne que ce dépôt paie le plus cher, et c'est pour ça que
+`POST /api/auth/accueil` a été écrite AVANT que le bouton n'existe : les
+trois effets vivent au même endroit, quel que soit le chemin d'entrée.
+
+### CE QUI NE BOUGE PAS D'UNE LIGNE
+
+L'accueil est appelé **uniquement sur la branche `?code=`** du callback,
+c'est à dire le retour d'un fournisseur. Les liens email (`verifyOtp`,
+le hash implicite, la récupération de mot de passe) ne sont pas touchés,
+et `/api/auth/signup` garde ses propres effets de bord : l'accueil
+s'ajoute, il ne remplace rien. Le test compte les appels et exige qu'il
+n'y en ait qu'un.
+
+### ELLE NE TOURNE QU'UNE FOIS, ET JAMAIS `free` SUR UN COMPTE QUI PAIE
+
+Le marqueur vit dans `app_metadata` (Supabase) : **aucune migration**, et
+c'est le bon endroit pour un fait que le serveur écrit sur un compte et
+que la personne ne peut pas modifier.
+
+**Le marqueur est posé AVANT les appels réseau.** Deux onglets, ou un
+rechargement pendant que ça tourne, feraient sinon deux accueils, sur un
+chemin qui décide QUI est payé.
+
+Et ce marqueur n'existait pas avant ce chantier : **un compte DÉJÀ
+inscrit qui se connecte par Google passera donc ici une fois.** Reposer
+`tiquiz-free` sur une abonnée la sortirait du seul segment qui compte
+pour les relances de Béné, et ça ne se verrait sur AUCUN écran.
+`tagPlanPourAccueil` rend donc `null` dès que le plan n'est pas gratuit.
+C'est le garde-fou le plus important de ce chantier, et le test le
+rejoue sur les six paliers.
+
+### L'ALLER-RETOUR QUITTE NOTRE DOMAINE : ce qui survit, et comment
+
+Deux choses doivent être encore là au retour, et **aucune ne peut
+voyager dans l'URL** : Supabase ajoute son `?code=` à l'adresse de
+retour, et je n'ai aucun moyen de vérifier d'ici ce que leur serveur
+fait d'une query déjà présente. On ne construit pas sur une supposition.
+
+- **le `?ref=` affilié** vit déjà dans le cookie `tq_ref`, posé par le
+  middleware pour un an : il survit sans qu'on fasse rien ;
+- **le quiz de la démo** n'a pas de cookie : le bouton lui en pose un
+  (`tq_reprise`) juste avant de partir.
+
+**MESURÉ dans Chromium, sur le trajet exact d'un aller-retour OAuth**
+(notre domaine -> un site tiers -> retour chez nous en premier niveau) :
+
+```
+au retour de premier niveau : tq_reprise=abc123
+sur une requête tierce      : (aucun)
+```
+
+`SameSite=Lax` est donc à la fois ce qui le ramène et ce qui le protège :
+il n'est jamais envoyé quand un autre site déclenche une requête vers
+nous en arrière plan.
+
+**Et `Secure` n'est posé qu'en https** : en développement local, un
+cookie `Secure` sur http est jeté par le navigateur en silence, et le
+jeton disparaîtrait sans que rien ne le dise.
+
+### ON REVIENT SUR L'ORIGINE D'OÙ L'ON EST PARTI
+
+`urlRetourGoogle(origine)`. Partir de `tiquiz.fr` et revenir sur
+`quiz.tipote.com` sont **deux sites différents** : le cookie posé avant
+de partir serait perdu, et le quiz avec. C'est déjà ce que fait
+`resolveAppUrl` pour les liens d'email depuis le 2 août, et une origine
+qui n'est pas à nous (ou une adresse locale) retombe sur le domaine
+canonique.
+
+**Et le jeton se lit AUSSI dans le `?redirect=` de la connexion**
+(`jetonDansRedirection`). Quelqu'un qui avait déjà un compte arrive sur
+`/login?redirect=/dashboard?tq_session=...` : sans cette lecture, un clic
+sur Google depuis cet écran repartirait sans son quiz, parce que
+l'aller-retour OAuth ne rapporte pas le `redirect`.
+
+### CE QUI RESTE À FAIRE, ET CE N'EST PAS DU CODE
+
+Le bouton ne peut rien tant que le fournisseur n'est pas déclaré. Trois
+réglages, tous chez Béné, et **aucun ne se devine depuis le code** :
+
+1. un identifiant OAuth chez Google Cloud, avec
+   `https://<projet>.supabase.co/auth/v1/callback` comme URI de
+   redirection autorisée ;
+2. les deux valeurs collées dans Supabase, Authentication > Providers >
+   Google ;
+3. `https://quiz.tipote.com/auth/callback` **et**
+   `https://tiquiz.fr/auth/callback` dans les Redirect URLs de Supabase.
+   Les deux : on revient sur l'origine du départ, et l'inscription est
+   servie sur les deux domaines.
+
+Tant que ce n'est pas fait, le bouton s'affiche et échoue proprement
+avec sa phrase, le formulaire juste en dessous continue de marcher.
+
+Test : `tests/logic/connexion-google.test.mts`, vérifié en rejouant les
+trois versions naïves (le tag posé pour tout le monde, le retour toujours
+canonique, l'accueil jamais appelé) : les trois rougissent.
+
+### « PKCE code verifier not found in storage » : on échangeait le code DEUX fois (retour Béné, 2 septembre 2026)
+
+"J'ai réessayé avec mon mail 20mn après avoir supprimé ce compte de mon
+supabase et j'ai la même erreur : PKCE code verifier not found in
+storage. [...] Peut être parce que google n'a pas encore validé l'app ?
+Toujours url `https://quiz.tipote.com/auth/callback` et pas d'erreur
+dans la console."
+
+**Non, Google n'y était pour rien, et la session était OUVERTE.** Le
+message accuse le navigateur ("storage was cleared", "a different
+browser or device"), donc il envoie chercher très loin de la cause, qui
+est chez nous et tient en quatre lignes de `node_modules`.
+
+**MESURÉ dans `@supabase/ssr` et `@supabase/auth-js`, pas déduit :**
+
+```
+createBrowserClient.js:40  detectSessionInUrl: … ?? isBrowser()   -> true
+GoTrueClient.js:283        au montage, si ?code= est là -> _getSessionFromURL()
+GoTrueClient.js:654/666    …qui échange le code ET RETIRE le `-code-verifier`
+GoTrueClient.js:2221       getSession() attend d'abord initializePromise
+```
+
+Le client échange donc le code **tout seul**, au montage, et consomme le
+vérificateur au passage. Notre `exchangeCodeForSession` explicite
+arrivait forcément APRÈS (il attend la même initialisation) et ne
+trouvait plus rien.
+
+**Ce n'était pas une course : c'était déterministe**, et c'est ce qui
+colle exactement à son "la même erreur à chaque essai". Une vraie course
+donne un résultat une fois sur deux.
+
+**Règle : on demande la SESSION d'abord, on n'échange qu'en repli.**
+`getSession()` attend l'initialisation, donc il rend la session que la
+détection automatique vient d'ouvrir. L'échange manuel reste là pour le
+jour où `detectSessionInUrl` serait coupé : le retirer marcherait
+aujourd'hui et casserait ce jour là.
+
+**Et la leçon dépasse Supabase : deux morceaux de code qui consomment la
+MÊME ressource à usage unique finissent toujours par se marcher
+dessus.** Ici la bibliothèque faisait déjà le travail, correctement, et
+on le refaisait par dessus. Le symptôme n'était pas "ça ne marche pas",
+c'était "ça marche et on affiche une erreur", ce qui est pire.
+
+### `tiquiz-free` ne se repose pas sur quelqu'un qui l'a déjà (Béné, 2 septembre 2026)
+
+"Pour tiquiz-free pose un garde fou sinon systeme io va renvoyer toute
+la campagne tiquiz free."
+
+Elle a raison, et le trou était réel : `POST /api/auth/accueil` ne tourne
+qu'une fois par compte (marqueur dans `app_metadata`), mais **ce marqueur
+n'existait pas avant le 2 septembre**. Tous les comptes gratuits DÉJÀ
+inscrits passent donc par l'accueil à leur première connexion Google, et
+`poserTagPlan` reposait le tag qu'ils portent déjà. Chez elle, une règle
+`tag_added` écoute `tiquiz-free` : reposer le tag **relance la
+campagne entière** sur quelqu'un qui l'a lue il y a six mois.
+
+**Règle : `siDejaPose` est un PARAMÈTRE** (`"reposer" | "ignorer"`), et
+l'accueil passe `"ignorer"`. Les webhooks de vente gardent `"reposer"` :
+là, reposer un tag est sans conséquence et ne rien reposer serait un
+accès qui n'ouvre pas.
+
+**Ça ne coûte AUCUN appel de plus, et c'est ce qui rend le garde-fou
+gratuit :** `GET /contacts?email=` renvoie DÉJÀ le tableau complet des
+tags du contact (mesuré dans son compte, son propre contact porte
+`tiquiz-free`, id 1962973). On lisait cette réponse pour n'en garder que
+l'`id`. `trouverContact` rend maintenant `{ id, tags }`, et la
+comparaison se fait en MINUSCULES : Systeme.io n'impose aucune casse.
+
+Nouvelle raison `deja_pose`, distincte de `ok` : le journal dit "le tag
+était déjà là" au lieu de laisser croire qu'on vient de la poser. C'est
+la règle du 31 août, un booléen ne dit jamais où chercher.
+
+**VÉRIFIÉ EN PRODUCTION LE 3 SEPTEMBRE**, sur son propre compte, après
+une vraie connexion Google :
+
+```
+[sio/tag] tiquiz-free est deja pose pour blagardette@gmail.com, on ne le repose pas.
+[rattacher] benebottet@gmail.com : rattache sa0007878317200141bbe3de2b...
+[rattacher] mareineethique@gmail.com : rattache_a_un_autre sa443cbc...
+```
+
+Les trois lignes prouvent trois choses d'un coup : le garde-fou tient,
+le `?ref=` survit à l'aller-retour Google, et le premier rattachement
+gagne sur une vraie inscrite.
+
+### ET LE SUCCÈS D'UNE POSE NE LAISSAIT AUCUNE TRACE
+
+Pour répondre à « est-ce que cette personne recevra sa campagne ? », il
+a fallu raisonner par ÉLIMINATION : pas de refus, pas de « déjà posé »,
+donc c'est passé. Seuls l'échec, le refus et le « déjà posé » étaient
+journalisés. **Sur le chemin qui décide si quelqu'un entre dans ses
+séquences email, une déduction n'est pas une mesure**, et un journal
+muet sur le cas NORMAL oblige à deviner le jour où ça cloche.
+`poserTagParNomDetaille` écrit donc `<tag> pose pour <adresse>.`
+
+**Et les quatre journaux de ce fichier disaient encore "étiquette"**,
+avec ses accords au féminin (« est deja posee »), c'est à dire le mot
+banni le 1er septembre, dans les lignes que Béné LIT quand elle
+diagnostique. `tests/logic/on-dit-tag.test.mts` ne balayait que
+`messages/*.json` : il couvre maintenant `lib/sio/`.
+
+**On cible le DOSSIER `lib/sio/`, jamais la sous-chaîne "sio"** :
+filtrer les chemins qui la contiennent ramène `dimenSIOn`, `sesSIOn` et
+`commisSIOn`. C'est le faux positif que ce même test raconte déjà pour
+"conver-sio-ne", et il se refait tout seul.
+
+**MES DEUX FAUTES EN L'ÉCRIVANT, et ce sont les 8e et 9e de la
+semaine :**
+
+1. mon contrôle du log de succès cherchait `console.log(\`[sio/tag]...pose`,
+   qui matche AUSSI le message « est deja pose » du garde-fou juste au
+   dessus. Retirer le log de succès laissait le test VERT. Il vise
+   désormais le journal situé ENTRE `pose_refusee` et `raison: "ok"`,
+   et il rougit quand on le retire ;
+2. `apres-paiement.test.mts` exigeait la chaîne littérale `"l'etiquette"`
+   pour prouver que le code explique pourquoi il n'a rien posé. **Un
+   garde-fou qui fige une FORMULATION empêche de corriger la
+   formulation** : il a rougi sur une correction juste. Il vise
+   maintenant le FAIT (`n'existe pas chez Systeme.io`).
+
+### La politique de confidentialité dit ce que Google nous donne (2 septembre 2026)
+
+Béné, capture de la Google Auth Platform à l'appui : "il dit que mon app
+doit être validée [...] et il ne valide pas ma privacy apparemment."
+
+**MESURÉ avant d'écrire une ligne :** `tiquiz.fr/privacy` répond 200,
+610 mots, RGPD complet (finalités, bases légales, durées, droits,
+sous-traitants). Le mot "Google" y apparaissait **une seule fois**, pour
+Google Analytics. **La page ne décrivait donc nulle part la connexion
+Google**, ce qui est exactement ce que leur relecture cherche.
+
+Une section 12 (« Connexion avec Google ») a été ajoutée dans les 5
+langues, et les sections 12 à 15 renumérotées 13 à 16. Elle dit les six
+choses que Google veut lire, et **aucune n'est une formule** :
+
+- c'est OPTIONNEL, le mot de passe reste possible ;
+- Google nous envoie EXACTEMENT trois choses : l'adresse email, le nom
+  affiché, l'identifiant unique du compte ;
+- elles servent à créer le compte, ouvrir la session et reconnaître au
+  retour, rien d'autre ;
+- **aucun autre accès** : ni Gmail, ni Drive, ni Agenda, ni Contacts, ni
+  Photos, aucune permission d'écriture ou de publication, et jamais le
+  mot de passe Google ;
+- jamais vendu, loué, utilisé pour de la publicité, ni partagé au delà
+  des sous-traitants de la section 7 ;
+- révocable sur `myaccount.google.com/permissions`, et le compte Tiquiz
+  survit à la révocation.
+
+**La liste des trois données n'est pas une promesse commerciale :** c'est
+ce que renvoie le scope `openid email profile`, le seul demandé. Écrire
+moins serait vague (donc refusé), écrire plus serait faux.
+
+**Ce qui reste chez Béné :** la carte « Accès aux données » de son écran
+dit que la validation n'est PAS requise pour ces scopes. Le bouton
+fonctionne donc dès aujourd'hui ; c'est l'écran de consentement qui
+affiche encore un avertissement tant que la relecture de marque n'est
+pas passée.
+
+## Le déploiement fantôme : le serveur reconstruisait l'ANCIEN code (2 septembre 2026)
+
+Béné : "ton code ne marche pas, il bloque ici et plus rien :
+`Username for 'https://github.com':`. Mais si je fais mon code et que je
+clique entrée entrée entrée ça finit par avancer. Du coup je fais quoi
+bordel ??" Et, dans le même message : "je ne vois pas de modif sur les
+pages légales envoyées à Google. C'est le code qui ne part pas en prod ?"
+
+**Oui. Et ça durait avant la chaîne `&&`, sans que rien ne le dise.**
+
+### Les trois mesures qui tranchent
+
+| Question | Réponse |
+|---|---|
+| `main` porte-t-il la section Google ? | **OUI** (`25e270d3`, `lastUpdated` au 02/09/2026) |
+| que sert `tiquiz.fr/privacy` ? | **22/04/2026**, aucune section "Connexion avec Google" |
+| le dépôt est-il privé ? | **NON**, `"visibility": "public"` (lu par l'API GitHub, pas par un `git ls-remote`) |
+
+Le code était donc à sa place ; c'est le SERVEUR qui ne l'avait pas.
+
+### MA PREMIÈRE MESURE ÉTAIT INVALIDE, ET C'EST LA LEÇON
+
+J'ai lancé `git ls-remote https://github.com/BenGOaff/tiquiz.git`, obtenu
+le HEAD, et écrit ici : « le dépôt ne demande aucun identifiant, donc
+l'URL du serveur est cassée ». **Les deux moitiés étaient fausses.**
+
+L'environnement d'où je mesure est AUTHENTIFIÉ en tant que `BenGOaff`
+(`api.github.com/user` le dit), et il porte un
+`url.https://github.com/.insteadOf` qui réécrit les adresses. Mon test
+ne pouvait donc pas distinguer « ce dépôt est public » de « ce dépôt est
+privé et je suis connecté ». **Un test qui ne distingue pas ce qu'il est
+censé distinguer est pire qu'un test absent** (leçon des clés Supabase,
+22 août), et je l'ai refaite dans l'outil même qui servait à trancher.
+
+Béné a passé un aller-retour à corriger une adresse qui était déjà
+juste. La sortie le disait, mot pour mot :
+
+```
+origin  https://github.com/BenGOaff/tiquiz.git (fetch)
+--- corrigé ---
+origin  https://github.com/BenGOaff/tiquiz.git (fetch)
+```
+
+**Ce qui tranche vraiment la visibilité, c'est l'API** (`private`,
+`visibility`), pas une commande git lancée depuis une machine dont on ne
+connaît pas la configuration. Et avant de conclure quoi que ce soit
+depuis ici : `curl -sS https://api.github.com/user`.
+
+### LA CAUSE, TROUVÉE À LA SIXIÈME MESURE : git parlait en HTTP/2
+
+J'ai avancé quatre causes avant celle là (l'URL du remote, un dépôt
+privé, un jeton périmé, une limite de débit) et **les quatre étaient
+fausses**. Aucune n'était mesurée avant d'être annoncée. Ce qui a fini
+par trancher, c'est une suite de mesures qui ÉLIMINENT, chacune en une
+commande :
+
+| La mesure | Ce qu'elle a éliminé |
+|---|---|
+| `git config --list --name-only` | rien n'est configuré : ni credential, ni proxy, ni insteadOf |
+| `curl` sur l'URL exacte de git -> **200** | GitHub sert bien le dépôt à ce serveur |
+| la trace `GIT_TRACE_CURL` | la 1re requête reçoit **200**, la 2e reçoit **401** |
+| `git ls-remote https://github.com/git/git.git` -> **échoue pareil** | ce n'est pas notre dépôt, c'est git sur cette machine |
+| dans la trace : `HTTP/2` chez elle, `HTTP/1.1` chez moi | la seule différence entre une machine qui marche et une qui échoue |
+
+**`git -c http.version=HTTP/1.1 pull` a débloqué instantanément.**
+
+Sur ce serveur, git en HTTP/2 obtient un 200 sur `info/refs` puis un
+401 sur la requête suivante, sur N'IMPORTE QUEL dépôt public. curl
+passe, parce qu'il ne négocie pas la même chose. Le message
+`Username for 'https://github.com'` ne parlait donc ni de droits, ni du
+dépôt : c'est ce que git affiche quand il reçoit un 401 qu'il ne
+comprend pas.
+
+**Le réglage est POSÉ, pas répété dans la commande :**
+
+```bash
+git config --global http.version HTTP/1.1
+```
+
+Une fois, pour les trois apps du serveur. Un drapeau recopié dans une
+commande de déploiement est un drapeau qu'on oublie au prochain
+copier-coller.
+
+**La méthode qui a marché, et c'est elle qu'il faut retenir : chaque
+commande devait ÉLIMINER une moitié, pas confirmer une intuition.**
+« curl passe » élimine GitHub. « git/git échoue aussi » élimine le
+dépôt. « HTTP/2 contre HTTP/1.1 » est la dernière différence qui reste.
+Quatre allers-retours ont été perdus à proposer des causes plausibles
+avant de commencer à éliminer.
+
+### LA CHAÎNE `&&` N'A RIEN CASSÉ : ELLE A RÉVÉLÉ
+
+C'est le point à ne pas inverser, et c'est ce que Béné a vécu comme une
+panne. Avec ses commandes sur des LIGNES SÉPARÉES, le `git pull`
+échouait, et `npm ci`, `npm run build` et `pm2 restart` tournaient quand
+même. Tout avait l'air de marcher : aucune ligne rouge, PM2 redémarrait,
+le site répondait. **Et il servait l'ancien code.**
+
+**Règle : une étape de déploiement qui échoue sans arrêter la chaîne
+fabrique un déploiement fantôme**, c'est à dire le pire des symptômes :
+la correction est absente, tout le reste est vert, et on va chercher le
+bug dans le code au lieu du transport. Même famille que le webhook dont
+le réessai ne pouvait pas repasser (24 août) et que les images en 403
+(31 août) : le geste était juste, il n'atteignait pas sa cible.
+
+### Et le contrôle qui manquait
+
+```bash
+npm run check:deploye
+```
+
+Il compare le commit que le SERVEUR a en main avec celui de `main` sur
+GitHub, et **il distingue les trois cas** (leçon des clés Supabase du
+22 août) : à jour, pas à jour, ou "je n'ai pas pu joindre GitHub" (avec
+la commande de réparation du remote imprimée à côté). Un contrôle qui
+répondrait "à jour" quand le fetch échoue serait pire que pas de
+contrôle.
+
+Il dit aussi ce qu'il ne peut PAS savoir : que le code soit tiré ne veut
+pas dire qu'il soit CONSTRUIT. Le build et le redémarrage restent à
+vérifier à l'écran.
+
+## Google refuse le branding : ce qu'il regarde vraiment (2 septembre 2026)
+
+Béné : "google ne valide toujours pas tu as lu les règles en vigueur ?"
+avec ses deux reproches à l'écran.
+
+**Non, je ne les avais pas lues.** J'avais ajouté une section « Connexion
+avec Google » de cinq phrases en supposant que décrire la connexion
+suffisait. Leurs deux pages d'aide (13806988 et 13807376) sont
+explicites, et elles demandent autre chose.
+
+### Reproche 1 : « ne contient pas suffisamment de contenu »
+
+Google exige que la politique **divulgue de façon exhaustive** comment
+l'app ACCÈDE aux données utilisateur Google, les UTILISE, les STOCKE, les
+PROTÈGE, les PARTAGE et les CONSERVE (avec la politique de suppression),
+plus la clause d'**usage limité** (Google API Services User Data Policy,
+Limited Use). Mesuré : la page servait **805 mots visibles**, et la
+section Google en couvrait trois axes sur six.
+
+La section 12 traite maintenant les six, nommés un par un, dans les
+5 langues, avec les scopes demandés (`openid email profile`), la liste
+de ce à quoi on n'accède PAS (Gmail, Drive, Agenda, Contacts, Photos,
+YouTube, écriture, publication), et la clause d'usage limité.
+
+**Ce qui n'est PAS écrit est aussi important :** rien sur un hébergement
+« dans l'Union européenne » (l'article 8 dit l'inverse), aucun délai de
+suppression inventé (on renvoie aux articles 9 et 10). Une politique qui
+promet ce que la page dément juste au dessus est pire qu'une politique
+courte.
+
+### CE QUE LA MESURE A TROUVÉ EN PLUS : Cloudflare masquait les emails
+
+**4 adresses sur 4** de la page étaient servies en
+`<span class="__cf_email__">[email&nbsp;protected]</span>`, y compris
+celle de l'article « Contact » et celle de l'article « Vos droits ».
+C'est l'option « Email Address Obfuscation » de Cloudflare, et elle
+s'applique au HTML SERVI, donc elle est invisible depuis le code.
+
+Un lecteur qui n'exécute pas le JavaScript (le validateur de Google, un
+robot, un lecteur d'écran dégradé) lit donc une politique de
+confidentialité **sans aucune adresse de contact**. `SansObfuscationEmail`
+(`components/legal/LegalPageView.tsx`) pose les marqueurs
+`<!--email_off-->` / `<!--email_on-->`, la directive officielle de
+Cloudflare pour laisser une zone intacte.
+
+**Ça ne se voyait que sur la page RENDUE**, jamais dans le dépôt : c'est
+la leçon du 22 août, appliquée à un intermédiaire qu'on oublie parce
+qu'il ne nous appartient pas.
+
+### Reproche 2 : « votre page d'accueil n'est accessible que via une page de connexion »
+
+**Celui là était PÉRIMÉ, et l'écran le disait :** « Problèmes détectés
+lors de la tentative de validation PRÉCÉDENTE ». Mesuré le même jour
+avec l'agent de Googlebot, sans cookie :
+
+| | |
+|---|---|
+| `tiquiz.fr/` | **200**, aucune redirection, **5325 mots visibles** |
+| lien vers la politique | présent (`/privacy`, `/legal`, `/terms`, `/cookies`) |
+
+**ET J'AI INVENTÉ UNE EXPLICATION.** J'ai écrit que le reproche datait
+du moment où la page d'accueil déclarée était `quiz.tipote.com`. Béné :
+« je n'ai JAMAIS mis ça, j'ai mis tiquiz.fr depuis le début ». C'était la
+QUATRIÈME cause inventée dans la même journée, après l'URL du remote, le
+dépôt privé et le jeton périmé.
+
+**Ce qui est mesuré s'arrête donc là :** `tiquiz.fr` répond 200 à
+l'agent de Googlebot, sans redirection, avec 5325 mots et le lien vers
+la politique. Pourquoi leur validateur a vu autre chose, **je ne le sais
+pas**, et je n'en propose pas de cause.
+
+**Règle, et c'est la leçon de la journée : sur une panne qu'on ne
+reproduit pas, une cause plausible n'est pas une cause.** Quatre fois de
+suite, une explication qui collait à l'histoire a envoyé Béné corriger
+quelque chose qui n'avait rien. « Je ne sais pas encore, voici ce que je
+mesure » coûte une minute ; une cause inventée coûte un aller-retour et
+la confiance.
+
+Ce qui reste utile sur cet écran : il dit « tentative PRÉCÉDENTE ». Un
+rapport d'échec n'est pas un état courant, et relancer la validation
+après un correctif est le seul moyen de savoir ce qui tient encore.
+
+Test : `tests/logic/politique-google.test.mts` (9 tests), vérifié en
+rejouant les versions d'avant : 8 rougissent.
+
+## Les robots d'IA bloqués par Cloudflare : ce que ça coûte VRAIMENT (3 septembre 2026)
+
+J'avais alerté que le blocage de `Google-Extended` "contredit tout le
+travail GEO". Béné : "pas compris t'es sûr de toi ?" **Elle avait
+raison de douter : mon alerte était trop forte.**
+
+**Ce qui est bloqué, mesuré sur les quatre domaines** (le bloc Cloudflare
+« Managed robots.txt » arrive AVANT notre robots.txt applicatif) :
+`Google-Extended`, `GPTBot`, `ClaudeBot`, `CCBot`, `Bytespider`,
+`Amazonbot`, `Applebot-Extended`, `meta-externalagent`. **Ce sont tous
+des robots d'ENTRAÎNEMENT.**
+
+**Ce qui n'est PAS bloqué, et c'est ce qui compte :**
+
+| | |
+|---|---|
+| `Googlebot` | le référencement classique, intact |
+| `OAI-SearchBot` | ce qui CITE le site dans la recherche ChatGPT |
+| `ChatGPT-User` | quelqu'un pose une question, ChatGPT va lire la page |
+| `Claude-User`, `Claude-SearchBot` | pareil côté Claude |
+
+**Vérifié aux sources, pas de mémoire.** Google écrit noir sur blanc que
+`Google-Extended` "does not impact a site's inclusion in Google Search
+nor is it used as a ranking signal". OpenAI et Anthropic documentent
+chacun trois agents SÉPARÉS : entraînement d'un côté, recherche et
+navigation à la demande de l'autre.
+
+**Le `llms.txt`, les 33 textes alternatifs et le flux RSS servent donc
+exactement les robots qui PASSENT.** Décision : on ne touche à rien.
+Béné garde sa visibilité dans les réponses d'IA et refuse que son
+contenu entraîne gratuitement des modèles.
+
+**La leçon est la mienne : "un bot d'IA est bloqué" ne dit RIEN tant
+qu'on n'a pas regardé LEQUEL.** Entraînement et citation portent des
+noms différents chez les trois fournisseurs, et les confondre transforme
+un réglage sain en fausse alerte. C'est la règle du 22 août appliquée à
+un nom d'agent : une liste ne dit pas ce qu'elle contient tant qu'on ne
+l'a pas lue.
+
+## Mesurer les conversions : le montant vient du CATALOGUE (4 septembre 2026)
+
+Béné : "dans mon admin : je peux tracker les visites sur nos deux pages
+de vente ? Mesurer les conversions etc ?" Et sa consigne, dans l'ordre :
+"1. `begin_checkout` au clic sur un palier, avec le produit et le montant
+du catalogue ; 2. `purchase` sur la page de remerciement, avec la
+référence de la vente ; 3. seulement après : un écran dans l'admin qui
+montre les deux ensemble." Plus : "le 1 et le 2 touchent le chemin de
+paiement, donc ils se font seuls, avec leur propre vérification."
+
+**Les points 1 et 2 sont faits. Le 3 ne l'est pas**, et c'est son ordre.
+
+### CE QUI MANQUAIT, MESURÉ AVANT D'ÉCRIRE UNE LIGNE
+
+GA4 était bien posé (`G-N6LQDRDMDB`, `lib/analytics/google.ts`, sur les
+domaines de vente uniquement, après consentement). Mais **il n'y avait
+dans tout le dépôt que le `gtag('config')` de la page vue** : aucun
+événement de conversion, nulle part. Google voyait donc le trafic et ne
+pouvait RIEN en faire : impossible de savoir quelle source, quelle page
+ou quelle publicité avait produit une vente.
+
+### LES QUATRE DÉCISIONS, ET AUCUNE N'EST COSMÉTIQUE
+
+**1. `begin_checkout` part à l'ARRIVÉE sur `/commande/<produit>`**, pas
+au clic sur la page de vente. Sa consigne dit "au clic sur un palier", et
+c'est le même moment du tunnel ; ce qui change, c'est l'endroit où le
+code vit. La page de vente est une CAPTURE reconstruite par
+`npm run vente:v2` : instrumenter ses boutons voudrait dire patcher un
+HTML capturé, donc recommencer à chaque capture, sur une page qui porte
+plus de cent liens.
+
+**Ce que ça ne mesure PAS, et il faut le dire :** un clic sur un bouton
+qui part chez Systeme.io (`SALES_LINKS_LEFT_ALONE`) n'arrive jamais chez
+nous, donc il ne comptera pas. Ces ventes là se lisent dans `/admin`.
+
+**2. `purchase` ne part QUE sur `etat === "paye"`**, c'est à dire quand
+le fournisseur vient de confirmer, relu CÔTÉ SERVEUR par la page de
+retour. Cette adresse est une URL comme une autre : compter une
+conversion parce qu'un navigateur est arrivé là reviendrait à inventer du
+chiffre d'affaires. C'est la même règle que l'accès, écrite en tête de
+cette page depuis le 7 août : elle affiche, elle ne décide pas.
+
+**3. LA RÉFÉRENCE EST OBLIGATOIRE, et c'est le garde-fou.**
+`transaction_id` est ce qui permet à GA4 de DÉDUPLIQUER : la page de
+retour se rafraîchit, se partage, se rouvre le lendemain. Sans référence,
+chaque ouverture compterait une vente de plus et le chiffre d'affaires de
+ses rapports grossirait tout seul. Pas de référence -> AUCUN événement.
+
+**4. LE MONTANT VIENT DU CATALOGUE** (`OWNER_CATALOG`), jamais d'un
+payload, jamais écrit à la main. Un montant recopié serait faux au premier
+changement de tarif, et **un chiffre gonflé dans un tableau de bord est
+pire qu'une absence de chiffre : il fait dépenser** (règle du 22 août).
+Le test refuse tout littéral à quatre chiffres dans le module.
+
+**Et GA4 attend le montant DANS L'UNITÉ, pas en centimes.** Le catalogue
+est en centimes (c'est ce que Stripe encaisse) : envoyer `1700` au lieu
+de `17` multiplierait son chiffre d'affaires par cent, en silence.
+
+### LA MÊME PORTE QUE LA BALISE, CONSENTEMENT COMPRIS
+
+`ConversionGa4` rappelle `chargerAnalytics`, exactement comme
+`GoogleAnalytics` : le domaine de vente, le chemin, ET le choix de la
+personne. **Une conversion envoyée après un "refuser" serait pire qu'une
+visite mesurée sans accord**, parce qu'elle porte un montant et une
+référence de commande. Deux portes qui décideraient chacune de leur côté
+finiraient par ne plus dire la même chose : c'est le défaut sorti six
+fois dans ce dépôt, d'où la même fonction et pas une condition recopiée.
+
+### ON POUSSE UN OBJET `arguments`, JAMAIS UN TABLEAU QUI Y RESSEMBLE
+
+Mon premier jet faisait `dataLayer.push(["event", nom, params])`. Ça
+RESSEMBLE au shim de Google (`function gtag(){dataLayer.push(arguments);}`,
+écrit juste à côté dans `GoogleAnalytics.tsx`) et ce n'est pas la même
+chose : un tableau ordinaire n'est documenté nulle part, et **je n'ai
+aucun moyen de vérifier d'ici ce que gtag.js en ferait**. Une conversion
+ignorée en silence ne se découvre qu'en regardant un rapport vide des
+semaines plus tard.
+
+On pousse donc un vrai objet `arguments`, la forme documentée. Et
+`dataLayer` est une FILE : ce qu'on y met avant que la balise se charge
+(`afterInteractive`) est traité au chargement, rien n'est perdu.
+
+### CE QUI N'EST PAS MESURÉ, ET QUI SE DIT
+
+**Aucun de ces deux événements n'a jamais atteint GA4 depuis ce dépôt.**
+Ce qui est vérifié : les montants sortent du catalogue au centime, la
+forme est celle que Google documente, et les quatre versions fautives
+font rougir le test (des centimes envoyés tels quels, un `purchase` sans
+référence, une conversion sur une simple ouverture de l'URL, l'envoi qui
+ignore le consentement). Ce qui reste à constater : une conversion qui
+apparaît vraiment dans ses rapports, et ça se lit dans GA4, pas ici.
+
+### Tipote n'est PAS concerné, et c'est vérifié
+
+Mesuré le 4 septembre, pas supposé : pas de `app/commande`, pas de
+`lib/checkout`, pas de `lib/analytics`, et les seules mentions de `gtag`
+y sont les pixels des CRÉATRICES sur leurs pages publiques
+(`lib/clientPixels.ts`), pas notre mesure de vente. Ce chantier n'a donc
+pas de jumeau là bas.
+
+**Endroits à respecter :** `lib/analytics/conversions.ts` (pur, il
+construit les deux événements et ne parle à personne),
+`components/analytics/ConversionGa4.tsx` (l'envoi, aucune décision),
+`app/commande/[produit]/page.tsx`,
+`app/commande/[produit]/retour/page.tsx`.
+Test : `tests/logic/conversions-vente.test.mts`.
+
+## Le site public s'aligne sur la PAGE DE VENTE (Béné, 4 septembre 2026)
+
+Une landing de relecture avait été écrite en vraie page Next. Béné :
+"wow on est donc passés de ma super jolie page ultra design à ... ça.
+C'est très décevant. Vraiment. Je ne peux pas accepter cette daube."
+
+**Elle avait raison, et la faute est nommable en une ligne : j'ai
+appliqué à une page de VENTE les règles de sobriété du BLOG.** La règle
+du 31 août interdit un aplat de couleur SOUS DU TEXTE. Elle n'a jamais
+interdit les visuels, les cartes, les ombres ni la couleur. J'avais
+sorti une page sans une seule image pour vendre un outil de quiz.
+
+C'est la même famille que les trois drames du 1er août : une logique
+écrite pour un cas, appliquée telle quelle à un autre.
+
+### ET ELLE A TRANCHÉ LE SENS DE L'ALIGNEMENT
+
+"Je préfère que tu alignes le blog sur ma belle page de vente que
+l'inverse."
+
+Le site public avait sa propre palette crème, reprise de Typeform en
+août ; la page de vente a la sienne. **Deux systèmes visuels sur un même
+domaine, c'est deux sites empilés**, et ça se voyait à la couture entre
+l'en-tête et n'importe quelle page.
+
+`.tq-site` (globals.css) porte donc désormais les couleurs de la page de
+vente, et les 20 fichiers qui lisent ces jetons ont suivi le même jour,
+sans être touchés.
+
+| | avant | après |
+|---|---|---|
+| encre des titres | #0b1020 | **#2B3264** |
+| corps | #4a5270 | **#3B3B3B** |
+| bleu des boutons | #1d6bf0 | **#5A6EF6** |
+| cyan des mots surlignés | #22d3ee | **#20BBE6** |
+| fond | #fbfaf8 | **#F3F6FC** |
+| pastilles | #f2f1ee | **#EDF1F7** |
+| bord | #e4e2dd | **#E4E8F3** |
+| fonte | Inter (système) | **Open Sans, auto hébergée** |
+
+**AUCUNE VALEUR N'EST CHOISIE, elles sont toutes RELEVÉES** dans
+`content/sales/v2/funnel-quiz.html` (le bloc qu'elle a relu et corrigé
+trois fois le 2 septembre) et dans la capture
+`content/sales/tiquiz.html`.
+
+**Et la fonte vient de SES fichiers.** Sa page de vente auto héberge
+Open Sans en 5 graisses (`/v/tiquiz/*.woff2`, relevées dans ses
+`@font-face`). On les REPREND : un aller-retour réseau en moins qu'avec
+Google Fonts, et surtout la garantie que le site rend exactement comme
+sa page. Vérifié dans un navigateur, pas déduit : `document.fonts` rend
+bien Open Sans en 400, 600, 700 et 800.
+
+**Le mot surligné passe au CYAN, pas au bleu des boutons.** Le bleu
+appelle au clic, le cyan souligne : les confondre fait lire un titre
+comme un lien.
+
+### LE MOT SURLIGNÉ A FAIT ROUGIR UN TEST JUSTE
+
+`branding-site.test.mts` exigeait la chaîne `color: var(--tq-bleu)` sur
+`.tq-surb`. Il est donc sorti ROUGE sur une correction JUSTE. **Un
+garde-fou qui fige une FORMULATION empêche de corriger la
+formulation** : il vise maintenant le FAIT (c'est une couleur de TEXTE,
+prise dans les jetons de marque, et il n'y a AUCUN fond). La règle était
+déjà écrite dans ce fichier, au 3 septembre, et je l'ai repayée.
+
+### CE QUI N'EST PAS SUR LA LANDING, ET POURQUOI
+
+- **Aucune capture du produit.** La seule que l'app sait produire vient
+  de `/visual-test`, la fixture des tests visuels : elle porte un
+  bandeau "Mode aperçu" et un quiz de démo écrit SANS ACCENTS ("Quel
+  createur de quiz es-tu ?"). La maquette du haut de page est donc
+  DESSINÉE en HTML, comme son bloc funnel : traduite avec le reste,
+  nette à toutes les densités, et elle ne pèse rien.
+- **Aucun témoignage.** Sa page de vente en porte quinze avec les
+  portraits (relevés dans `lib/sales/altImagesV2.ts`). Je n'ai aucun
+  moyen de vérifier d'ici qui a dit quoi, et un faux témoignage est son
+  interdit numéro un. Ils s'ajoutent quand elle donne les vrais.
+- **Aucune icône en caractère Unicode** (leçon du 2 septembre) : les
+  coches, les flèches et les pictogrammes sont des TRACÉS SVG.
+
+### LE COMPILATEUR JSX MANGE L'ESPACE APRÈS UNE EXPRESSION
+
+Trouvé en regardant le hub intégrations après la bascule. La page
+affichait, en production, **"à partir de 29,99 $par mois"**.
+
+La source est juste (`{ZAPIER.professionnelParMois} par mois`), et le
+`{" "}` posé DEVANT l'expression prouve que quelqu'un avait déjà vu le
+problème d'un côté sans voir l'autre.
+
+**Deux extractions de texte sur trois MENTAIENT, et c'est la leçon.**
+
+| ce qu'on fait | ce que ça rend |
+|---|---|
+| retirer les balises avec `''` | colle deux voisins qui, à l'écran, sont séparés |
+| retirer les balises avec `' '` | INVENTE une espace là où React pose son `<!-- -->`, donc cache exactement ce bug |
+| lire les NOEUDS DE TEXTE dans un navigateur | la seule mesure qui dit ce que le lecteur voit |
+
+Ma première mesure disait "$par" (juste, par accident), ma deuxième
+disait "aucune faute sur 17 pages" (faux), et j'ai failli conclure que
+le bug n'existait pas. **Un test qui ne distingue pas ce qu'il est censé
+distinguer est pire qu'un test absent**, et j'ai réussi à me tromper
+dans les DEUX sens sur la même mesure.
+
+**La sonde qui tranche** parcourt les COMMENTAIRES de séparation de
+React et regarde ses deux voisins : un texte qui finit par un caractère
+visible, un commentaire, un texte qui commence par une lettre. Sur les
+17 pages du site elle rend **5 candidats, dont 3 légitimes** (`(SAS`,
+`filleul` + `s` pour le pluriel, `(70`) et **2 vrais collages**, les
+deux corrigés :
+
+- `/integrations` : "29,99 $par mois" ;
+- `/integrations/interact-systeme-io` : "2étapes".
+
+Une sonde qui rendait 8 fautes par page (parce qu'elle lisait aussi les
+scripts de Next) aurait fini ignorée : c'est le même défaut que le filet
+genre-neutre du 24 août.
+
+### Deuxième passage : ce que "ultra design" veut dire, mesuré
+
+Béné : "tu vas vraiment devoir faire des efforts sur le design, on est
+très loin d'un saas premium de 2026. Rapproche-toi beaucoup plus de ma
+page d'origine. On est à peine à 20 % de ce que je veux."
+
+**LA MÉTHODE QUI A MARCHÉ, ET C'EST ELLE QU'IL FAUT RETENIR : j'ai
+SERVI sa page de vente dans un navigateur et je l'ai REGARDÉE, section
+par section, au lieu d'en relire le CSS.** Le premier passage avait
+relevé les couleurs, la fonte et le bouton, c'est à dire ce qu'un
+fichier CSS raconte. Ce qui faisait la différence n'était pas là : ce
+sont des GESTES, et ils ne se voient qu'à l'écran.
+
+Les huit qui manquaient, tous les huit relevés dans la capture :
+
+| Le geste | Ce qu'il fait |
+|---|---|
+| le SURLIGNEUR pâle derrière un fragment de titre, curseur au bout | sa signature la plus visible, sur presque chaque titre |
+| les SCINTILLES au dessus du bouton principal | ce qui fait que le bouton n'a pas l'air posé à plat |
+| la RASSURANCE sous chaque bouton | "Gratuit à vie", "Pas besoin de CB", répétée à CHAQUE bouton |
+| le BANDEAU DÉFILANT de fonctionnalités | il remplit le vide sous le haut de page |
+| les pastilles "ÉTAPE n" + des lignes qui ALTERNENT texte / visuel | à la place d'une grille de quatre cartes plates |
+| de vraies MAQUETTES de produit dans ces lignes | montrer au lieu de décrire |
+| les cartes de tarif à RUBAN coloré + l'interrupteur mensuel / annuel | c'est l'écran où quelqu'un sort sa carte |
+| le BANDEAU DÉGRADÉ de fin | blanc sur bleu, le seul aplat de la page |
+
+**Deux choses viennent de ce que font les landings qui vendent en 2026,
+pas d'elle** : la preuve sociale remontée AVANT la première
+fonctionnalité, et une grille "bento" à la place d'une liste à puces.
+
+### 🚨 LES SIX AVIS TRUSTPILOT ONT ÉTÉ RETIRÉS LE 5 SEPTEMBRE
+
+Ce bloc racontait comment ils étaient relevés mot pour mot et pourquoi
+ils ne se traduisaient jamais. **C'est périmé, et je le corrige ici
+plutôt que d'empiler** : Béné, 5 septembre : "6 avis trustpilot pas une
+preuve sociale. Supprime. Tu peux mettre +200 utilisateurs (c'est le
+vrai chiffre)."
+
+Elle a raison sur le fond : six avis ne pèsent pas, et les afficher en
+annonçant leur nombre SOULIGNE qu'il y en a six. La section, la
+constante `AVIS`, `TRUSTPILOT_URL` et le composant `Etoiles` sont
+supprimés, pas laissés sans appelant.
+
+Ce qui reste vrai de l'ancienne note, et qui vaut pour le jour où elle
+donnera d'autres témoignages : **un témoignage ne se traduit JAMAIS**,
+il vit hors des objets de langue, et on ne corrige ni son orthographe
+ni sa ponctuation.
+
+### CE QUE MES PROPRES MESURES ONT ENCORE RATÉ
+
+- **`textContent` ignore `display:none`.** Ma première vérification de
+  l'interrupteur de tarif lisait `textContent` et rendait "0 €0 €" : j'ai
+  cru la bascule cassée alors qu'elle marchait. `innerText` respecte le
+  rendu, et c'est le seul qui dit ce que la lectrice voit. Troisième fois
+  de la semaine qu'une extraction de texte mal choisie ment.
+- **Un accent grave TERMINE un littéral de gabarit**, y compris dans un
+  commentaire CSS écrit dedans. Deux fois de suite.
+- **`pkill -f "next dev"` tue mon propre shell** (sortie 144). On tue par
+  PID, ou on change de port.
+
+### QUATRE DÉFAUTS QUE SEUL LE RENDU A MONTRÉS
+
+Aucun n'aurait été vu par `tsc` ni par un test de contenu :
+
+1. **le bouton "Copier" du champ de lien affichait "Étape"** : j'avais
+   passé `t.etapeMot`, la mauvaise chaîne ;
+2. **l'étape 1 réutilisait la maquette du haut de page**, donc le même
+   écran deux fois sur la même page ;
+3. **le gros chiffre de la colonne annuelle affichait "ou 170,00 € par
+   an"** en 42 px : un prix se lit d'un coup d'oeil, une phrase non ;
+4. **les trois boutons de tarif menaient à `/signup`** et portaient le
+   même libellé, dont la colonne à 29 €. Ils mènent aux bons de commande
+   (`/commande/mensuel`, `/commande/annuel`, et les deux PLUS), et comme
+   l'interrupteur n'a AUCUN script, les DEUX destinations sont rendues et
+   `:has()` montre la bonne. Le gratuit ne porte aucune des deux classes,
+   sinon son bouton disparaissait dès qu'on passait à l'année.
+
+### CE QUI RESTE ABSENT, ET POURQUOI
+
+- **Aucune capture d'écran du produit.** La seule que l'app sait
+  produire vient de `/visual-test`, la fixture des tests visuels : elle
+  porte un bandeau "Mode aperçu" et un quiz de démo écrit SANS ACCENTS
+  ("Quel createur de quiz es-tu ?"). Les maquettes sont DESSINÉES en
+  HTML (`pieces.tsx`) : traduites avec le reste, nettes à toutes les
+  densités, et elles ne pèsent rien.
+- **Aucune vidéo de démo.** Sa page en a deux ; je n'en ai aucune.
+- **Aucun avis** depuis le 5 septembre : voir plus haut.
+- **La FAQ n'a que 4 questions**, la sienne en a 18 en 5 groupes. Les
+  siennes sont déjà écrites et validées : elles se portent depuis sa
+  page, elles ne se réinventent pas.
+
+### SUR L'APLAT DE COULEUR SOUS DU TEXTE
+
+La règle du 31 août ("aucun aplat sous du texte, NULLE PART") a été
+écrite pour le BLOG et les pages qui se LISENT, après trois remontées
+sur des pavés bleus saturés portant du texte blanc.
+
+Deux endroits de la landing en portent, et les deux sont SON geste sur
+SA page : le surligneur du titre (une TEINTE pâle sous du texte à
+l'encre) et le bandeau dégradé de fin (où rien ne se lit longtemps,
+comme le pied de page). **Ne pas les "corriger" au prochain passage.**
+
+Test : `tests/logic/landing.test.mts`, vérifié en rejouant deux versions
+fautives (les deux payantes vers `/signup`, un avis recopié dans une
+langue) : les deux rougissent.
+
+### Troisième passage : les paddings, sa FAQ, sa vidéo, ses animations
+
+Béné, 4 septembre 2026 : "un truc sur lequel toutes les IA se plantent :
+les paddings hauts et bas. Je veux au moins 100px en haut et 100px en
+bas pour chaque section sauf le hero si pas adapté." Puis : "et la FAQ
+bordel tu as déjà tout sur la page de vente : pourquoi tu ne reproduis
+pas ?? Et pourquoi tu ne reprends pas au moins une partie des animations
+de ma page d'origine ?"
+
+**Elle avait raison sur les quatre points, et trois fois sur quatre la
+réponse était déjà dans le dépôt.**
+
+#### 1. LES PADDINGS SE MESURENT
+
+Relevé AVANT de toucher à quoi que ce soit, sur la page rendue :
+
+| | haut / bas |
+|---|---|
+| le hero | 72 / 84 |
+| la FAQ | 70 / 70 |
+| le bandeau de fin | 96 / 96 |
+| **tout, sous 900 px de large** | **60 / 60** |
+
+Tout est à **100 minimum, haut et bas, y compris en mobile**. Seules les
+marges LATÉRALES se resserrent : sa règle porte sur le haut et le bas.
+Le seul bloc en dessous est le bandeau défilant, qui n'est pas une
+section mais un filet de 16 px.
+
+**Le garde-fou est une MESURE, pas une lecture de CSS** :
+`tests/visual/landing-paddings.spec.ts` lit les `padding` CALCULÉS sur
+les trois viewports. C'est le geste d'`intro-bounds.spec.ts` : une
+capture d'écran ne fait pas rougir une section trop serrée, elle
+s'affiche très bien.
+
+#### 2. SA FAQ EXISTAIT DÉJÀ, EN ENTIER
+
+Les 16 questions ET leurs réponses vivent dans le `FAQPage` en données
+structurées de `content/sales/tiquiz.html` ; le regroupement en cinq
+groupes vit dans `lib/sales/faqV2.ts` depuis le 2 septembre.
+**Il n'y avait rien à écrire, seulement à lire.**
+`npm run faq:extraire` fait le pont et écrit `content/faq-vente.json`.
+
+**Le JSON-LD est la source, pas le DOM** : les questions y sont
+APPARIÉES avec leurs réponses. Dans le DOM il faudrait deviner quel
+paragraphe répond à quel titre, et une seule paire décalée donnerait une
+réponse qui ne correspond pas à sa question.
+
+**Deux défauts trouvés en extrayant, et les deux étaient en ligne :**
+- la réponse "formation" pointait sur `www.tipote.fr/atelier-du-quiz-bene`,
+  un tunnel Systeme.io. **Un lien qui atterrit là ne paie plus personne**
+  depuis que nos liens portent `?ref=` (24 août) ;
+- deux réponses disaient "en cliquant ici >>", ce qui ne dit RIEN partout
+  où le lien disparaît, et il disparaît dès que la réponse est rendue en
+  TEXTE. Dont la seule ligne de la FAQ qui promet une réponse humaine.
+
+Les deux sont corrigés **dans `CORRECTIONS_FAQ`**, donc sa page v2 en
+profite aussi.
+
+**ET UNE CORRECTION QUI NE TROUVE RIEN EST UNE CORRECTION QU'ON CROIT
+APPLIQUÉE.** Les deux consommateurs de cette liste ne voient pas le même
+texte : le script de la page v2 travaille sur le JSON-LD BRUT, où les
+chevrons sont écrits `&gt;&gt;`, et l'extracteur de la landing sur le
+texte déséchappé. La correction trouvait chez l'un et pas chez l'autre.
+`appliquerCorrectionsFaq()` essaie les DEUX formes et rend ce qui a
+mordu, pour que l'appelant REFUSE. Une deuxième liste écrite pour
+l'autre forme aurait divergé en une semaine.
+
+**Et une chaîne cherchée ne traverse pas une balise** : `cherche`
+valait "Par email en cliquant ici >>", alors que dans le JSON-LD seul
+"cliquant ici &gt;&gt;" est le TEXTE DU LIEN, "Par email en " étant
+dehors. On vise le texte du lien.
+
+#### 3. LA VIDÉO EST UN POPQUIZ, ET ELLE EN A DONNÉ L'ADRESSE
+
+**MESURÉ avant de l'intégrer** : la page répond **200** et porte
+`content-security-policy: frame-ancestors *`, donc elle s'affiche depuis
+n'importe quel domaine.
+
+🚨 **CE QUI N'A PAS PU ÊTRE VÉRIFIÉ D'ICI : le RENDU.** Le navigateur de
+ce conteneur n'a AUCUNE route vers `quiz.tipote.com`
+(`ERR_CONNECTION_RESET` en direct, aucune requête à travers le proxy) :
+la capture montre un cadre blanc, et c'est l'environnement, pas la page.
+Un lien "ouvrir dans un nouvel onglet" est posé sous le cadre, parce
+qu'un cadre qui échoue affiche la page d'erreur du navigateur DEDANS :
+aucun repli posé derrière ne s'afficherait.
+
+#### 4. SES ANIMATIONS SE LÈVENT, ELLES NE SE REDESSINENT PAS
+
+Sa page porte **234 keyframes**, groupés par bloc, et chaque bloc est une
+ÎLE autonome (son `<style>`, puis son markup). `npm run anims:extraire`
+en lève trois, à l'octet près : l'opt-in contre le quiz, le branding qui
+change, les pixels.
+
+**Trois pièges, tous trouvés en MESURANT :**
+
+1. **Le re-préfixage désappariait tout.** Renommer `.tqvs` en
+   `.tqla-tqvs` en laissait 112 non traités : le style et le markup ne se
+   correspondaient plus, donc l'animation ne partait pas. Vérifié avant
+   de renoncer : `tqvs`, `tqbr` et `tqpx` n'existent dans AUCUN fichier
+   de code du dépôt, donc il n'y avait rien à protéger.
+2. **J'ai levé la variante MOBILE.** `indexOf("@keyframes tqvs")` tombe
+   sur `tqvsmbUpL`, qui apparaît plus tôt dans le fichier. Servie sur un
+   grand écran, elle mesurait **10463 px de haut**. L'ancre est
+   maintenant exacte (`@keyframes tqvs[A-Z]`).
+3. **Les blocs levés étaient INERTES.** Ses règles s'écrivent
+   `.tqvs.tqz-visible .machin{animation:...}` : un script pose
+   `tqz-visible` à 85 % du viewport. Mesuré : **0 élément animé** sans
+   lui, **23 et 31** avec. `DeclencheurAnims` refait sa mécanique en
+   vingt lignes, même seuil, avec sa relance toutes les 13,5 s. Il est
+   RÉÉCRIT, pas levé, et je le dis : ses scripts sont minifiés, il y en a
+   un par bloc, et ils parlent à des ids de sa page.
+
+**On ne sert qu'UNE variante.** Poser les deux en comptant sur ses media
+queries les affichait TOUTES LES DEUX, à 1280 comme à 390 : ce qui les
+départage sur sa page vit dans un conteneur Systeme.io, hors de l'île.
+Et la variante grand écran s'adapte au téléphone (mesurée à 358x456 sur
+un viewport de 390).
+
+#### ET LA LEÇON DE STRUCTURE
+
+`import faq from "...json"` compile très bien avec Next et le runner de
+tests natif le REFUSE (Node exige `with { type: "json" }`). Mais le vrai
+enseignement est plus ancien : **un module qui touche au disque n'est
+plus chargeable par le runner, donc plus testé.** La lecture vit donc
+dans `app/(site)/apercu-landing-8f2c9d41/faq.ts`, à côté d'`anims.tsx`
+qui lit déjà des fichiers, et `lib/site/landing.ts` reste PUR.
+
+**Et un garde-fou existant a rougi à juste titre** : `affiliate-links`
+interdit `tipote.fr/atelier-du-quiz` écrit en dur. Ma chaîne est une CLÉ
+DE RECHERCHE, pas une destination : l'exemption porte sur `cherche:` et
+lui seul, jamais sur `remplace:`, et jamais sur le fichier entier.
+
+### Quatrième passage : douze reproches, et le premier tenait à UNE ligne de CSS (5 septembre 2026)
+
+Béné a listé douze défauts en un message. Ils tombent en trois familles,
+et la première explique deux d'entre eux d'un coup.
+
+#### 1. TOUS LES BOUTONS DE LA PAGE AVAIENT LA MAUVAISE COULEUR
+
+"Texte foncé sur fond foncé : illisible" sur le bouton du haut de page,
+et "texte blanc sur bouton blanc ? Vraiment ?" sur celui du bandeau de
+fin. Deux symptômes opposés, **UNE cause, et elle est arithmétique** :
+
+```
+.tql a{color:inherit}   ->  0,1,1   (une classe + un element)
+.tql-cta                ->  0,1,0
+.tql-col-cta            ->  0,1,0
+.tql-bande-cta          ->  0,1,0
+```
+
+La règle d'héritage battait donc TOUTES les règles de bouton. Sur le
+fond clair de la page, les boutons bleus prenaient l'encre sombre ; dans
+le bandeau, où `.tql-bande` pose `color:#fff`, le bouton blanc prenait
+du blanc. La ligne avait été écrite pour qu'un lien NU hérite du texte
+autour, ce qui est juste ; elle visait aussi tous les autres.
+
+`.tql a:not([class])` la borne aux liens nus. **MESURÉ après correction,
+dans un navigateur, pas déduit** : les neuf boutons rendent 4,20:1
+(blanc sur son bleu) et 12,05:1 (encre sur blanc).
+
+**Le garde-fou CALCULE la spécificité, il ne cherche pas une chaîne.**
+Figer `:not([class])` interdirait de corriger autrement, et une règle
+d'héritage réécrite d'une autre façon referait exactement le même bug.
+Le test parse la feuille, ne garde que les règles qui posent `color`,
+et refuse qu'un sélecteur visant `a` nu batte un sélecteur de bouton.
+
+#### 2. SIX AVIS NE SONT PAS UNE PREUVE SOCIALE
+
+"Supprime. Tu peux mettre +200 utilisateurs (c'est le vrai chiffre)."
+Et sur le lien qui menait à leur fiche : "non, on ne veut pas que les
+gens quittent la page ... on veut qu'ils commandent bordel !"
+
+Elle a raison deux fois. Annoncer "6 avis" SOULIGNE qu'il y en a six ; et
+un lien sortant posé sous le premier bouton est un visiteur qui part
+avant d'avoir lu la page.
+
+**Il n'y a plus AUCUN lien qui quitte nos domaines**, et le test le
+vérifie sur toutes les adresses absolues de la page.
+
+**À la place des avis : le bloc des cinq OBJECTIONS**, tirées mot pour
+mot du persona de `copywriting-claude/Persona tiquiz.md` ("encore un
+outil de plus", "je ne suis pas technique", "ça va me prendre du temps",
+"je ne suis pas sûr que ça marche dans mon domaine", "j'ai déjà testé
+plein de trucs sans résultat"). Ce n'est pas un pis-aller : un bloc
+d'objections en fin de page est ce qui répond à ce que le lecteur pense
+à l'instant où il hésite, alors que six témoignages ne répondent à
+aucune question précise.
+
+**"créateurs" et pas "utilisateurs".** Elle a écrit "+200 utilisateurs" ;
+la page dit "Plus de 200 créateurs". Le nombre est le sien, le mot est
+celui du reste de la page.
+
+#### 3. LE HAUT DE PAGE VENDAIT LE COMMENT
+
+"'Tu décris ton sujet en trois champs. L'IA écrit les questions...' =
+c'est le COMMENT pas le résultat. On ne vend jamais les 10h de vol, on
+vend la plage avec les cocktails."
+
+Elle a listé ce qu'un visiteur doit comprendre : si c'est fait pour lui,
+à quoi ça sert, ce qu'il a à y gagner, comment ça marche, pourquoi il
+peut faire confiance. Le haut de page y répond maintenant dans cet
+ordre, et le COMMENT est DÉPLACÉ, pas supprimé : les quatre étapes
+vivent plus bas, là où on les lit.
+
+| | avant | après |
+|---|---|---|
+| titre | "Le générateur de quiz connecté à Systeme.io" | "Ton visiteur repart avec un résultat. Toi, avec son email." |
+| accroche | trois champs, l'IA écrit, tu relis | ce que le visiteur donne, et ce que ça devient dans Systeme.io |
+| pour qui | rien | "coachs, consultants, formateurs et créateurs qui ont une offre et pas assez de monde à qui la présenter" |
+
+**Le garde-fou est une LISTE NOIRE des tournures qu'elle a refusées**,
+pas une formulation figée : le titre et l'accroche se réécrivent
+librement tant qu'ils ne redescendent pas dans la mécanique.
+
+#### LA STRUCTURE, ET D'OÙ ELLE VIENT
+
+"Il faut que tu cherches sérieusement les meilleures structures
+copywriting des meilleures landing pages de saas... tu as des tonnes de
+ressources copywriting dans le code."
+
+Les deux sources ont été lues, et elles disent la même chose :
+
+- **ses ressources** (`copywriting-claude/`) : les 17 déclencheurs
+  psychologiques, les 104 hooks, les puces promesses, le persona ;
+- **ce que mesurent les landings SaaS de 2026** : le cadre PAS
+  (problème, agitation, solution) convertit +22 % contre une page qui
+  empile des fonctionnalités ; un bloc d'objections en fin de page vaut
+  +28 % de clics ; le haut de page doit répondre en dix secondes à
+  "c'est quoi, c'est pour qui, et après".
+
+```
+haut de page -> problème -> démo -> mécanique -> funnel -> Systeme.io
+-> les 2 mécaniques -> où il vit -> ton branding -> objections
+-> tarifs + grille comparative -> FAQ -> bandeau
+```
+
+Les déclencheurs sont posés là où ils comptent, pas récités : preuve par
+le résultat (la démo est elle même un Popquiz), plausibilité (les
+objections), sécurité (le gratuit sans carte, répété sous chaque
+bouton), preuve scientifique (le 44,9 % avec sa source).
+
+#### LE PALIER À 17 € AVAIT L'AIR PLUS PAUVRE QUE LE GRATUIT
+
+"Y'a plus de bénéfices dans le compte gratuit que le compte à 17 € tu
+trouves ça logique et vendeur ?? Mets les bénéfices puces promesses."
+
+Mesurable : le gratuit listait ses TROIS limites, la colonne à 17 € ses
+DEUX lignes. Sur l'écran où quelqu'un sort sa carte.
+
+**Trois corrections, et les trois comptent :**
+
+1. **`avantages.ts` porte un `detail` sur les lignes payantes.** Une
+   puce promesse, chez Béné, c'est un BÉNÉFICE suivi de sa CONSÉQUENCE
+   concrète, et le test est "est-ce qu'on peut répondre 'et alors ??' à
+   la fin". "Réponses illimitées" appelle ce "et alors" ; "ton quiz peut
+   décoller un mardi sans qu'un seul email se floute" non. Le bon de
+   commande affiche les mêmes lignes : c'est LA source depuis le
+   2 septembre, et il n'y a pas de deuxième liste.
+2. **L'échelle se DIT** : "Tout le gratuit, sans les limites :" et
+   "Tout Tiquiz, plus :". Sans cette ligne, la colonne payante a l'air
+   de contenir deux choses là où le gratuit en annonce trois.
+3. **La grille comparative** ("on n'a qu'à rajouter une grille de
+   fonctionnalités qui compare tous les plans, comme les vrais saas").
+   Trois groupes : ce qui est BORNÉ sur le gratuit, ce que TOUT LE MONDE
+   a, ce que le PLUS ajoute. Elle ne recopie rien : les limites viennent
+   de `FREE_LIMITS`, les lignes de `avantages.ts`, et le test exige
+   qu'aucun avantage promis sur le bon de commande n'y manque.
+
+**Une limite chiffrée n'est NI un oui NI un non.** Une coche sur "1 quiz"
+ferait croire que le gratuit est illimité : la cellule rend la VALEUR.
+Et un refus rend un TIRET, jamais une case vide, qui se lit "on a oublié
+de remplir".
+
+#### LE BÉNÉFICE SYSTEME.IO N'ÉTAIT PAS CELUI QU'ON CROYAIT
+
+Le titre annonçait "Le tag est posé, même s'il n'existe pas encore".
+Béné : "oui ok c'est super, mais NON c'est pas un bénéfice qui fait
+vendre. Le bénéfice c'est que Systeme io est connecté nativement, pas
+besoin de lier zapier, make, pabbly ou autre."
+
+Elle a raison, et c'est une leçon de vente : **la création du tag est
+une PREUVE, pas un argument.** Ce qu'un lecteur achète, c'est de ne pas
+avoir un abonnement de plus et une configuration de plus. Le titre nomme
+donc les trois intermédiaires, et le prix de Zapier est affiché : il
+vient de `lib/site/integrations.ts`, jamais écrit à la main, et les
+devises ne se convertissent pas.
+
+#### UNE ANIMATION LEVÉE SANS SON CONTEXTE NE DIT RIEN
+
+"Ok t'as repris mes animations mais pas comme elles sont à l'origine, du
+coup ça ne veut plus rien dire", et : "ton logo ta marque arrive comme
+un cheveu sur la soupe, sans texte ni contexte, incompréhensible".
+
+Sur SA page, chaque animation vit sous un titre qui dit ce qu'on
+regarde. Levée toute seule au bas d'une autre section, elle est un
+dessin qui bouge. Les trois ont maintenant leur titre, leur phrase et
+leur légende :
+
+| Le bloc | Ce qu'il illustre |
+|---|---|
+| `opt-in-vs-quiz` | "Même effort pour attirer ton visiteur. 5x plus de données pour toi." |
+| `tes-pixels` | les deux mécaniques : profil, ou score |
+| `ton-branding` | ton logo, tes couleurs, ta langue |
+
+**`tes-pixels` DORMAIT dans `content/sales/anim/` sans être servi nulle
+part.** Il montre exactement "profil OU score", c'est à dire la réponse
+à l'objection la plus chère du persona ("je ne suis pas sûr que ça
+marche dans mon domaine"), et il n'était affiché sur aucun écran.
+
+Le test exige qu'aucun `<AnimVente>` ne soit posé sans titre ni phrase
+au dessus, et que les trois blocs extraits soient servis.
+
+#### LE TITRE DE LA DÉMO DÉCRIVAIT UN ÉCRAN
+
+"'Tiquiz en action : teste la création de ton quiz' : ben non, le quiz à
+tester il est ailleurs, là on teste le fonctionnement. Et c'est vraiment
+un titre qui fait vendre ?"
+
+Les deux reproches sont justes : le titre était FAUX (la démo est un
+Popquiz, pas le générateur) et il décrivait un écran au lieu de promettre
+quelque chose. Il dit maintenant "Regarde ce que ton visiteur va vivre",
+et le corps assume la mise en abyme : la démo est elle même un Popquiz
+Tiquiz, donc c'est la preuve par le résultat.
+
+#### CE QUI RESTE OUVERT
+
+- **Son animation `ton-branding` annonce "100+ langues via l'IA".**
+  Compté dans `lib/quizLanguages.ts` : le catalogue porte EXACTEMENT
+  100 entrées. C'est SON asset, levé à l'octet près, et il porte le même
+  chiffre sur sa page de vente en ligne. **On ne l'a pas réécrit** : une
+  correction ici laisserait sa vraie page fausse. C'est un dessin à
+  reprendre, pas du code.
+- **Le contraste des boutons est de 4,20:1** (blanc sur `#5A6EF6`, sa
+  couleur). C'est au dessus du seuil des textes larges (3:1) et en
+  dessous de celui des textes normaux (4,5:1). Ses boutons sont en gras
+  à 17 px, donc c'est conforme ; c'est dit pour qu'on ne le découvre pas
+  dans un audit.
+
+Test : `tests/logic/landing.test.mts` (30 cas), vérifié en rejouant
+QUATRE versions fautives (l'ancienne règle d'héritage, une puce payante
+sans sa conséquence, le lien vers Trustpilot, l'ancienne accroche qui
+vend le processus) : les quatre rougissent.
+
+### Cinquième passage : j'avais corrigé sa liste, pas écrit la page (5 septembre 2026)
+
+Béné, après le quatrième passage : "pourquoi 'créateurs' c'est des
+entrepreneurs, des coachs, des auteurs, des affiliés, des infopreneurs
+... ils ne se définissent pas comme étant des 'créateurs' j'ai bossé dur
+sur ma page initiale, il faut arrêter de chier dessus comme ça." Et :
+"et du coup ... c'est tout ce que tu as corrigé ? [...] Tu considères
+que là c'est ok, tu m'as sorti la MEILLEURE version possible ?"
+
+**Elle a raison sur les deux, et le deuxième reproche est le vrai : le
+quatrième passage a répondu à sa liste de douze défauts, il n'a pas fait
+la réécriture qu'elle demandait.**
+
+#### LA MÉTHODE, ET C'EST ELLE QUI A TOUT CHANGÉ
+
+**J'ai EXTRAIT sa page de vente en ordre de lecture** (545 lignes de
+texte visible, `content/sales/tiquiz.html` sans ses scripts) au lieu de
+la relire en diagonale. C'est le geste du 3 septembre sur le labo de
+l'Atelier ("relever les phrases de l'un et les chercher dans l'autre
+trouve les absences"), et il a rendu quatre choses que je n'avais pas
+vues.
+
+| Ce que sa page a | Ce que la landing avait |
+|---|---|
+| un CTA APRÈS CHAQUE SECTION, à la première personne | trois boutons en tout |
+| quinze témoignages nommés, avec leur métier | un nombre |
+| le COÛT de ne rien faire, et la plateforme qui peut sauter | "un opt-in demande, un quiz donne" |
+| une section viralité, et une section trois formats | rien |
+
+#### 1. SON VOCABULAIRE SE LIT DANS SES PROPRES TÉMOIGNAGES
+
+Je n'avais pas à inventer la liste : les quinze témoignages de sa page
+portent leur métier, écrit par les intéressés. Entrepreneur, infopreneur,
+consultant, formatrice, coach, solopreneur, thérapeute, affilié,
+marketeur, créateur de contenu. **C'est cette liste qui décide des mots
+de la page**, et "créateurs" tout court n'y est jamais.
+
+Le test bannit le mot NU dans `preuve` et `pourQui` ; "créateur de
+contenu" et "course creators" restent, ce sont des métiers.
+
+#### 2. LES QUINZE TÉMOIGNAGES REVIENNENT, ET CE NE SONT PAS LES SIX
+
+Elle a fait retirer six avis Trustpilot le 5 septembre au matin, et le
+lien qui menait chez eux. Ceux là sont autre chose : **ils vivent déjà
+sur SA page**, sous son titre ("Il y a un avant ... et un après
+Tiquiz"), ils sont quinze, ils portent un prénom et un métier, et aucun
+ne fait quitter la page.
+
+`TEMOIGNAGES` (`lib/site/landing.ts`) vit HORS des objets de langue :
+**un témoignage ne se traduit jamais, ne se corrige pas, ne se
+raccourcit pas.** C'est quelqu'un qui a écrit ça, et le réécrire en
+ferait un faux témoignage, c'est à dire sa ligne rouge numéro un.
+
+Ils sont précédés de la TRANSFORMATION, quatre lignes tirées de son
+persona ("maintenant, imaginons que tout change") : une page qui décrit
+le problème puis l'outil saute l'étape où le lecteur se projette.
+
+#### 3. LE COÛT DE NE RIEN FAIRE : son titre valait mieux que le mien
+
+Le mien disait "Un opt-in demande. Un quiz donne." Le sien dit **"Chaque
+visiteur qui repart sans te laisser son email est un client perdu"**, et
+il est meilleur pour une raison précise : il dit ce que ça COÛTE, pas ce
+que l'outil FAIT.
+
+Son deuxième argument manquait entièrement, et c'est le plus fort de sa
+page : **"tes abonnés ne t'appartiennent pas : ton compte sur n'importe
+quel réseau peut sauter à tout moment. Ta liste email, elle, est à toi."**
+
+#### 4. UN BOUTON APRÈS CHAQUE SECTION, ET IL DIT UN DÉSIR
+
+Sa signature, relevée section par section : "Je veux capturer ces
+emails", "Je veux mon quiz viral", "Je veux vendre avec un quiz", "Je me
+lance gratuitement". **Ce n'est pas un libellé de bouton, c'est la
+phrase que le lecteur vient de se dire.** Six boutons maintenant, contre
+trois, avec sa rassurance dessous ("Pas besoin de CB").
+
+#### 5. DEUX ARGUMENTS DE SA PAGE ÉTAIENT ABSENTS
+
+- **la VIRALITÉ** : le seul levier qui RAMÈNE des visiteurs au lieu d'en
+  convertir. Vrai dans le code (`virality_enabled`, le bonus de partage).
+  **AUCUN chiffre** : ceux de sa page portent sur ses propres quiz, je ne
+  peux pas les sourcer. Et la note dit la nuance de Jocelyne (4 août) :
+  sur un sujet intime, un partage bas n'est pas un défaut du quiz ;
+- **les TROIS FORMATS** : quiz, sondage, Popquiz. Ils sont dans la
+  grille de tarifs depuis le début et aucun écran ne disait ce qu'ils
+  font. Deux produits payés, jamais montrés.
+
+#### ET LE HAUT DE PAGE PORTAIT UN ANGLICISME QUE J'AI ÉCRIT MOI MÊME
+
+"Ton visiteur repart AVEC un résultat. Toi, AVEC son email." C'est le
+calque banni par son guide anti-IA (point 17, "ce que tu repars avec",
+de *what you walk away with*), et je l'avais posé en `<h1>`.
+
+Le titre dit maintenant son INSIGHT CLÉ, celui de son persona : **"Pas
+besoin de plus de trafic. Juste de savoir qui te lit."** Onze mots, une
+construction qui est la sienne ("Pas besoin de CB"), et il finit sur le
+fragment coloré, donc plus de ponctuation orpheline après le curseur.
+
+#### MA FAUTE EN ÉCRIVANT LE TEST, ET ELLE EST NOUVELLE
+
+J'ai écrit le fichier de test par un heredoc Python. **`\b` dans une
+chaîne Python ordinaire n'est pas un mot-frontière : c'est un
+CARACTÈRE DE RETOUR ARRIÈRE**, et il est parti tel quel dans le
+fichier. Le motif `/<CtaSection\b/` cherchait donc `<CtaSection` suivi
+d'un octet 0x08, ne trouvait rien, et le test annonçait "seulement 0
+boutons de milieu de page" sur une page qui en porte cinq.
+
+**Ici il a rougi, donc je l'ai vu. Dans une assertion NÉGATIVE, il
+serait passé au vert pour toujours**, et c'est exactement la panne que
+ce fichier décrit depuis le 22 août. Le contrôle qui l'a trouvé tient en
+une commande :
+
+```bash
+grep -nP '[\x00-\x08\x0b\x0c\x0e-\x1f]' tests/logic/*.test.mts
+```
+
+Zéro ligne. Un motif écrit par un heredoc Python passe par une chaîne
+BRUTE (`r"""..."""`), toujours.
+
+Test : `tests/logic/landing.test.mts` (39 cas), vérifié en rejouant
+trois versions fautives (le mot "créateurs" remis, deux boutons de
+milieu de page retirés, l'argument de la plateforme retiré plus un
+chiffre sans source dans la viralité) : les trois rougissent.
+
+### Sixième passage : "pourquoi les quiz" et "pourquoi Tiquiz" (5 septembre 2026)
+
+Béné : "cette fois c'est la MEILLEURE version aussi bien niveau copy que
+design et UX UI que tu puisses proposer ? Pour vendre Tiquiz aux bonnes
+personnes ? Avec pertinence et authenticité ? Sans bullshit (n'écris pas
+sans bullshit, je veux juste PAS de bullshit) ? En donnant tous les
+arguments au bon moment, pour montrer pourquoi les quiz, et pourquoi
+tiquiz ?"
+
+**La réponse honnête était NON, et sa question dit exactement pourquoi :
+la page vendait Tiquiz sans jamais vendre le QUIZ.** Elle démarre sur le
+coût de ne rien faire, puis enchaîne sur ce que Tiquiz fait, donc elle
+suppose acquis que le lecteur a déjà choisi un quiz comme outil de
+capture. Quelqu'un qui hésite entre un PDF, un webinaire et un quiz
+n'avait rien à lire.
+
+**"n'écris pas sans bullshit" est une consigne de FOND, pas de style.**
+On ne dit pas qu'on est honnête, on l'est : chaque argument ajouté ici
+se vérifie dans le code ou n'entre pas.
+
+#### CE QUI MANQUAIT, ET LES TROIS SE PLACENT À UN ENDROIT PRÉCIS
+
+| Le bloc | Où il est posé | Pourquoi là |
+|---|---|---|
+| **pourquoi un quiz** (5 critères x 3 formats) | après le problème, AVANT la démo | il faut avoir choisi le format avant de regarder l'outil |
+| **pourquoi Tiquiz** (le tableau des 6 outils) | juste après la section Systeme.io | c'est la preuve de ce que la section vient de promettre |
+| **et ce n'est PAS pour toi si** (3 refus vrais) | après les objections, AVANT les tarifs | savoir dire non est ce qui rend croyable tout le reste |
+
+#### 1. LE COMPARATIF DES FORMATS NE PORTE AUCUN CHIFFRE INVENTÉ
+
+Cinq critères (ce que le visiteur donne, ce qu'il reçoit, ce que tu
+apprends de lui, le temps que ça te prend, ce que tu peux en faire
+ensuite), trois formats : PDF ou ebook, webinaire, quiz.
+
+**On compare ce qu'on OBTIENT, jamais des taux de conversion.** Le
+44,9 % d'Interact a une source publique et il est déjà cité sur la page ;
+je n'ai rien d'équivalent pour un PDF ou un webinaire, donc il n'y a
+aucun pourcentage dans ce tableau. Un chiffre inventé dans une
+comparaison est exactement l'endroit où un lecteur va vérifier.
+
+#### 2. LE TABLEAU DES OUTILS LIT `OUTILS`, IL NE LE RECOPIE PAS
+
+`lib/site/integrations.ts` porte déjà les six outils (Tally, Typeform,
+Google Forms, Jotform, Interact, Tiquiz) avec, pour chacun,
+l'intermédiaire exigé et la pose du tag par profil. Ces lignes ont été
+relevées sur les pages d'aide des concurrents en septembre, et deux
+d'entre elles sont des CITATIONS.
+
+La landing les AFFICHE depuis ce module, et le test l'exige : recopier
+une seule cellule à la main donnerait, dans six mois, une page qui
+contredit `/integrations` sur le même domaine. Le lien vers le hub est
+posé sous le tableau (interne, donc il ne fait pas quitter le domaine).
+
+#### 3. LES TROIS REFUS SONT VRAIS, ET ILS DISENT CE QUI SE PASSE À LA PLACE
+
+Ce sont les mêmes que le bloc de qualification de sa page v2, et ils se
+vérifient dans le code : le résultat est un profil PRÉÉCRIT
+(`lib/quizScoring.ts`), le parcours est LINÉAIRE, et le branding est un
+jeu de réglages, pas une maquette libre.
+
+**Un refus qui ne dit pas ce qui se passe à la place n'est pas un
+refus, c'est une excuse.** Chaque ligne porte donc les deux moitiés, et
+le test le vérifie ("Tiquiz attribue un profil que TU as écrit à
+l'avance", "tout le monde voit les mêmes questions, seul le résultat
+change"). La ligne de fin assume : "si l'un des trois est indispensable
+chez toi, ne prends pas Tiquiz".
+
+**La croix est DESSINÉE** (`Croix` dans `pieces.tsx`), jamais un
+caractère Unicode : c'est la leçon du 2 septembre, un glyphe absent
+d'Open Sans rend un carré vide sur Windows.
+
+#### LES QUATRE FAUTES DE CE PASSAGE
+
+1. **Un accent grave dans un commentaire CSS écrit à l'intérieur d'un
+   littéral de gabarit** a terminé le littéral : 500 au chargement,
+   "Expected a semicolon" à la ligne 376 de `styles.ts`. **Quatrième
+   fois.** Le commentaire concerné le dit maintenant en toutes lettres.
+2. **De la spécificité, encore, et exactement la même arithmétique que
+   son bug de boutons :** `.tql-comp thead th` pèse (0,1,2) et
+   `.tql-col-nous` (0,1,0), donc la teinte de la colonne "Un quiz"
+   s'arrêtait à la ligne d'en-tête. Corrigé par des sélecteurs préfixés
+   par la table.
+3. **Mon garde-fou sur `OUTILS` balayait le fichier ENTIER** et tombait
+   sur le témoignage de Gwenn, qui contient "sans devoir passer par des
+   outils comme Zapier ou Make", c'est à dire mot pour mot une cellule
+   du tableau. Il exclut désormais le bloc `TEMOIGNAGES` avant de
+   chercher, avec la raison écrite à côté : **on ne réécrit jamais un
+   témoignage pour faire passer un test.**
+4. **Le répertoire du shell a dérivé** vers `/home/user`, et un `grep`
+   sur un chemin relatif a répondu "No such file". C'est la faute du
+   22 août : chemin ABSOLU dès qu'on traverse plusieurs dépôts.
+
+Test : `tests/logic/landing.test.mts` (46 cas), vérifié en rejouant
+trois versions fautives (un pourcentage inventé dans le comparatif des
+formats, un refus qui ne dit pas ce qui se passe à la place, le tableau
+des outils recopié à la main au lieu de lire `OUTILS`) : les trois
+rougissent.
+
+### Septième passage : ses mots, ses témoignages, et 14 pages de détail (5 septembre 2026)
+
+Béné : "ce que je ne comprends pas c'est pourquoi tu ne reprends pas :
+les mots, la mise en forme, le design, les animations, le rythme, les
+arguments... De la page de vente originale ? J'ai beaucoup bossé pour
+cette page, pourquoi la landing devrait être aussi différente alors
+qu'elle a fait ses preuves ?"
+
+**Elle avait raison, et la mesure le dit mieux que moi.** J'ai extrait
+les 19 sections de `content/sales/tiquiz.html` en ordre de lecture, et
+comparé une par une :
+
+| | sa page | la landing avant |
+|---|---|---|
+| sections | 19 | 11 reproduites |
+| items du bandeau défilant | 19 | 8 |
+| le comparatif à 7 critères | il existe | j'en avais réinventé un moins bon |
+| le titre du haut de page | le sien | remplacé par le mien |
+
+**Trois sections entières manquaient** (les profils qualifiés, les
+offres, "démarque-toi"), et son comparatif "Prends 5 ans d'avance"
+existait déjà, avec ses sept critères et ses trois colonnes : j'en avais
+écrit un autre à côté. **Reprendre une page qui marche, c'est reprendre
+ses MOTS, pas sa structure.** C'est la leçon du labo de l'Atelier du
+3 septembre, repayée sur la page de vente.
+
+### LES 14 PAGES DE FONCTIONNALITÉS
+
+Sa demande : "je veux aussi une page avec le détail de chaque
+fonctionnalité pour creuser le sujet : sur la landing on présente
+pourquoi cette fonctionnalité + les bénéfices + comment ça marche en une
+phrase. Sur la page détail on détaille comment ça marche avec des
+screenshot etc."
+
+`lib/site/fonctionnalites.ts` porte les 14, `/fonctionnalites` est le
+hub, `/fonctionnalites/<slug>` la page dédiée. **Une seule source pour
+les deux écrans** : `resume`, `pourquoi`, `benefices` et `commentCourt`
+s'affichent sur la landing, `detail` seulement sur la page dédiée.
+Écrire les deux séparément donnerait, dans six mois, une landing qui
+promet ce que la page détaillée ne décrit plus.
+
+**CHAQUE FONCTIONNALITÉ PORTE LE FICHIER QUI LA REND VRAIE** (`source`),
+et le test vérifie que ce fichier EXISTE. Ce n'est pas décoratif : il a
+attrapé ma première citation, `supabase/migrations/20260504_popquiz_
+module.sql`, qui vit dans le dépôt de TIPOTE et pas ici (le nôtre est
+`026_popquiz_schema.sql`). Une fonctionnalité retirée du produit fait
+donc rougir la page qui la vend.
+
+**LA CAPTURE MANQUANTE EST NOMMÉE, PAS OUBLIÉE.** Je ne peux pas la
+produire d'ici : la seule que l'app sait rendre vient de `/visual-test`,
+qui porte un bandeau "Mode aperçu" et un quiz de démo écrit sans
+accents. Chaque page DIT donc quel écran il faut photographier, dans un
+encadré visible. Un espace vide passerait pour un oubli ; nommé, il se
+remplit en deux minutes dans un vrai compte.
+
+**Le module est en FRANÇAIS seulement**, même choix assumé que
+`lib/checkout/avantages.ts` et pour la même raison : traduire tout de
+suite fabriquerait une deuxième liste à tenir. C'est écrit dans son
+en-tête, pas laissé à deviner.
+
+### ET CE QUE LE RENDU A TROUVÉ, QUE LE CODE NE DISAIT PAS
+
+Trois défauts, tous les trois vus en SERVANT les pages et en les
+REGARDANT, aucun visible dans la source :
+
+**1. LE BOUTON ÉTAIT BLEU SUR BLEU.** Mesuré : `rgb(90,110,246)` sur
+`rgb(90,110,246)`, contraste 1:1, donc invisible. La cause, demandée au
+navigateur (`CSS.getMatchedStylesForNode`) et pas devinée :
+
+```
+.tqf a    -> var(--b)   (0,1,1)   gagne
+.tqf-cta  -> #fff       (0,1,0)
+```
+
+**C'est mot pour mot son bug des boutons illisibles du matin même**, dans
+l'autre feuille, quatrième fois cette semaine. Corrigé par
+`a:not([class])`, comme la landing.
+
+**2. LE TEXTE DES CARTES DU HUB SORTAIT EN BLEU DE BOUTON.** La carte EST
+un lien, donc son titre et son résumé héritaient de la couleur des
+liens : trois cartes sur trois se lisaient comme des liens, et le bleu ne
+servait plus à distinguer quoi que ce soit. Les deux posent maintenant
+leur couleur explicitement.
+
+**3. UN FILET VERTICAL SUR LES PUCES.** Sa règle du 31 août est générale
+et je l'ai enfreinte : "un filet reste HORIZONTAL, jamais vertical : une
+décoration à gauche déplace ce qu'elle décore". Mesuré : le texte des
+puces partait 19 px à droite des titres de la même section. Remplacé par
+la coche DESSINÉE (jamais un caractère Unicode, drame du 2 septembre),
+le même tracé que la landing.
+
+**LE CALCUL DE SPÉCIFICITÉ VIT MAINTENANT DANS UN SEUL FICHIER**
+(`tests/logic/aide/specificiteCss.mts`), lu par le test de la landing ET
+par celui des fonctionnalités. Une deuxième copie du même calcul aurait
+divergé, et c'est le défaut que ces dépôts paient en boucle. Les deux
+gardes ont été vérifiés en rejouant les vraies versions fautives : ils
+rougissent.
+
+### ET MON PROPRE TEST ÉTAIT FAUX AVANT LE CODE, ENCORE
+
+Mon contrôle des puces promesses exigeait **70 caractères**, et il a
+rejeté deux puces parfaitement bonnes ("Pas de site ? Ton quiz EST la
+page, avec sa propre adresse.", 59 caractères). **Un seuil de longueur
+fige une FORME, pas le fait.**
+
+Ce qui sépare vraiment une étiquette d'une puce promesse, c'est la
+STRUCTURE : une étiquette est un groupe nominal nu ("Réponses
+illimitées"), une puce est une PHRASE qui porte une CHARNIÈRE (`,` `:`
+`?`) introduisant la conséquence. Le test vise les deux, et **un
+deuxième test lui donne quatre étiquettes et exige qu'il les refuse** :
+un garde-fou relâché qui ne peut plus échouer ment.
+
+**Et un accent grave a re-terminé un littéral de gabarit**, dans un
+commentaire CSS, pour la CINQUIÈME fois. `tsc` l'a attrapé, comme il
+doit. Ce n'est pas un garde-fou qui manque, c'est moi qui le refais.
+
+### CE QUE LA CAPTURE D'ÉCRAN M'A FAIT CROIRE, ET QUI ÉTAIT FAUX
+
+En regardant la page réduite à 761 px de large, le gros bouton bleu
+paraissait VIDE. J'ai failli chercher une chaîne mal passée (le "bouton
+Copier affichait Étape" du 4 septembre). Mesuré, il portait bien "Créer
+mon compte gratuit" : c'est le sous-échantillonnage qui avait effacé le
+texte. **Un symptôme lu sur une image réduite est une observation, pas
+une mesure** ; et il se trouve qu'il y avait quand même un vrai bug
+dessous, le bleu sur bleu. Regarder d'abord, mesurer ensuite, dans cet
+ordre et jamais un seul des deux.
+
+### CE QUI RESTE OUVERT, ET QUI EST SA DÉCISION
+
+- **"raccourcir un peu pour renvoyer vers les pages détaillées".**
+  Mesuré : sa page fait 20942 px, la landing 23324. UNE duplication
+  réelle a été retirée (la carte du code s'affichait deux fois sur la
+  même page, mot pour mot, avec le même encart). Le reste de l'écart,
+  c'est du texte qu'elle a validé : décider lequel saute est un choix
+  éditorial qui lui appartient.
+- **Les 14 captures d'écran**, nommées une par une sur chaque page.
+- **La coche est RECOPIÉE de la landing, pas importée**, parce que son
+  `pieces.tsx` vit dans un dossier d'aperçu au nom temporaire
+  (`apercu-landing-8f2c9d41`) : l'importer casserait ces pages le jour
+  où la landing prendra son adresse définitive. À rassembler ce jour là.
+
+Test : `tests/logic/fonctionnalites.test.mts` (15 cas) et
+`tests/logic/landing.test.mts` (50 cas).
+
+### Huitième passage : ses animations, sa FAQ, ses témoignages (5 septembre 2026)
+
+Seize reproches en un message, et la moitié disait la même chose : je
+reproduisais des ÉCRANS FIXES là où sa page BOUGE, et je redessinais en
+HTML plat ce qu'elle avait déjà dessiné.
+
+#### 1. LE H1 DÉFILE, ET C'EST SON RYTHME
+
+"Sur ma page initiale il n'y a pas que ça comme H1 : il y a aussi
+'génère plus de leads', 'améliore tes offres' : c'est un texte qui
+défile en mode machine à écrire mais moderne."
+
+`Machine.tsx` reprend ses CINQ phrases et ses QUATRE durées, relevées
+dans `content/sales/tiquiz.html` (bloc `rawhtml-125dab43`) : 85 ms par
+lettre, 1400 ms de pause, 45 ms à l'effacement, 250 ms avant le mot
+suivant, curseur cyan à 0,8 s. Elles ne sont pas choisies, elles sont
+LEVÉES.
+
+**Le premier mot est rendu par le SERVEUR** : c'est lui que lit un
+moteur et celui qui n'a pas de JavaScript. Un `<h1>` vide au premier
+rendu serait un `<h1>` vide pour Google.
+
+**On ne pose PAS de gabarit invisible derrière le mot** : il porterait
+la phrase la plus longue dans le DOM, donc le `<h1>` contiendrait deux
+titres à la suite. La hauteur est tenue par `white-space:nowrap` sur
+grand écran, comme chez elle, et mesurée sous 900 px.
+
+#### 2. DES SCINTILLES FIXES N'ONT AUCUN INTÉRÊT
+
+"Les bulles de boutons ne fonctionnent pas : elles sont fixes et non
+animées : aucun intérêt, soit tu supprimes soit tu reproduis."
+
+Elle avait raison : douze points posés, zéro animation. Ils respirent
+maintenant, chacun à son rythme, et **le décalage est CALCULÉ depuis la
+position du point** : un `Math.random()` donnerait un rendu serveur
+différent du rendu client, donc une erreur d'hydratation React.
+
+#### 3. CINQ ANIMATIONS DE PLUS, ET CINQ QU'ON REFUSE
+
+"Y'a plein d'animations sur ma page d'origine et j'ai l'impression que
+tu reproduis un screen fixe, pas les animations.... reprends tout ça."
+
+Dix blocs de plus ont été levés, **SERVIS dans un navigateur et
+REGARDÉS un par un** avant d'être retenus (règle du 1er septembre : un
+visuel se place en le regardant, jamais d'après son nom). Cinq sont
+posés, et ils REMPLACENT mes dessins quand ils disent la même chose :
+
+| Le bloc | Où | Ce qu'il remplace |
+|---|---|---|
+| `comparatif-formats` | pourquoi un quiz | mon tableau, écrit à côté du sien |
+| `generation-ia` | étape 1 | ma maquette de brief |
+| `offres-sur-mesure` | les offres | mes quatre barres de sondage |
+| `leads-qualifies` | les leads qualifiés | mon flux dessiné |
+| `viralite-trafic` | la viralité | rien, la section n'avait aucun visuel |
+
+**LES CINQ AUTRES SONT REFUSÉS, ET LA RAISON EST ÉCRITE DANS LE SCRIPT
+D'EXTRACTION.** Sans elle, le prochain passage "finit le travail" et
+remet en ligne ce qu'on a écarté exprès.
+
+| Refusé | Pourquoi |
+|---|---|
+| `rawhtml-b8b48544` | une publication Facebook FABRIQUÉE au nom de **Mark Zuckerberg**, photo comprise, avec 503 réactions. On ne republie pas une publication inventée au nom d'une personne réelle. Elle porte en plus "TIQUIZ.COM", qui n'est aucun de nos domaines |
+| `rawhtml-ce57993d` | son troisième écran affiche "il n'y a que 20 codes promos disponibles, profite du tien avant les autres" : c'est de la FAUSSE RARETÉ, son interdit numéro un. Le montrer, c'est l'enseigner |
+| `rawhtml-f0639bfe` | le lien affiché est `app.tiquiz.com/sandra-costa/...`, un domaine qui n'existe pas |
+| ~~`rawhtml-8ecf2c31`~~ | **REFUS LEVÉ le 7 septembre, voir le onzième passage.** Il était écarté parce qu'il montre douze outils d'emailing concurrents ; Béné : "garde tout pour les utilisateurs qui n'utilisent pas systeme io" |
+| `rawhtml-21bf9dec` | ses cinq scènes sont pilotées par SON script : servi sans lui, le bloc rend un titre et rien d'autre (mesuré). Et elle l'a fait retirer de la v2 le 2 septembre |
+
+**Les trois premiers vivent sur sa page EN LIGNE.** Ce n'est pas une
+décision de code : c'est à elle de trancher si elle les garde là-bas.
+
+**`AnimVente` prend un `decoratif`**, et c'est un PARAMÈTRE : la plupart
+de ses blocs sont des dessins, mais son comparatif et son sondage
+portent de vraies phrases et de vrais chiffres, et ils REMPLACENT un
+tableau que la landing rendait en HTML. Les masquer aux lecteurs
+d'écran retirerait l'argument.
+
+**Et `viralite-trafic` porte deux nombres que je ne peux pas sourcer**
+(+4327 visites, +487 leads). Ils viennent de ses propres quiz, ils sont
+déjà publiés sur sa page : la décision de les garder est la sienne.
+
+#### 4. UN BLOC DE PLUS DE TROIS LIGNES S'ALIGNE À GAUCHE
+
+"Ce gros bloc de texte est imbuvable [...] aligne à gauche quand il y a
+plus de 3 lignes (règle élémentaire pour être plus facile à lire)."
+
+**ON NE COMPTE PAS LES LIGNES, PARCE QU'ON NE PEUT PAS.** Mesuré le
+5 septembre sur la page rendue : un paragraphe de 216 caractères tenait
+en 3 lignes, un autre de 198 en prenait 4. Une estimation "caractères
+divisés par 70" se trompe donc dans les deux sens.
+
+`blocLong()` est donc SÛR au lieu d'être précis, et le sens de l'erreur
+décide du seuil : aligner à gauche un paragraphe de trois lignes ne
+coûte rien, laisser centré un pavé de cinq est ce qu'elle refuse.
+**Sous 900 px, TOUT le corps de texte est à gauche** : mesuré à 390 px,
+onze paragraphes centrés rendaient 4 ou 5 lignes.
+
+Le contrôle qui compte MESURE : aucun paragraphe centré ne dépasse
+trois lignes rendues, sur les trois largeurs.
+
+#### 5. LA RASSURANCE SUIT SON BOUTON
+
+"Attention aux trucs centrés et pas centrés ... comme 'Connecté à
+Systeme.io - Quiz illimités - IA intégrée' aligné à gauche sous un
+bouton centré." La rangée de boutons dit déjà si elle est centrée
+(`.tql-centre`) : la ligne du dessous s'aligne dessus au lieu de le
+redécider.
+
+#### 6. UN TABLEAU DE FAITS N'EST PAS UN ARGUMENT
+
+"L'idée de la comparaison est bien mais c'est peu compréhensible par un
+néophyte : c'est QUOI l'intérêt, le vrai gain, l'avantage ?"
+
+"Zapier Pro, un Zap par résultat" est un FAIT. Quelqu'un qui n'a jamais
+ouvert Zapier ne peut pas le traduire en abonnement, en temps et en
+clics. `outilsGain` le dit en clair sous le tableau, et le prix vient de
+`lib/site/integrations.ts`, jamais recopié.
+
+Le "blabla" au dessus du lien est retiré : il ne reste que "Voir le
+détail des intégrations", en lien discret, comme elle l'a demandé.
+
+#### 7. LA FAQ MARCHAIT DÉJÀ, C'EST L'AFFORDANCE QUI MANQUAIT
+
+"La FAQ doit être sous forme de VRAIE FAQ (question -> clic ->
+réponse)."
+
+**MESURÉ AVANT DE TOUCHER À QUOI QUE CE SOIT** (leçon du 2 septembre :
+on mesure le GESTE, pas l'état au repos) : clic sur la première
+question, 67 px -> 166 px, 16 questions, aucune ouverte au repos.
+L'accordéon fonctionnait.
+
+Ce qui manquait, c'est qu'une liste de titres séparés par un filet gris
+et un chevron pâle ne se LIT pas comme quelque chose qui s'ouvre.
+Chaque question est maintenant une carte blanche avec son chevron dans
+sa pastille, un survol, et une bordure bleue quand la réponse est
+ouverte.
+
+#### 8. LES TÉMOIGNAGES ONT LEUR PORTRAIT
+
+"Les témoignages idem tu m'as mis ça tout moche alors que c'est beau sur
+la page d'origine."
+
+Les quinze portraits sont levés de sa page, et **l'appariement nom /
+photo est MESURÉ** : chaque portrait est lu avec le nom qui le suit dans
+la même carte. Les ranger dans l'ordre du tableau aurait mis la photo de
+quelqu'un sur le témoignage d'un autre, et aucun test ne peut voir ça.
+Les trois personnes venues de Trustpilot n'ont pas de portrait chez
+elle : leur carte porte l'initiale de leur prénom.
+
+🚨 **"CE QU'ON NE REPREND PAS : les cinq étoiles" EST PÉRIMÉ (7
+septembre).** Ce passage écartait les étoiles, avec la bonne raison :
+"afficher une note qu'on n'a pas est exactement ce qu'elle interdit".
+Elle a demandé depuis "de jolis témoignages avec les photos des users,
+style screenshot comme sur ma page d'origine", et sa page les porte, sur
+ses propres clients. **C'est SON asset et SA décision** : elles sont
+affichées, et le message de cette version le lui dit en toutes lettres
+pour qu'elle puisse dire non. Une note d'état des lieux se relit quand
+on corrige ce qu'elle décrit (leçon du 31 août).
+
+#### 9. "C'EST PAS POUR TOI" EST SON MINI QUIZ
+
+"On a créé un mini quiz pourquoi tu ne le reprends pas ??"
+
+Il existe depuis le 2 septembre, elle l'a relu trois fois, il pose UNE
+question à la fois, il sait dire non, et il n'a aucun script. La landing
+avait une liste à puces à la place. Une liste, ce n'est pas un quiz.
+
+`BlocVente` le lit et applique DEUX corrections, **et la lecture REFUSE
+si l'une ne trouve rien** : l'ancre de ses tarifs (qui n'existe pas ici)
+et son padding mobile de 60 px (sa règle en demande 100). Une correction
+qui ne mord pas est une correction qu'on croit appliquée.
+
+**Le bloc n'existe qu'en français**, donc la version anglaise garde la
+liste : le traduire ferait une deuxième version qui divergerait de la
+sienne en une semaine.
+
+#### 10. LES TARIFS
+
+"Les tarifs sont moches. Pour mensuel et annuel (sans plus) annonce
+aussi le retrait du watermark tiquiz." Et : "tu t'es trompé dans le
+détail, relis les limites du plan gratos. Pas de retrait de logo tiquiz
+en gratuit."
+
+**Elle avait raison sur le fait, et je l'ai VÉRIFIÉ avant d'écrire la
+ligne :** `app/api/quiz/[quizId]/public/route.ts` fait
+`footerAllowed = isPaidPlan(ownerPlan) || isResellerSub`, puis
+`hideBranding = footerAllowed && quiz.hide_branding`. C'est donc vrai
+sur TOUS les paliers payants et jamais en gratuit. La ligne manquait
+partout, sur la landing comme sur le bon de commande : elle vit
+maintenant dans `avantages.ts`, la source unique.
+
+**Le branding logo et couleurs, lui, est bien GRATUIT** (`brand_logo_url`
+et `brand_color_*` sont lus sans condition) : cette ligne là était juste,
+et elle reste dans les avantages communs.
+
+Deux corrections de forme, mesurées :
+
+- **le gros prix perd ses deux zéros** quand les centimes sont nuls.
+  `17,00 €` en 44 px est un montant de facture posé là où on lit un prix
+  d'un coup d'oeil. On ne touche PAS à `formatCents` : le bon de commande
+  et les factures gardent leurs décimales ;
+- **une limite ne porte plus de coche.** "10 réponses visibles, les
+  suivantes sont floutées" avec une coche bleue se lit comme une bonne
+  nouvelle. Pastille neutre, même règle que la grille comparative.
+
+Et "Le détail, ligne par ligne" est devenu "Ce que tu as dans chaque
+palier" : ce n'était pas un titre, c'était une légende.
+
+#### CE QUE JE N'AI PAS PU REPRODUIRE, ET JE LE DIS
+
+"La vidéo démo s'affiche avec un large espace blanc dessous."
+
+**Le navigateur de ce conteneur n'a AUCUNE route vers
+`quiz.tipote.com`** (`ERR_CONNECTION_RESET`, mesuré) : le cadre ne
+charge pas, donc je ne peux pas voir ce qu'elle voit.
+
+Ce qui EST mesuré, par `curl` sur l'embed en production : sa page
+dessine DÉJÀ sa propre boîte (`aspect-video rounded-2xl bg-black
+shadow-...`) et ajoute sous la vidéo un lien "via Tiquiz". Notre boîte
+en rajoutait une deuxième par dessus, avec un fond BLANC : c'est la
+seule surface blanche que notre code produit autour de cette vidéo. Elle
+est retirée, et la hauteur réserve les 16/9 PLUS la ligne du lien
+(sinon la boîte est 24 px trop courte pour son propre contenu).
+
+**Si l'espace blanc est toujours là, il vient de l'embed et pas de la
+landing**, et ça se tranchera sur son écran.
+
+#### ET LE FILET A TROUVÉ UN BLOC FIGÉ POUR TOUJOURS
+
+Les captures sont passées, et c'est la MESURE des animations qui a
+rougi. Trois défauts empilés, et le premier est un vrai bug que sa
+lectrice aurait vu.
+
+**1. UN BLOC FRANCHI D'UN COUP RESTAIT INERTE, POUR TOUJOURS.**
+`DeclencheurAnims` ne regardait les blocs que sur `scroll` et `resize`,
+et il exigeait `bottom > -40`, c'est à dire "le bloc n'est pas encore
+remonté au dessus de l'écran". Un bloc DÉPASSÉ ne remplissait donc plus
+la condition, et il ne s'animait jamais.
+
+**MESURÉ le 5 septembre, un seul saut jusqu'en bas puis on remonte** (le
+geste de quelqu'un qui appuie sur Fin, qui clique une ancre du menu, ou
+qui jette la molette) :
+
+| | avec `bottom > -40` | après |
+|---|---|---|
+| `opt-in-vs-quiz` | **0 animé** | 23 |
+| `tes-pixels` | **0 animé** | 15 |
+| `ton-branding` | **0 animé** | 31 |
+
+Trois de ses huit blocs figés dans leur état d'AVANT l'animation, et ça
+ne se voit pas : ils s'affichent très bien, ils ne bougent simplement
+jamais. C'est la famille du 31 août (les images en 403) : le geste était
+juste, il n'atteignait pas sa cible.
+
+**Règle : un bloc DÉPASSÉ a été vu, donc on le démarre.** La condition
+est `top < h * SEUIL`, et rien d'autre. Et il y a DEUX mécaniques, parce
+que chacune couvre ce que l'autre ne peut pas : `IntersectionObserver`
+voit un bloc entrer SANS défilement (la page s'allonge, une image
+arrive) et ne dit rien sur un saut (pas de changement d'état, donc pas
+d'entrée) ; le filet sur `scroll` rattrape exactement le saut.
+`demarrer` est idempotent, les deux peuvent le réclamer.
+
+**2. ET LE TEST NE DESCENDAIT PAS LA PAGE.** Il faisait
+`window.scrollTo(0, y)` toutes les 40 ms. Mesuré position par position :
+`scrollY` restait entre 250 et 760 alors qu'on demandait jusqu'à 26200,
+et il RECULAIT parfois. `globals.css` pose `scroll-behavior: smooth` :
+chaque appel lançait une animation que le suivant interrompait.
+
+Le résultat dépendait donc du PAS choisi, ce qui est le symptôme :
+**pas de 400, le bloc s'anime ; pas de 500, il reste inerte**, sur la
+même page et le même viewport. Le test annonçait "on descend vraiment"
+et ne descendait pas. `behavior: "instant"` place la fenêtre au lieu de
+l'y emmener, et le test VÉRIFIE maintenant qu'il est arrivé en bas :
+sans ça, il dirait la même chose sur une page qu'il n'a jamais
+parcourue.
+
+**3. ET SES DEUX SEUILS NE DISTINGUAIENT PAS CE QU'ILS DEVAIENT.**
+
+| Le seuil | Ce qu'il faisait | Ce qu'il fait |
+|---|---|---|
+| `animes > 5` | rougissait sur `viralite-trafic`, qui en déclare SIX et en anime cinq, donc un bloc qui marche | `> 0` : il attrape un bloc INERTE, il n'arbitre pas entre 5 et 6 |
+| `hauteur < 1200` | rougissait sur la variante mobile de son comparatif, 1390 px, servie par la media query de sa propre île | `< 3000` : loin des deux groupes (1390 légitime, 10463 fautif) |
+
+Un seuil qui départage à la limite finit par crier sur du travail juste,
+et un test qui crie pour rien finit désactivé.
+
+**LA MÉTHODE QUI A TRANCHÉ, et c'est elle qu'il faut retenir :** ma
+première correction était FAUSSE. J'avais conclu "la page s'allonge
+pendant qu'on la descend", posé un `IntersectionObserver`, et re-mesuré :
+**rien n'avait changé**. C'est en imprimant la position du bloc à CHAQUE
+pas, au lieu de raisonner sur ce qu'elle devait être, que le défilement
+mort est apparu. Une cause plausible n'est pas une cause (règle du
+2 septembre), et la sonde qui tranche est celle qui imprime, pas celle
+qui conclut.
+
+Garde-fou : le cas "un saut d'un seul coup ne laisse aucun bloc figé"
+de `tests/visual/landing-paddings.spec.ts`, vérifié en rejouant la
+version d'avant (il rougit, et il nomme les trois blocs).
+
+#### LES TROIS FAUTES DE CE PASSAGE
+
+1. **Un accent grave dans un commentaire CSS écrit dans un littéral de
+   gabarit**, deux fois de plus. `tsc` les attrape comme il doit ; ce
+   n'est pas un garde-fou qui manque, c'est moi qui le refais.
+2. **Une cause plausible annoncée avant d'être mesurée**, et corrigée
+   pour rien : voir le bloc figé ci dessus. C'est la faute du
+   2 septembre, refaite dans l'outil même qui sert à trancher.
+3. **Un test qui figeait une FORMULATION a rougi sur une correction
+   juste**, pour la quatrième fois : il exigeait le mot "Zapier" DANS le
+   titre de la section Systeme.io, alors qu'elle venait de demander
+   "Connexion native à Systeme.io". Il vise maintenant le FAIT : la
+   SECTION dit ce qu'on évite, et le titre ne revend plus la mécanique
+   du tag.
+
+Test : `tests/logic/landing.test.mts`, et la mesure des paddings dans
+`tests/visual/landing-paddings.spec.ts`.
+
+## Le sitemap du domaine de vente oubliait les pages légales (4 septembre 2026)
+
+Béné, après le énième refus de validation de marque par Google : "je
+l'ai fait mille fois et mille fois je reviens là donc NON c'est pas la
+solution".
+
+Elle avait raison, et je lui répétais un bouton. Ce qui suit est ce que
+la MESURE a donné, et ce qu'elle n'a pas donné.
+
+### Ce que Google reproche, et ce qui est mesuré
+
+Deux reproches, tous les deux sur `tiquiz.fr` :
+
+1. `https://tiquiz.fr/privacy` "ne contient pas suffisamment de contenu" ;
+2. "votre page d'accueil n'est accessible que via une page de connexion".
+
+**Le deuxième est faux, et c'est le robot de Google qui le prouve.** Le
+HTML récupéré par l'inspection d'URL de la Search Console porte
+**5382 mots visibles, ZÉRO balise `<form>`, ZÉRO champ mot de passe**.
+Le premier est au minimum discutable : **1786 mots rendus par le
+serveur**, en français, avec les six axes que Google réclame, contre
+805 mots avant la correction du 2 septembre.
+
+**Et ce n'est pas Cloudflare** : testé avec un agent vide, un agent
+inconnu, `Google-InspectionTool` et un navigateur, `/` et `/privacy`
+répondent **200 avec le contenu complet**, aucun `cf-mitigated`. Le
+`robots.txt` sert `Allow: /` pour `*`, les deux pages portent
+`index, follow`, aucun `noindex`. **L'hypothèse a été testée AVANT
+d'être proposée, et elle est morte.**
+
+### LE TROU RÉEL, ET IL EST CHEZ NOUS
+
+`tiquiz.fr/sitemap.xml` déclarait **29 adresses et AUCUNE page légale**.
+Pendant que `quiz.tipote.com/sitemap.xml` les déclarait toutes.
+
+La cause est le défaut que ce dépôt paie en boucle : **deux listes.**
+`PUBLIC_ROUTES` (branche de l'app) portait les six chemins légaux
+recopiés à la main ; la branche du domaine de VENTE avait sa propre
+liste (`PAGES_PUBLIQUES` + le blog) et ne les contenait pas. Et
+`lib/site/pagesPubliques.ts` dit dans son PROPRE en-tête "deux listes
+écrites séparément finissent toujours par diverger". C'est arrivé une
+branche plus bas.
+
+Or c'est exactement `https://tiquiz.fr/privacy` que Google lit dans la
+configuration de marque.
+
+**Règle : les chemins légaux sont DÉRIVÉS de `ADRESSES_LEGALES_FR`**
+(qui porte la page canonique en VALEUR), et les deux branches lisent
+`CHEMINS_LEGAUX`. Une adresse légale ajoutée demain entre dans les deux
+sitemaps sans qu'on y pense.
+
+### CE QUE JE NE PRÉTENDS PAS
+
+**Je ne dis pas que c'est la cause du refus.** Un relecteur de marque va
+chercher l'adresse directement, il ne passe pas par le sitemap. C'est un
+trou réel, chez nous, qui ferme une variable et qui aide de toute façon
+ces pages à être indexées.
+
+**Sur le refus lui même : je ne sais pas.** Tout ce qui est mesurable
+est propre. C'est le cinquième passage sur ce sujet, et j'ai déjà
+inventé quatre causes le 2 septembre, dont une qui a envoyé Béné
+corriger une adresse GitHub déjà juste. Une cause plausible n'est pas
+une cause.
+
+### Ce qui reste à mesurer, et qui n'est pas du code
+
+L'inspection d'URL de la Search Console sur `https://tiquiz.fr/privacy`
+(elle l'a déjà faite sur `/`). Si Google répond "URL inconnue de
+Google", c'est un fait qui change le tableau. Sinon, le bouton "Je pense
+que les problèmes détectés sont incorrects" devient le bon, avec les
+chiffres mesurés ci dessus dans la demande.
+
+**Et le rappel qui désamorce l'urgence :** sa propre console écrit "La
+validation n'est pas requise, car votre application ne demande aucun
+niveau d'accès sensible ou restreint". Le plafond de 100 utilisateurs ne
+vise que les scopes sensibles ou restreints, ce que sa page Audience dit
+aussi en toutes lettres. **Aucune connexion ne casse pendant ce temps**,
+et le branding ne décide que de l'affichage du logo.
+
+Test : le bloc "les pages légales sont déclarées sur le domaine de
+vente" de `tests/logic/site-public.test.mts`, vérifié en rejouant la
+version d'avant (2 tests rougissent).
+
+### Neuvième passage : la landing raccourcit, le reste DÉMÉNAGE (6 septembre 2026)
+
+Béné : "la page actuelle fait environ 5 000 mots et une quinzaine
+d'écrans. C'est une page de vente, pas une landing. Elle a été écrite
+pour une audience chaude qui connaît déjà Béné. Le trafic à venir est
+froid : affiliés, SEO, Capterra. Un visiteur froid décroche au troisième
+écran. **Rien n'est à jeter. Tout est à déplacer.**"
+
+Et sa règle numéro un, écrite en tête de sa consigne : **on ne touche
+pas au design.** Palette, typographie, composants, cartes, maquettes,
+classes `tql-`, animations au défilement, bandeau défilant : tout reste,
+aucune librairie de plus. Les huit passages précédents ont construit ce
+système visuel avec elle ; ce passage DÉPLACE du texte dedans.
+
+#### CE QUI VA OÙ
+
+```
+/                    six blocs : haut de page, preuve, integrations,
+                     trois etapes, demo + mini quiz, objections + prix
+/tarifs              les 3 paliers, la grille comparative, le cout
+                     compare, les 5 objections, la FAQ d'argent,
+                     les 16 autres temoignages, le CTA final
+/fonctionnalites     le hub, une carte par fonctionnalite
+/fonctionnalites/<8> chacune reprend SA section, telle qu'elle est
+                     ecrite, avec son visuel
+```
+
+**LES HUIT SLUGS sont les siens, nommés dans sa consigne :**
+`generation-ia`, `connexion-systeme-io`, `resultats-par-profil`,
+`quiz-profil-ou-score`, `partage-et-viralite`, `sondages-et-popquiz`,
+`branding-et-langues`, `ou-placer-son-quiz`. La liste passe donc de 14 à
+8, et `lib/site/pagesPubliques.ts` les DÉRIVE : le sitemap suit sans
+qu'on y pense.
+
+#### UN SEUL LIBELLÉ DE BOUTON, ET IL Y EN AVAIT TREIZE
+
+"Créer mon quiz gratuitement", partout, avec "Gratuit, sans carte
+bancaire" dessous. Le huitième passage avait posé sa signature (un
+bouton après chaque section, à la première personne) ; sa consigne du
+6 septembre la remplace, et c'est un choix de landing FROIDE : treize
+libellés, c'est treize promesses à tenir, et aucune répétition qui
+s'installe chez quelqu'un qui découvre le produit.
+
+`CtaPrincipal` (`components/landing/morceaux.tsx`) porte le libellé, et
+le test compte les occurrences : un deuxième libellé fait rougir.
+
+#### "QUIZ ILLIMITÉS" EST RETIRÉ DU HAUT DE PAGE, ET C'EST ELLE QUI L'A VU
+
+Sa consigne : les trois preuves sont "Connecté à Systeme.io · Sans
+Zapier ni Make · Zéro ligne de code", et **"Quiz illimités" saute parce
+que c'est faux sur le plan gratuit** (`FREE_LIMITS` : 1 quiz). Une
+promesse fausse posée à trente pixels d'un bouton "Gratuit, sans carte
+bancaire" est exactement ce qui fait partir quelqu'un au moment de
+l'inscription.
+
+#### LES DEUX TÉMOIGNAGES EN DOUBLE
+
+🚨 **J'AI ÉCRIT ICI "EXACTEMENT LE MÊME TEXTE, MOT POUR MOT". C'EST
+FAUX, et je corrige plutôt que d'empiler.** Je l'ai aussi dit à Béné
+dans ce sens là, et ça a orienté sa décision.
+
+**Ce que la mesure donne vraiment**, sur les 153 paires possibles :
+"Gwenn, Solopreneur" (49 mots) et "Eric Legrigeois, Infopreneur"
+(54 mots) partagent UNE suite de **21 mots d'affilée**, soit 43 % de
+l'un et 39 % de l'autre : « ...à Systeme.io pour récupérer les leads et
+les taguer automatiquement, sans devoir passer par des outils comme
+Zapier ou Make ». Le reste diffère : Gwenn ouvre par "Enfin un outil" et
+finit par "J'adore !", Eric remercie Béné nommément. La plus longue
+suite commune entre deux témoignages DIFFÉRENTS fait 5 mots.
+
+**ET LES DEUX SONT DÉJÀ LA VERSION TRUSTPILOT DU 2 SEPTEMBRE 2026.**
+Béné, 6 septembre : "garde celui de Trustpilot, le dernier à jour pour
+les deux." Son critère ne les départage donc pas : il les garde tous
+les deux. Ce sont deux personnes réelles qui ont écrit le même jour, pas
+une vieille version et une neuve.
+
+**RÈGLE : jamais les deux sur le même écran** (sa consigne du
+6 septembre). La landing en montre trois, nommés par elle (Maurice,
+Adeline, Bernard C.) ; les autres vont sur `/tarifs`. Les deux
+tomberaient donc sur `/tarifs`, et `sansDoublons` garde le PREMIER de la
+liste : **Gwenn s'affiche, Eric ne s'affiche nulle part.**
+
+**ÇA RESTE SA DÉCISION, et elle n'est pas prise** : lequel des deux
+noms garder est une ligne à changer. On ne réécrit ni ne fusionne
+jamais les deux textes : ce sont des gens qui ont écrit ça.
+
+#### CE QUE LE MIDDLEWARE FAIT, ET CE QU'ELLE A TRANCHÉ
+
+`tiquiz.fr/` **sert encore sa page de vente capturée.** Béné, le même
+jour : "montre moi la landing sur la page aperçu 8f2 etc pas directement
+en page d'accueil, on la valide d'abord ensemble."
+
+La landing vit donc derrière `/apercu-landing-8f2c9d41` : slug
+introuvable, `noindex, nofollow`, absente du sitemap, de `llms.txt` et
+du pied de page. **C'est le sens SÛR de l'erreur** : un oubli laisse la
+page fermée, et la mettre en ligne est un geste explicite (une ligne du
+middleware, la canonique de la page, une entrée de sitemap), jamais un
+effet de bord d'un prochain passage.
+
+#### LE TRACKING AFFILIÉ COUVRE CHAQUE PAGE, ET C'EST MESURÉ
+
+Béné, le même jour : "n'oublie pas le tracking affilié partout, sur
+toutes les pages du site et du blog."
+
+**Relevé avant d'écrire une ligne : rien ne manquait.** Le `matcher` du
+middleware couvre tout sauf les fichiers statiques, ses onze sorties
+passent TOUTES par `poseSa`, et `clicASignaler` répond oui sur chaque
+chemin de page. Je le dis dans ce sens là : `tracking-affilie-partout.
+test.mts` ne corrige pas un trou, il empêche d'en creuser un.
+
+**Et il DÉRIVE la liste des pages** (`PAGES_PUBLIQUES`, `RUBRIQUES`, les
+articles du blog) au lieu de la recopier : une liste écrite à la main
+oublierait la prochaine page ajoutée, c'est à dire exactement celle sur
+laquelle le trou s'ouvrirait.
+
+**LE PIÈGE QU'IL SURVEILLE EST RÉEL** : `clicASignaler` refuse tout
+chemin qui finit par une extension, pour ne pas compter une image comme
+une visite. Un article dont le slug finirait par `.io` ou `.fr`
+tomberait dans ce refus, et l'affiliée qui le partage ne verrait jamais
+un seul clic. Mesuré sur les 10 articles : aucun n'est dans ce cas.
+(Cette ligne a dit "11" pendant deux jours : le compte incluait
+`content/blog/index.json`, qui n'est pas un article. Corrigé le
+8 septembre, en place.)
+
+**Vérifié en rejouant deux versions fautives** (une sortie sans
+`poseSa`, un `matcher` qui exclut `/blog`) : les deux rougissent, et la
+seconde NOMME les quinze pages qui perdraient le cookie.
+
+#### CE QUE MES PROPRES CONTRÔLES ONT ENCORE RATÉ
+
+1. **Un matcher Next est ANCRÉ, `RegExp.test` non.** Mon contrôle
+   `/_next/static/...` passait parce que le motif se satisfaisait
+   ailleurs dans la chaîne : il ne distinguait pas ce qu'il était censé
+   distinguer. Attrapé en l'exécutant, pas en le relisant.
+2. **Un test qui figeait `url.pathname = \`/apercu/vente/`** est sorti
+   ROUGE sur une correction juste, pour la CINQUIÈME fois de la semaine.
+   Il vise maintenant le FAIT : la racine d'un hôte de vente est
+   réécrite, et cette réponse porte le cookie. La destination peut
+   changer, le fait non.
+3. **`pkill -f "playwright test"` a tué mon propre shell** (sortie 144),
+   exactement comme ce fichier le décrit depuis le 4 septembre pour
+   `next dev`. Ce n'est pas un garde-fou qui manque, c'est moi qui le
+   refais : on tue par PID.
+4. **UN COMPOSANT CLIENT QUI TIRE `node:fs`, et `tsc` a répondu exit 0
+   dessus.** En sortant les composants vers `components/landing/`,
+   `DeclencheurAnims` (client) s'est mis à importer une constante depuis
+   `anims.tsx`, qui LIT LE DISQUE. Le bundle refuse alors de se
+   construire :
+
+   ```
+   the chunking context does not support external modules
+   (request: node:fs)
+   ```
+
+   **La landing ne s'affichait plus du tout**, et rien ne le disait :
+   `npx tsc --noEmit` vert, `npm run test:logic` vert. C'est
+   littéralement la leçon de `pdf-parse` (7 août), et c'est le FILET DE
+   CAPTURES qui l'a attrapé, pas la relecture.
+
+   `DECLENCHEURS` vit donc dans `lib/site/blocsAnimes.ts`, le module
+   PUR, et les deux côtés l'y lisent. Garde-fou : le cas "aucun
+   composant client de la landing n'importe un module qui lit le
+   disque" de `tests/logic/landing.test.mts`, vérifié en rejouant la
+   version fautive (il rougit et nomme la paire).
+
+   **Et il EXIGE qu'un module de la landing lise encore le disque** :
+   sans ça, le jour où plus rien n'appelle `node:fs`, le test passerait
+   au vert sans rien vérifier.
+
+#### CE QUI RESTE À FAIRE, ET C'EST SA DÉCISION
+
+- **valider la landing**, sur `/apercu-landing-8f2c9d41` ;
+- **les captures d'écran des trois étapes** : chaque emplacement DIT
+  quel écran photographier, dans un encadré visible. Je ne peux pas les
+  produire d'ici (la seule que l'app sait rendre porte un bandeau "Mode
+  aperçu" et un quiz de démo sans accents) ;
+- **la vidéo de 8 secondes** du haut de page : tant qu'elle n'existe
+  pas, la maquette dessinée reste, et c'est ce que sa consigne demande ;
+- **les deux témoignages identiques** : lequel des deux est le bon.
+
+### Dixième passage : le haut de page, ses mots, et une animation à la place d'un paragraphe (7 septembre 2026)
+
+Huit reproches sur le seul haut de page, capture à l'appui. Le dernier
+les résume tous : **"tu dois bien reprendre la qualité et les mots
+utilisés sur la page originale : `https://www.tipote.fr/part-tiquiz`.
+ET adapter pour une landing : mêmes mots et expressions, même qualité
+d'animations."**
+
+#### CE QUE LA MESURE A DONNÉ AVANT D'ÉCRIRE UNE LIGNE
+
+**`content/sales/tiquiz.html` EST sa page `part-tiquiz`.** Vérifié en
+allant chercher l'URL en ligne et en comparant : 1 460 437 octets contre
+1 442 663 dans la capture, et **8 lignes de texte visible d'écart** sur
+545. Ses mots sont donc déjà dans le dépôt, et ils y étaient depuis le
+début : il n'y avait rien à aller chercher ailleurs.
+
+#### 1. LA RASSURANCE N'ÉTAIT PAS CENTRÉE, ET LA RÈGLE EXISTAIT DÉJÀ
+
+Elle portait `tql-mid-r`, une classe qui CENTRE sans condition, sous une
+rangée de boutons qui, elle, s'aligne à gauche sur le haut de page. Le
+commentaire de la règle disait pourtant, depuis le 5 septembre : "elle
+suit l'alignement de sa rangée de boutons".
+
+**Sixième fois que ce dépôt paie une règle écrite en commentaire et
+démentie par le code** (le `w-full h-auto` des images de réponse,
+l'`ADD_ATTR: ["target"]` des liens légaux, le "Next décode déjà le
+segment" du pilotage, le brouillon d'Adeline, le N+1 de Mes projets).
+
+#### 2. LE BANDEAU DÉFILANT PASSE AU DESSUS DE LA LIGNE DE FLOTTAISON
+
+"Pour les entrepreneurs, les coachs, les consultants, les formateurs,
+les infopreneurs et les affiliés qui ont une offre et pas assez de monde
+à qui la présenter" : **elle veut cette phrase visible SANS scroller.**
+Elle vit donc dans le bandeau, au dessus du titre, sous le libellé
+"C'est pour toi si tu es", et les dix métiers défilent.
+
+**Les dix métiers sont RELEVÉS dans ses quinze témoignages**, écrits par
+les intéressés eux mêmes : entrepreneur, coach, consultant, formateur,
+infopreneur, affilié, thérapeute, créateur de contenu, solopreneur,
+marketeur. C'est la leçon du 5 septembre ("son vocabulaire se lit dans
+ses propres témoignages"), appliquée au bandeau.
+
+**La phrase ENTIÈRE reste dans le HTML**, en `.tql-vh` (masquée à
+l'oeil, lue par un moteur et un lecteur d'écran) : un bandeau qui défile
+ne dit rien à un robot, et cette phrase est la seule qui nomme la cible.
+
+**Et le fondu des bords a dû DÉMÉNAGER.** Il vivait sur le bandeau lui
+même, en `overflow:hidden` : le libellé posé à côté était donc rogné. Le
+cadre défilant a maintenant sa propre boîte, le libellé vit dehors.
+
+#### 3. LE HAUT DE PAGE DIT LE RÉSULTAT, PAS LE MÉCANISME
+
+Son accroche, mot pour mot : **"Crée des quiz viraux qui attirent du
+trafic qualifié sur tes offres et transforment tes visiteurs en clients
+payants, sans investir en publicité."** L'ancienne décrivait les trois
+champs, l'IA qui écrit, la relecture : c'est le COMMENT, et il vit plus
+bas depuis le 5 septembre.
+
+Les trois preuves deviennent les siennes : **connexion native à
+Systeme.io · adapté aux débutants · automatisations.**
+
+#### 4. LE 44,9 % ARRIVAIT SANS SON "ET ALORS"
+
+"Ça arrive comme un cheveu sur la soupe, on peut dire 'et alors ??' donc
+c'est pas complet et pas au bon endroit."
+
+Un chiffre nu n'est pas un argument : c'est la règle des puces promesses
+appliquée à une statistique. Il ouvre maintenant la section **"Pourquoi
+un quiz, et pas un PDF de plus"**, et il est suivi de son "et alors" :
+"presque une personne sur deux. Va regarder le taux de ta dernière page
+de capture, et compare : c'est le même trafic, le même effort pour
+l'attirer, et ce n'est pas du tout le même nombre d'adresses à la fin."
+
+**"Va regarder ta dernière page de capture" est SA tournure** :
+interpeller le lecteur et lui faire vérifier lui même, plutôt que de
+lui demander de croire un pourcentage.
+
+#### 5. LE PARAGRAPHE DES INTÉGRATIONS EST DEVENU UNE ANIMATION
+
+"C'est long, il faut faire un effort pour comprendre. Fais une animation
+qui relate ça en t'inspirant des animations déjà présentes."
+
+`components/landing/AnimTag.tsx` : le profil, le menu de tags qui
+s'ouvre, le tag choisi, "Créé pour toi", une bille qui file jusqu'à la
+carte Systeme.io, le contact qui arrive, la campagne qui part. Cinq
+secondes, aucun script, **`forwards` sur chaque animation** donc la
+scène finit VISIBLE (règle du 6 septembre : un bloc jamais déclenché ne
+doit pas rester vide).
+
+**ON S'INSPIRE DE SA GRAMMAIRE, ON NE LÈVE PAS SON BLOC, et c'est
+mesuré.** `public/animations/automatisations.txt` est
+`rawhtml-8ecf2c31`, celui que `scripts/extraire-anims-vente.mjs` REFUSE
+depuis le 5 septembre. Ses douze logos en base64 ont été décodés et
+regardés : **Brevo, Klaviyo, Kit (ConvertKit)**, c'est à dire des outils
+d'emailing CONCURRENTS, alors que l'argument de la page est la connexion
+NATIVE à Systeme.io. Le refus était juste, la mesure le confirme.
+
+#### 6. LES TÉMOIGNAGES REPRENNENT SON DESSIN
+
+"C'est mal mis en forme, moche : mets de jolis témoignages avec les
+photos des users, style screenshot comme sur ma page d'origine."
+
+`components/landing/Temoignages.tsx` reprend son carrousel `tqz-tm` :
+cartes de 320 px, portrait rond de 48 px cerclé, défilement infini,
+pause au survol, bords en fondu, rupture à 600 px. **Ce n'est PAS une
+île levée** : une île est du HTML figé sans données, et elle demande
+justement d'AJOUTER quelqu'un. C'est son CSS avec `TEMOIGNAGES` pour
+source.
+
+**Maurice Massolin est "coach pour femmes entrepreneures", et il n'est
+pas dans son carrousel** (vérifié : ses quinze cartes ne le portent
+pas). Son métier vient donc d'elle, pas d'un relevé, et c'est écrit à
+côté. Quatre métiers manquants ont été remplis en LISANT ses cartes
+(Fabienne G. coach, Marie Paule C. formatrice, Thibault L. consultant,
+Sylvère M. entrepreneur), jamais devinés.
+
+**`align-items:flex-start` sur la piste** : sans lui, une carte courte
+s'étirait à la hauteur de celle de Monique (460 caractères), et ça
+laissait du vide sous le texte. Mesuré, pas déduit.
+
+#### ET LE TEST QUE J'AI ÉCRIT SORTAIT ROUGE SUR UNE ANIMATION QUI MARCHE
+
+**C'est la dixième fois de la semaine, et c'est la même faute.** J'ai
+ajouté à `tests/visual/landing-paddings.spec.ts` une mesure du GESTE (le
+menu de tags s'ouvre-t-il vraiment ? le carrousel bouge-t-il ?), et elle
+est sortie rouge sur les trois viewports en annonçant "l'animation est
+inerte".
+
+**Elle ne l'était pas.** `playwright.visual.config.ts` pose
+`contextOptions: { reducedMotion: "reduce" }` pour TOUT le filet, et
+c'est juste : une capture d'écran doit être stable. Mais sous cette
+préférence, le CSS de ces deux blocs coupe EXPRÈS ce que je venais
+mesurer (`.tqtag-liste{display:none}`, le carrousel arrêté).
+
+**Le geste n'existe que sans la préférence : on mesure donc là où il
+existe.** Le test vit dans son propre `test.describe` avec
+`test.use({ contextOptions: { reducedMotion: "no-preference" } })`, et
+il passe 3/3. Le reste du filet garde la préférence.
+
+**La règle générale : avant d'accuser le code, regarder ce que le
+HARNAIS impose au navigateur.** Un réglage global du filet peut désarmer
+exactement la chose qu'un nouveau test vient vérifier, et le symptôme est
+alors indiscernable d'un vrai bug.
+
+**Et une deuxième panique a été désamorcée en cours de route** : mes
+sondes d'hydratation rendaient `[]` sur TOUTES les pages, y compris une
+où le mécanisme marche de façon prouvée. Elles ne distinguaient donc
+rien. Ce qui tranche, c'est le filet du dépôt : **111/111 au vert**,
+dont les trois mesures d'animations qui exigent le déclencheur client.
+
+Test : `tests/visual/landing-paddings.spec.ts` (12 cas), et
+`tests/logic/landing.test.mts`.
+
+### Onzième passage : elle lève mon refus, et le responsive de tout le site (7 septembre 2026)
+
+Deux décisions d'elle, et la seconde a ouvert un chantier plus large que
+la question posée.
+
+**1. "Oui garde les étoiles."** La note du huitième passage est corrigée
+en place plus haut : elles sont affichées, c'est SON asset et SA
+décision, et le message qui accompagnait la version le lui disait pour
+qu'elle puisse dire non.
+
+**2. "Garde tout pour les utilisateurs qui n'utilisent pas systeme io :
+c'est possible aussi. Moins simple, mais possible."**
+
+#### ELLE A LEVÉ UN REFUS QUI ÉTAIT LE MIEN, ET ELLE AVAIT RAISON
+
+J'avais écarté `rawhtml-8ecf2c31` le 5 septembre parce qu'il montre
+douze outils d'emailing concurrents (décodés et REGARDÉS un par un :
+Brevo, ActiveCampaign, MailerLite, Kit, Klaviyo, Mailchimp, Podia,
+Mailjet, Omnisend...) alors que l'argument de la section juste au dessus
+est la connexion NATIVE à Systeme.io.
+
+**Le raisonnement était juste et la conclusion était mauvaise : refuser
+le bloc, c'était refuser le PUBLIC.** La moitié des gens qui liront
+cette page n'ont pas Systeme.io, et la page ne leur disait rien.
+
+#### CE QUI EST VRAI POUR EUX, ET C'EST MESURÉ
+
+Balayé le 7 septembre dans tout le dépôt : **aucun webhook sortant,
+aucune intégration native ailleurs que Systeme.io.** Le seul chemin
+existant est l'export CSV de Mes leads, et il est meilleur qu'il n'en a
+l'air : `app/leads/LeadsShell.tsx` exporte l'adresse, le prénom, le nom,
+le téléphone, le pays, le quiz, **le profil obtenu**, le tag, les scores
+et la date. La segmentation par profil survit donc à l'import dans
+n'importe quel outil, et c'est elle qui fait la valeur d'un quiz.
+
+**Le texte de la section dit donc les DEUX temps**, et `autresLegende`
+nomme lequel est automatique : "les trois actions de droite sont
+automatiques chez Systeme.io. Ailleurs, elles partent de ton import."
+Sans cette phrase, un visuel qui montre Brevo au dessus de "S'abonner à
+la campagne" promet une connexion qui n'existe pas, c'est à dire son
+interdit numéro un. Le test l'exige, dans les deux langues.
+
+**Trouvé en cherchant :** le commentaire de `LeadsShell.tsx` renvoie à
+"/api/leads/export", **qui n'existe pas** (`app/api/leads/` ne porte
+qu'un `route.ts`). L'export client marche très bien ; c'est le
+commentaire qui ment. Septième fois que ce dépôt paie une règle écrite
+en commentaire.
+
+#### LE TEXTE DU TÉLÉPHONE ANNONÇAIT SON BONUS À ELLE
+
+Son bloc porte "Télécharge gratuitement mes scripts n8n à importer en
+1 clic pour lancer 10 bots qui travailleront pour toi dès ce soir". Sur
+SA page c'est son exemple, et c'est cohérent. Sur la landing de Tiquiz,
+c'est un cadeau que personne ne recevra.
+
+**Corrigé par une CORRECTION NOMMÉE dans l'extracteur**, la mécanique de
+`CORRECTIONS_FAQ` (4 septembre) : on ne retouche jamais un fichier levé
+à la main, et le script REFUSE quand une correction ne trouve pas sa
+cible. Le remplacement décrit ce que Tiquiz sait vraiment faire.
+
+**ET LE REFUS A MORDU DU PREMIER COUP, SUR MOI :** ma chaîne portait une
+espace ORDINAIRE devant le `:`, sa page une INSÉCABLE. C'est mot pour
+mot la faute du 31 août, écrite dans ce fichier, et je l'ai refaite.
+`motif()` accepte donc n'importe quelle espace.
+
+#### "PENSE ÉVIDEMMENT AU RESPONSIVE POUR TOUT"
+
+Elle l'a écrit pendant que je regardais son bloc sur un téléphone, et
+c'est exactement ce que la mesure venait de montrer.
+
+**Relevé sur les ONZE pages du site, à 1440, 900, 390 et 320 px** :
+aucune page ne débordait, et pourtant **trois de ses blocs avaient leur
+contenu coupé à l'intérieur de leur boîte**, sans que rien ne dise qu'il
+existait :
+
+| | rogné |
+|---|---|
+| `autres-outils` | +762 px (le téléphone à gauche, les trois cartes à droite) |
+| `viralite-trafic` | +46 px, sur `/fonctionnalites/partage-et-viralite` |
+| `ton-branding` | +26 px, sur `/fonctionnalites/branding-et-langues` |
+
+Les deux derniers étaient là depuis le 6 septembre, sur des pages déjà
+en relecture. **Aucune capture ne pouvait le voir** : la page s'affiche
+très bien, et le contenu manquant ne manque à personne sauf à la
+lectrice.
+
+**Règle : `components/landing/cssIles.ts`, et les DEUX feuilles
+l'interpolent.** On ne rogne pas et on ne redessine pas son travail : la
+boîte défile (la règle déjà écrite pour les tableaux du hub, "c'est le
+tableau qui défile, jamais la page"). Pour `autres-outils` on fait
+mieux : ses trois colonnes passent l'une sous l'autre, donc plus rien à
+faire glisser.
+
+**LA RÈGLE A D'ABORD ÉTÉ ÉCRITE DANS UNE SEULE FEUILLE**, celle de la
+landing, et les deux blocs des pages de fonctionnalités sont restés
+coupés : elles ont LEUR feuille. Une règle, deux feuilles, écrite dans
+une seule, c'est le défaut que ce dépôt paie en boucle depuis juin,
+transposé au CSS.
+
+#### 🚨 ET UN GUILLEMET ORPHELIN AVALAIT TOUT CE QUI SUIVAIT
+
+La correction a ensuite été SERVIE dans le HTML **sans aucun effet**. Le
+navigateur répondait `overflow-x: visible` sur un élément dont la
+feuille disait `auto`.
+
+La cause : **un guillemet double orphelin traînait en fin de
+`components/landing/styles.ts`** (`}\n"` puis la fin du gabarit). Un
+guillemet non fermé met l'analyseur CSS en erreur et lui fait ABANDONNER
+tout ce qui suit. Il ne coûtait rien tant que rien ne venait après ; la
+première règle posée derrière est morte.
+
+**Toute règle ajoutée en fin de cette feuille aurait subi la même
+chose**, et c'est indétectable à la lecture : le fichier est correct,
+le HTML servi porte la règle, et elle ne fait rien.
+
+**Le filet mesure donc ce que le navigateur APPLIQUE, jamais ce que le
+fichier déclare** (`tests/visual/responsive-site.spec.ts`) : un test qui
+aurait cherché la règle dans la source serait sorti VERT sur une page
+cassée. Et `tests/logic/landing.test.mts` compte les guillemets des trois
+feuilles : un nombre impair fait rougir.
+
+Filet : **178 captures et mesures** (111 + 67), `test:logic` 2518,
+`tsc` exit 0. Les gardes ont été vérifiés en rejouant six versions
+fautives (la légende sans "automatique", le corps sans l'export, le
+visuel redevenu décoratif, le bonus n8n de retour, le guillemet
+orphelin, une feuille qui perd la constante) : les six rougissent.
+
+### Douzième passage : sa disposition, mesurée sur SA page (7 septembre 2026)
+
+Béné, en regardant la section des autres outils : "pourquoi tu mets
+verticalement ce qui était horizontal à la base ? Les automatisations
+c'est : animation à gauche, texte à droite. Et tout ce qui fait plus de
+deux lignes doit être en texte aligné à gauche et pas texte centré.
+Revois toute la disposition pour une meilleure lecture, adaptée à une
+lecture, fluide et recommandée pour guider l'oeil, équilibrée et
+élégante."
+
+#### LA MÉTHODE : ON MESURE SA PAGE, ON NE DISCUTE PAS DE GOÛT
+
+Sa page de vente ouverte dans un navigateur, alignement par alignement :
+
+| | sa page | la landing avant |
+|---|---|---|
+| blocs de texte alignés à GAUCHE | **112** | quasi zéro |
+| blocs de texte CENTRÉS | 32 | tout |
+| largeur de ses colonnes de texte | 510 à 550 px | 720 px, centrés |
+| ses H2 de section | à GAUCHE dans leur colonne | centrés |
+
+**Sa page fait déjà ce qu'elle demande, à 78 %.** Il n'y avait donc rien
+à arbitrer : la landing faisait l'inverse.
+
+#### 1. LES DEUX COLONNES, ET ELLES SONT TAILLÉES SUR UNE MESURE
+
+Son bloc vit dans la rangée `row-ee65297c` de sa page : **une colonne de
+6 sur 12 pour l'animation, une colonne de 6 pour le texte de l'étape**.
+Je l'avais empilé verticalement.
+
+**LA LARGEUR VIENT DE CE QUE L'ÎLE MESURE, pas d'un réglage esthétique.**
+Relevé dans le navigateur : 260 + 46 + 323 px de contenu, plus 36 px de
+gouttières et 32 px de marge interne, soit **672 px**.
+
+| la colonne fait | ce qui se passe |
+|---|---|
+| 532 px (moitié de 1120) | l'île est rognée de 25 px |
+| 532 px + passage à la ligne | 1346 px de haut contre 605 px pour son texte |
+| **695 px (boîte de 1240)** | **rien n'est rogné, 720 px contre 633 px** |
+
+D'où deux décisions : la boîte de cette disposition passe à **1240 px**,
+et **les colonnes s'empilent dès 1240 px, pas 900**. Entre les deux, la
+colonne de l'animation passerait sous les 672 px dont elle a besoin ;
+empilée, elle a toute la largeur (mesuré à 900 px : 868 de large, aucun
+rognage).
+
+**Sa propre page rogne 25 px de ses cartes** dans sa colonne de 530.
+Servir la même chose aurait été recopier un défaut.
+
+**LE TEXTE EST PREMIER DANS LE DOM, l'animation passe à gauche par le
+CSS.** Une fois les colonnes empilées sur un téléphone, l'ordre du DOM
+décide : le titre doit y précéder son visuel, sinon l'animation arrive
+sans contexte (sa remarque du 5 septembre). Inverser le DOM pour "mettre
+l'animation à gauche" casserait le mobile sans qu'une capture le dise.
+C'est l'idiome de `.tql-etape`, qui croise déjà ses lignes depuis le
+4 août.
+
+**UNE REQUÊTE DE CONTENEUR A ÉTÉ ESSAYÉE PUIS RETIRÉE**, et la raison
+est écrite dans `cssIles.ts` : elle faisait passer l'île à la ligne dans
+sa colonne, donc 1346 px de haut contre 605 px pour son texte, c'est à
+dire exactement le déséquilibre qu'on corrigeait.
+
+#### 2. LE CORPS DE TEXTE EST À GAUCHE, ET IL N'Y A PLUS DE SEUIL
+
+🚨 **`blocLong` ET `CARACTERES_BLOC_LONG` SONT SUPPRIMÉS**, et la note du
+5 septembre qui les décrivait est corrigée en place dans
+`lib/site/landing.ts`.
+
+Ils décidaient au cas par cas, sur un seuil de 150 caractères. **Un
+seuil en caractères ne peut pas décider, et c'est mesuré** : sur la
+landing rendue, un paragraphe de 141 caractères prenait 3 lignes dans
+une colonne étroite pendant qu'un de 150 en prenait UNE dans un
+conteneur large. C'est la LARGEUR de la colonne qui décide, et elle
+change d'un bloc à l'autre.
+
+`.tql-p` est donc aligné à gauche **sans condition**, dans une colonne
+centrée bornée à **640 px** (720 px à 17 px donnent 90 caractères par
+ligne, la où une ligne se lit le mieux vers 65 à 75, et 640 rapproche la
+landing de ses colonnes à elle). Même geste que la suppression de
+`LOOKS_LIKE_HTML` le 1er septembre : **quand une erreur ne coûte rien à
+commettre et se voit tard, on rend l'erreur impossible au lieu de la
+détecter.** Un seuil, c'est un seuil qu'on oublie au prochain paragraphe
+ajouté.
+
+**Et la règle vaut pour TOUT le corps, pas pour les seuls `.tql-p`** :
+mesuré à 390 px, la légende du chiffre, sa source, le texte du bandeau
+de fin et le pied d'article du blog rendaient 3 et 4 lignes centrées.
+
+**LES TITRES RESTENT HORS DE SA RÈGLE** : elle parle du TEXTE, et sa
+page centre ses H1 et plusieurs de ses H2.
+
+#### 3. LE TITRE ET SON CORPS PARTAGENT UNE BOÎTE
+
+C'est ce que la mise à gauche a révélé, et c'est un vrai défaut de
+lecture : dans la section Systeme.io, le titre était centré sur 1120 px
+et son paragraphe démarrait à 400 px. **Il flottait, sans bord commun
+avec quoi que ce soit** : le mélange de centré et de non centré qu'elle
+a relevé le 5 septembre, et le drame du sous-titre du 3 août dans une
+autre robe.
+
+La section du 44,9 % le faisait déjà bien, par accident : sa boîte fait
+760 px et son paragraphe part du bord GAUCHE de cette boîte, donc du
+bord de la carte au dessus. **`.tql-intro` généralise ce geste** : une
+boîte de 760, le titre centré dedans, le corps ancré à gauche. Mesuré
+après correction : boîte, titre et texte partagent 340-1100 sur les six
+blocs de la landing et de `/tarifs`.
+
+#### 🚨 ET UN CONTRÔLE QUE CETTE PAGE DÉCRIVAIT N'EXISTAIT PAS
+
+Le commentaire de `blocLong` affirmait : "le contrôle qui compte
+vraiment est ailleurs, et il MESURE : `tests/visual/landing-paddings.
+spec.ts` refuse qu'un paragraphe centré dépasse trois lignes rendues".
+
+**Ce test n'a jamais existé.** Mesuré, pas déduit : aucune occurrence de
+`textAlign` dans tout `tests/visual/`. **Huitième fois que ce dépôt paie
+une règle écrite en commentaire et démentie par le code** (le
+`w-full h-auto` des images de réponse, l'`ADD_ATTR: ["target"]` des
+liens légaux, le "Next décode déjà le segment" du pilotage, le brouillon
+d'Adeline, le N+1 de Mes projets, la rassurance centrée, l'export de
+leads).
+
+Il existe maintenant, et il refuse **DEUX** lignes, sur la landing et
+sur `/tarifs`, aux trois largeurs. Deux autres mesures l'accompagnent :
+les bords partagés de `.tql-intro`, et la position rendue des deux
+colonnes (jamais l'ordre du DOM, qui dit exactement le contraire de ce
+que la lectrice voit).
+
+#### CE QUE MES PROPRES SONDES ONT ENCORE RATÉ
+
+**Un débordement n'est une perte que s'il est ROGNÉ.** Ma première sonde
+comptait tout élément dont `scrollWidth` dépasse `clientWidth` : avec
+`overflow:visible` le contenu sort de sa boîte et reste AFFICHÉ. Ma
+deuxième remontait la chaîne des ancêtres jusqu'à un `overflow:hidden`,
+et elle a alors accusé le bandeau défilant, le carrousel de témoignages,
+les flous décoratifs du hero et une légende de tableau pour lecteurs
+d'écran, tous rognés exprès. **Onzième fois qu'une sonde ne distingue
+pas ce qu'elle est censée distinguer**, et cette fois dans les deux sens
+successivement.
+
+Ce qui tranche vraiment vit déjà dans `tests/visual/responsive-site.
+spec.ts` : les îles animées, et le débordement de la PAGE.
+
+**Et un accent grave a terminé le littéral de la feuille DEUX fois de
+plus** dans la même heure, une fois dans un commentaire CSS, une fois
+dans un commentaire de code juste avant. Septième et huitième fois. Ce
+n'est pas un garde-fou qui manque, c'est moi qui le refais.
+
+## Un client anglophone est parti : ce qui était vrai, ce qui ne l'était pas (7 septembre 2026)
+
+Béné transmet l'email d'un client, ancien fondateur technique, qui a
+failli s'abonner et qui est reparti se coder son propre quiz dans
+Systeme.io. Elle : "il faut tout vérifier ce qu'il a affirmé pour que je
+puisse ensuite lui faire un retour. Et surtout corriger parce que ça
+fait chier de perdre un de mes premiers clients anglophones sur des
+trucs qui sont censés être nickel."
+
+**Trois reproches. Les trois sont vrais, et les trois étaient
+mesurables depuis le dépôt.** Ce qui suit dit aussi ce qui n'a PAS été
+mesuré, parce que c'est ce qu'elle va lui répondre.
+
+### 1. "some parts of the quiz UI were in French - I did set the language to English"
+
+**QUATRE chemins servaient du français à un quiz réglé en anglais**, et
+les quatre ont la même cause : le repli de langue était réécrit à la
+main, différemment, à chaque endroit.
+
+| Ce qui parlait français | Qui le voyait |
+|---|---|
+| le bandeau "Mode aperçu, rien n'est enregistré" | le créateur, à chaque test de son quiz |
+| le toast "Aperçu de ton brouillon" | idem, sur un quiz pas encore publié |
+| **les DEUX écrans d'erreur du viewer** | **tout le monde, dans toutes les langues** |
+| le bandeau de reprise, sur un quiz `pt-BR` | ses visiteurs brésiliens |
+
+Les deux premiers étaient écrits EN DUR dans `PublicQuizClient`. Les
+deux écrans d'erreur appellent `getT(null)` et `getT(json?.quiz?.locale)`
+sur une réponse d'erreur, **qui ne porte jamais de quiz** : les deux
+rendaient donc le français, pour tout le monde. C'est l'écran qu'on voit
+quand ça a l'air cassé, c'est à dire celui où une phrase dans la
+mauvaise langue coûte le plus cher.
+
+Le quatrième est le plus proche de sa phrase ("the message that your
+answers are saved") : `RESUME_COPY` n'avait **aucun repli BCP-47**,
+alors que `pt-BR` est proposée dans le sélecteur de l'éditeur. Un quiz
+brésilien y prenait la ligne FRANÇAISE au milieu d'un quiz portugais.
+Chez Tipote c'était pire : son `getT` n'avait aucun repli du tout, donc
+un quiz `pt-BR` sortait **entièrement en français**.
+
+**Règle : `lib/quiz/langueViewer.ts`, `repliLangue()`, et personne ne
+réécrit de repli.** Une seule fonction, appelée par `translations`, par
+`RESUME_COPY` et par les nouvelles phrases d'aperçu. Trois copies d'une
+même règle finissent toujours par ne plus dire la même chose, et c'est
+exactement ce qui venait d'arriver.
+
+**Et les écrans d'erreur prennent la langue du NAVIGATEUR**
+(`getTErreur`), parce qu'à ce moment là on n'a pas celle du quiz. On ne
+touche PAS à `getT(null)` pour le reste du viewer : l'éditeur écrit
+`locale: locale || null`, donc un quiz français dont la créatrice n'a
+jamais ouvert le sélecteur y est bien à null, et il doit rester français.
+
+### 2. "the quiz was just showing white, including the demo"
+
+**Mesuré, et c'est un fait de conception :** la page publique d'un quiz
+ne rend **aucun contenu côté serveur**. Le HTML ne porte que le JSON-LD
+et les pixels ; tout le quiz est monté par le navigateur après un appel
+à `/api/quiz/<id>/public`.
+
+**Et il n'existait AUCUN `error.tsx` ni `global-error.tsx` dans tout
+`app/`**, dans les deux dépôts. La moindre exception côté client, un
+fragment JavaScript qui répond 404 après un déploiement, et la page
+reste blanche, sans un mot.
+
+C'est la règle du 3 août ("un `ok: false` produit TOUJOURS quelque chose
+à l'écran") : elle ne couvrait que le serveur, le navigateur n'avait
+rien. `app/global-error.tsx` et `app/q/[quizId]/error.tsx` affichent
+désormais une phrase et un bouton "recharger", **dans la langue du
+navigateur** (`lib/site/messagesPanne.ts`), en style INLINE et sans
+importer un composant d'UI : cet écran s'affiche quand quelque chose a
+déjà échoué, peut être la feuille de style elle même.
+
+🚨 **CE QUI N'EST PAS MESURÉ, ET QU'IL FAUT DIRE :** je n'ai pas
+reproduit sa page blanche, et je ne sais pas ce qui l'a causée ce jour
+là. Un déploiement pendant sa visite est plausible (son process est
+`npm run build && pm2 restart`, et un fragment remplacé pendant qu'un
+onglet est ouvert répond 404), et **une cause plausible n'est pas une
+cause**. Ce qui est corrigé, c'est le SILENCE : la même panne affichera
+maintenant une phrase au lieu de rien.
+
+### 3. "it was loading a bit slow"
+
+Mesuré sur `quiz.tipote.com/q/rps`, trois fois :
+
+| | |
+|---|---|
+| le HTML (vide de tout contenu de quiz) | **0,5 à 2,2 s** |
+| le JavaScript | 17 fichiers, 343 Ko transférés |
+| l'appel API, qui ne part QU'APRÈS | **0,3 à 1,5 s** |
+
+Les trois s'enchaînent, ils ne se recouvrent pas : le visiteur voit un
+spinner pendant **1,5 à 4 secondes** avant le premier mot du quiz.
+
+**Ce qui a été corrigé, et c'est mesurable :** `generateMetadata` et le
+composant de page tournent sur la MÊME requête et appelaient chacun
+`fetchQuizMeta`, donc **deux allers-retours Supabase pour la même
+ligne**, à chaque chargement. Next ne déduplique que `fetch`, jamais un
+client Supabase : c'est `cache()` de React qui le fait, posé sur
+`fetchQuizMeta` et sur `resolveCustomDomainOwner`.
+
+**Ce qui restait, et qui n'était pas du code : Cloudflare ne mettait PAS
+les fragments JavaScript en cache.** Mesuré trois fois de suite,
+`cf-cache-status: DYNAMIC` sur `/_next/static/chunks/*.js`, alors qu'ils
+portent `cache-control: public, max-age=31536000, immutable` et
+qu'`app.tipote.com/favicon.ico` répond `REVALIDATED` sur la même zone.
+Chaque premier visiteur les téléchargeait donc depuis le serveur, en
+France.
+
+### CORRIGÉ LE 7 SEPTEMBRE, et c'est SA question qui a rendu la chose sûre
+
+Béné : "vérifie dans le code pourquoi on avait mis ça. Je veux bien
+changer mais si on avait mis ça c'est sûrement pour une bonne raison, il
+ne faut rien casser."
+
+Deux règles vivaient sur la zone `tipote.com` : `bypath chunks` (Bypass
+sur `/_next/static/`) et `next-image-bypass` (sur `/_next/image`).
+
+**AUCUNE TRACE DE LEUR RAISON NULLE PART**, et c'est dit dans ce sens là
+plutôt que d'inventer une cause qui collerait à l'histoire (règle du
+2 septembre). Cherché dans les TROIS dépôts : code, markdown, configs,
+historique git. Rien.
+
+**Ce que le code dit, lui, et il disait l'inverse.**
+`infra/caddy/Caddyfile` pose `public, max-age=31536000, immutable` sur
+`/_next/static/*` de chacun des quatre hôtes, depuis juin, sous le
+commentaire "Hashed static assets: aggressive immutable cache". La règle
+Cloudflare contredisait donc notre propre configuration serveur.
+
+**Le seul vrai risque a été MESURÉ, pas supposé.** C'est celui du
+30 août ("un lien affilié ne se met jamais en cache") : un cache partagé
+qui servirait le `Set-Cookie` d'UN affilié à tous les visiteurs
+suivants. Relevé en production sur `quiz.`, `app.` et `affiliate.` :
+**aucun `Set-Cookie` sur ces fichiers**, et c'est structurel, pas un
+hasard. Le `matcher` du middleware exclut `_next/static` et
+`_next/image` dans les trois dépôts : il n'y tourne JAMAIS, donc aucun
+clic affilié ni aucun cookie ne peut y passer.
+
+**Le réglage exact : `Eligible for cache`, et l'Edge TTL reste sur "Use
+cache-control header if present, bypass cache if not".** Notre serveur
+envoie déjà l'année, il n'y a aucun chiffre à taper. "Ignore
+cache-control header and use this TTL" écraserait ce que le serveur dit,
+y compris sur une réponse d'erreur.
+
+**Mesuré après : `0 / 20` -> `20 / 20`.** Et l'honnêteté du chiffre
+compte plus que le chiffre : le total affiché est passé de 1275 ms à
+592 ms, mais le HTML et l'API n'ont RIEN à voir avec cette règle et
+varient d'un essai à l'autre. Ce que la règle enlève vraiment, ce sont
+les **1146 Ko de JavaScript** qui s'ajoutent APRÈS ce total, et le gain
+est plus grand pour un visiteur loin de la France que pour une mesure
+lancée depuis le serveur lui même.
+
+**La troisième règle, `pages`, a été SUPPRIMÉE par Béné le même jour**
+(la liste n'en affiche plus que deux). Elle mettait en cache le HTML de
+`/p/` et `/q/`, c'est à dire exactement ce qui porte le cookie affilié.
+Elle était inerte (la page envoie un cookie de langue, donc Cloudflare
+refusait de la garder), et c'est ce qui la rendait dangereuse : un piège
+armé qui n'attendait que la disparition de ce cookie.
+
+**Ne pas remettre un Bypass sur `/_next/static/`** sans écrire la raison
+à côté. C'est exactement ce qui a coûté cette journée : une règle sans
+motif écrit est une règle que personne n'ose retirer.
+
+```bash
+npm run check:vitesse-quiz -- https://quiz.tipote.com/q/mon-quiz
+```
+
+Il mesure les trois temps, dit si le HTML porte du contenu, et compte
+les fragments servis par le cache Cloudflare. Il annonce le poids
+**décompressé** et le dit : `fetch` décompresse tout seul et n'expose
+pas la taille compressée, donc un chiffre mal nommé serait pire qu'un
+chiffre absent.
+
+### CE QUE LA MESURE A TROUVÉ EN PLUS, ET QUE PERSONNE N'AVAIT VU
+
+En allant chronométrer la page, une requête demandait **des colonnes qui
+n'existent pas**, et elle échouait EN ENTIER, en silence.
+
+```
+.select("questions, created_at, updated_at, content_locale")  sur `quizzes`
+```
+
+`questions` vit dans la table `quiz_questions`. `content_locale` vit sur
+`profiles` (Tiquiz) et sur `business_profiles` (Tipote). PostgREST
+rejette alors le select complet, donc `created_at` et `updated_at`, qui
+eux existent, tombaient avec.
+
+| Ce que ça coûtait | Mesuré sur |
+|---|---|
+| Tiquiz : `numberOfQuestions`, `dateCreated`, `dateModified`, `inLanguage` absents du JSON-LD de CHAQUE quiz public | `quiz.tipote.com/q/rps` |
+| Tipote : **aucune balise `application/ld+json` du tout, et `pixels` à null** | `app.tipote.com/q/chemindepuissance` |
+
+Chez Tipote c'est la même requête qui porte les pixels Meta, GA4 et
+Google Ads rendus côté serveur : ils n'étaient donc pas émis non plus.
+
+**Personne ne l'a vu parce que l'erreur n'était jamais lue** : la ligne
+faisait `res.data as ... | null` et se contentait du null. Elle est lue
+maintenant, et elle CRIE dans le journal. Le nombre de questions passe
+par un `head: true` sur `quiz_questions` : les tirer pour les compter
+ramènerait tout l'énoncé de chaque question sur une page qui n'en
+affiche aucune. Et `inLanguage` vient de `quizzes.locale`, la langue que
+le visiteur LIT ; `content_locale` est la langue par défaut des contenus
+de la créatrice, ce n'est pas la même question et ce n'est pas sur cette
+table.
+
+### CE QU'IL A DIT ET QUI EST FAUX, POUR SA RÉPONSE
+
+**"systeme.io does not natively support custom quiz results tailored to
+questions"** : vrai, et c'est exactement l'argument du produit.
+
+**Sa solution maison** (une page de tunnel par question, les réponses
+enchaînées en paramètres GET, un cookie pour le résultat, une page de
+routage) fonctionne et il a raison sur les trois gains qu'il cite
+(rapidité, coût, statistiques dans Systeme.io). Ce qu'elle perd, et il
+ne le dit pas : les réponses passent dans l'URL, donc elles se
+bricolent ; il n'y a ni tag par profil posé automatiquement, ni relance
+par profil, ni partage du résultat, ni reprise, ni statistiques par
+question. Et **chaque nouveau quiz demande de refaire tout le tunnel.**
+
+Test : `tests/logic/langue-du-viewer.test.mts` (les deux dépôts),
+vérifié en rejouant SIX versions d'avant côté Tiquiz (la bannière
+française en dur, `getT(null)` sur l'écran d'erreur, `RESUME_COPY`
+indexé à la main, le select sur les colonnes inexistantes, le `cache()`
+retiré, le message de panne retiré) et DEUX côté Tipote : toutes
+rougissent.
+
+## Le trafic et les ventes sur le même écran (Béné, 4 septembre 2026, point 3)
+
+Sa consigne, dans son ordre : "1. `begin_checkout` au clic sur un
+palier ; 2. `purchase` sur la page de remerciement ; 3. **seulement
+après** : un écran dans l'admin qui montre les deux ensemble."
+
+Les points 1 et 2 sont faits depuis le 4 septembre. Voici le 3.
+
+### CE QUI MANQUAIT, ET CE N'ÉTAIT PAS L'ÉCRAN
+
+Le numérateur existait (les ventes, exactes, dans `resumePeriode`).
+**Le DÉNOMINATEUR n'existait nulle part côté serveur** : aucune table de
+trafic dans aucune migration, mesuré avant d'écrire une ligne.
+
+### POURQUOI ON COMPTE NOUS MÊMES, ET PAS EN LISANT GA4
+
+Deux raisons, et la seconde seule aurait suffi.
+
+Lire GA4 depuis le serveur demanderait un compte de service Google, un
+identifiant de propriété et une clé de plus dans le `.env` (vérifié :
+il n'y en a aucun dans les trois dépôts). Ça, ce n'est qu'un coût.
+
+**Le vrai problème : GA4 ne compte QUE les gens qui ont accepté le
+bandeau cookies** (`chargerAnalytics` ne charge la balise qu'après
+accord), et pas ceux qui ont un bloqueur. Son chiffre de trafic est donc
+SOUS-compté, alors que le chiffre de ventes, lui, est exact. Diviser
+l'un par l'autre donnerait **un taux de conversion trop beau, affiché
+comme un fait**. C'est la règle du 22 août : un chiffre gonflé dans un
+tableau de bord est pire qu'une absence de chiffre, il fait dépenser.
+
+### CE QU'ON NE STOCKE PAS, ET C'EST LA CONDITION DE TOUT LE RESTE
+
+Ni adresse IP, ni cookie, ni identifiant, ni empreinte. On incrémente un
+compteur par **(jour, hôte, chemin, source)**. Rien dans cette table ne
+désigne une personne, donc rien n'y demande de consentement, donc le
+compteur voit AUSSI ceux qui refusent le bandeau. Ce n'est pas un effet
+de bord : c'est exactement ce qui le rend plus juste que GA4.
+
+**Corollaire assumé, et l'écran le dit : on compte des VUES DE PAGE,
+jamais des visiteurs.** Sans cookie, on ne sait pas distinguer une
+personne de deux pages qu'elle ouvre. Écrire "visiteurs" serait mentir
+sur ce qu'on mesure, et le test l'interdit.
+
+### LE MIDDLEWARE TOURNE SUR EDGE : MESURÉ, PAS SUPPOSÉ
+
+Next 16 a renommé `middleware.ts` en `proxy.ts`, et `proxy.ts` tourne
+sur Node par défaut. **Notre fichier s'appelle encore `middleware.ts`, et
+il est compilé pour EDGE** : `.next/server/middleware-manifest.json` le
+range dans `server/edge/chunks/` avec un `edge-wrapper`.
+
+Donc **pas de `supabaseAdmin` dans la chaîne du middleware**, ni aucun
+module qui touche au disque (leçon du `node:fs` du 6 septembre, qui
+cassait le bundle sans qu'un `tsc` vert ne dise rien). L'écriture passe
+par une route interne :
+
+```
+middleware (Edge)  ->  event.waitUntil( POST /api/interne/trafic )
+                                          ^ runtime nodejs, X-Cron-Secret
+```
+
+`event.waitUntil` est ce qui met l'appel HORS du chemin critique : la
+page part sans l'attendre. Et `AbortSignal.timeout(2000)` plus un
+`catch` silencieux : **un compteur qui tombe ne doit jamais coûter une
+page**, c'est la règle du webhook qui ne bloque pas un accès payé.
+
+**On réutilise `CRON_SECRET`, et la raison est écrite à côté** : une
+variable NEUVE est une variable qui peut ne jamais être posée sur le
+serveur, et le compteur resterait alors à zéro en silence pendant des
+semaines (drame `PARTNER_SHARED_SECRET`, 23 août). La comparaison passe
+par `safeEqual`, jamais `!==` (audit du 24 août).
+
+### L'INCRÉMENT EST ATOMIQUE, ET LA TABLE EST FERMÉE
+
+```sql
+insert into trafic_jour (...) values (..., 1)
+on conflict (jour, hote, chemin, source) do update set vues = trafic_jour.vues + 1
+```
+
+Lire puis écrire perdrait des vues dès que deux requêtes arrivent en même
+temps, c'est à dire exactement les jours qui comptent. RLS activée, et
+`revoke ... from anon` sur la fonction : ce compteur ne s'incrémente que
+depuis le serveur.
+
+### LES QUATRE GARDES, ET POURQUOI LES ROBOTS SONT EXCLUS
+
+`vueASignaler` (module PUR, la seule décision) : l'hôte doit être un
+hôte de vente, le chemin n'est ni une API ni un fichier, l'`accept`
+contient `text/html`, et l'agent n'est pas un robot.
+
+**Sans le filtre robots, le compteur additionne Googlebot, les sondes de
+disponibilité et les aspirateurs**, et le taux de conversion s'effondre
+sans qu'une seule vente ait manqué. C'est le funnel de Jocelyne dans une
+autre robe : le chiffre existe et il ne veut rien dire.
+
+**Un agent VIDE est traité comme un robot.** Un navigateur qui affiche
+une page en envoie toujours un ; le sens du repli est donc d'exclure,
+parce qu'un robot compté est une erreur invisible et qu'un humain raté
+est une vue en moins, visible seulement si le total s'effondre.
+
+### LES TROIS MARCHES, ET LE SEUIL QUI ÉVITE UN TAUX QUI NE DIT RIEN
+
+| | d'où ça vient |
+|---|---|
+| les vues du site public | `trafic_jour` |
+| les vues d'un bon de commande | les MÊMES lignes, chemin `/commande/*` |
+| les ventes encaissées | `resumePeriode`, la MÊME source que l'écran Ventes |
+
+**Le nombre de ventes est PASSÉ au module, jamais recalculé dedans** :
+deux comptes pour la même chose finissent toujours par se contredire, et
+c'est celui du tableau de bord qu'elle croirait.
+
+**`/commande/mensuel/retour` n'est PAS une entrée de tunnel**, et
+`estUnBonDeCommande` l'exclut par un motif à un seul segment. Cette page
+n'est atteinte qu'APRÈS avoir payé : la compter gonflerait le taux de
+passage et compterait la vente deux fois.
+
+**En dessous de 100 vues, aucun taux ne s'affiche** (`null`, et l'écran
+dit "pas encore assez de vues"). À 20 vues, une seule vente vaut
+5 points : on prendrait une variation de hasard pour un signal. **Les
+COMPTES, eux, s'affichent toujours** : ils sont exacts dès la première
+vue, et les cacher parce que le taux n'est pas mûr reviendrait à cacher
+la seule chose qu'on sait.
+
+Le second taux (bon de commande -> vente) se juge sur un seuil DIX FOIS
+plus bas : ces vues sont bien plus rares, et exiger 100 y rendrait le
+chiffre invisible pendant des mois.
+
+### `interne` EST COMPTÉ DANS LES PAGES, ÉCARTÉ DES SOURCES
+
+Une navigation d'une de nos pages vers une autre est une vraie vue, mais
+elle n'a amené personne. La laisser dans le classement des sources la
+mettrait presque toujours en tête et masquerait les vraies, qui sont la
+seule chose que ce tableau doit dire.
+
+### "JE N'AI PAS PU REGARDER" N'EST PAS "IL N'Y A RIEN"
+
+`lireTrafic` rend `{lisible: false, raison}` sur une erreur, et l'écran
+écrit "le comptage n'a pas pu être lu" plus **"ce n'est pas un site sans
+visite"**. Un zéro affiché sur une panne de lecture se lit comme un
+constat, et c'est la règle du 23 août.
+
+**Et le compteur démarre le 7 septembre** : l'écran le DIT sur toute
+période antérieure, au lieu de laisser croire que le site n'avait pas de
+trafic avant.
+
+### CE QUE CET ÉCRAN NE COUVRE PAS, ET IL FAUT LE DIRE
+
+**Le trafic d'`atelierduquiz.fr` n'y est pas.** L'Atelier vit dans le
+dépôt formaquiz, avec sa propre base : le compteur devrait y être porté,
+et ce n'est pas fait. L'écran ne prétend donc rien sur lui.
+
+Et un clic sur un bouton qui part chez Systeme.io
+(`SALES_LINKS_LEFT_ALONE`) n'arrive jamais chez nous : ces ventes là se
+lisent dans `/admin`, exactement comme pour `begin_checkout`.
+
+### MA FAUTE, ET C'EST LA DOUZIÈME DE LA SEMAINE
+
+Après avoir rejoué les cinq versions fautives (les cinq rougissent
+comme il faut), mon contrôle de remise en état a répondu
+**`# pass 0 / # fail 1`** sur un fichier parfaitement correct. J'ai
+failli aller réparer cinq fichiers qui n'avaient rien.
+
+La commande omettait `--import ./tests/logic/register-alias.mjs` : le
+fichier ne pouvait donc pas résoudre `@/lib/...`, il échouait au
+CHARGEMENT, et ça se lit exactement comme un test rouge. **Un contrôle
+qui ne distingue pas ce qu'il est censé distinguer est pire qu'un
+contrôle absent**, et cette fois c'était le contrôle censé prouver que
+les autres contrôles étaient sains.
+
+Test : `tests/logic/trafic-et-ventes.test.mts` (15 cas), vérifié en
+rejouant CINQ versions fautives (le filtre robot retiré, aucun seuil sur
+les taux, la page de retour comptée comme un bon de commande, le
+middleware qui décide tout seul au lieu d'appeler le module pur, l'écran
+qui affiche zéro au lieu de dire qu'il n'a pas pu lire) : les cinq
+rougissent.
+
+### Le compteur de l'Atelier, et le dénominateur qui mentait (7 septembre 2026)
+
+Béné : "il me faut aussi le compteur de l'Atelier."
+
+En le branchant, **un défaut introduit la veille est apparu**, et il est
+plus grave que ce qu'elle demandait.
+
+#### `resume.ventes` ADDITIONNE LES DEUX SITES
+
+`app/api/admin/pilotage/route.ts` appelle
+`resumePeriode({ sales: [...sales, ...atelier.sales] })`. Mon entonnoir
+divisait donc **les vues de tiquiz.fr** par **les ventes de Tiquiz ET de
+l'Atelier** : le numérateur et le dénominateur ne parlaient pas de la
+même population, et rien ne le disait. Le taux sortait gonflé, affiché
+comme un fait, c'est à dire exactement le chiffre qui fait dépenser
+(règle du 22 août).
+
+**Règle : chaque site a son entonnoir, avec SES ventes.**
+`ventesParSite: { tiquiz, atelier }` vient de la route, et l'écran nomme
+chaque bloc (`tiquiz.fr`, `atelierduquiz.fr`). Fusionner les deux
+donnerait un taux qui ne parle d'aucun des deux : ils n'ont ni le même
+public, ni le même prix, ni le même tunnel.
+
+**Et il n'y a qu'UNE définition de "une vente comptée dans cette
+période"** : `compterVentes(sales, periode)` est exportée de
+`resumePeriode.ts`, et `resumePeriode` l'appelle LUI AUSSI. Un filtre
+réécrit à la main à côté aurait donné deux règles de comptage, et c'est
+le défaut que ce dépôt paie en boucle.
+
+#### LE PILOTAGE VA LIRE CHEZ L'ATELIER, L'ATELIER NE POUSSE PAS
+
+C'est le motif de `fetchAtelier` (21 août), et il est meilleur qu'un
+push : une panne de Tiquiz ferait perdre les vues de l'Atelier POUR
+TOUJOURS. En les gardant dans SA base, une panne de Tiquiz ne coûte que
+l'affichage.
+
+**Le trafic voyage dans la porte QUI EXISTE DÉJÀ**
+(`GET /api/partner/pilotage`), à côté des élèves et des ventes. Une
+deuxième porte voudrait dire un deuxième secret, un deuxième délai
+maximum et un deuxième `reachable` : le pilotage pourrait alors montrer
+les ventes de l'Atelier sans son trafic. Le test compte les portes et
+en exige UNE.
+
+**La période est un PARAMÈTRE de `fetchAtelier`**, jamais devinée : deux
+périodes différentes sur un écran qui les divise l'une par l'autre
+donneraient un taux faux, et rien ne le dirait.
+
+#### TROIS ÉTATS POUR L'ATELIER, ET ILS NE SE CONFONDENT PAS
+
+| | ce que ça veut dire |
+|---|---|
+| champ absent | son serveur n'a pas répondu, OU sa version n'est pas déployée |
+| `lisible: false` | il a répondu, sa table n'a pas pu être lue (SA migration) |
+| `lisible: true` | on affiche |
+
+Les deux premiers rendent une PHRASE, jamais un zéro. Un écran qui
+afficherait "0 vue" ferait conclure que sa page de vente n'intéresse
+personne (règle du 23 août).
+
+#### AUCUN MONTANT SUR LE BLOC DE L'ATELIER, ET C'EST DÉLIBÉRÉ
+
+`encaisseCents` est devenu OPTIONNEL sur le composant `Entonnoir`.
+`resume.encaisseCents` additionne les deux sites, et **je n'ai pas
+mesuré comment ce total se compose par site** (les montants estimés
+`amountSource: "plan"` sont écartés d'un chiffre d'affaires depuis le
+22 août, et je ne l'ai pas revérifié ici).
+
+Le bloc de l'Atelier montre donc ses vues et ses ventes, qui sont
+exactes, et **pas de montant**. Afficher un chiffre d'affaires qu'on n'a
+pas mesuré est exactement ce qui fait prendre une décision sur un
+chiffre faux. Le jour où le partage est mesuré, le paramètre le reçoit.
+
+Test : les 4 cas ajoutés à `tests/logic/trafic-et-ventes.test.mts`,
+vérifiés en rejouant QUATRE versions fautives (l'entonnoir de Tiquiz qui
+reprend le total des deux sites, `resumePeriode` qui recompte à la main,
+les deux cas muets de l'Atelier fondus en un seul, `fetchAtelier` qui
+devine la période) : les quatre rougissent.
+
+## Le favicon d'une créatrice n'était jamais servi (Béné, 7 septembre 2026)
+
+En lisant le journal du serveur de dev, elle a posé la bonne question :
+"pour le favicon c'est pas un conflit entre NOS favicon et ceux que nos
+users ajoutent pour leur branding dans tiquiz et tipote quand ils
+ajoutent leur domaine ?"
+
+**Si. Et c'était un vrai bug, MESURÉ en production avant d'y toucher**
+(cache Cloudflare contourné) :
+
+| | ce qui répondait | taille | en-tête |
+|---|---|---|---|
+| `quiz.tipote.com` | `image/x-icon` | 7030 o, 128x128 | `max-age=14400` |
+| `app.tipote.com` | `image/png` | 13372 o, 512x512 | `max-age=300, s-maxage=300` |
+
+`app/favicon.ico/route.ts` pose `max-age=300` et ne peut JAMAIS rendre
+`image/x-icon` (elle lit un PNG et le déclare comme tel). Tipote portait
+donc sa signature ; **Tiquiz servait le fichier statique
+`public/favicon.ico`, qui masquait la route.**
+
+Conséquence : sur Tiquiz, le favicon qu'une créatrice a téléversé pour
+son domaine perso n'était **jamais** servi. Le fichier statique gagne,
+et la route ne tournait pas une seule fois.
+
+**Le serveur de dev le disait à chaque requête** ("A conflicting public
+file and page file was found for path /favicon.ico"), et personne ne
+lisait cette ligne : elle passait pour du bruit. C'est la famille des
+images en 403 du 31 août, où le geste était juste et n'atteignait pas sa
+cible.
+
+🚨 **FICHIER SUPPRIMÉ : `public/favicon.ico`.** Il était identique à
+l'octet près à `public/favicon-tiquiz.png`, que la route sert par
+défaut : sur nos domaines, rien ne bouge. **Et il doit être retiré du
+serveur à la main** : un copier-coller n'enlève pas ce qui a disparu,
+donc le fichier survivrait et continuerait de masquer la route.
+
+Garde-fou : `tests/logic/favicon-des-clientes.test.mts`, dans les DEUX
+dépôts (Tipote porte la même route et n'a pas encore eu le fichier
+statique : un garde-fou qui ne protège qu'un des deux jumeaux ne protège
+personne). Vérifié en rejouant la version d'avant, des deux côtés : il
+rougit.
+
+**Il LIT le nom du fichier par défaut dans la route**, il ne le recopie
+pas : Tiquiz sert `favicon-tiquiz.png`, Tipote `favicon.png`, et une
+liste écrite dans le test divergerait au premier renommage en disant
+vert sur un fichier disparu.
+
+## Le générateur de quiz a sa page, et le bouton y était MORT (8 septembre 2026)
+
+Béné : "le générateur de quiz sur une page dédiée, optimisée seo, dans
+le style du blog et des pages de ventes etc."
+
+### CE QUE LA MESURE A TROUVÉ AVANT D'ÉCRIRE LA PAGE
+
+Le générateur anonyme existe depuis des mois, dans une iframe sur la
+page de vente. Son bouton principal, celui qui transforme un visiteur en
+inscrit, faisait :
+
+```
+window.parent.postMessage({ type: "tiquiz-embed-checkout", ... })
+```
+
+**Hors iframe, `window.parent` EST `window`.** Le message part vers la
+page elle même, personne n'écoute, et le bouton ne fait RIEN. Aucune
+erreur, aucun symptôme : il s'affiche, on clique, il ne se passe rien.
+C'est le `ok: false` muet du 3 août, sur le seul bouton qui rapporte de
+l'argent, et il aurait été posé tel quel sur la page dédiée.
+
+**La cause profonde : le mode embed était DÉDUIT de la présence du
+jeton** (`const isEmbed = !!embedSessionToken`). Or le jeton dit "ce quiz
+est anonyme", il ne dit PAS "on est dans une iframe" : sur la page
+dédiée, les deux cessent d'être vrais ensemble.
+
+### UN SEUL PARAMÈTRE, DEUX CONSÉQUENCES QUI DOIVENT RESTER D'ACCORD
+
+`lib/embed/remise.ts` (pur, testé) prend `contexte: "iframe" | "page"`
+et en tire les DEUX choses qui en découlent :
+
+| | `iframe` | `page` |
+|---|---|---|
+| le bouton | `postMessage` au pont de la page hôte | NAVIGUE vers l'inscription |
+| le cadre | `100dvh` + fond de l'app | une carte dans une section du site |
+
+**Deux paramètres séparés finiraient par se désaccorder**, et la
+combinaison "cadre de page + remise d'iframe" donne exactement le bouton
+mort. Et il est OBLIGATOIRE : les props de `QuizDetailClient` sont une
+UNION DISCRIMINÉE, donc fournir un jeton sans dire où l'on est **ne
+compile pas**. C'est la règle du 1er août, dans sa forme la plus stricte.
+
+**L'adresse d'inscription n'est PAS réécrite** : elle vit dans
+`lib/embed/reprise.ts` depuis le 2 septembre, avec sa validation d'UUID
+et son chemin RELATIF (la page est servie sur `tiquiz.fr` en public et
+sur le domaine de l'app derrière la clé d'aperçu).
+
+**L'éditeur est en `h-screen` chez lui, donc sa boîte l'est aussi.** Une
+boîte plus COURTE avec `overflow-hidden` ROGNERAIT le bas de l'éditeur,
+et la règle du 7 septembre dit qu'un débordement n'est une perte que
+s'il est rogné : ici il le serait. Le test rejoue `h-[85vh]` et rougit.
+
+### CE QUE LA PAGE DIT, ET POURQUOI ELLE EST RÉFÉRENÇABLE
+
+**Le contenu est rendu par le SERVEUR : 1208 mots dans le HTML servi**,
+mesuré. Une page dont l'outil est monté par le navigateur ne dit RIEN à
+un moteur (c'est le défaut du viewer public, relevé le 7 septembre) :
+l'outil vit à l'intérieur d'une page qui, elle, se lit sans JavaScript.
+
+Six sections : le haut de page avec l'outil DEDANS, les trois étapes,
+ce que l'IA écrit à ta place, ce que le générateur ne fait pas, la FAQ,
+le bandeau de fin. Plus deux JSON-LD (`WebApplication` et `FAQPage`)
+construits depuis les MÊMES données que l'écran.
+
+**AUCUN CHIFFRE N'EST ÉCRIT À LA MAIN** (`lib/site/generateurQuiz.ts`) :
+les bornes du générateur public sont LUES dans `lib/embed/limites.ts`,
+le nombre de langues dans `QUIZ_LANGUAGES`, les limites du gratuit dans
+`FREE_LIMITS`. Un chiffre recopié est un chiffre faux au prochain
+changement, et il vit ici à l'endroit exact où un lecteur le vérifie.
+
+**ET CES TROIS NOMBRES VIVENT DANS UN MODULE PUR, PAS DANS
+`rateLimit.ts`, POUR UNE RAISON QUI N'EST PAS COSMÉTIQUE :** ce dernier
+importe `supabaseAdmin`, **qui LÈVE au chargement du module** quand une
+variable d'environnement manque. Une page publique qui l'importerait
+pour afficher une limite répondrait donc 500 sans base, et le runner de
+tests ne pourrait pas la charger du tout. C'est le piège du 30 août
+(`commentairesStore.ts`, qui faisait répondre 500 à toute la page
+d'article), évité avant d'être payé.
+
+**`offers.price: "0"` est justifié dans le module** : la route de
+génération ne demande aucune session, donc c'est un fait, pas une
+formule commerciale. Le test exige que la raison reste écrite à côté.
+
+**Les trois refus disent ce qui se passe À LA PLACE.** Un refus qui ne
+le dit pas n'est pas un refus, c'est une excuse (règle du 6 septembre) :
+le profil est PRÉÉCRIT, le parcours est LINÉAIRE, le branding est un jeu
+de réglages. Chaque `source` citée est un fichier dont le test vérifie
+l'EXISTENCE : une fonctionnalité retirée fait rougir la page qui la
+vend.
+
+### CE QUI A ÉTÉ MESURÉ SUR LA PAGE RENDUE
+
+Aucun débordement à 1440, 900 et 390 px. Chaque section porte au moins
+100 px de padding haut ET bas (sa règle du 4 septembre). La boîte de
+l'outil fait 1120 / 868 / 358 px. Aucun paragraphe centré ne dépasse
+2,5 lignes rendues. Les deux JSON-LD sont présents. Le rendu a été
+REGARDÉ, section par section : il est dans le style du site.
+
+### 🚨 CE QUE JE N'AI PAS PU MESURER, ET QUI SE DIT
+
+**Le formulaire du générateur ne s'hydrate pas dans ce conteneur.** Une
+sonde posée dans `EmbedPreviewClient` ne s'exécute **0 fois**, les trois
+menus rendent 48 px de large et vides, et le bouton ne déclenche aucun
+appel. Aucune erreur, aucune requête en échec, 38 scripts chargés.
+
+**C'est IDENTIQUE sur `/embed/preview`, qui est en production depuis des
+mois** : ce n'est donc pas ce chantier. Et l'hydratation marche
+généralement ici (`DeclencheurAnims` marque bien ses blocs sur la
+landing). Deux hypothèses ont été éliminées par la mesure (un faux
+`.env.local` ne change rien, retirer le JSON-LD ne change rien), et la
+production est INJOIGNABLE depuis ce navigateur
+(`ERR_CONNECTION_RESET`, alors que `curl` répond 200).
+
+**Je ne sais donc pas si c'est l'environnement ou un vrai bug, et une
+cause plausible n'est pas une cause** (règle du 2 septembre). Le seul
+endroit où ça se tranche est son écran.
+
+### ET CE QUI A ÉTÉ TROUVÉ EN CHEMIN, QUI N'EST PAS DU CODE
+
+**La génération anonyme n'a AUCUN plafond de dépense.**
+`ANTHROPIC_EMBED_DAILY_BUDGET` est NOMMÉE dans un commentaire de
+`lib/embed/rateLimit.ts` et **lue nulle part** : neuvième fois que ce
+dépôt paie une règle écrite en commentaire.
+
+🚨 **ET C'EST PLUS URGENT DEPUIS LE 8 SEPTEMBRE, parce que les deux
+moitiés qui adoucissaient ont bougé le même jour.** Cette page écrivait
+"le seul garde-fou est `HOURLY_LIMIT_PER_IP = 10`, donc une IP par
+heure ; le modèle est Haiku, ce qui adoucit sans fermer". Les deux
+lignes sont périmées, et je les corrige ici plutôt que d'empiler :
+
+| | avant | maintenant |
+|---|---|---|
+| la borne | 10 par IP et par heure | **2 par IP et par 24 h** |
+| le modèle | Haiku | **le même que l'éditeur payant** |
+
+La borne resserre, le modèle desserre : chaque génération anonyme coûte
+désormais ce qu'elle coûte à une cliente qui paie. **Aucun coût en euros
+n'a été mesuré**, et il ne faut pas en citer un ; ce qui est certain,
+c'est qu'un plafond de dépense reste la seule chose qui arrêterait un
+botnet tournant sur mille adresses.
+
+Test : `tests/logic/generateur-page.test.mts`, vérifié en rejouant
+`contexte="iframe"` sur la page dédiée et la boîte en `h-[85vh]` : les
+deux rougissent.
+
+### Le générateur public écrivait avec le PLUS PETIT modèle (Béné, 8 septembre 2026)
+
+"Le générateur de quiz ne fonctionne pas : j'ai cette erreur `JSON IA
+invalide. Réessaie.` au lieu du quiz généré." Et, séparément : "Tu as
+bien utilisé le même prompt et la même IA pour générer le quiz ? Je
+trouve le résultat pas ouf."
+
+**Les deux phrases décrivent la MÊME cause, et elle est mesurée.**
+
+| | le modèle demandé |
+|---|---|
+| `/api/quiz/generate` (l'éditeur payant) | `resolveAnthropicModel(..., "opus")` |
+| `/api/embed/quiz/generate` (le générateur public) | **`"haiku"`** |
+
+Le prompt, lui, était bien le même des deux côtés (`buildQuizGeneration
+Prompt`), et le parsing du JSON est identique ligne pour ligne. Le
+générateur public écrivait donc avec le plus petit modèle de la famille,
+sur un prompt long et un schéma JSON strict : ça donne exactement les
+deux symptômes qu'elle décrit, un contenu moins bon ET du JSON parfois
+malformé, donc "JSON IA invalide" sur l'écran qui doit donner envie.
+
+🚨 **ET CETTE PAGE AVAIT ÉCRIT LE CONTRAIRE, À MOITIÉ.** La section du
+2 septembre dit : "Le prompt, lui, était déjà le même des deux côtés :
+c'est vérifié, pas supposé." **C'était vrai, et cette phrase a servi de
+preuve que la génération était identique, ce qui était faux.** C'est mot
+pour mot la faute du 3 septembre sur les prompts de l'Atelier : **une
+phrase exacte sur une moitié laisse croire l'autre moitié.** Dire ce
+qu'on a vérifié ne suffit pas ; il faut dire aussi ce qu'on n'a pas
+vérifié.
+
+**Règle : `lib/quiz/modeleGeneration.ts` porte le DÉFAUT, et les deux
+routes l'appellent.** La SURCHARGE reste par surface (le générateur
+public lit `ANTHROPIC_MODEL_EMBED` puis `ANTHROPIC_MODEL`) : c'est ce
+qui permet de le redescendre un jour de trafic anormal sans toucher à
+l'éditeur payant. Ce qui ne peut plus arriver, c'est que les deux
+DÉFAUTS divergent sans que personne ne le voie.
+
+### ET LE SUJET DU QUIZ PARTAIT DANS LE CHAMP DE L'OFFRE
+
+Trouvé en comparant les deux appels ligne à ligne. Le générateur public
+faisait :
+
+```
+buildQuizGenerationPrompt({ ..., intention: topic })
+```
+
+`intention`, dans ce prompt, c'est **"pourquoi tu crées ce quiz"**,
+c'est à dire l'OFFRE PAYANTE vers laquelle chaque bouton doit ramener.
+On disait donc au modèle que l'offre de la créatrice était le sujet de
+son quiz, et il écrivait des CTA qui vendent... le sujet.
+
+`buildQuizGenerationPrompt` prend maintenant un `sujet` à lui, émis
+seulement quand il est fourni : un champ vide n'est jamais rendu avec un
+tiret (règle du 1er septembre, une ligne "OFFRE : -" apprend au modèle
+qu'il a le droit d'en inventer une).
+
+### LES RÉGLAGES SONT CEUX DU VRAI TIQUIZ, PAS UNE VERSION ALLÉGÉE
+
+Béné : "il faudrait aussi demander au départ si le visiteur veut un quiz
+scoré ou profil, en expliquant brièvement ce que c'est, pour montrer que
+les deux sont dispo." Puis : "pour obtenir la même qualité de quiz, il
+faut réutiliser la fonction 'créer un quiz avec l'ia' du vrai tiquiz.
+Mais en rendant ça un peu plus UX UI friendly, plus joli. **On doit
+coller au mieux à l'intérieur de tiquiz en fait.**"
+
+Le formulaire public demandait cinq champs et un compteur de questions.
+Il demande maintenant les MÊMES choses que `QuizFormClient`, avec ses
+MOTS (relevés dans le namespace `quizForm` de `messages/fr.json`) :
+
+| Le réglage | Ce qu'il décide |
+|---|---|
+| Format, court ou long | le nombre de questions, DÉDUIT (4 ou 8) |
+| **Type : par profil, ou avec un score** | la mécanique d'attribution du résultat |
+| nombre de profils, ou de tranches | le libellé CHANGE avec la mécanique |
+| ton | imposé au modèle |
+| "Pourquoi tu crées ce quiz ?" | l'offre, facultative |
+| prénom et genre | la personnalisation dynamique |
+
+**LES DEUX CARTES DE TYPE NE SONT PAS DÉCORATIVES : c'est LA décision
+qui bloque** (drame Véronique, 2 août, deux jours perdus sur un quiz
+scoré qu'elle voulait par profil). Elles disent donc le QUESTIONNEMENT,
+"qui es-tu ?" et "où en es-tu ?", jamais la mécanique.
+
+**`questionCount` a DISPARU du formulaire, et c'est délibéré** : le vrai
+formulaire le DÉDUIT du format. Deux réglages pour une seule décision,
+c'est un des deux qui finit par mentir.
+
+**Et le libellé du nombre de résultats CHANGE avec la mécanique** : en
+scoring ce ne sont pas des profils mais des tranches de score, et les
+appeler pareil est exactement ce qui a coûté deux jours à Véronique.
+
+### L'ÉDITEUR PREND TOUT L'ÉCRAN, ET LE RETOUR VIT DANS SA BARRE
+
+"La mise en page de l'éditeur est éclatée sur la page du générateur,
+c'est pas représentatif, ça donne pas envie, il faut mettre le véritable
+éditeur en pleine page, en mettant un bouton pour revenir sur le
+générateur."
+
+Elle a raison, et c'est mesurable : l'éditeur est une grille à trois
+colonnes bâtie pour un écran entier. Enfermé dans la colonne d'une page
+marketing, il rend ses colonnes à 300 px, donc il montre au visiteur un
+outil qui a l'air cassé, sur la page exacte qui doit lui donner envie.
+
+`cadreDuGenerateur("page")` rend donc `fixed inset-0 z-50` pour
+l'éditeur, et **AUCUNE barre à nous au dessus** : l'éditeur est en
+`h-screen`, donc tout ce qu'on lui mettrait sur la tête lui volerait la
+même hauteur en bas, et le bas serait ROGNÉ (règle du 7 septembre, un
+débordement n'est une perte que s'il est rogné, et ici il le serait). Le
+retour vit dans SA barre à lui, à la place exacte où une créatrice
+connectée trouve sa flèche.
+
+**Et le défilement de la page qui est DERRIÈRE est verrouillé.** Sans
+ça, la molette traverse et fait défiler la page marketing sous
+l'éditeur, ce qui est exactement le "c'est pas représentatif". C'est le
+MÊME paramètre qui décide des deux (`verrouillerLeDefilement`) : dans
+une iframe il n'y a rien derrière, donc rien à verrouiller.
+
+**Le jeton n'est PAS effacé au retour** : c'est le même quiz, on revient
+sur le formulaire, on ne recommence pas de zéro.
+
+### DEUX QUIZ PAR RÉSEAU, ET LA FENÊTRE EST DE 24 H
+
+"Limiter à 2 quiz générés gratos pour une même adresse IP."
+
+C'était 10 par heure, et ça n'a plus rien d'anodin depuis le même jour :
+le générateur public écrit désormais avec le modèle de l'éditeur payant.
+
+**LA FENÊTRE EST DE 24 H, PAS "À VIE", ET C'EST UNE DÉCISION.** Une
+adresse IP ne désigne pas une personne : en 4G, un opérateur en partage
+une seule entre des milliers d'abonnés (CGNAT), et un bureau, un espace
+de coworking ou une salle de formation sortent tous par la même. Bloquer
+à vie sur ce signal fermerait la porte à des inconnus qui n'ont jamais
+rien généré, et **personne ne le verrait jamais** : ils partiraient,
+c'est tout. Si Béné veut plus strict, c'est UNE constante à changer.
+
+**Les trois nombres vivent dans `lib/embed/limites.ts`**, pas dans
+`rateLimit.ts` : voir plus haut, `supabaseAdmin` lève au chargement.
+
+### SES TROIS RÉÉCRITURES, MOT POUR MOT
+
+Elle a réécrit trois phrases de la page. Elles sont posées telles
+quelles, sans "amélioration" :
+
+| Ce qui était écrit | Ce qu'elle a écrit |
+|---|---|
+| "L'IA écrit tes questions, options et profils. Quelques secondes." | "Tiquiz rédige tes questions et les profils, ça vaut le coup de patienter quelques secondes 😉" |
+| "Trois gestes, et le troisième est celui qui compte : rien n'est figé, tout se corrige." | "Suis ces 3 étapes pour créer ton premier quiz interactif" |
+| "Pas un squelette à remplir : un quiz entier, lisible, que tu peux publier tel quel ou réécrire mot par mot." | "Tiquiz te donne un quiz déjà optimisé pour attirer tes futurs clients et les amener à te confier leur email. Mais tu gardes la main sur tout : édites-le à l'infini" |
+
+Sa deuxième remarque nomme le défaut de la première version : "c'est
+mal traduit de l'anglais". Une phrase qui commence par "Trois gestes, et
+le troisième est celui qui compte" est une figure de style qui n'apprend
+rien ; "Suis ces 3 étapes pour créer ton premier quiz interactif" dit ce
+qu'on doit faire.
+
+### 🚨 LE MULTILANGUE : la réponse honnête est NON, et voici les chiffres
+
+Béné : "d'ailleurs toutes les pages et mêmes les articles doivent être
+multilangues, j'espère que tu as anticipé."
+
+**Non, et je le dis dans ce sens là plutôt que de laisser croire.**
+Mesuré le 8 septembre, pas déduit :
+
+| | langues servies |
+|---|---|
+| l'APPLICATION (l'éditeur, le viewer, les écrans) | **7** (`SUPPORTED_LOCALES`) |
+| **TOUTES les pages du site public** | **2** (fr + en), au 8 septembre au soir |
+| le blog | **10 articles fr, 10 en** (les 4 importés le 8 septembre, les 6 traduits à la main le soir même) |
+
+🚨 **CE BLOC DISAIT "il reste un vrai chantier" SUR QUATRE PAGES. C'EST
+PÉRIMÉ**, et je le corrige en place plutôt que d'empiler (règle du
+31 août). Le générateur, le hub intégrations et ses six pages filles,
+`/a-propos`, `/affiliation`, `/affiliation-atelier` et `/newsletter`
+ont été traduits le 8 septembre : **il ne reste AUCUNE page interne du
+site en français seul.** Le détail de chaque passage vit dans les
+sections ci dessous.
+
+🚨 **CE PARAGRAPHE DISAIT "traduire le BLOG est autre chose, et c'est
+sa décision". PÉRIMÉ pour l'anglais** (Béné, 8 septembre : "oui traduis
+les stp"), corrigé en place. Les 10 articles ont leur version anglaise.
+
+**Ce qui reste vrai, et qui reste sa décision : les CINQ AUTRES
+langues.** 10 articles fois 7 langues font 70 pages à tenir à jour, et
+chaque correction de chiffre (le prix, le taux d'affiliation, un lien
+mort) se paierait alors sept fois. Le pipeline `blog:reparer` ne sait
+corriger qu'une langue à la fois, et il en existe déjà DEUX
+(`faitsProgramme.ts` et `faitsEn.ts`) : une troisième table serait une
+troisième occasion de diverger.
+
+### MES DEUX FAUTES DE CE PASSAGE
+
+**1. `export { X } from "..."` ne crée AUCUN binding local.** J'ai voulu
+re-exporter les bornes depuis `lib/site/generateurQuiz.ts` et les
+interpoler dans la FAQ du même fichier : la valeur n'existait pas dans
+la portée du module, et `tsc` l'a dit. Il faut un vrai `import` PUIS un
+`export { X }` nu.
+
+**2. Un garde-fou qui figeait `h-screen` a rougi sur une correction
+juste.** Il exigeait la chaîne littérale, donc il refusait le passage en
+`fixed inset-0`, c'est à dire exactement ce qu'elle demandait. **HUITIÈME
+fois qu'un test qui fige une FORMULATION empêche de corriger la
+formulation** ; il vise maintenant le FAIT (le cadre occupe tout le
+viewport, il ne pose aucune borne qui rognerait l'éditeur, et une
+surcouche verrouille le défilement de ce qui est derrière).
+
+## L'anglais a enfin une ADRESSE (Béné, 8 septembre 2026)
+
+"J'ai des users anglophones qui me trouvent sur tipote.blog avec les
+articles en anglais : on doit les récupérer sur le blog tiquiz.fr avec
+les articles et pages en anglais. Mais il faut que ce soit bien fait."
+Et, dans le même message : **"je ne veux pas changer les URL actuelles
+parce qu'elles commencent à ranker doucement."**
+
+### CE QUI BLOQUAIT, ET CE N'ÉTAIT PAS LA TRADUCTION
+
+Mesuré avant d'écrire une ligne, et c'est structurel :
+
+| | |
+|---|---|
+| la langue du site venait de | le COOKIE `ui_locale`, et de rien d'autre |
+| segments de langue dans les URL | **aucun** |
+| balises `hreflang` dans tout le dépôt | **aucune** |
+
+`tiquiz.fr/tarifs` était donc **UNE seule adresse qui changeait de
+langue selon le cookie du visiteur**, et un robot n'envoie jamais de
+cookie. **Il n'existait AUCUNE URL anglaise à indexer.** Traduire du
+texte n'y aurait rien changé : ses lecteurs anglophones n'avaient nulle
+part où atterrir, et Google n'avait rien à ranger dans sa version
+anglaise.
+
+C'est pour ça que ce passage ne traduit presque rien et construit
+l'adresse : le texte sans l'adresse ne sert à personne.
+
+### LE FRANÇAIS NE PORTE AUCUN PRÉFIXE, ET C'EST SA CONTRAINTE
+
+```
+/tarifs        le francais, exactement ou il est aujourd'hui
+/en/tarifs     l'anglais
+```
+
+Poser `/fr/` changerait CHAQUE adresse déjà indexée, c'est à dire jeter
+le référencement qu'elle commence à avoir. `LANGUE_SANS_PREFIXE = "fr"`
+(`lib/site/langues.ts`), et le test refuse qu'un `/fr/` se fabrique
+quelque part.
+
+**ON RÉÉCRIT, ON NE REDIRIGE PAS.** L'adresse vue par le visiteur reste
+`/en/tarifs`, donc c'est elle que Google indexe et elle que le
+`hreflang` apparie. Une redirection vers `/tarifs` ferait disparaître
+l'URL anglaise, c'est à dire tout l'intérêt du chantier.
+
+### L'URL GAGNE SUR LE COOKIE, ET C'EST LA RÈGLE QUI CASSE EN SILENCE
+
+Sans elle, `/en/tarifs` sert du FRANÇAIS à quelqu'un dont le cookie dit
+"fr", et Google indexe du français sous une adresse anglaise. **La page
+s'affiche parfaitement pendant tout ce temps** : c'est exactement la
+forme de panne que ces dépôts paient le plus cher.
+
+Le middleware pose la langue dans un en-tête de requête
+(`ENTETE_LANGUE`), et `i18n/request.ts` le lit AVANT le cookie. Le
+cookie garde tout son rôle : il décide partout où l'URL ne se prononce
+pas, c'est à dire l'app derrière connexion et le français.
+
+**Et c'est la PRÉCÉDENCE qui le dit, pas l'ordre des lignes.** Mon
+premier test mesurait l'ordre des deux `await`, et il ne distinguait
+RIEN : `indexOf("langueDeLUrl(")` tombait sur la DÉCLARATION de la
+fonction, écrite plus haut, donc le test restait vert quand on
+inversait vraiment les deux lignes. Et ces deux lignes ne décident
+rien : c'est le `??` qui décide. **Treizième fois qu'un contrôle ne
+distingue pas ce qu'il est censé distinguer**, et cette fois il a fallu
+rejouer la version fautive pour le voir.
+
+### LA CANONIQUE ANNONCE SA PROPRE LANGUE
+
+`alternatesDeLangue(origine, cheminNu, langueCourante, langues)` prend
+**QUATRE paramètres, et les deux derniers sont ce qui compte.**
+
+Mon premier jet rendait `languages[dispo[0]]`, donc toujours le
+français : **chaque page anglaise aurait annoncé la française comme sa
+version de référence.** Google l'aurait crue, l'anglais n'aurait jamais
+été indexé, et rien à l'écran ne l'aurait dit. `langueCourante` est
+donc un PARAMÈTRE OBLIGATOIRE (règle du 1er août), et le test rejoue la
+version qui devine : il rougit.
+
+**La canonique se lit sur l'ADRESSE, jamais sur le texte affiché.**
+`langueCanonique()` (`lib/site/langueRequete.ts`) lit l'en-tête ;
+`getLocale()` répond la langue du TEXTE, qui peut venir d'un cookie ou
+d'un `?lang=`. Les deux disent la même chose sur `/en/tarifs` et PAS
+sur `/tarifs` visité avec un cookie anglais. Les confondre ferait
+annoncer deux canoniques différentes pour la même URL, et c'est celle
+du robot qui compte.
+
+Ce module lit `next/headers`, donc il ne vit PAS dans `langues.ts` :
+celui là reste pur, donc chargeable par le runner natif.
+
+### ON NE DÉCLARE QUE LES LANGUES QU'UNE PAGE A VRAIMENT
+
+`PagePublique.langues` (`lib/site/pagesPubliques.ts`), absent = le
+français seul. Déclarer une langue qu'une page n'a pas mettrait
+`https://tiquiz.fr/en/<chemin>` dans le sitemap ET dans ses `hreflang`,
+et Google y trouverait du FRANÇAIS sous une adresse anglaise : l'anglais
+serait alors jugé sur du contenu dupliqué.
+
+Le sitemap DÉRIVE cette liste (`languesDePage`), il ne la recopie pas :
+deux listes écrites séparément finissent toujours par diverger, et ce
+fichier le dit dans son propre en-tête depuis le 30 août.
+
+**Une seule page a un texte anglais complet aujourd'hui : `/tarifs`**
+(`contenuLanding("en")` existe depuis le 4 septembre). Le test exige
+que cet objet de langue existe encore : déclarer la langue sans écrire
+le texte est exactement le trou décrit au dessus.
+
+### LA RACINE `/en/` EST EXCLUE, ET C'EST DÉLIBÉRÉ
+
+Sur un hôte de vente, `/` réécrit vers la page de vente CAPTURÉE, qui
+est en français. La servir sous `/en/` serait la panne que tout ce
+chantier existe pour empêcher. Elle répondra le jour où une racine
+anglaise existe (la landing a son texte anglais, et elle attend sa
+validation).
+
+### L'AFFILIATION ET LE COMPTEUR SURVIVENT AU PRÉFIXE
+
+Sa consigne du même jour : "le générateur pourra être offert en lead
+magnet par mes affiliés qui les enverront direct sur cette page avec
+leur ref."
+
+**MESURÉ en servant les deux adresses**, pas déduit :
+
+```
+GET /en/tarifs?ref=jocelyne  ->  set-cookie: tq_ref=jocelyne; Max-Age=31536000
+GET /en/tarifs               ->  200, <title> anglais, lang="en"
+                                 canonical  https://tiquiz.fr/en/tarifs
+                                 hreflang   fr + en + x-default
+GET /tarifs                  ->  200, <title> francais, lang="fr"
+                                 canonical  https://tiquiz.fr/tarifs
+GET /a-propos                ->  aucun hreflang anglais (pas de texte)
+```
+
+La réécriture passe par `poseSa`, comme les onze autres sorties du
+middleware, et le clic comme la vue se comptent AVANT elle, donc sur le
+chemin reçu (`/en/tarifs`). Effet de bord voulu : le compteur de trafic
+range l'anglais sous son propre chemin, donc elle voit ce que l'anglais
+apporte.
+
+**ET LA PAGE DU GÉNÉRATEUR COMMISSIONNE COMME LE RESTE**, sa phrase du
+même jour : "le générateur pourra être offert en lead magnet par mes
+affiliés qui les enverront direct sur cette page avec leur ref."
+**Mesuré avant d'écrire le garde-fou : rien ne manquait**, et je le dis
+dans ce sens là. La chaîne a QUATRE maillons, et il les faut tous les
+quatre : le middleware pose `tq_ref` en arrivant ; le clic est compté
+sur ce chemin ; le bouton "Garder mon quiz" NAVIGUE vers `/signup` sur
+la même origine (un `postMessage` ne poserait rien, et une adresse
+absolue perdrait le cookie) ; `/api/auth/signup` relit le cookie et
+appelle `rattacherInscrit`. Les trois cas ajoutés à
+`generateur-page.test.mts` les tiennent ensemble, vérifiés en rejouant
+deux versions fautives (le signup qui ne lit plus le cookie, la page
+sortie de `PAGES_PUBLIQUES`) : les deux rougissent. Un test qui n'en
+tiendrait qu'un passerait au vert sur une page où l'affiliation est
+morte, et ça ne se voit sur AUCUN écran.
+
+### CE QUI EST SERVI EN ANGLAIS, ET CE QUI NE L'EST PAS
+
+L'adresse existe partout. **Au 8 septembre au soir, le CONTENU aussi :
+il ne reste AUCUNE page interne du site en français seul.**
+
+| | langues servies |
+|---|---|
+| `/tarifs` | **fr + en** |
+| **le hub et les 8 pages de fonctionnalités** | **fr + en** |
+| **`/generateur-de-quiz`** | **fr + en** |
+| **`/a-propos`** | **fr + en** |
+| **`/integrations`** et ses **6 pages d'outil** | **fr + en** |
+| **`/affiliation`** et **`/affiliation-atelier`** | **fr + en** |
+| **`/newsletter`** | **fr + en** |
+| les 10 articles du blog | fr |
+| **les 10 articles** | **SERVIS** sur `/en/blog/<slug>`, un pour un avec les 10 français |
+
+🚨 **CETTE TABLE DISAIT "le CONTENU sur deux pages" ET "`/affiliation` |
+fr". LES DEUX SONT PÉRIMÉES**, corrigées en place le 8 septembre au soir
+plutôt qu'empilées : `/affiliation` et `/affiliation-atelier` ont été
+traduites dans la journée, `/newsletter` le soir.
+
+🚨 **CETTE LIGNE DISAIT "importés et corrigés sur le disque, PAS ENCORE
+SERVIS". C'EST PÉRIMÉ, et je la corrige en place** (règle du 31 août :
+une note d'état des lieux se relit quand on corrige ce qu'elle décrit).
+
+MESURÉ le 8 septembre sur le serveur, pas déduit : `/en/blog`,
+`/en/blog/<slug>` et `/en/blog/rss.xml` répondent **200**, la page porte
+`lang="en"`, sa canonique est `https://tiquiz.fr/en/blog/<slug>`, et ses
+trois `hreflang` apparient le bon slug FRANÇAIS (`fr`, `en`,
+`x-default`).
+
+**Et l'anglais est à PARITÉ avec le français, au chiffre près** : 19
+`alt` renseignés et 4 vides des deux côtés. Les quatre vides sont les
+COUVERTURES (celle de l'article, plus les trois cartes d'articles liés),
+et c'est le comportement historique du français : une couverture posée
+juste à côté de son propre titre est décorative, et répéter le titre
+ferait perdre du temps à celle qui écoute.
+
+**Ses 4 articles anglais sont mesurés, et ils s'apparient 1 pour 1 avec
+4 des 10 français** (relevé sur `tipote.blog/posts`, en lisant
+`window.__PRELOADED_STATE__` : c'est du JavaScript, pas du JSON) :
+
+```
+17-reasons...                        <-> 17-raisons-lancer-quiz-business
+capturing-emails-quiz-strategy       <-> collecter-emails-quiz-strategie
+create-quiz-systeme-io               <-> comment-creer-quiz-systeme-io
+monthly-recurring-income-tiquiz...   <-> rente-mensuelle-affiliation-tiquiz
+```
+
+Les 6 autres français n'ont pas de version anglaise.
+
+### LES 4 ARTICLES ANGLAIS SONT IMPORTÉS, ET SURTOUT CORRIGÉS
+
+**Publier son anglais tel quel aurait republié en anglais ce qu'on vient
+de corriger en français**, sur les deux pages qui vendent et qui
+recrutent les affiliés. Ses articles datent d'avant le 6 août : ils
+portent l'ancien tarif, la vente bêta à vie qui n'existe plus, et
+l'article d'affiliation annonce mot pour mot les promesses fausses
+corrigées les 31 août et 1er septembre ("no threshold", "paid on the
+10th", 40 % écrit comme un plafond, plus **une section entière sur
+Tipote** à 50 % à vie sur des plans de $19 à $99/mois).
+
+**Trois pièces, et les trois sont obligatoires :**
+
+| | |
+|---|---|
+| `scripts/importer-blog-en.mjs` | lit `window.__PRELOADED_STATE__` (du JavaScript, pas du JSON) et ne corrige RIEN, exprès |
+| `lib/blog/faitsEn.ts` | la table anglaise : 54 règles qui mordent, 94 corrections |
+| `scripts/reparer-blog-en.mjs` | l'applique, et REFUSE de finir en silence |
+
+**L'IMPORT NE CORRIGE RIEN, ET C'EST VOULU** : un ré-import écraserait
+toute retouche faite dans le JSON. C'est la mécanique de
+`faitsProgramme.ts` depuis le 31 août, et le test appelle LA MÊME
+fonction : le contenu est propre quand la réparation ne change plus
+rien.
+
+**LES PRIX SE LISENT, ILS NE SE RECOPIENT PAS.** Les deux tarifs Tiquiz
+viennent de `faitsProgramme.ts` (exportés le 8 septembre : deux copies
+d'un prix finissent toujours par diverger, et le blog annoncerait alors
+deux tarifs selon la langue lue). Les prix des CONCURRENTS viennent de
+`liensIntegrations.ts`, la même source que le français : son anglais
+annonçait "Typeform at $59/month" et "$88/month" à cinq endroits, sur
+les deux pages qui nous comparent à Typeform et Zapier, c'est à dire
+exactement là où un lecteur va vérifier. **Les devises ne se convertissent
+pas** (règle du 1er septembre) : Typeform et Zapier facturent en dollars,
+Tiquiz en euros.
+
+**LA SECTION SUR TIPOTE EST REMPLACÉE, PAS CORRIGÉE PHRASE PAR PHRASE.**
+Une section entière qui promet un produit qui n'est pas en vente ne se
+rafistole pas : `remplacerSection` échange les blocs entre le titre qui
+ouvre et celui qui ferme, et **il LÈVE si le titre de fermeture est
+introuvable** (on n'écrit rien plutôt que de manger la fin de
+l'article). Ce qui remplace parle de l'Atelier du Quiz, qui est vendu, à
+70 %, avec son montant calculé.
+
+### ET LES 27 IMAGES ANGLAISES N'AVAIENT AUCUN TEXTE ALTERNATIF
+
+Mesuré avant d'écrire une ligne, en les regardant une par une :
+**27 images sur 27**, dans les quatre articles. C'est 100 %, là où le
+français était à 43 % le 31 août.
+
+Un `alt` vide coûte trois choses d'un coup, et **aucune ne se voit à
+l'écran** : une lectrice aveugle n'entend rien (ou s'entend épeler
+`17-reasons-to-launch-business-quiz-4ce3c7f955`), Google ne sait pas ce
+que le schéma montre, et un modèle de langue non plus. Or ces schémas
+portent l'essentiel de l'argumentaire (l'email contre les réseaux, les
+chiffres de segmentation, le tunnel). C'est exactement ce qu'elle vise
+en parlant de GEO.
+
+**UNE DEUXIÈME TABLE, ET C'EST LA MESURE QUI L'IMPOSE.**
+`lib/blog/altImagesEn.ts` vit à côté de `altImages.ts` parce que la clé
+est le CHEMIN de l'image, et que **deux visuels sont PARTAGÉS avec les
+articles français** (`/blog/img/quiz-buzzfeed.webp` et
+`/blog/img/quiz-kerastase.webp`). Une seule table poserait donc du
+FRANÇAIS dans une page anglaise, sur la seule ligne qu'une lectrice
+aveugle anglophone entend : c'est le reproche du client du 7 septembre,
+transposé au blog.
+
+**Et `poserAltEn` existe à côté de `poserAlt` au lieu de prendre une
+langue en paramètre** : une fonction qui accepte les deux tables finit
+par recevoir la mauvaise, et rien ne le dirait.
+
+**LES 27 ONT ÉTÉ REGARDÉES, JAMAIS DEVINÉES.** Leurs noms sont des
+empreintes (`...-4ce3c7f955.webp`) : ils ne disent rien du tout. Deux
+visuels portent une marque que la capture ne permet pas d'identifier
+avec certitude (la bannière à 82M+ quiz takers, l'écran "First, choose
+an intention") : **leur texte dit ce qui est à l'écran et s'arrête là.**
+Nommer au jugé mettrait une marque fausse dans la seule ligne que lisent
+Google, un modèle de langue et une lectrice aveugle.
+
+**Les deux visuels ÉCARTÉS sont dans la table, et sans chiffre.** Ils ne
+s'affichent nulle part depuis `visuelsPerimes.ts`, mais leur texte est
+écrit pour le jour où Béné les redessine, sans le tarif ni la
+projection : ce sont exactement les chiffres qui les ont fait écarter,
+et un texte qui les recopierait serait faux le jour du redessin.
+
+**LE SCRIPT REFUSE MAINTENANT DANS UN QUATRIÈME CAS : une image qui
+sort sans texte alternatif.** La table couvre les 27 ; une image qui
+ressort nue veut donc dire une seule chose, son chemin a changé et la
+table ne le NOMME plus. Ça ne casse rien et ça ne s'affiche pas : c'est
+le genre de trou qui vit des mois.
+
+**Et le contrôle lit le contenu CORRIGÉ, jamais le disque** : en
+`--verifie` rien n'est écrit, donc le disque dirait "27 images nues" sur
+une réparation parfaitement bonne.
+
+### ET MON PROPRE DISCRIMINANT S'EST CASSÉ EN AJOUTANT UNE 4e FAMILLE
+
+`dejaCorrige` valait `compteur.size === 0`, et c'était juste tant que le
+compteur ne portait que les trois familles de règles de texte. Le jour
+où une QUATRIÈME chose s'y est ajoutée (la pose des `alt`), une
+réparation parfaitement bonne sur un contenu déjà corrigé comptait
+27 poses, donc `dejaCorrige` tombait à faux, donc **les 54 règles de
+texte étaient dénoncées comme fausses et le script refusait de finir.**
+
+Il se mesure maintenant sur les SEULES familles que `muettes`
+surveille. **Seizième fois qu'un contrôle ne distingue pas ce qu'il est
+censé distinguer**, et cette fois dans le contrôle même que ce script
+existe pour porter.
+
+**Et la phrase finale ne s'appuie plus dessus** : elle disait "rien à
+corriger" pendant que 27 textes venaient d'être posés.
+
+Test : les 4 cas ajoutés à `tests/logic/blog-en.test.mts`, vérifiés en
+rejouant QUATRE versions fautives (les `alt` retirés du disque, un texte
+français dans la table, `poserAltEn` qui n'écrase plus un `alt` hérité
+de l'import, le même texte dans les deux tables) : les quatre
+rougissent.
+
+### ET LA TYPOGRAPHIE ÉTAIT FRANÇAISE DANS UN TEXTE ANGLAIS
+
+Béné, le même jour : "il faut à chaque fois utiliser le champ sémantique,
+les expressions, tournures de phrases, ponctuation etc .. propre à chaque
+langue, c'est pas uniquement du mot à mot."
+
+**Elle avait raison, et c'était MESURABLE. Les fautes étaient les
+MIENNES**, posées par ma propre table de corrections :
+
+| | son anglais d'origine | ce que j'écrivais |
+|---|---|---|
+| un pourcentage | `40%`, `80%`, toujours collé | **27 fois `40 %`** |
+| un montant | `$9`, `$88`, jamais "9 USD" | **22 fois `17 EUR`** |
+
+Son import n'en portait AUCUNE (mesuré : zéro dans les quatre fichiers).
+`eur()` rend donc `€5.67` (symbole devant, point décimal, virgule des
+milliers) et `usd()` rend `$29.99`, à l'anglaise, et le `%` se colle.
+
+**Et trois espaces devant une ponctuation vivaient dans SA prose**
+("And now ?" deux fois, "three options : " une fois).
+`ponctuationAnglaise()` les retire, avec les mêmes gardes que
+l'insertion française du 3 août, dans l'autre sens : on ne touche qu'à
+une ponctuation qui TERMINE. Ça protège un `https://`, une heure
+(`12:30`), un `&nbsp;` et un `style="color:red"`, tous testés. Et elle
+est IDEMPOTENTE par construction : une fois l'espace retirée, le motif
+ne trouve plus rien.
+
+**C'est la faute du 1er août dans une autre robe** : une règle écrite
+pour une langue, appliquée telle quelle à une autre.
+
+### UNE RÈGLE MUETTE NE VEUT PAS DIRE LA MÊME CHOSE SELON LE MOMENT
+
+Mon premier jet REFUSAIT dès qu'une règle ne mordait pas. Sur un import
+frais c'est juste (une règle muette est une règle fausse, leçon du
+4 septembre). Sur un contenu DÉJÀ corrigé, aucune règle ne peut mordre,
+et c'est exactement le résultat attendu : **le script ne pouvait donc
+tourner qu'une seule fois**, et le test, qui appelle la même mécanique,
+n'aurait jamais pu passer.
+
+**Le discriminant est "combien ont mordu", pas "il en reste une" :** des
+règles qui mordent À CÔTÉ de règles muettes disent que celles là sont
+fausses ; zéro morsure sur toute la table dit que le travail est déjà
+fait. Le contrôle des interdits, lui, tourne dans les DEUX cas : c'est
+la vraie preuve.
+
+**Et il lit le contenu CORRIGÉ, gardé en mémoire, jamais le disque.** En
+`--verifie` rien n'est écrit : relire le disque aurait fait dire au
+contrôle que TOUT survit, sur une réparation parfaitement bonne.
+Quatorzième fois qu'un contrôle ne distingue pas ce qu'il est censé
+distinguer, et cette fois il a été attrapé avant d'envoyer chercher au
+mauvais endroit.
+
+**Aucun switcher de langue n'est posé, et c'est un choix.** Le site
+public n'en a jamais eu ; avec UNE page traduite, un lien "English" dans
+le pied de page mènerait nulle part sur les vingt autres. Il se pose le
+jour où plusieurs pages existent en anglais.
+
+### `/en/tarifs` ÉTAIT UN ORPHELIN : le chrome l'ignorait (8 septembre)
+
+Mesuré sur `/en/blog` servi, une fois le blog anglais en ligne :
+
+```
+<a href="/tarifs">Tarifs</a>
+<a href="/blog">Blog</a>
+```
+
+`/en/tarifs` existe, il est en anglais, il est dans le sitemap, et
+**AUCUN lien du site ne le citait.** Une page qu'aucun lien ne désigne
+n'est atteinte par personne : un lecteur anglophone arrivé de
+`tipote.blog` ne la trouve jamais, et un robot ne la découvre que par le
+sitemap, sans un seul lien interne pour la peser.
+
+**Règle : `hrefPourLangue(href, langue)` (`lib/site/nav.ts`), et les
+LIBELLÉS ne bougent pas.** La décision écrite dans
+`app/en/blog/layout.tsx` reste entière : traduire un libellé sans
+traduire la page promettrait de l'anglais derrière chaque clic. Une
+DESTINATION n'a pas cette contrainte, et c'est la seule moitié qui
+change.
+
+**LA DISPONIBILITÉ SE LIT, ELLE NE SE SUPPOSE PAS.** Préfixer tout en
+`/en/` ferait huit 404 dans le menu, sur toutes les pages à la fois :
+`/a-propos`, `/integrations` et les autres n'ont pas de version
+anglaise. Les deux sources sont celles qui existent déjà,
+`PAGES_PUBLIQUES` (la MÊME que le sitemap et les `hreflang`) et
+`CHEMINS_HORS_REECRITURE` (le blog, qui a son propre segment). Une
+deuxième liste écrite ici annoncerait une langue que le sitemap ne
+déclare pas.
+
+**Et la correspondance y est EXACTE, jamais un préfixe.** `/en/blog`
+existe ; `/en/blog/<slug français>` n'existe pas, parce que les slugs
+anglais sont différents (`17-reasons...` contre
+`17-raisons-lancer-quiz-business`). Un lien construit par préfixe
+mènerait à un 404 que personne ne voit avant de cliquer, et traduire un
+slug n'est pas le travail de cette fonction : c'est `alternatesDeLangue`
+qui apparie les deux, article par article.
+
+**LE SENS DE L'ERREUR :** un chemin oublié laisse un lien vers le
+français, c'est à dire le comportement d'aujourd'hui. Un chemin déclaré
+à tort donne un 404 dans le menu, partout d'un coup.
+
+#### `/tarifs` A SON PROPRE GROUPE DE ROUTES, ET C'EST UNE MESURE
+
+`langue` est une prop OBLIGATOIRE de `SiteShell` : elle ne peut pas se
+deviner (le blog anglais est `force-static`, donc prérendu au BUILD,
+donc sans requête à interroger ; `/en/tarifs`, lui, passe par la
+réécriture du middleware). Restait à savoir QUI la lui donne.
+
+**Un `headers()` dans un layout rend TOUT son groupe dynamique.** Relevé
+avant d'écrire une ligne : sur les 10 pages de `app/(site)/`, **8
+n'appellent aucune API dynamique**, donc elles sont prérendues au build,
+et ce sont exactement celles qui commencent à ranker. Poser la lecture
+de langue dans leur layout commun aurait payé un rendu par requête sur
+ces 8 pages, pour une langue qu'elles n'ont pas.
+
+`/tarifs` vit donc dans `app/(site-langues)/`, un DEUXIÈME groupe de
+routes. Un groupe n'ajoute aucun segment d'URL : `/tarifs` reste
+`/tarifs`, sa canonique et ses `hreflang` ne bougent pas (mesuré après
+le déplacement). Et il ne coûte rien : `/tarifs` lit déjà l'en-tête dans
+sa propre `generateMetadata`, il était donc déjà dynamique.
+
+**Les deux layouts rendent le MÊME `SiteShell`**, donc il n'y a pas deux
+chromes à tenir d'accord : le menu, le pied de page et leurs libellés
+vivent à un seul endroit (`lib/site/nav.ts`). Ce qui est dupliqué, c'est
+une ligne de trois mots, et le test exige que tout appelant de
+`SiteShell` passe sa langue.
+
+**MESURÉ après correction, sur le serveur :**
+
+| | Tarifs | Blog |
+|---|---|---|
+| `/en/blog` | **`/en/tarifs`** | `/en/blog` |
+| `/en/tarifs` | `/en/tarifs` | **`/en/blog`** |
+| `/blog`, `/tarifs`, `/a-propos` | `/tarifs` | `/blog` |
+
+Le chemin anglais boucle donc dans les deux sens, et le français ne
+bouge pas d'un caractère. `/en/tarifs` répond toujours `lang="en"`,
+canonique `https://tiquiz.fr/en/tarifs`, ses trois `hreflang`, et il
+pose encore `tq_ref` sur un `?ref=`.
+
+#### ET DEUX TESTS ONT ROUGI SUR UN CODE JUSTE
+
+`landing.test.mts` et `fonctionnalites.test.mts` portaient
+`app/(site)/tarifs/page.tsx` écrit en dur, à quatre endroits. Le
+déplacement de groupe les a fait rougir alors que rien n'était cassé.
+
+**Un groupe de routes n'ajoute aucun segment d'URL : un chemin sur
+disque n'est donc PAS une adresse, et l'écrire en dur dans un test fige
+un rangement.** `tests/logic/aide/pageDuSite.mts` le CHERCHE, et il
+refuse les deux cas qui comptent : introuvable (la page a vraiment
+disparu), ou trouvée DEUX fois (deux groupes serviraient la même URL, ce
+que Next refuse au build, et le dire ici le dit plus tôt). Vérifié en
+rejouant les deux : ils rougissent.
+
+### Le hub et les 8 pages de fonctionnalités passent en anglais (8 septembre)
+
+Deuxième moitié du chantier : l'adresse existait, il fallait le TEXTE.
+`/fonctionnalites` et ses 8 pages sont servies en `fr` et en `en`, et
+elles ont déménagé dans `app/(site-langues)/` (elles lisent maintenant
+`langueCanonique()`, donc leur groupe est celui qui a le droit).
+
+**UNE STRUCTURE, UN TEXTE PAR LANGUE.** Le slug, le palier, le fichier
+`source`, les deux voisines et le visuel vivent UNE fois, dans
+`FONCTIONNALITES_FR` ; une langue n'apporte que du texte, rangé par
+slug. Dupliquer le tableau entier laisserait `liees` et `source`
+diverger sans que rien ne le dise. Et **`TRADUCTIONS` est un `Record`
+dont les clés sont les 8 slugs**, donc en oublier un ne compile pas :
+sans ça, un slug manquant servirait du FRANÇAIS sous une adresse
+anglaise, la page s'afficherait parfaitement, et Google indexerait du
+contenu dupliqué.
+
+**LE SLUG NE SE TRADUIT PAS**, et c'est une décision : le sitemap, les
+`hreflang` et le menu se calculent alors par simple préfixe. Un slug
+traduit exigerait une deuxième table d'appariement, article par
+article, comme le blog a dû la faire.
+
+**LES LIENS INTERNES DE CES PAGES PASSENT PAR `hrefPourLangue`, jamais
+par `cheminPourLangue`.** La différence n'est pas cosmétique : leur CTA
+mène à `/signup`, qui n'est pas dans `PAGES_PUBLIQUES` et n'a aucune
+version anglaise. Un préfixe posé à l'aveugle aurait fabriqué
+`/en/signup`, c'est à dire un 404 au bout du seul bouton de la page.
+
+**Et le repli de langue du TEXTE est l'ANGLAIS, pas le français**
+(`languePubliqueDuTexte`) : le site public sert deux langues, l'app en
+connaît sept, et `contenuLanding` retombait déjà sur l'anglais depuis
+le 4 septembre. Deux replis différents feraient lire l'anglais sur un
+écran et le français sur le suivant, au même visiteur.
+
+#### ET DEUX AUTRES TESTS ONT ROUGI SUR UN CODE JUSTE
+
+La leçon juste au dessus s'est repayée deux fois dans l'heure, sur la
+même cause :
+
+1. **`landing.test.mts` lisait la feuille de style à
+   `app/(site)/fonctionnalites/styles.ts`.** Une feuille rangée À CÔTÉ
+   de sa page se cite forcément par un chemin de groupe : elle vit
+   maintenant dans `components/fonctionnalites/styles.ts`, à un endroit
+   stable, comme celle de la landing.
+2. **`site-en-anglais.test.mts` collait le chemin d'URL entier** pour
+   savoir si une page vit dans tel groupe. `/fonctionnalites/generation-ia`
+   est servi par `fonctionnalites/[slug]/page.tsx` : un segment
+   DYNAMIQUE ne porte pas le nom qu'on cherche, donc `existsSync`
+   répondait "non" sur une page qui existe et qui répond.
+   `servieParLeGroupe` descend segment par segment et accepte un
+   `[param]` à chaque niveau. Vérifié en rejouant la version fautive
+   (une page de fonctionnalité recréée dans `(site)`) : il rougit et il
+   la nomme.
+
+### `/a-propos` passe en anglais, et son récit ne bouge pas (8 septembre)
+
+C'est SA page auteur : deux ans de travail perdus, 30 000 € partis en
+fumée, 387 € de pension, 34 ans. **Une traduction qui déplace un de ces
+nombres écrit une autre vie que la sienne, et personne ne le verrait.**
+
+Le test compare donc les nombres des deux langues **après avoir
+normalisé le séparateur de milliers** : `30 000 €` et `€30,000` sont le
+MÊME fait, et ce qui doit rester identique est le nombre, jamais sa
+graphie. Mesuré, les deux langues portent le même jeu.
+
+**LE MODULE PORTE LA STRUCTURE UNE FOIS, chaque langue n'apporte que du
+texte** (`lib/site/aPropos.ts`), et `TRADUCTIONS` est un `Record` des
+langues préfixées : en oublier une ne compile pas. C'est le geste des
+8 pages de fonctionnalités, repris tel quel.
+
+**LA CITATION DE SON EX-ASSOCIÉ EST TRADUITE, ET C'EST UNE DÉCISION
+ÉCRITE.** La règle du 5 septembre interdit de traduire un TÉMOIGNAGE :
+c'est une preuve sociale, les mots de quelqu'un, et les réécrire en
+ferait un faux. Ici c'est du discours RAPPORTÉ à l'intérieur de son
+propre récit, et une lectrice anglophone ne lit pas le français : la
+laisser en français couperait la phrase qui explique tout le reste.
+C'est écrit dans l'en-tête du module pour que Béné puisse dire non.
+
+**La page a DÉMÉNAGÉ dans `app/(site-langues)/`** : c'est le seul groupe
+qui lit l'en-tête posé par le middleware, donc le seul où le chrome et
+les liens peuvent suivre `/en/`. Un groupe de routes n'ajoute aucun
+segment d'URL : `/a-propos` reste `/a-propos`.
+
+**Les liens passent par `hrefPourLangue`, jamais par un `/en/` écrit à
+la main** : `/newsletter`, `/support` et `/` n'ont pas de version
+anglaise, et le préfixe fabriquerait un 404 au bout des boutons de fin
+de page. Le lien des mentions légales garde son `target="_blank"`
+(règle du 24 août) et n'est jamais préfixé.
+
+**ET MON GARDE-FOU EST TOMBÉ SUR SON PROPRE ÉCHAFAUDAGE.** Il
+interdisait la sous-chaîne `"About"` dans la source de la page pour
+prouver qu'aucune phrase n'y est recopiée : il a rougi sur
+**`knowsAbout`**, la propriété schema.org du JSON-LD, c'est à dire sur
+un code parfaitement correct. **Dix-huitième fois qu'un contrôle ne
+distingue pas ce qu'il est censé distinguer.** Il cherche maintenant les
+VRAIES phrases du module (celles de plus de 20 caractères) : une phrase
+entière ne peut apparaître dans la page que si quelqu'un l'y a
+recopiée, alors qu'un mot choisi à la main tombe tôt ou tard sur un
+identifiant.
+
+**Trois tests existants ont rougi sur un code juste**, et pour la même
+cause : ils prenaient `/a-propos` comme fixture "page française
+seulement" (`chrome-en-anglais`, `site-en-anglais`) ou citaient son
+chemin de disque en dur (`branding-site`). Le premier a été sauvé par sa
+propre ligne de prémisse, qui VÉRIFIE que la fixture n'a pas de version
+anglaise : sans elle il serait passé au vert en ne mesurant plus rien.
+Les adresses passent désormais par `cheminPageDuSite`, et la fixture est
+`/integrations`.
+
+Test : `tests/logic/page-auteur.test.mts` (7 cas), vérifié en rejouant
+QUATRE versions fautives (un `alt` anglais remis en français, `€30,000`
+écrit `30 000 EUR`, la page revenue dans `app/(site)/`, une phrase du
+module recopiée dans la page) : les quatre rougissent.
+
+
+### Le hub intégrations passe en anglais, puis ses six pages filles (8 septembre)
+
+Suite du chantier. `/integrations` est servi en `fr` et en `en`, et il a
+déménagé dans `app/(site-langues)/` (c'est le seul groupe qui lit
+l'en-tête posé par le middleware, donc le seul où le chrome et les liens
+peuvent suivre `/en/`). **Un groupe de routes n'ajoute aucun segment
+d'URL** : l'adresse ne bouge pas d'un caractère, et c'est sa contrainte
+du jour ("je ne veux pas changer les URL actuelles").
+
+**MESURÉ après le déplacement, sur le serveur :**
+
+| | `<html lang>` | canonique | h1 | tableau |
+|---|---|---|---|---|
+| `/integrations` | `fr` | `.../integrations` | Connecter un formulaire... | "Zapier ou Make" |
+| `/en/integrations` | `en` | `.../en/integrations` | Connect a form or a quiz... | "Zapier or Make" |
+
+Les deux portent leurs trois `hreflang`, chacune sa canonique, et
+`?ref=jocelyne` pose toujours `tq_ref` sur l'adresse préfixée.
+
+#### CE QUI EST TRADUIT, ET CE QUI NE L'EST PAS
+
+🚨 **CE BLOC DISAIT "les SIX CARTES d'outil non". C'EST PÉRIMÉ depuis le
+8 septembre au soir** : les six pages d'outil sont servies en anglais
+(voir la section suivante), donc les cartes le sont aussi, et
+`outilsLangueDesPages` rend `null`. Je le corrige en place plutôt que
+d'empiler (règle du 31 août).
+
+**Ce qui reste vrai, et qui est la mécanique :** le tableau est de la
+donnée pure, `outilsPourLangue(langue)` garde le nom, le slug et le logo
+et ne change que les trois champs de texte. **Une carte ne se traduit
+QUE quand la page derrière l'est** : sinon son titre promet de l'anglais
+derrière le clic.
+
+**Le français rend `OUTILS` LUI MÊME**, pas une copie : deux tableaux
+pour la même langue finiraient par ne plus dire la même chose. Et
+`TEXTES_OUTILS_EN` est un `Record` typé sur les NOMS des outils, donc en
+oublier un ne compile pas : un outil manquant afficherait du FRANÇAIS
+dans une ligne anglaise, la page s'afficherait parfaitement, et personne
+ne le verrait.
+
+**ET UNE LIGNE LE DISAIT** (`outilsLangueDesPages`), au lieu de laisser
+la surprise au clic. C'est la règle du chrome, appliquée à une carte : un
+libellé resté français est une INFORMATION, pas un oubli. Elle rend
+`null` depuis que les six pages sont traduites, et **la fonction reste**
+: le jour où une septième page d'outil arrive sans son anglais, elle
+reparle toute seule.
+
+**LE GARDE-FOU S'AUTO-CORRIGE, et c'est le point.** Tant qu'aucune page
+fille ne déclare l'anglais, la ligne est OBLIGATOIRE ; le jour où les
+six l'ont, le même test exige qu'elle DISPARAISSE et refuse un état
+intermédiaire ("2 pages filles sur 6 sont traduites : finir, ou retirer
+la langue déclarée"). Un garde-fou qui fige l'état du jour aurait
+empêché de finir le travail.
+
+**Et le sitemap ne déclarait l'anglais QUE sur le hub**, tant que les
+six enfants n'avaient pas leur texte : le poser plus tôt aurait mis
+`/en/integrations/tally-systeme-io` dans le sitemap
+ET dans ses `hreflang`, et Google y aurait trouvé du français sous une
+adresse anglaise, donc jugerait l'anglais sur du contenu dupliqué.
+
+#### CE QUE `git checkout --` M'A COÛTÉ, ET C'EST NOUVEAU
+
+Pour rejouer la version fautive "la page revenue dans `(site)`", j'ai
+fait `rm -rf "app/(site)/integrations"`. **Ce dossier ne portait pas que
+la page : il porte les SIX pages filles.** Le `git checkout --` qui a
+suivi les a bien restaurées... **dans leur version d'AVANT le commit en
+cours**, donc sans le `langue={LANGUE_SANS_PREFIXE}` que ce chantier
+venait de leur poser.
+
+`tsc` l'a dit tout de suite (18 erreurs, `Property 'langue' is missing`),
+donc rien n'est parti. Mais la leçon vaut : **un `git checkout --` sur un
+travail non committé restaure l'état du DÉPÔT, pas l'état de la séance**,
+et un `rm -rf` de répertoire emporte des voisins qu'on n'avait pas en
+tête. Pour rejouer un déplacement de page, on déplace le FICHIER
+(`git mv` ou un `mv` du seul `page.tsx`), jamais son dossier.
+
+Test : `tests/logic/hub-en-anglais.test.mts` (8 cas), vérifié en rejouant
+SIX versions fautives (la ligne d'avertissement retirée alors que les
+pages filles sont en français, `at 0 €` à la française dans l'anglais,
+l'anglais qui rend `OUTILS` tel quel, le français qui rend une copie au
+lieu de `OUTILS` lui même, une phrase du module recopiée dans la page, la
+page revenue dans `(site)`) : les six rougissent.
+
+### Le CHROME parlait français sur les pages anglaises (8 septembre)
+
+Mesuré en servant les pages, une fois le blog anglais et les
+fonctionnalités en ligne :
+
+```
+/en/blog   ->  Fonctionnalités | Tarifs | Blog | L'Atelier du Quiz |
+               Affiliation | À propos | Aide | Se connecter |
+               Créer un compte gratuit
+               pied : Tiquiz / Gagner avec Tiquiz / Intégrations /
+                      Aide / Le cadre
+               « Fait en France, par une créatrice... »
+```
+
+Contenu anglais, chrome français, sur les pages exactes où atterrissent
+les lecteurs qu'on veut récupérer de `tipote.blog`. C'est le reproche du
+client anglophone du 7 septembre ("some parts of the quiz UI were in
+French"), transposé au site public.
+
+**LA RÈGLE, ET C'EST UN COMPROMIS ASSUMÉ : un libellé passe en anglais
+UNIQUEMENT quand la page derrière est vraiment lisible en anglais.**
+Traduire les huit entrées d'un coup promettrait de l'anglais derrière
+chaque clic, alors que `/a-propos`, `/integrations` et `/affiliation`
+n'ont aucune version anglaise. **Un libellé resté français est donc une
+INFORMATION, pas un oubli** : il dit que la page derrière est française.
+
+`libellePourLangue(lien, langue)` (`lib/site/nav.ts`) lit la
+disponibilité aux MÊMES sources que la destination (`PAGES_PUBLIQUES` +
+`languesDePage`, `CHEMINS_HORS_REECRITURE`, `ADRESSES_LEGALES_FR`) :
+une deuxième liste écrite ici annoncerait une langue que le sitemap ne
+déclare pas. **Le sens de l'erreur est sûr** : un `en` oublié laisse un
+libellé français, c'est à dire le comportement d'hier ; un `en` posé sur
+une page qui n'a pas la langue est REFUSÉ par la fonction, donc il ne
+peut pas mentir.
+
+**TROIS CHOSES NE SUIVENT PAS CETTE RÈGLE, et chacune a sa raison :**
+
+| | pourquoi |
+|---|---|
+| le TITRE d'une colonne du pied (`titrePourLangue`) | ce n'est pas un lien, il ne promet aucune destination |
+| `/login`, `/signup`, `/support` (`APP_MULTILANGUE`) | servis par l'APP, qui résout la langue au cookie, à `Accept-Language`, puis au domaine. Leur LIBELLÉ se traduit, leur ADRESSE ne se préfixe JAMAIS : il n'existe aucun `/en/signup`, et le lien ferait un 404 dans le menu |
+| les six adresses légales françaises | même mécanique, le document existe en 5 langues |
+
+**`/support` a été ajouté à cette liste par la MESURE, pas par analogie :**
+il rend son écran par `getTranslations("supportForm")`, et ce namespace
+porte ses 16 clés en français comme en anglais. Il n'a PAS pu être servi
+dans ce conteneur (il importe `supabaseAdmin`, qui LÈVE au chargement
+sans variables d'environnement, donc 500 : c'est le piège du 30 août,
+pas un défaut de cette page), et c'est écrit à côté.
+
+**ET LES LIBELLÉS D'ACCESSIBILITÉ EN FONT PARTIE** (`CHROME_SITE`) : un
+lecteur d'écran anglophone entendait « Navigation principale » et
+« Ouvrir le menu ». **Un texte qu'on n'affiche pas reste un texte que
+quelqu'un lit.** Le `LIEN_CONNEXION` a rejoint la table au passage : il
+était écrit en dur dans `SiteHeader`, donc il échappait à ce qui décide
+des libellés, et il serait resté français seul au milieu d'un menu
+anglais sans que rien ne le dise.
+
+**MESURÉ après correction, sur le serveur :**
+
+```
+/blog                     nav[Navigation principale]  Fonctionnalités | Tarifs | Blog | ...
+/en/blog                  nav[Main navigation]        Features | Pricing | Blog | L'Atelier du Quiz | Affiliation | À propos | Aide
+/en/tarifs                idem, pied : Tiquiz / Earn with Tiquiz / Integrations / Help / The legal bit
+/en/generateur-de-quiz    idem
+/en/fonctionnalites       idem
+```
+
+Les quatre entrées restées françaises sont exactement les quatre pages
+qui n'ont pas de version anglaise. **Le français ne bouge pas d'un
+caractère**, et le test l'exige dans ce sens là.
+
+Test : `tests/logic/chrome-en-anglais.test.mts` (10 cas), vérifié en
+rejouant TROIS versions fautives (un `en` posé sur `/a-propos`, le pied
+revenu à `l.libelle`, une adresse d'`APP_MULTILANGUE` préfixée en
+`/en/signup`) : les trois rougissent.
+
+### 🚨 ET LA MESURE A TROUVÉ DEUX PAGES QUI DÉCLARENT LA MAUVAISE LANGUE
+
+Relevé **EN PRODUCTION**, `<html lang>` de chaque page publique :
+
+| | ce que la page déclare | ce qu'elle contient |
+|---|---|---|
+| `/`, `/tarifs`, `/fonctionnalites`, `/integrations`, `/a-propos`, `/affiliation`, `/newsletter`, `/legal`, `/privacy` | `fr` | français, juste |
+| **`/blog` et TOUTES ses pages** | **`en`** | **français** |
+| **`/support`** | **`en`** sans en-tête de langue, `fr` avec `Accept-Language: fr` | français |
+
+**`lang` est l'attribut que lisent Google, les lecteurs d'écran et les
+outils de traduction pour savoir dans quelle langue une page est
+écrite.** Dix articles français plus leurs rubriques l'annoncent en
+anglais, et depuis ce chantier c'est pire : leur `hreflang` dit `fr` et
+leur `<html lang>` dit `en`, sur la même page. Deux signaux qui se
+contredisent, sur les pages que Béné veut faire ranker.
+
+**LA CAUSE DU BLOG EST ÉTABLIE.** Ces pages sont `force-static`, donc
+prérendues au BUILD : il n'y a aucune requête, donc `langueParDefaut()`
+ne voit pas l'hôte de vente et retombe sur `DEFAULT_LOCALE`, qui vaut
+`"en"`. Le blog ANGLAIS, lui, est juste PAR ACCIDENT : il tombe sur le
+même repli.
+
+**ET LA CORRECTION ÉVIDENTE NE MARCHE PAS, c'est mesuré.**
+`setRequestLocale` de next-intl (4.9.1) posé dans `app/blog/layout.tsx`,
+avec `requestLocale` lu dans `getRequestConfig` : `/blog` répond
+toujours `lang="en"`. **Le `<html lang>` vit dans le layout RACINE, qui
+rend AVANT le layout du blog** : la langue est déjà décidée quand le
+blog la pose. L'expérience a été RETIRÉE, pas laissée en place : une
+branche que rien n'exerce est un piège que le prochain passage
+rebranche en croyant réparer (leçon de `simuler()`, 31 août).
+
+**IL RESTE DONC DEUX CHEMINS, ET C'EST UNE DÉCISION DE BÉNÉ :**
+
+1. **rendre les pages du blog dynamiques** : `langueParDefaut()` voit
+   alors l'hôte et répond `fr`. Ça coûte le prérendu, que les
+   commentaires de ces fichiers défendent explicitement (vitesse, et la
+   lecture des commentaires qui deviendrait une requête par visite). Et
+   **on ne peut PAS compenser par un cache Cloudflare sur ce HTML** :
+   ces pages portent le `Set-Cookie` affilié, et mettre ça en cache
+   partagé est exactement le piège écrit le 7 septembre ;
+2. **donner au blog sa propre racine** (un groupe de routes de premier
+   niveau avec son propre `<html>`). Ça règle la langue proprement et
+   ça duplique tout ce que le layout racine porte, plus un rechargement
+   complet à chaque passage du blog au reste du site.
+
+**Sur `/support`, je ne sais pas.** Les autres pages dynamiques du même
+domaine répondent `fr` sans en-tête de langue, celle là répond `en`, et
+je n'ai pas établi pourquoi. Une cause plausible n'est pas une cause
+(règle du 2 septembre) : c'est mesuré, ce n'est pas expliqué.
+
+### Le flux anglais ne portait AUCUNE image (8 septembre)
+
+Mesuré sur le serveur, une fois le blog anglais servi :
+
+| | `<item>` | `<enclosure>` |
+|---|---|---|
+| `/blog/rss.xml` | 10 | **10** |
+| `/en/blog/rss.xml` | 4 | **0** |
+
+Le flux existe pour les automatisations de PARTAGE (règle du
+1er septembre : Zapier, Make, n8n vers Pinterest), et `<enclosure>` est
+le champ qu'elles lisent quand elles demandent "l'image de cet
+article". Un flux à quatre articles sans une seule image ne peut donc
+rien publier : le premier usage du chantier anglais était mort, et rien
+ne le disait.
+
+La cause est celle qui revient : **une seule épingle par slug, dans un
+seul dossier.** `epinglePour(slug)` cherchait `/blog/pin/<slug>.jpg`,
+donc les quatre slugs anglais ne trouvaient rien, et le bouton
+Pinterest de leurs pages disparaissait avec.
+
+**Règle : la langue est un PARAMÈTRE OBLIGATOIRE d'`epinglePour` et
+d'`attributsEpinglePour`, et chaque langue a SON dossier**
+(`/blog/pin/` et `/blog/pin/en/`), comme les couvertures. Le
+constructeur boucle sur les langues et écrit dans le dossier de
+chacune.
+
+**Un dossier COMMUN marcherait aujourd'hui, et c'est exactement le
+piège** : les quatre slugs anglais diffèrent tous des français
+(`17-reasons...` contre `17-raisons-lancer-quiz-business`). Le jour où
+un article anglais porterait le même slug qu'un français, sa
+construction **ÉCRASERAIT l'épingle de l'autre**, et le flux français
+publierait la couverture anglaise sans qu'une seule erreur ne
+s'écrive. C'est la règle du 1er août appliquée à un chemin de fichier :
+quand une erreur ne coûte rien à commettre et détruit du travail en
+silence, on rend l'erreur impossible.
+
+**LES ONZE ÉPINGLES FRANÇAISES SONT INCHANGÉES À L'OCTET PRÈS**,
+vérifié : `git status public/blog/pin` ne montre que le dossier `en/`
+en nouveau. Quatre épingles anglaises construites, 1000 x 1500, 73 à
+87 Ko, depuis les couvertures de ses articles.
+
+**MESURÉ après correction, sur le serveur :** `/en/blog/rss.xml` porte
+ses 4 `<enclosure>` vers `https://tiquiz.fr/blog/pin/en/*.jpg`, avec
+leur vraie taille en octets ; `/blog/rss.xml` reste à 10 items et 10
+enclosures.
+
+Les deux garde-fous BOUCLENT maintenant sur `LANGUES_PUBLIQUES` au lieu
+de ne regarder que le français (`epingles-pinterest.test.mts`,
+`flux-blog.test.mts`), avec un plancher sur le nombre total : sans lui,
+le jour où une langue perd ses épingles, la boucle passerait au vert sur
+zéro fichier. Un test l'exige aussi dans l'autre sens :
+`epinglePour(slug_anglais, "fr")` doit rendre `null`, sinon deux
+langues se partageraient un dossier sans que rien ne le dise.
+
+### LE `.fr` : ce que dit la documentation de Google, pas ma mémoire
+
+Sa question : "c'est très grave que mon domaine soit en .fr ou pas ?"
+
+**Vérifié à la source** (documentation Google sur les sites
+multirégionaux, pas de mémoire) : un domaine national comme `.fr`
+"provide[s] a strong signal to both users and search engines that your
+site is explicitly intended for a certain country". C'est donc un vrai
+handicap pour un lecteur anglophone hors de France, et **ce signal ne
+s'éteint pas** : il est porté par le nom de domaine.
+
+Ce n'est pas bloquant pour autant : `hreflang` dit à Google qu'une
+version anglaise existe, et une recherche en anglais peut la remonter.
+Ce qu'un `.fr` coûte, c'est la préférence par défaut sur un marché
+anglophone.
+
+**Et l'architecture garde la porte ouverte** : l'hôte est un PARAMÈTRE
+d'`alternatesDeLangue`, et les chemins se calculent dans un seul module.
+Déplacer l'anglais sur un `.com` un jour est un changement d'origine,
+pas une réécriture. La décision est la sienne, et elle n'a pas à être
+prise maintenant.
+
+### Le garde-fou
+
+`tests/logic/site-en-anglais.test.mts` (14 cas), vérifié en rejouant
+TROIS versions fautives (la canonique devinée sur la première langue, la
+réécriture `/en/` sans le cookie affilié, le cookie qui gagne sur
+l'adresse) : les trois rougissent.
+
+Il tient les quatre moitiés ensemble, et c'est le point : un test qui
+n'en tiendrait qu'une passerait au vert sur un site où l'anglais n'est
+pas indexé, ou sur un site où une affiliée n'est plus payée sur les
+pages anglaises.
+
+**Le sitemap de ce container répond 500, et ce n'est PAS ce chantier :**
+`app/sitemap.ts` importe `supabaseAdmin`, qui LÈVE au chargement quand
+les variables d'environnement manquent (le piège du 30 août). Vérifié en
+production le 8 septembre : `tiquiz.fr/sitemap.xml` répond **200 avec 46
+adresses**, dont `/tarifs`. Il gagnera `/en/tarifs` au déploiement.
+
+### Quatre captures de l'article qui recrute les affiliés étaient PÉRIMÉES (8 septembre 2026)
+
+Trouvées en REGARDANT les images une par une, pour leur écrire un texte
+alternatif anglais. Deux d'entre elles vivaient en production **en
+français depuis le 29 août** :
+
+| Le visuel | Ce qu'il montre |
+|---|---|
+| le tableau de bord affilié (fr + en) | la consigne de coller `?sa=...` sur une URL `tipote.fr`. **Depuis le 24 août, ce lien ne paie plus personne.** |
+| le simulateur de commissions (fr + en) | 9 EUR/mois et 90 EUR/an, le tarif d'avant le 6 août, projetant 7 430,40 EUR et $5 702,40 |
+
+Le corps de l'article annonce 17 EUR depuis le 31 août : **la page se
+contredisait elle même**, sur l'écran qui doit convaincre un gros
+affilié. C'est la famille des couvertures du 31 août : **un dessin ne se
+corrige pas en code, aucun remplacement de texte ne l'atteint.**
+
+**Règle : `lib/blog/visuelsPerimes.ts`, et le retrait est RÉVERSIBLE.**
+Chaque entrée porte sa RAISON écrite à côté et l'EMPREINTE du fichier.
+Retirer par le chemin seul masquerait POUR TOUJOURS une image que Béné
+redessine sous le même nom, en silence : le test recalcule l'empreinte
+et rougit dès que le fichier change, ce qui dit "retire son entrée pour
+le republier".
+
+**La comparaison au disque vit dans le TEST, jamais à l'exécution** : le
+module reste PUR (aucun `node:fs`), donc un composant serveur ne paie
+pas une lecture de fichier par image.
+
+**Et le test exige que le compte corresponde** : si plus aucun article ne
+portait ces blocs, c'est que le contenu a bougé et que la liste est à
+relire. Un test qui ne peut plus échouer ment.
+
+#### MON TEST D'ORDRE NE DISTINGUAIT RIEN, ET LE COMMENTAIRE NON PLUS
+
+Le retrait passe avant l'appariement et la déduplication. J'avais écrit
+DEUX raisons en commentaire, et **mesuré, une seule est vraie** :
+
+| Ce que j'affirmais | Ce que la mesure dit |
+|---|---|
+| "sinon un visuel écarté reviendrait dans un `<picture>`" | **pas atteignable** : aucune entrée ne porte de suffixe de variante |
+| "sinon retirer le premier de deux voisins identiques ferait remonter le second" | **faux** : les deux ordres rendent zéro image |
+
+Ce qui distingue vraiment est l'inverse de ce que j'avais écrit :
+`apparierVariantes` fusionne en `{ ...grand, mobile: petit.src }`, donc
+le bloc survivant ne porte plus que le `src` du GRAND. **Un retrait qui
+passerait après emporterait la variante téléphone VIVANTE avec lui**, et
+la page afficherait juste un schéma de moins.
+
+Mon premier test posait deux voisins identiques et écartés : il rendait
+`# pass 4 / # fail 0` sur la version fautive. **Quinzième fois qu'un
+contrôle ne distingue pas ce qu'il est censé distinguer**, et c'est en
+rejouant la version d'avant que ça s'est vu, jamais en le relisant.
+
+Test : `tests/logic/visuels-perimes.test.mts` (4 cas), vérifié en
+rejouant TROIS versions fautives (le filtre retiré, un visuel redessiné,
+le retrait après l'appariement) : les trois rougissent.
+
+## Qui entre par le générateur, et ce qu'il devient (Béné, 8 septembre 2026)
+
+"Dans admin, fais moi apparaitre qui entre par le générateur dans mes
+contacts et dans les stat comment le générateur convertit : visites /
+inscrits gratos / abonnés et le ROI."
+
+### CE QUI MANQUAIT, MESURÉ AVANT D'ÉCRIRE UNE LIGNE
+
+Les QUATRE marches de l'entonnoir étaient déjà toutes lisibles :
+
+| | d'où ça vient |
+|---|---|
+| les visites | `trafic_jour`, chemin `/generateur-de-quiz` |
+| les quiz générés | `embed_quiz_sessions.created_at` + `source` |
+| les inscrits | `claimed_by_user_id` (le quiz a été rattaché) |
+| les abonnés | le `plan` de ces comptes |
+
+**Seul le ROI n'avait AUCUNE entrée** : `/api/embed/quiz/generate`
+faisait `const json = await res.json()` et ne touchait jamais
+`json.usage`. Les jetons repartaient dans le vide à chaque génération,
+donc aucun coût ne pouvait être calculé, même rétroactivement.
+
+🚨 Migration : `supabase/migrations/20260908_generateur_usage.sql`
+(**Supabase de TIQUIZ**). Trois colonnes sur `embed_quiz_sessions`
+(`modele_ia`, `jetons_entree`, `jetons_sortie`) plus un index sur
+`created_at`.
+
+**TROIS COLONNES, PAS CINQ, ET C'EST MESURÉ :** l'appel de l'embed ne
+pose aucun `cache_control`, donc des colonnes de jetons de cache
+seraient une branche que rien n'exerce, c'est à dire le piège de
+`simuler()` (31 août).
+
+**L'usage est capturé AVANT la lecture du JSON.** Une réponse tronquée
+coûte exactement les mêmes jetons qu'une réponse complète : la ranger
+après le `JSON.parse` ferait perdre le coût des générations qui ratent,
+donc précisément celles qu'on veut chiffrer. Et l'écriture est
+best-effort et CRIE : un compteur qui tombe ne doit jamais coûter un
+quiz à un visiteur.
+
+### LE NUMÉRATEUR ET LE DÉNOMINATEUR PARLENT DE LA MÊME PAGE
+
+C'est la règle qui rend ce tableau honnête, et c'est le défaut du
+7 septembre sur l'entonnoir des ventes, à un jour d'écart.
+
+Le générateur est servi à DEUX endroits : sa page dédiée
+(`source: "page-generateur"`) et l'iframe de la page de vente
+(`source: "tiquiz-fr"`). **Personne ne compte les vues de l'iframe.**
+Diviser TOUS les quiz générés par les vues de la seule page dédiée
+gonflerait le taux, et rien ne le dirait.
+
+L'entonnoir ne compte donc que la page dédiée ; ce que l'iframe apporte
+se lit à côté, **en COMPTES, sans aucun pourcentage**. Inventer un
+dénominateur serait pire que se taire.
+
+**Et la pastille sur une fiche client, elle, compte TOUTES les portes**
+(`comptesDuGenerateur`) : quelqu'un arrivé par l'iframe est entré par le
+générateur tout autant. C'est l'entonnoir qui filtre, parce que lui
+DIVISE ; une pastille ne divise rien.
+
+**Le chemin se compare à l'IDENTIQUE, jamais en préfixe** : une future
+`/generateur-de-quiz-pro` serait une autre page, et les additionner
+rendrait le taux faux le jour où elle existe.
+
+### UN MODÈLE INCONNU RÉPOND `null`, JAMAIS UN PRIX APPROCHÉ
+
+`lib/generateur/tarifsIa.ts` porte la table des tarifs Anthropic **avec
+sa date de relevé** (`TARIFS_MAJ`), exactement comme `TAUX_UE` de la TVA
+européenne : un tarif faux ne se voit sur aucun écran, il se voit sur la
+facture.
+
+**La famille Opus est passée de 15 $ / 75 $ à 5 $ / 25 $ par million de
+jetons.** Appliquer le tarif du jour à un modèle plus ancien diviserait
+son coût par trois, en silence. On ne reconnaît donc que ce qui a été
+RELEVÉ, par PRÉFIXE (les identifiants portent une date), et **le préfixe
+le plus LONG gagne** : sinon `claude-opus-5` attraperait
+`claude-opus-5-1` le jour où leurs tarifs différeraient.
+
+**Une génération sans coût calculable est COMPTÉE (`coutInconnu`), pas
+mise à zéro.** Deux cas : la ligne est antérieure au 8 septembre (aucun
+jeton n'était écrit), ou son modèle n'est pas dans la table. Un zéro
+ferait lire le total comme le coût complet, et c'est exactement le
+chiffre qui fait dépenser (règle du 22 août).
+
+### ON CONVERTIT EN EUROS, ET LE TAUX EST DATÉ (corrigé le 8 septembre)
+
+🚨 **Cette section a dit le contraire pendant une demi-journée.** Elle
+écrivait "on ne convertit pas les devises, il n'y a donc aucun ratio de
+ROI", en s'appuyant sur la règle du 1er septembre. **Béné a tranché :**
+"je veux le ROI tu peux faire une conversion même si c'est imprécis à
+quelques euros prêt". Je corrige en place plutôt que d'empiler.
+
+**Mon refus répondait à côté.** La règle du 1er septembre interdit de
+convertir un PRIX AFFICHÉ à un lecteur (le tarif de Zapier sur le blog),
+parce qu'un tarif annoncé faux se vérifie en un clic. Ici c'est un COÛT
+INTERNE, sur son écran à elle, qu'elle doit comparer à un revenu en
+euros : ne pas convertir ne la protégeait de rien, ça lui laissait la
+division à faire de tête.
+
+`TAUX_USD_EUR = 0.86`, relevé le 8 septembre sur `open.er-api.com`
+(1 USD = 0,860364 EUR, horodaté du même jour), avec `TAUX_USD_EUR_MAJ`
+à côté : **la même mécanique que `TARIFS_MAJ` et que `TAUX_UE` de la
+TVA**. L'écran affiche le taux ET sa date, pour que le chiffre se lise
+pour ce qu'il est.
+
+### LE ROI COMPARE UN COÛT PAYÉ UNE FOIS À UN REVENU RÉCURRENT
+
+C'est l'asymétrie qu'il faut DIRE, et l'écran l'écrit : la génération se
+paie **une seule fois**, l'abonnement rentre **chaque mois** tant que la
+personne reste. Le ratio est donc généreux par construction ; le taire
+en ferait un multiple sur une même période, c'est à dire un chiffre
+gonflé affiché comme un fait.
+
+**Le revenu vient du CATALOGUE, et il est PASSÉ, jamais lu dedans.**
+`revenuMensuelParPlan(produits)` prend la liste en paramètre : c'est ce
+qui rend ses trois branches exerçables par un test, au lieu d'une
+branche que rien n'exerce (le piège de `simuler()`, 31 août). Et
+`construireEntonnoirGenerateur` exige `revenus` : le compilateur refuse
+un appelant qui se tait.
+
+Trois décisions dedans, et les trois comptent :
+
+- **une échéance ANNUELLE est LISSÉE sur douze mois**, exactement comme
+  le simulateur d'affiliation (31 août) : c'est la seule façon
+  d'additionner deux récurrences ;
+- **un produit SANS récurrence n'entre pas** : son montant n'est pas un
+  revenu mensuel. Son abonné ressort en `revenuInconnu`, donc AFFICHÉ,
+  jamais compté zéro ;
+- **quand deux produits ouvrent le même plan, le MOINS cher gagne** : on
+  ne surestime jamais un revenu qu'on n'a pas mesuré.
+
+**Le ratio se calcule sur le coût NON ARRONDI** : arrondir au centime
+avant de diviser ferait diviser par zéro dès qu'une période coûte moins
+d'un centime, c'est à dire aujourd'hui.
+
+### "JE N'AI PAS PU LIRE" N'EST PAS "PERSONNE N'ENTRE PAR LÀ"
+
+Trois états, et ils ne se confondent pas : champ absent (le serveur n'a
+pas la version), `lisible: false` (la migration n'est pas passée),
+`lisible: true`. Les deux premiers rendent une PHRASE qui nomme la
+cause, jamais un zéro.
+
+**Et la décision vit dans la fonction PURE**
+(`comptesDuGenerateurSiLisible`), pas dans la route :
+`buildPeople` reçoit `undefined` quand la lecture a raté, jamais un
+ensemble VIDE. Un ensemble vide se lirait "personne n'entre par le
+générateur", et enverrait chercher un trafic manquant au lieu d'une
+panne. Enfermée dans la route, cette moitié n'était pas testable, et
+c'est LITTÉRALEMENT là que mon garde-fou a d'abord menti (voir plus
+bas).
+
+**Le seuil aval est le dixième de celui des vues** (10 contre 100) : un
+quiz généré est bien plus rare qu'une vue, et une inscription plus rare
+encore. Exiger 100 rendrait ces deux taux invisibles pendant des mois.
+Les COMPTES, eux, s'affichent toujours : ils sont exacts dès la première
+ligne.
+
+### DANS SES CONTACTS : une pastille ET un filtre
+
+Sa phrase dit "dans mes contacts", donc les deux : une pastille
+`Générateur` sur la ligne (un mot, lisible sur un téléphone) et une puce
+`Entrés par le générateur N` à côté des filtres produit.
+
+**Ce n'est ni un statut ni un produit, donc c'est un filtre à part** :
+quelqu'un entré par le générateur peut être abonné, gratuit ou parti.
+`FiltreEntree` n'a que deux valeurs et **pas de "non"** : la question est
+"montre moi ceux là", jamais "montre moi les autres".
+
+### MA FAUTE, ET C'EST LA DIX-SEPTIÈME DE LA SEMAINE
+
+Mon contrôle du cas muet cherchait `/venusDuGenerateur:[^,]*lisible/`
+dans la route. **Il est resté VERT sur la version fautive**, celle qui
+fabrique un ensemble vide : le mot `lisible` apparaît dans les deux
+formes, à l'intérieur de l'argument.
+
+**Un contrôle qui ne distingue pas ce qu'il est censé distinguer est
+pire qu'un contrôle absent**, et cette fois c'était le contrôle censé
+protéger la seule moitié du chantier qui peut mentir à Béné. La
+correction n'a pas été de durcir la regex : la décision a DÉMÉNAGÉ dans
+un module pur, donc elle se teste par son COMPORTEMENT et plus par sa
+forme dans un fichier.
+
+### CE QUI N'EST PAS MESURÉ, ET QUI SE DIT
+
+- **aucun coût pour les générations d'AVANT le 8 septembre** : les
+  jetons n'étaient pas écrits, et ils ne peuvent pas être retrouvés.
+  L'écran les compte dans `coutInconnu` ;
+- **le coût affiché est une ESTIMATION** : il vient de la table de
+  tarifs, pas d'une facture Anthropic. Aucun montant réel n'a été
+  relevé sur son compte, et le taux de change est arrondi à deux
+  décimales ;
+- **Tipote n'a PAS de jumeau**, vérifié et pas supposé : aucune
+  migration ni aucun fichier n'y mentionne `embed_quiz_sessions`.
+
+Test : `tests/logic/entonnoir-generateur.test.mts` (24 cas), vérifié en
+rejouant DIX versions fautives (l'entonnoir qui compte toutes les
+sources, un tarif par défaut sur un modèle inconnu, un coût inconnu
+compté pour zéro, le chemin comparé en préfixe, la fonction pure qui
+rend un ensemble vide, la route qui refabrique l'ensemble à la main, un
+produit sans récurrence compté comme mensuel, un annuel non lissé, un
+plan inconnu compté zéro, le taux de change sans sa source) : les dix
+rougissent.
+
+### Les six pages d'outil passent en anglais (8 septembre 2026, le soir)
+
+Suite immédiate. Les six pages filles du hub (`zapier-`, `tally-`,
+`typeform-`, `jotform-`, `google-forms-`, `interact-systeme-io`) sont
+servies en `fr` et en `en`, elles ont déménagé dans
+`app/(site-langues)/`, et le sitemap déclare les deux langues sur
+chacune.
+
+**MESURÉ sur le serveur, les 14 adresses**, avec l'en-tête `Host` du
+domaine de vente (sans lui, le middleware ne voit pas un hôte de vente
+et la mesure ne dit rien de ce que le visiteur reçoit) :
+
+| | `<html lang>` | mots rendus | `hrefLang` |
+|---|---|---|---|
+| les 7 françaises | `fr` | 694 à 971 | fr + en + x-default |
+| les 7 anglaises | `en` | 688 à 949 | fr + en + x-default |
+
+Chacune porte SA canonique, et le français ne bouge pas d'un caractère.
+
+**LE TEXTE VIT DANS `lib/site/outils/<outil>.ts`, UN PAR OUTIL.** Le
+hub porte déjà 350 lignes de son côté ; y ajouter six pages entières
+aurait fait un fichier que personne ne relit. Chaque module suit le
+geste des 8 pages de fonctionnalités : la STRUCTURE une fois (le chemin,
+les captures, leurs dimensions), et `TRADUCTIONS` typé
+`Record<Exclude<LanguePublique, "fr">, T>`, donc **une langue déclarée
+sans son texte ne compile pas**.
+
+**Les phrases dont le milieu porte du code ou du gras passent par
+`<Phrase segments={...} />`** : une chaîne coupée en trois avec du JSX
+au milieu ne se traduit pas, et c'est exactement là qu'un traducteur
+recolle les morceaux dans le mauvais ordre.
+
+**Les liens passent par `hrefPourLangue`, jamais par un `/en/` écrit à
+la main** : leur CTA mène à `/signup`, servi par l'APP, qui n'a aucune
+version préfixée. Un préfixe posé à l'aveugle ferait un 404 au bout du
+seul bouton de la page (la leçon des pages de fonctionnalités, le matin
+même).
+
+**Les deux CITATIONS d'Interact ne bougent PAS** (`CITATIONS_INTERACT`),
+et elles sont en anglais dans les deux langues : c'est la parole d'un
+concurrent, relevée sur sa page d'aide en ligne le 1er septembre. Une
+citation traduite n'est plus une citation.
+
+### 🚨 LE MÊME DÉCOUPEUR DE COMMENTAIRES, RECOPIÉ 20 FOIS, ET L'ORDRE ÉTAIT FAUX PARTOUT
+
+C'est la trouvaille de la séance, et elle est plus grande que ce
+chantier.
+
+Un test est sorti rouge en annonçant **"la page n'appelle plus
+`contenuHub`"** sur une page qui l'appelle deux fois. La cause tient en
+deux lignes :
+
+```
+.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "")   // les blocs, EN PREMIER
+.replace(/^\s*\/\/.*$/gm, "")             // les lignes, ensuite
+```
+
+**Une ligne `//` peut contenir `/*`**, et c'est banal : tout commentaire
+qui cite un chemin en glob en porte un. Le motif de bloc s'ouvre alors
+DANS cette ligne et court jusqu'au premier `*/` du fichier, c'est à dire
+jusqu'à la fin du prochain vrai commentaire de bloc.
+
+**MESURÉ sur la page du hub** : la ligne 35 ouvre, la ligne 172 ferme,
+et **11126 octets tombent à 4168**. Tout ce qui vit entre les deux
+disparaît, `contenuHub(` compris.
+
+**L'ORDRE EST LA SEULE CHOSE QUI COMPTE ICI, ET IL ÉTAIT FAUX PARTOUT :**
+20 fichiers de tests portaient ce découpeur, recopié à la main, et
+**aucun** ne retirait les lignes en premier.
+
+| | |
+|---|---|
+| fichiers du dépôt qui portent le motif qui collisionne | **14** |
+| `QuizDetailClient.tsx` | **15757 octets** avalés |
+| `lib/site/pagesPubliques.ts` | 3157 |
+| `components/embed/EmbedPreviewClient.tsx` | 629 |
+
+**ET LE VRAI DANGER EST L'ASSERTION NÉGATIVE.** Ici le test a rougi,
+donc il a été vu. Un garde-fou qui INTERDIT quelque chose dans une zone
+avalée passe au vert pour toujours, sans que rien ne le dise.
+
+**Prouvé, pas supposé** : un `setSessionToken("")` (qui jetterait le
+quiz d'un visiteur) posé dans la fenêtre avalée d'`EmbedPreviewClient`
+fait rougir `generateur-page.test.mts` avec l'ordre sûr (`# fail 1`) et
+**passe au vert avec l'ordre naïf** (`# fail 0`).
+
+**Règle : `tests/logic/aide/sansCommentaires.mts`, et personne ne
+recopie ce découpage.** Les lignes `//` PUIS les blocs `/* */`, et le
+remplacement est une ESPACE : deux identifiants séparés par un
+commentaire ne doivent pas se coller. Les 20 fichiers ont été remis dans
+le bon ordre ; le partagé est celui qu'on appelle désormais.
+
+C'est la dix-neuvième fois qu'un contrôle ne distingue pas ce qu'il est
+censé distinguer, et la première où la faute vivait dans VINGT tests à
+la fois. **Une règle recopiée finit toujours par en oublier un ; une
+règle recopiée FAUSSE les casse tous en silence.**
+
+### ET `git checkout --` A DÉTRUIT DU TRAVAIL NON COMMITTÉ, DEUX FOIS
+
+Pour rejouer une version fautive, j'ai fait `git checkout --
+tests/logic/`. **Ça restaure l'état du DÉPÔT, pas celui de la séance :**
+le réordonnancement des 20 fichiers ET la réécriture entière de
+`hub-integrations.test.mts` (510 lignes, faite le même après-midi) sont
+parties d'un coup. Même geste, même perte, dix minutes plus tôt, sur
+`generateur-page.test.mts`.
+
+Le fichier a été récupéré **mot pour mot dans le transcript de la
+séance** (`/root/.claude/projects/.../<session>.jsonl`), pas réécrit de
+mémoire : une réécriture de mémoire aurait perdu les raisons écrites à
+côté de chaque garde.
+
+**Règle : on sauvegarde avec `cp`, on restaure avec `cp`.** Un
+`git checkout --` sur un travail non committé, et un `rm -rf` de
+répertoire (qui emporte des voisins qu'on n'avait pas en tête), ne sont
+pas des outils de rejeu.
+
+### DEUX GARDES QUI NE MESURAIENT RIEN, TROUVÉS EN LES REJOUANT
+
+Les deux étaient dans le fichier réécrit, et les deux sont passés au
+vert sur une version fautive :
+
+1. **le contrôle "aucune phrase du module n'est recopiée dans la page"**
+   a été rejoué avec une phrase tapée à la main. `etiquette` vaut
+   `"Intégrations"`, soit 12 caractères, donc SOUS le filtre de 20 que
+   le garde applique. **Une version fautive écrite avec une valeur
+   inventée ne mesure rien** : rejouée avec la vraie première phrase
+   longue du module, elle rougit ;
+2. **le contrôle "la page Interact cite sa source et la rend
+   cliquable"** cherchait `CITATIONS_INTERACT` dans la source. Une page
+   qui garde son `import` et affiche une AUTRE liste passait au vert :
+   **un garde qui cherche un NOM ne distingue pas RENDRE d'IMPORTER.**
+   Il vise maintenant le site de rendu (`CITATIONS_INTERACT.map`,
+   `href={DOC_INTERACT}`).
+
+Test : `tests/logic/hub-en-anglais.test.mts` (8 cas) et
+`tests/logic/hub-integrations.test.mts` (19 cas).
+
+### La newsletter passe en anglais, et c'était la DERNIÈRE (8 septembre 2026, le soir)
+
+Béné : "oui traduis la newsletter."
+
+`/newsletter` était la dernière page interne du site en français seul.
+Elle est servie en `fr` et en `en`, elle a déménagé dans
+`app/(site-langues)/` (le seul groupe qui lit l'en-tête posé par le
+middleware, donc le seul où le chrome et les liens peuvent suivre
+`/en/`), et le sitemap déclare les deux langues.
+
+**MESURÉ sur le serveur, avec l'en-tête `Host` du domaine de vente**
+(sans lui, le middleware ne voit pas un hôte de vente et la mesure ne
+dit rien de ce que le visiteur reçoit) :
+
+| | `/newsletter` | `/en/newsletter` |
+|---|---|---|
+| `<html lang>` | `fr` | `en` |
+| canonique | `.../newsletter` | `.../en/newsletter` |
+| `hreflang` | fr + en + x-default | fr + en + x-default |
+| h1 | "Une pépite le lundi, une action avant vendredi." | "One nugget on Monday, one action before Friday." |
+| mots rendus | 935 | 896 |
+| lien du formulaire | `/politique-de-confidentialite` | `/privacy` |
+
+`GET /en/newsletter?ref=jocelyne` pose toujours `tq_ref`.
+
+#### LE FORMULAIRE NE PORTE PLUS UNE SEULE PHRASE
+
+C'est la moitié du chantier qu'on ne voit pas. `FormulaireNewsletter` est
+le SEUL composant client du site public, et ses cinq raisons d'échec plus
+ses six libellés vivaient EN DUR dedans : un lecteur anglophone aurait lu
+un formulaire français au milieu d'une page anglaise, et il ne l'aurait
+découvert **qu'en se trompant d'adresse email**, c'est à dire au moment
+exact où il a besoin qu'on lui parle.
+
+Tout vit dans `lib/site/newsletter.ts`, avec le reste de la page : deux
+endroits qui portent le texte d'un même écran finissent toujours par ne
+plus dire la même chose.
+
+**Et ce module doit rester PUR.** Un `next/headers` ou une lecture de
+disque importés là casseraient le bundle **avec un `tsc` vert** : c'est
+la leçon du `node:fs` du 6 septembre, où la landing ne s'affichait plus
+du tout et où aucun test logique ne le disait.
+
+**La LANGUE est une prop, jamais devinée.** La page connaît déjà la
+langue de son adresse ; la deviner dans le composant (un cookie,
+`navigator.language`) donnerait un formulaire anglais sous un titre
+français, et l'inverse.
+
+**LES CINQ REFUS NE SONT PAS ADOUCIS EN ANGLAIS** ("Pas de vente", "Pas
+de faux compte à rebours", "Pas de secret ni de méthode magique", "Pas de
+recommandation que je n'ai pas testée", "Pas de remplissage"). C'est son
+interdit numéro un, et une traduction qui arrondit une promesse la
+transforme en argument commercial.
+
+**Le lien légal suit la langue du TEXTE, pas l'adresse :**
+`/politique-de-confidentialite` en français, `/privacy` en anglais.
+J'ai failli "corriger" le premier en le prenant pour un reste de
+Systeme.io ; mesuré avant d'y toucher, `lib/site/adressesLegales.ts` en
+fait une VRAIE redirection construite par `next.config.ts`. Rien n'était
+cassé, et c'est ma correction qui l'aurait été.
+
+#### HUIT LIBELLÉS DE MENU MENTAIENT ENCORE
+
+Trouvés en branchant le sien : `/support` dans le menu et les six pages
+d'outil du pied portaient un libellé français alors que leur page est
+traduite depuis le matin. Ils ont leur `en`, et `libellePourLangue`
+REFUSE un `en` sur une page qui n'a pas la langue : cet ajout ne peut
+donc pas mentir.
+
+Il ne reste en français que les deux liens EXTERNES (l'Atelier, l'espace
+affilié), et c'est la fonction elle même qui l'impose : leur adresse ne
+sert aucun segment de langue.
+
+#### LES 6 DERNIERS ARTICLES SONT TRADUITS À LA MAIN (Béné, 8 septembre)
+
+"Oui traduis les stp." Ces six là n'ont **aucune source anglaise** sur
+`tipote.blog` : `importer-blog-en.mjs` ne pouvait rien, chaque phrase
+est écrite. **15 446 mots**, et les 10 articles français ont désormais
+leur anglais, un pour un.
+
+| l'anglais | traduit de | blocs |
+|---|---|---|
+| `tiquiz-review` | `avis-tiquiz` | 35 |
+| `case-study-jocelyne-adhd-quiz` | `cas-client-jocelyne-tdah` | 52 |
+| `quiz-tools-comparison-systeme-io` | `comparatif-outils-quiz-systeme-io` | 37 |
+| `interactive-video-quiz-popquiz` | `quiz-video-popquiz` | 91 |
+| `viral-quiz-marketing-strategy` | `strategie-quiz-marketing-tiquiz` | 37 |
+| `sell-with-a-quiz` | `vendre-avec-un-quiz` | 28 |
+
+#### CE QUI EST TRADUIT, ET CE QUI NE L'EST PAS
+
+- **les prix se LISENT, ils ne se recopient pas** : €17 et €170 de
+  `faitsProgramme.ts`, $79 de `liensIntegrations.ts`, $29.99 de
+  `ZAPIER_PRO_USD`. Les devises ne se convertissent jamais ;
+- **les CITATIONS de personnes sont traduites**, celles de Jocelyne
+  comme celle de Sébastien : c'est du discours RAPPORTÉ à l'intérieur
+  du récit de Béné, pas une preuve sociale posée telle quelle. C'est
+  le précédent `/a-propos` du 8 septembre, pas la règle des
+  témoignages du 5 septembre ;
+- **`systeme.io/fr?sa=sa0007...` est gardé VERBATIM** : il la paie, et
+  l'interdit ne vise qu'un `?sa=` sur NOS hôtes ;
+- **les blocs image ÉCARTÉS sont retirés de l'anglais**, pas laissés
+  au filtre : `visuelPerime()` les cacherait, mais un bloc qui ne
+  s'affiche jamais est un bloc que le prochain passage croit vivant ;
+- **les couvertures restent FRANÇAISES** sur les six : elles n'ont pas
+  de version anglaise dessinée, et les quatre articles importés, eux,
+  ont la leur. Le mélange se voit.
+
+#### LES `alt` DES SIX VIVENT DANS LE BLOC IMAGE, PAS DANS LA TABLE
+
+Et c'est écrit dans l'en-tête d'`altImagesEn.ts` pour que le prochain
+passage ne "finisse pas le travail". `ALT_IMAGES_EN` existe pour
+réparer ce que l'IMPORT laisse derrière lui ; un article traduit à la
+main n'est jamais ré-importé. Comme `poserAltEn` fait GAGNER la table
+sur ce qu'elle nomme (règle du 1er septembre), une entrée ajoutée là
+ferait vivre la même phrase à deux endroits et rendrait la copie du
+bloc image morte, en silence.
+
+**Le garde-fou qui compte tient les deux cas** : `reparer-blog-en.mjs`
+REFUSE dès qu'une image sort sans texte alternatif, quelle que soit sa
+provenance. Mesuré : la passe est verte avec les 33 images des six.
+
+#### ET LES TROIS `alt` "tiquiz amazon" SONT ENFIN ÉCRITS
+
+Trois images de l'étude de cas de Jocelyne portaient le même texte
+hérité de l'import, qui ne décrit aucune des trois. **Regardées une
+par une**, en français comme en anglais : les détails Amazon du livre
+(9 juin 2026, 112 pages, 2e des ebooks sur la gestion de la colère),
+le tableau de bord Systeme.io (680 nouveaux contacts, 67900 % sur
+31 jours, plat jusqu'au 25 mai), le classement n°1 des titres gratuits
+Kindle. Le remède documenté le 1er septembre marche enfin : la table
+GAGNE sur ce qu'elle nomme.
+
+#### 🚨 L'INTERDIT `Tipote` FIRAIT SUR `quiz.tipote.com`
+
+Mesuré : la seule occurrence du corpus est
+`quiz.tipote.com/p/my-popquiz`, l'adresse PUBLIQUE d'un Popquiz, celle
+que la créatrice partage vraiment, et qui est en plus lisible dans la
+capture d'écran juste à côté. **Un contrôle qui crie pour rien finit
+désactivé.**
+
+Le motif est NARROWÉ (`/(?<![.\w])Tipote(?!\.(?:com|fr|blog))/i`),
+comme le `?sa=` l'a été le 8 septembre au matin, et la raison est
+écrite à côté. Vérifié dans les deux sens : il laisse passer
+`quiz.tipote.com`, `app.tipote.com` et `affiliate.tipote.com`, et il
+FIRE toujours sur "the Tipote ecosystem" et "When Tipote launches".
+
+#### DEUX GARDE-FOUS FIGEAIENT LE COMPTE DU JOUR
+
+`blog-en.test.mts` exigeait `tous.length === 4` et `en.length === 4`,
+c'est à dire le nombre d'articles le jour de l'import. Les deux sont
+sortis ROUGES sur un travail juste. **Un garde-fou qui fige l'état du
+jour empêche de finir le travail**, exactement comme ceux qui figeaient
+un chemin de disque ou une formulation.
+
+Ils mesurent maintenant le FAIT : chaque anglais s'apparie avec un
+français qui EXISTE, et **aucun français n'est réclamé par deux
+anglais** (ça donnerait deux `hreflang` contradictoires sur la même
+page, et Google en choisirait un). Un plancher les garde d'une autre
+panne : un dossier vide les rendrait muets.
+
+**Et la fixture "un article français sans version anglaise" est
+devenue SYNTHÉTIQUE.** Le test la prenait dans le contenu vivant, donc
+il s'est éteint le jour où les dix ont eu leur traduction : c'est la
+leçon de la fixture du chrome, à quelques heures d'écart. Un slug que
+rien ne déclare ne sera jamais traduit.
+
+Vérifié en rejouant deux versions fautives (deux anglais qui réclament
+le même français, une paire annoncée vers une page absente) : les deux
+rougissent.
+
+#### CE QUE LA TRADUCTION A TROUVÉ DANS LE FRANÇAIS, ET QUI RESTE OUVERT
+
+Cinq défauts d'IMPORT, tous côté français, tous invisibles à l'écran
+(le texte manquant ne manque à personne sauf à la lectrice) :
+
+| L'article | Ce qui manque |
+|---|---|
+| `cas-client-jocelyne-tdah` | un H2 "3 leçons à retenir et appliquer" **suivi de RIEN** |
+| `comparatif-outils-quiz-systeme-io` | **quatre tableaux** annoncés et absents |
+| `strategie-quiz-marketing-tiquiz` | **cinq listes** annoncées et absentes, plus **un paragraphe en DOUBLE** |
+| `quiz-video-popquiz` | un H2 **coupé en plein mot** : "qu'avec un outil U" |
+| `strategie-quiz-marketing-tiquiz` | sa FAQ annonce encore **Typeform 50 €, Tally 29 $, et Tiquiz bêta 57 € à vie** |
+
+🚨 **TOUT CE TABLEAU EST RÉPARÉ DEPUIS LE 8 SEPTEMBRE AU SOIR**, et je
+le corrige en place plutôt que d'empiler (règle du 31 août). Béné : "ben
+il faut corriger, c'est toi qui a importé mes articles ! [...] on peut
+pas laisser de la merde !!" Elle avait raison : la section
+"LE CONTENU PERDU À L'IMPORT" plus bas dit la cause, la correction et ce
+qui reste. **2 555 mots récupérés**, dont 2 036 dans le comparatif.
+
+🚨 **CE PARAGRAPHE DISAIT QUE LES TROIS LEÇONS DE JOCELYNE ÉTAIENT
+PERDUES. C'EST PÉRIMÉ**, et je le corrige en place plutôt que d'empiler.
+Sa page source n'existe toujours nulle part (cherchée le 8 septembre :
+aucune adresse ne répond, ni sommaire, ni sitemap, ni étape de tunnel),
+et je n'ai rien inventé : **Béné a collé tout le texte de la page**, le
+même jour. Les trois leçons, la fin de parcours, ses liens, les deux
+cartes et la FAQ à six questions sont revenus de là. Voir la section
+"LA FIN DU CAS CLIENT DE JOCELYNE" plus bas.
+
+**La leçon tient : on n'invente pas ce qui manque, on le DEMANDE.** Une
+page perdue n'est pas une page dont le texte a disparu ; c'est une page
+dont la seule copie est chez la personne qui l'a écrite.
+
+**Et une affirmation reste invérifiée** dans la FAQ du comparatif :
+"support in French and English". Elle vient du français, elle n'est
+mesurée nulle part.
+
+### 🚨 LA FIXTURE DES DEUX GARDES DE LANGUE EST DÉSORMAIS INVENTÉE
+
+Le test "un `en` posé sur une page SANS version anglaise ne s'affiche
+jamais" pointait vers une VRAIE page française seule. **Il en a usé
+QUATRE** : `/a-propos`, `/integrations`, `/affiliation`, puis
+`/newsletter`, et les quatre ont fini traduites.
+
+Sa ligne de prémisse l'a sauvé à chaque fois (sans elle il serait passé
+au vert en ne mesurant plus rien), mais au 8 septembre au soir **la
+fixture n'avait plus où se poser**. Elle est donc SYNTHÉTIQUE
+(`/cette-page-n-existe-pas-tq`), et c'est ce qui la rend stable : un
+chemin que rien ne déclare ne peut pas être traduit un jour. Le test
+garde ses deux assertions de prémisse, donc il ne peut pas devenir muet.
+
+**La leçon : une fixture prise dans le contenu vivant se périme quand le
+contenu avance.** Quand ce qu'un test mesure est un COMPORTEMENT (ici :
+la fonction refuse un `en` que rien ne sert), la fixture doit être
+inventée, pas empruntée.
+
+#### ET UN GARDE-FOU A ROUGI SUR DU CODE JUSTE, POUR LA NEUVIÈME FOIS
+
+`newsletter.test.mts` lisait la SOURCE de `FormulaireNewsletter.tsx` pour
+y trouver les cinq clés de raison. Le jour où les phrases ont déménagé
+dans le module, il est sorti rouge sur une correction parfaitement bonne.
+
+**Un garde-fou qui fige un EMPLACEMENT empêche de déplacer le texte.**
+Il mesure maintenant le COMPORTEMENT, dans LES DEUX LANGUES : chaque
+raison rend une phrase non vide, aucune ne recopie une autre, aucune ne
+laisse un `{contact}` à trou, et une raison inconnue retombe sur
+`indisponible`. Vérifié en rejouant deux versions fautives (une phrase
+dupliquée, la substitution de `{contact}` retirée) : les deux rougissent.
+
+Fichier SUPPRIMÉ : `app/(site)/newsletter/page.tsx`.
+
+## LE CONTENU PERDU À L'IMPORT (Béné, 8 septembre 2026)
+
+"ben il faut corriger, c'est toi qui a importé mes articles ! Ou un
+autre agent mais en tous cas on peut pas laisser de la merde !!"
+
+Elle a raison, et le pire n'était pas les quatre articles amputés :
+**le script qui les avait importés n'existait plus dans le dépôt.**
+Personne ne pouvait retrouver la cause, ni rejouer l'import, ni même
+vérifier. Seul l'importateur ANGLAIS avait survécu, et il portait les
+deux mêmes bugs.
+
+### LES DEUX CAUSES, MESURÉES SUR SES PAGES SOURCES
+
+**1. `BulletList` N'AVAIT AUCUN CAS.** Ce type porte son `<ul>` dans
+`.content`, exactement comme un `Text`, et il n'a AUCUN enfant : il
+tombait donc dans le `default:` qui marche les `childIds`, et il ne
+produisait rien. Six listes perdues dans un seul article.
+
+**2. `RawHtml` ÉTAIT SAUTÉ SANS REGARDER CE QU'IL PORTE.** La raison
+écrite à côté disait "les RawHtml de ces pages ne portent QUE du
+JSON-LD". C'était vrai des QUATRE pages anglaises sur lesquelles la
+règle a été écrite, et faux des pages françaises, où ce sont des blocs
+de CONTENU : le comparatif des 8 outils, les 4 outils retenus, le coût
+réel, le traitement des données. C'est la faute du 1er août, une règle
+écrite pour un cas et appliquée telle quelle à un autre.
+
+### CE QUI EST RÉCUPÉRÉ : 2 555 MOTS
+
+| | blocs | mots |
+|---|---|---|
+| `comparatif-outils-quiz-systeme-io` | 39 -> 46 | **+2 036** |
+| `strategie-quiz-marketing-tiquiz` | 38 -> 42 | +313 |
+| `comment-creer-quiz-systeme-io` | 52 -> 56 | +186 |
+| `17-raisons-lancer-quiz-business` | 83 -> 84 | +20 |
+| `create-quiz-systeme-io` (anglais) | 41 -> 47 | 6 listes à puces |
+
+Le comparatif avait perdu **le tableau des 8 outils**, c'est à dire
+l'écran qu'on lit avant d'acheter.
+
+### ON NE RÉIMPORTE PAS : ON FUSIONNE, ET LA FUSION NE PEUT QU'AJOUTER
+
+C'est la décision qui tient tout le chantier, et elle a été prise sur
+une MESURE, après avoir essayé le ré-import franc et regardé ce qu'il
+donnait. Il coûtait trois choses, toutes invisibles :
+
+| | ce que le ré-import franc a fait, mesuré |
+|---|---|
+| les images | **62 images renvoyées sur le CDN de Systeme.io**. Le nom local ne se déduit pas du nom source : 22 des 62 ont été RENOMMÉES au rapatriement du 30 août |
+| les textes alternatifs | **62 `alt` perdus d'un coup**. `poserAlt` les pose à partir du chemin LOCAL : avec un chemin de CDN, la table ne reconnaît plus rien |
+| les corrections | la page source porte encore les prix d'avant le 6 août et les promesses corrigées le 31 |
+
+Donc : les blocs du disque sont **RECONDUITS TELS QUELS**, dans leur
+ordre, et seuls les blocs que la source a en plus sont insérés. Un bloc
+n'est jamais retiré ni réécrit, et le titre, la description, les mots
+clés, la date et la couverture ne sont pas touchés.
+
+### CINQ RÈGLES DE LA FUSION, ET AUCUNE N'EST DÉCORATIVE
+
+1. **L'APPARIEMENT EST TOLÉRANT.** Une comparaison exacte verrait un
+   bloc corrigé comme un bloc nouveau, et l'insérerait EN DOUBLE avec sa
+   version d'avant correction. La signature ignore donc les chiffres,
+   les URL et la ponctuation.
+2. **UN BLOC PROCHE D'UN BLOC DU DISQUE EST LE MÊME**, corrigé depuis :
+   on garde celui du disque. **Le seuil ne tranche rien à la limite** :
+   mesuré sur les 22 blocs non appariés, les vraies nouveautés sortent
+   entre 0,00 et 0,12, les blocs simplement corrigés entre 0,89 et 0,97.
+3. **LES IMAGES ET LES FAQ S'APPARIENT PAR LEUR RANG.** Leur `src` a
+   changé et leur texte a été corrigé : le rang est la seule chose qui
+   n'a pas bougé. Un écart de compte est REFUSÉ, jamais deviné.
+4. **UN DOUBLON N'ENTRE PAS, et la liste est amorcée avec ce qui est
+   DÉJÀ sur le disque.** Sans cette amorce, l'import et la réparation se
+   battent : `blog:reparer` retire le doublon, l'import suivant le
+   remet, et rien n'atteint jamais un état stable. Vérifié : la paire
+   converge, les deux ne réécrivent plus rien.
+5. **UN ORDRE AMBIGU EST REFUSÉ.** Si un trou porte à la fois un bloc du
+   disque sans jumeau ET une nouveauté, rien ne dit lequel vient avant.
+
+### CE QUI EST ÉCARTÉ, ET LA RAISON EST ÉCRITE À CÔTÉ
+
+- **`rente-mensuelle-affiliation-tiquiz` n'est PAS fusionné.** Mesuré :
+  23 de ses blocs ne s'apparient plus, parce que sa page source annonce
+  encore un versement "le 10 de chaque mois", 40 % écrit comme un
+  plafond, les rentes calculées sur l'ancien tarif à 9 €, et une section
+  entière sur Tipote, qui n'est pas en vente. Y insérer quoi que ce soit
+  ferait rentrer par la fenêtre ce qu'on a sorti par la porte. Son
+  jumeau anglais est exclu pour la même raison.
+- **`cas-client-jocelyne-tdah` n'a plus de source.** Aucune adresse ne
+  répond, il n'est ni dans le sommaire du blog, ni dans un sitemap, et
+  aucune étape de tunnel ne porte son nom.
+- **Un SVG en ligne, une vidéo, une image dans un bloc brut : écartés et
+  NOMMÉS dans le rapport.** `nettoyerBloc` retire les balises inconnues
+  et garde ce qu'il y a ENTRE : un SVG gardé déverserait toutes ses
+  étiquettes en vrac, un `<style>` ses règles CSS, et l'adresse d'un
+  `<img>` resterait sur notre disque en pointant sur le CDN d'un tiers.
+- **Un type inconnu est COMPTÉ**, jamais avalé. C'est exactement le
+  silence qui a coûté ce chantier.
+
+🚨 **CE PARAGRAPHE ATTENDAIT SA DÉCISION SUR LA VIDÉO DE
+`avis-tiquiz`. ELLE L'A PRISE LE 8 SEPTEMBRE : "oui je veux la vidéo
+Youtube".** Le gabarit a un bloc `video` depuis, et il ne contacte
+personne avant qu'on ne clique. Corrigé en place, voir la section
+"LA VIDÉO D'UN ARTICLE" plus bas.
+
+### LES QUATRE AUTRES DÉFAUTS, RÉPARÉS PAR DES RÈGLES GÉNÉRALES
+
+Aucun ne se corrige à la main dans le JSON : un import suivant les
+ramènerait.
+
+| Le défaut | La règle |
+|---|---|
+| un titre qui FINIT l'article sans rien après | `retirerTitreOrphelin` |
+| le même paragraphe deux fois (c'est dans SA source) | `retirerBlocsEnDouble`, seuil à 60 caractères, le PREMIER gagne |
+| un tiret cadratin dans sa prose | `retirerTiretsLongs`, dans `reponctuer` |
+| les prix périmés des FAQ | `liensIntegrations.ts`, aux MÊMES constantes que le corps |
+
+**LE TIRET CADRATIN EN ENTITÉ, ET C'EST LE TROU LE PLUS INSTRUCTIF.**
+La règle du 7 juin est absolue, et elle vivait dans un test qui
+INTERDIT et dans aucune règle qui CORRIGE. Pire : ce test cherchait le
+CARACTÈRE `—`, donc `&mdash;` passait au travers, et deux em-dash sont
+entrés dans le comparatif à la faveur de ce chantier. Un test qui ne
+distingue pas ce qu'il est censé distinguer est pire qu'un test absent.
+La correction et le test couvrent maintenant les deux formes, et **on
+n'agit que sur un tiret ENTOURÉ D'ESPACES** : collé, c'est une plage
+(`2020–2024`) ou une composition, et le convertir écrirait autre chose.
+
+**LES PRIX DES FAQ CONTREDISAIENT LE CORPS DU MÊME ARTICLE.** Le corps
+de `comment-creer-quiz-systeme-io` avait été corrigé le 1er septembre,
+sa FAQ non : le même article annonçait 79 $ dans son texte et 717 €
+dans sa FAQ, à quelques écrans d'écart. Et
+`strategie-quiz-marketing-tiquiz` promettait encore "Tiquiz en bêta
+c'est 57 € une fois à vie", terminé depuis. **Le prix de Tally est
+RETIRÉ, pas corrigé** : il n'est vérifiable nulle part dans le dépôt, et
+un tarif annoncé faux se vérifie en un clic.
+
+### LES DÉCISIONS ONT QUITTÉ LE SCRIPT
+
+`lib/blog/importBlocs.ts` porte l'extraction et la fusion ;
+`scripts/importer-blog-fr.mjs` et `scripts/importer-blog-en.mjs` ne font
+plus que les entrées/sorties, et ils appellent le MÊME module.
+
+Ce n'est pas du rangement : ces scripts vont chercher les pages sur le
+réseau, donc **aucun test ne peut les lancer**, et c'est LÀ que le bug
+s'était installé. Une logique enfermée dans un script n'est pas
+testable, donc elle n'est pas testée (règle du 1er août). L'anglais en
+avait en plus sa PROPRE COPIE, avec les deux bugs dedans.
+
+```bash
+npm run blog:importer-fr -- --verifie   # dit ce qu'il rendrait
+npm run blog:importer-fr                # fusionne
+npm run blog:reparer                    # repasse derriere, idempotent
+```
+
+### ET LE DISCRIMINANT DES "RÈGLES MUETTES" S'EST CASSÉ EN CHEMIN
+
+Côté anglais, `blog:reparer-en` a REFUSÉ de finir sur six règles
+parfaitement bonnes. Sa question est "cette règle a-t-elle trouvé sa
+cible ?", et son discriminant était un drapeau de CORPUS ("au moins une
+règle a mordu quelque part"). Un import qui rend du texte neuf dans UN
+article le fait basculer, et les règles des AUTRES articles, déjà
+corrigées, sont alors dénoncées comme fausses.
+
+**Un contrôle par corpus ne peut pas répondre à une question par
+règle.** La preuve est maintenant PAR RÈGLE : une règle qui n'a pas
+mordu est fausse seulement si son texte d'ARRIVÉE est introuvable lui
+aussi. Son `vers` présent prouve que la correction a déjà eu lieu.
+
+**Et la limite est DITE au lieu d'être maquillée :** une règle qui
+SUPPRIME une phrase n'a pas de texte d'arrivée, donc "la phrase a bien
+été supprimée" est indistinguable de "le motif ne correspond à rien".
+Ces règles sont exemptées du contrôle et **COMPTÉES à l'écran** : une
+exemption silencieuse deviendrait un trou où n'importe quelle règle
+fausse pourrait se ranger.
+
+**Et ma propre preuve était fausse au premier jet** : elle lisait
+`l.href` sur des règles qui portent `l.vers`. `includes(undefined)` rend
+toujours faux, donc le garde dénonçait six règles saines. Un garde écrit
+avec un nom de champ INVENTÉ ne mesure rien.
+
+Test : `tests/logic/import-blog-fr.test.mts` (19 cas), vérifié en
+rejouant ONZE versions fautives (`BulletList` sans cas, `RawHtml` sauté,
+ni SVG ni image retirés, doublon du disque non amorcé, ambiguïté non
+refusée, écart d'images non refusé, la fusion qui écrase au lieu
+d'ajouter, le titre orphelin gardé, les doublons gardés, le tiret retiré
+sans regarder les espaces, le garde aveugle aux entités) : les onze
+rougissent.
+
+## LA VIDÉO D'UN ARTICLE : rien ne part chez Google avant le clic (8 septembre 2026)
+
+Béné : "oui je veux la vidéo Youtube."
+
+Sa page `avis-tiquiz` porte une vidéo depuis l'origine. L'import la
+SIGNALAIT sans la poser, pour une raison qui était juste : `nettoyerBloc`
+retire les `iframe`, donc la poser en bloc `html` aurait donné un bloc
+VIDE, et personne ne l'aurait vu.
+
+### LE BLOG NE PORTE AUCUNE BANNIÈRE DE CONSENTEMENT
+
+**MESURÉ avant d'écrire une ligne, pas supposé.** Le bandeau cookies est
+celui de Béné, il vit dans la page de vente CAPTURÉE, et il range son
+choix dans `aq_consent_v1` (c'est ce que relit `GoogleAnalytics.tsx`
+depuis le 26 août). Un article de blog n'en porte AUCUN.
+
+Poser le cadre au chargement enverrait donc l'adresse IP de chaque
+lecteur chez Google, sur une page où rien ne peut recueillir son accord.
+Et ça ne se verrait sur aucun écran : la vidéo s'afficherait
+parfaitement.
+
+**`youtube-nocookie.com` ne suffit pas, et il faut le dire dans ce sens
+là :** il ne dépose pas de cookie de suivi tant que la vidéo n'est pas
+lancée, mais dès que le cadre existe, l'adresse IP part. C'est pour ça
+que le domaine n'est que la moitié de la réponse.
+
+**Règle : le cadre n'existe QU'AU CLIC.** Avant, une miniature. MESURÉ
+sur le HTML servi de `/blog/avis-tiquiz` : **zéro occurrence de
+`youtube-nocookie`, zéro de `ytimg`**.
+
+### QUATRE CHOSES À NE PAS DÉFAIRE
+
+1. **La miniature est RECOPIÉE chez nous** (`public/blog/video/<id>.webp`,
+   1280x720, 98 Ko). Servie depuis `i.ytimg.com`, elle serait exactement
+   la requête tierce qu'on évite, et elle partirait à CHAQUE chargement.
+2. **La façade est un LIEN vers YouTube, jamais un bouton.** Sans
+   JavaScript, un bouton ne fait RIEN : la vidéo serait morte et le
+   lecteur n'aurait aucun moyen de le savoir. Le clic est intercepté
+   quand JavaScript est là ; un clic modifié (nouvel onglet) n'est pas
+   volé.
+3. **Le triangle de lecture est DESSINÉ.** "▶" n'existe ni dans Open
+   Sans ni dans Inter : Windows rend le carré vide (drame du
+   2 septembre, les icônes de la landing).
+4. **L'identifiant est VALIDÉ, jamais recopié** (`[A-Za-z0-9_-]{11}`,
+   `lib/blog/video.ts`). Il finit dans un `src`. Une adresse qu'on ne
+   sait pas lire rend `null`, et l'import la SIGNALE : on ne fabrique
+   jamais une adresse à partir de ce qu'on n'a pas compris.
+
+**Le TITRE vient de YouTube, et le module d'extraction reste PUR.**
+`blocsDe` rend un titre VIDE ; c'est le script d'import qui le lit chez
+YouTube (il fait déjà du réseau) et qui REFUSE de finir s'il n'y arrive
+pas. Un titre vide, c'est une légende vide sous une vidéo et un lien qui
+ne dit pas laquelle.
+
+**Et le titre ne se traduit pas.** L'article anglais porte la MÊME
+vidéo, avec son titre FRANÇAIS : c'est une vidéo en français, et un
+titre traduit décrirait autre chose que ce que le lecteur va voir.
+
+**Une vidéo s'apparie par son IDENTIFIANT** dans la fusion d'import
+(`signature`), jamais par son rang : c'est lui qui EST son identité.
+Sans ce cas, `nuTexte` lirait un `html` qui n'existe pas et deux vidéos
+différentes porteraient la même signature.
+
+Test : `tests/logic/video-article.test.mts`, vérifié en rejouant SIX
+versions fautives (le cadre sur `youtube.com`, la miniature chez
+`i.ytimg.com`, la façade en bouton, un titre vide en base, le cadre posé
+sans le clic, le glyphe Unicode) : les six rougissent.
+
+## LA FIN DU CAS CLIENT DE JOCELYNE (Béné, 8 septembre 2026)
+
+"Voilà tout le texte de la page du cas client."
+
+Sa page source n'existe plus, et l'article s'arrêtait sur "- Jocelyne
+Bacquet". **Elle a collé le texte manquant**, donc il est revenu : la
+suite de parcours, les trois leçons, ses liens, les deux cartes et une
+FAQ de six questions. **13 blocs, en français ET en anglais** (le jumeau
+anglais s'arrêtait exactement au même endroit).
+
+### TROIS CHOSES ONT ÉTÉ CORRIGÉES EN LE POSANT, ET TROIS SEULEMENT
+
+| Ce que son texte disait | Pourquoi |
+|---|---|
+| "passer au plan Mensuel à 9 €/mois" | le tarif d'avant le 6 août. Le prix vient de `PRIX_MENSUEL_TTC`, il ne se recopie pas |
+| "15 templates métier (coach, nutrition, ..., **entrepreneur**, photo, immo)" | MESURÉ : le catalogue en porte bien 15, et six des sept noms existent. Pas "entrepreneur" : c'est "Coach **business**" |
+| "vous pouvez tout à fait commencer **seule**" | adresse DIRECTE au lecteur, accordée au féminin. On tourne la phrase (règle du 24 août) |
+
+**Tout le reste est verbatim.** "scaler" y compris : c'est son mot, dans
+son texte déjà publié, et ce n'est ni faux ni genré. À elle de trancher.
+
+**Et les DEUX AUTRES claims ont été vérifiés, pas supposés** : les
+limites du gratuit (1 quiz, 1 sondage, 1 popquiz, 10 leads visibles,
+les suivants capturés et masqués) sont exactement `FREE_LIMITS`, et la
+génération IA est bien ouverte au gratuit (`/api/quiz/generate` n'a
+aucun gate de plan).
+
+### LES LIENS : LES QUATRE SONT LA (elle les a donnés le 8 septembre)
+
+🚨 **CETTE SECTION DISAIT "DEUX SUR QUATRE, ET LES DEUX MANQUANTS
+ATTENDENT QU'ELLE LES DONNE". C'EST PÉRIMÉ**, et je le corrige en place
+plutôt que d'empiler : elle a envoyé les quatre, **et une adresse de
+blog PLUS PRÉCISE que celle que j'avais vérifiée**. La sienne fait foi.
+
+| | ce que la mesure donne |
+|---|---|
+| son blog `.../blog-jocelyne-bacquet` | **200**, `<title>` "Blog de Jocelyne Bacquet" |
+| le livre sur Amazon | **je n'ai pas pu vérifier** : Amazon sert une page anti-robot (3815 octets, aucun "Bacquet" dedans) |
+| son Instagram | **je n'ai pas pu vérifier** : 429, leur limite de débit sur notre adresse |
+| sa page Facebook | **je n'ai pas pu vérifier** : 400 sur un `profile.php` non authentifié |
+
+**Un blocage de plateforme veut dire "je n'ai pas pu regarder", jamais
+"ça n'existe pas"** (règle du 22 août, et c'est déjà la leçon du 429 de
+Pinterest du 1er septembre). Ce sont SES liens : ils sont posés, et le
+message final lui dit lequel des trois n'a pas pu être mesuré.
+
+Test : les cinq cas ajoutés à `tests/logic/blog.test.mts`, vérifiés en
+rejouant TROIS versions fautives (le prix d'avant, "commencer seule", la
+queue retirée) : les trois rougissent.
+
+## Les chevrons n'étaient corrigés par RIEN (8 septembre 2026)
+
+Trouvé en posant son texte : sa page rendue porte des chevrons `«` `»`,
+et `tests/logic/blog.test.mts` les INTERDIT depuis le 7 juin.
+
+**MESURÉ : aucune ligne de code, ni dans l'import ni dans
+`reponctuation.ts`, n'en convertissait un seul.** L'en-tête de ce module
+affirmait pourtant "l'import du 29 août remplace les chevrons". C'est la
+DIXIÈME fois que ce dépôt paie une règle écrite en commentaire et
+démentie par le code.
+
+La règle ne vivait donc que dans un test qui INTERDIT, et un contenu
+écrit à la main la faisait rougir sans qu'aucune commande sache la
+réparer. C'est exactement le défaut du tiret cadratin en entité, trouvé
+le même jour.
+
+**`remplacerChevrons` existe, et `reponctuer` l'applique.** Trois choses
+comptent :
+
+- **l'espace INTÉRIEURE part avec le chevron** (souvent insécable) :
+  la garder donnerait `" C'est un sujet "`, donc la faute inverse de
+  celle que ce module existe pour corriger. L'espace EXTÉRIEURE reste ;
+- **les entités comptent** (`&laquo;`, `&#171;`) : elles s'affichent
+  exactement pareil ;
+- **elle passe AVANT `reparerGuillemets`**, qui COMPTE les guillemets
+  droits pour savoir lequel ouvre. Convertir après lui, c'est lui cacher
+  la moitié du texte, donc lui faire poser l'espace du mauvais côté.
+
+### ET ELLE A TROUVÉ SIX CHEVRONS EN ENTITÉ DÉJÀ EN LIGNE
+
+`comparatif-outils-quiz-systeme-io` portait six
+`&laquo;&nbsp;...&nbsp;&raquo;`, et le garde ne cherchait que le
+CARACTÈRE. Il cherche maintenant les deux formes, vérifié en rejouant le
+fichier d'avant correction : il rougit.
+
+## Une adresse email d'ARTICLE était masquée par Cloudflare (8 septembre 2026)
+
+La fin du cas client porte le contact de Gwenn, à deux endroits. C'est
+la PREMIÈRE adresse email du blog (mesuré : zéro avant).
+
+Cloudflare l'aurait remplacée par `[email protected]` dans le HTML
+servi, comme les 4 adresses des pages légales le 2 septembre.
+
+**Et les marqueurs qui l'en empêchent ne peuvent pas vivre dans le
+contenu :** `nettoyerBloc` retire les commentaires HTML (MESURÉ, pas
+supposé). C'est donc le RENDU qui les pose, autour du SEUL bloc
+concerné : désarmer l'obfuscation là où il n'y a rien à protéger ne
+protège rien de plus.
+
+`SansObfuscationEmail` a quitté `LegalPageView` pour
+`components/legal/SansObfuscationEmail.tsx`, **où il vit déjà chez
+Tipote et chez l'Atelier** : Tiquiz était le seul des trois à l'avoir
+enfermé dans une page. Son corps est identique à l'octet près aux deux
+autres.
+
+**Et le garde de `politique-google.test.mts` a rougi sur cette
+correction JUSTE**, parce qu'il cherchait les marqueurs dans
+`LegalPageView.tsx`. Un garde-fou qui fige un EMPLACEMENT empêche de
+déplacer le code : il SUIT désormais l'import.
+
+**MA FAUTE, et c'est la 20e de la semaine :** mon premier garde du côté
+blog cherchait `porteUneAdresseEmail` dans la source du rendu. Il est
+resté VERT sur la version fautive (l'appel remplacé par `false`), parce
+que le nom apparaît encore dans la ligne d'import. **Un garde qui
+cherche un NOM dans une source ne distingue pas APPELER de simplement
+IMPORTER.** Il retire les imports avant de chercher, et il exige
+`porteUneAdresseEmail(` : vérifié en rejouant les deux versions
+fautives, elles rougissent.
+
+## Le filet responsive couvre enfin deux articles (8 septembre 2026)
+
+`tests/visual/responsive-site.spec.ts` ne mesurait aucune page d'article,
+et son propre en-tête dit pourquoi (les ajouter d'un coup est un chantier
+à part). Les DEUX que ce passage a touchées y sont maintenant :
+`/blog/avis-tiquiz` (le nouveau bloc vidéo, une façade en 16/9 jamais
+mesurée sur un téléphone) et `/blog/cas-client-jocelyne-tdah` (deux
+listes, deux cartes, une FAQ). Mesuré aux quatre largeurs : aucun
+débordement.
+
+**Les huit autres articles restent dehors**, exprès : un filet qui
+rougit sur des pages qu'on n'a pas regardées finit désactivé.
+
+## Le meuble d'un article anglais parlait français (corrigé le 9 septembre)
+
+Trouvé en servant `/en/blog/case-study-jocelyne-adhd-quiz`. Le travail
+du 8 septembre au matin a traduit le menu et le pied de page ; **trois
+composants d'article portaient encore leurs phrases en dur en
+français** :
+
+| Le composant | Ce qu'un lecteur anglophone lit |
+|---|---|
+| `PartageArticle` | "Copier le lien" |
+| `EncartCta` | "Un quiz qui tague tes leads dans Systeme.io", "Créer mon quiz gratuitement", "Voir ce que fait Tiquiz" |
+| `Commentaires` | "Ton avis sur cet article", "Laisser un commentaire", "Ton prénom", "Ton email (jamais publié)", "Ton message", "Envoyer" |
+
+C'est le reproche du client anglophone du 7 septembre ("some parts of
+the quiz UI were in French"), sur les pages exactes où atterrissent les
+lecteurs qu'on veut récupérer de `tipote.blog`. **Ce n'est pas une
+régression de ce passage** : c'est antérieur, et ça vaut pour les dix
+articles anglais. Les phrases se posent dans `motsDuBlog.ts`, comme le
+reste du meuble.
+
+### CE QUI A ÉTÉ FAIT, ET LE PIÈGE QU'AUCUN TEST NE VOYAIT
+
+Les phrases vivent dans `motsDuBlog.ts`, avec le reste du meuble.
+**MESURÉ sur la page servie, dans les deux langues** : 12 phrases
+françaises et 0 anglaise sur `/blog/cas-client-jocelyne-tdah`, 0
+française et 11 anglaises sur `/en/blog/case-study-jocelyne-adhd-quiz`.
+
+**Six composants, pas trois** : le relevé de la veille en nommait
+trois, et il en manquait la moitié. `BoutonCopier` portait ses trois
+libellés, `RailArticle` en portait trois autres ("Dans cet article",
+"Sommaire de l'article", "Partager") **alors que `dansCetArticle`
+existait déjà dans la table et qu'il ne l'appelait pas**, et
+`FormulaireCommentaire` portait ses QUATORZE phrases de refus, celles
+qu'un lecteur découvre au moment exact où il se trompe d'adresse email.
+Et la date d'un commentaire était formatée en `fr-FR` en dur.
+
+🚨 **ET LE VRAI PIÈGE : `tsc` ÉTAIT VERT, LE FILET LOGIQUE ÉTAIT VERT À
+2728, ET LES DEUX ARTICLES RÉPONDAIENT 500.**
+
+```
+Functions cannot be passed directly to Client Components
+{surReseau: function surReseau, copierLeLien: ..., ...}
+```
+
+`BoutonCopier` et `FormulaireCommentaire` sont marqués `use client`, et
+la table portait DEUX fonctions (`surReseau`, `titreN`). **Un composant
+client ne peut pas recevoir une référence de fonction depuis une page
+serveur, et le typecheck ne voit RIEN de tout ça** : c'est le drame du
+1er août (`FolderCard`, dépôt Tipote), payé une deuxième fois.
+
+**Règle : ce qui traverse vers un composant client a son propre TYPE, et
+il ne porte que des chaînes.** `MotsCopie` et `MotsFormulaire`
+(`lib/blog/motsDuBlog.ts`) rendent la frontière visible : le prochain
+qui ajoutera une fonction à `partage` ou à `commentaires` ne pourra pas
+la faire descendre sans le voir. Les deux fonctions restent dehors,
+leurs appelants sont rendus par le serveur.
+
+**Et ça ne s'est vu qu'en SERVANT la page.** Un vert local ne prouve
+rien sur un rendu (leçon de `pdf-parse`, 7 août) : la dernière étape
+n'est pas de lancer les tests, c'est d'aller chercher l'URL.
+
+**Le second bouton de l'encart vaut `null` en anglais**, comme
+`sommaire.ctaSecondaire` depuis le 8 septembre : il mène à `/`, la page
+de vente CAPTURÉE, en français. Et les deux destinations passent par
+`hrefPourLangue`, qui REFUSE de préfixer une page qui n'a pas la langue :
+sans lui, `/signup` deviendrait `/en/signup`, c'est à dire un 404 au
+bout du seul bouton de l'encart.
+
+### MES TROIS ITÉRATIONS SUR LE MÊME GARDE-FOU
+
+Le garde qui vérifie qu'un composant ne porte plus de français en dur a
+été écrit trois fois, et les trois versions disent quelque chose :
+
+| Le motif | Ce qu'il faisait |
+|---|---|
+| le mot nu `"commentaires"` | rougissait sur le chemin d'import, sur le nom de la prop et sur l'`id` de la section : **trois usages légitimes** |
+| `{mots.` (l'interpolation JSX) | rougissait sur un ternaire parfaitement correct (`{etat === "copié" ? mots.lienCopie : ...}`) |
+| `mots.[a-zA-Z]` compté | passe, et **le commentaire dit ce qu'il ne prouve pas** |
+
+**Un motif se vise sur un LITTÉRAL AFFICHÉ, jamais sur un mot nu**, et
+quand un contrôle ne peut pas prouver ce qu'on voudrait, il le DIT au
+lieu de faire semblant. Ce qui garde vraiment le français dehors, c'est
+la liste de phrases, pas le compteur.
+
+## Les quatre liens de Jocelyne, en cartes (Béné, 8 septembre 2026)
+
+"Les liens qui te manquaient", envoyés dans un bloc HTML à elle : une
+grille de quatre cartes, un dégradé pâle, un emoji, un libellé et une
+précision dessous.
+
+**Son HTML ne pouvait pas être posé tel quel, et c'est une règle, pas un
+accident** : `nettoyerBloc` retire TOUS les attributs sauf le `href`
+d'un lien, depuis l'import du 29 août (une classe ou un style importés
+imposeraient l'apparence de Systeme.io au milieu d'une page qui a la
+nôtre). Collé tel quel, son bloc rendait quatre liens nus les uns
+derrière les autres.
+
+**D'où un bloc `liens` qui porte la DONNÉE**, et notre CSS qui la
+dessine : il se traduit, il suit le thème, et il passe à la ligne tout
+seul. Ses trois hexadécimaux deviennent des jetons (`#5A6EF6` EST déjà
+`--tq-bleu`, la palette a été calée sur sa page de vente le
+4 septembre) : un pâle écrit en dur resterait pâle le jour où la palette
+bouge, avec du texte foncé devenu illisible dessus.
+
+### DEUX DÉFAUTS QUE SEULE LA MESURE A MONTRÉS
+
+**1. LES QUATRE CARTES SORTAIENT SOULIGNÉES.** `.tiquiz-blog a` pose
+`text-decoration: underline` avec une spécificité de **0,1,1**, et un
+`no-underline` de Tailwind pèse **0,1,0** : il perd. C'est exactement
+l'arithmétique du bouton bleu sur bleu du 30 août, et la réponse est la
+même : une classe nommée (`tq-carte-lien`) qui monte la spécificité, pas
+un `!important`. La prochaine carte posée dans un article n'aura pas à
+connaître cette histoire.
+
+**2. LA QUATRIÈME CARTE S'ÉTIRAIT SUR TOUTE LA LARGEUR.** Mesuré dans un
+navigateur : `flex: 1 1 200px` donne, dans la colonne de 720 px d'un
+article, des boîtes de **229 / 229 / 229 / 720**. Trois tiennent sur la
+première ligne, la quatrième passe seule et grossit. Ce n'est pas la
+grille qu'elle a dessinée.
+
+La cause n'est pas son CSS : 4 x 200 px plus trois gouttières font
+848 px, et notre colonne de lecture en fait 720 (bornée le 30 août pour
+que la ligne reste lisible). Son bloc vivait dans un conteneur plus
+large. **Une grille 2 x 2** tient dedans avec des cartes de 352 px, et
+passe à UNE colonne sur un téléphone (mesuré à 390 px : 350 px, aucun
+débordement).
+
+**Et son intro est gardée MOT POUR MOT** : "Jocelyne accepte d'être
+contactée et de partager son parcours. Voici les liens qu'elle a
+souhaité mettre en avant." Un chantier de mise en page ne réécrit pas
+ses phrases.
+
+Test : `tests/logic/blog.test.mts`, plus
+`/en/blog/case-study-jocelyne-adhd-quiz` ajouté au filet responsive
+(il ne mesurait AUCUN article anglais, et c'est là que le meuble vient
+de changer : une phrase anglaise n'a pas la longueur de la française).
+
+## UN SVG SUR LE BLOG : ça marche, en FICHIER (Béné, 8 septembre 2026)
+
+"Tu ne sais pas mettre un svg sur notre blog ? C'est embêtant ..."
+
+**LA RÉPONSE EST EN DEUX MOITIÉS, et il faut les deux.**
+
+**Un SVG en FICHIER marche depuis le 31 août**, et ce n'est pas une
+supposition : cinq d'entre eux sont en ligne (`svg-tunnel-jocelyne.svg`,
+`svg-gwenn-3-axes.svg`, `svg-comment-lire-chiffres.svg` et sa variante
+mobile, `svg-12-comparatif-outils-popquiz-fr.svg`), posés en blocs
+`image`, avec 11 références dans trois articles.
+`lib/blog/dimensionsImage.ts` lit leur taille naturelle dans le
+`viewBox`, `apparierVariantes` apparie la version téléphone, et le filet
+responsive du 8 septembre les mesure sur quatre largeurs.
+
+**Ce qui cassait, c'est un `<svg>` EN LIGNE**, celui qu'on obtient en
+collant un schéma dans le HTML d'un article. MESURÉ avant correction :
+
+```
+ENTREE  <p>Avant</p><svg ...><style>.t{fill:#333}</style>
+        <text>97 % partent sans rien laisser</text>
+        <text>3 % laissent leur email</text></svg><p>Apres</p>
+SORTIE  <p>Avant</p>.t{fill:#333}97 % partent sans rien laisser3 %
+        laissent leur email<p>Apres</p>
+```
+
+`nettoyerBloc` retire les BALISES inconnues et garde ce qu'il y a
+ENTRE : le schéma disparaissait, **son CSS sortait en prose**, et ses
+deux étiquettes se collaient l'une à l'autre. C'est ce qu'elle aurait vu
+en essayant.
+
+**Règle : `sansContenuNonRendu` (`lib/blog/rendu.ts`), et l'import
+DÉLÈGUE.** Les trois coupes (`<style>`, `<script>`, `<svg>`) existaient
+déjà à l'IMPORT depuis le 8 septembre. Elles vivent maintenant au RENDU,
+parce qu'un article ÉCRIT À LA MAIN ne passe jamais par l'import : une
+règle posée sur un seul des deux chemins n'en protège que la moitié.
+`sansCodeNiStyle` l'appelle au lieu de recopier les trois motifs.
+
+**ON NE REND PAS UN SVG EN LIGNE, ET C'EST MESURÉ.** Le seul candidat du
+corpus (`comment-creer-quiz-systeme-io`) porte un `<style>` dont les
+sélecteurs s'appliqueraient à TOUTE la page une fois inliné, 25 `class=`,
+cinq `id` et cinq `url(#...)` qui entreraient en collision avec ceux
+d'un deuxième schéma. Un SVG chargé par `<img src>` rend dans un
+document ISOLÉ : son `<style>` y est borné, ses `url(#id)` s'y résolvent,
+et ses scripts ne tournent pas. **Un SVG passe par un fichier, ou il ne
+passe pas.**
+
+Et le deuxième candidat (`rente-mensuelle-affiliation-tiquiz`) ne doit
+de toute façon pas revenir : son article est EXCLU de l'import (23 blocs
+ne s'apparient plus), et son propre `<desc>` porte les promesses Tipote
+retirées le 1er septembre.
+
+Test : les trois cas ajoutés à `tests/logic/blog.test.mts`, vérifiés en
+rejouant la version d'avant (deux rougissent).
+
+## SOURCER LES FAQ (Béné, 8 septembre 2026)
+
+"Source les faq stp."
+
+**LE RELEVÉ, ET IL A ÉTÉ FAUX UNE FOIS.** 140 questions de FAQ sur les
+20 articles. Mon premier passage en annonçait **36 non sourcées** ; le
+vrai chiffre est **12**. Le premier ne cherchait qu'un `http`, donc il
+comptait comme non sourcées des réponses qui disent "selon le rapport
+Litmus State of Email Marketing 2024" ou "d'après le Quiz Conversion
+Rate Report d'Interact". **Un contrôle qui ne distingue pas ce qu'il est
+censé distinguer est pire qu'un contrôle absent**, et j'ai failli aller
+réécrire deux douzaines de réponses parfaitement sourcées.
+
+**CE QUI ÉTAIT DÉJÀ SOURCÉ ET N'A PAS BOUGÉ** : le ROI email (Litmus),
+les 44,9 % et 59,1 % (Quiz Conversion Rate Report d'Interact), les 2 à
+3 % contre 30 à 40 % (benchmarks Sumo, GetResponse, Interact, Outgrow).
+Ces réponses NOMMENT leur source.
+
+**CE QUI A ÉTÉ RETIRÉ, ET C'EST RETIRÉ, PAS SOURCÉ.** Je n'ai pas trouvé
+de source pour ces chiffres, et "ne jamais mentir, sous aucune forme" ne
+laisse pas le choix entre les deux. Un chiffre inventé dans une FAQ vit
+à l'endroit exact où un lecteur va vérifier.
+
+| Le claim | Pourquoi il est parti |
+|---|---|
+| "Warby Parker, Glossier, Sephora, BuzzFeed" (FAQ de Jocelyne) | quatre entreprises réelles citées comme PREUVE, sans une source |
+| "lu seulement par 12 % des inscrits" (deux articles) | aucune source, et il servait de base à un deuxième chiffre ("les 88 % restants") |
+| "en 2026, les quiz ont remplacé les ebooks dans la majorité des stratégies performantes" | une affirmation sur tout un marché, invérifiable |
+| "entre 150 et 500 leads par mois, 30 à 50 % de partage, 1 000 leads mensuels" | trois chiffres promis sans source : c'est une promesse de résultat |
+
+**Dix retraits, dans les deux langues**, par la table nommée
+(`faitsProgramme.ts` et `faitsEn.ts`) et pas à la main : un ré-import
+les ramènerait. Les deux pipelines sont idempotents après.
+
+**ET LA TROUVAILLE QUI COMPTE : `17-raisons-lancer-quiz-business` FAIT
+ÇA BIEN, et c'est le modèle.** Ses mentions de BuzzFeed et de Warby
+Parker sont accompagnées d'une **capture d'écran de leur vrai quiz** et
+d'une invitation à aller le passer ("Va passer le quiz Find Your Frames
+sur Warby Parker", "Va sur buzzfeed.com/quizzes"). Un lecteur vérifie en
+un clic. C'est l'inverse exact de la FAQ de Jocelyne, qui les citait
+sans rien. **Si elle veut un exemple nommé dans cette FAQ, Warby Parker
+est le seul des quatre qui soit adossé quelque part chez nous.**
+
+**Le garde-fou est borné aux claims TIERS**, exprès : nos propres taux et
+nos propres prix viennent du catalogue, donc les exiger sourcés ferait
+rougir le test sur des chiffres vrais par construction, et un test qui
+crie pour rien finit désactivé. Il exige aussi qu'il RESTE des FAQ
+sourcées à surveiller : sans ça, il passerait au vert sur zéro question.
+
+Test : les trois cas ajoutés à `tests/logic/blog.test.mts`, vérifié en
+rejouant les quatre marques dans la FAQ (il rougit et la nomme).
+
+## LA MESURE DU PARCOURS : cinq événements, et pas un de plus (Béné, 9 septembre 2026)
+
+"Cinq chantiers, dans cet ordre. **Le point 1 avant tout : sans mesure,
+on ne saura pas si le reste a servi.**" Et : "Le seul ratio à afficher :
+`generation_lancee -> compte_cree`. Ajoute aussi la durée médiane de
+`generation_reussie` : c'est le chiffre qui justifiera le chantier 3."
+
+### CE QU'IL Y AVAIT, ET CE QU'IL N'Y AVAIT PAS
+
+Mesuré avant d'écrire une ligne. GA4 était bien posé
+(`components/analytics/GoogleAnalytics.tsx`, sur les domaines de vente,
+après consentement), et les deux événements de VENTE existaient depuis
+le 4 septembre. **Du parcours lui même, rien** : aucun des cinq
+événements n'existait, et surtout **la durée médiane n'avait aucun
+endroit pour vivre.**
+
+**GA4 NE CALCULE PAS DE MÉDIANE dans ses rapports standard**, seulement
+des moyennes : une médiane demande une exploration ou BigQuery. C'est ce
+qui a décidé la colonne `duree_ms`, et ce n'est pas un détail de
+plomberie : une seule génération partie en délai d'attente déplace une
+moyenne de plusieurs secondes et une médiane de rien.
+
+### LES DEUX DURÉES NE SE CONFONDENT JAMAIS
+
+C'est le piège de ce chantier, et il est écrit dans la migration elle
+même :
+
+| Où | Ce qu'elle mesure |
+|---|---|
+| `embed_quiz_sessions.duree_ms` | l'APPEL AU MODÈLE : entrée de la requête -> réponse lue |
+| GA4, `generation_reussie.duree_ms` | ce que le VISITEUR VIT : le réseau, le flux et le rendu compris |
+
+Les deux répondent à deux questions différentes. Les additionner ou les
+comparer sous le même nom donnerait un chiffre qui a l'air juste, et
+l'écran d'admin dit donc laquelle il affiche, en toutes lettres.
+
+**Le chrono de la base démarre à l'ENTRÉE du POST**, avant tout `await` :
+posé après la lecture du corps ou après la limite par IP, il cacherait
+tout ce qui l'entoure. Le test mesure cette POSITION, commentaires
+retirés.
+
+**Et la durée est écrite MÊME quand l'usage est illisible.** Une réponse
+tronquée ou refusée a coûté exactement le même temps qu'une réponse
+complète, et c'est précisément le genre de réponse qui traîne le plus :
+l'exclure ferait une médiane trop flatteuse. `duree_ms` vit donc dans la
+ligne TOUJOURS construite, `if (usage)` vient après, et le test exige cet
+ordre.
+
+### LA MÉDIANE COUVRE TOUTES LES PORTES, L'ENTONNOIR NON
+
+Les quatre marches de l'entonnoir ne comptent que la page dédiée : les
+vues de l'iframe de la page de vente ne sont mesurées par personne, donc
+diviser toutes les générations par ces seules vues gonflerait le taux
+(c'est le défaut corrigé le 7 septembre sur l'entonnoir des ventes).
+
+La DURÉE, elle, est une mesure TECHNIQUE : elle n'a pas de dénominateur
+venu d'une autre population, donc elle couvre les deux portes. **L'écran
+le DIT**, sinon on compare deux chiffres qui ne parlent pas des mêmes
+gens.
+
+Trois nombres, jamais un seul : la médiane, les générations
+chronométrées, et **les générations sans mesure**. Aucune ligne d'avant
+le 9 septembre ne porte de durée : les compter à zéro annoncerait un
+générateur deux fois plus rapide qu'il n'est. En dessous de
+`MIN_POUR_UNE_MEDIANE = 10`, la médiane vaut `null` et l'écran dit
+pourquoi.
+
+### UNE SEULE PORTE DE SORTIE, ET ELLE PORTE UNE FILE
+
+`lib/analytics/envoi.ts`. Il y avait déjà un envoi
+(`ConversionGa4.tsx`, 4 septembre) qui gardait sa décision pour lui : le
+consentement, le domaine, le chemin, la façon de pousser dans
+`dataLayer`. **Deux portes qui décideraient chacune de leur côté
+finiraient par ne plus dire la même chose**, et ici la divergence
+coûterait une mesure envoyée après un "refuser".
+
+**LA FILE N'EST PAS UN CONFORT.** Le cas qui la rend nécessaire : le
+bandeau s'affiche, le visiteur ne répond pas tout de suite, il joue au
+quiz, PUIS il accepte. Sans file, `quiz_demarre` est perdu et
+`quiz_termine` envoyé, c'est à dire un entonnoir avec plus d'arrivées
+que de départs.
+
+- l'ORDRE est gardé, et le prix est dit : les événements vidés portent
+  l'horodatage du vidage, pas celui du geste ;
+- **un refus ne vide RIEN**, la file meurt avec l'onglet ;
+- au delà de 20 on ARRÊTE d'empiler au lieu de jeter les plus anciens :
+  jeter le premier ferait exactement l'inversion que cette file existe
+  pour empêcher.
+
+### CE QUE MON PROPRE TEST A TROUVÉ DANS LE CODE
+
+`dureeEnMs` faisait `typeof brut === "number" ? brut : Number(brut)`.
+**`Number(null)` vaut ZÉRO, et `Number("")` aussi** : "je n'ai pas
+mesuré" partait donc en `duree_ms: 0`, c'est à dire un faux zéro au
+milieu de sa médiane. C'est exactement le faux zéro que `mesureDeDuree`
+compte à part côté base, et il rentrait par la porte de GA4. Corrigé :
+on n'accepte qu'un nombre, ou une chaîne qui porte vraiment quelque
+chose.
+
+### LES CINQ ÉVÉNEMENTS, ET OÙ ILS PARTENT
+
+| L'événement | D'où |
+|---|---|
+| `quiz_demarre` | le quiz du hero de la landing : **PAS ENCORE BRANCHÉ** |
+| `quiz_termine` | idem |
+| `generation_lancee` | `EmbedPreviewClient`, quand l'appel démarre vraiment |
+| `generation_reussie` | le même écran, à l'AFFICHAGE du quiz |
+| `compte_cree` | `SignupForm` (formulaire) et `CallbackClient` (Google) |
+
+**`generation_lancee` NE PART PAS AU CLIC SUR LA LANDING.** Un clic qui
+navigue et repart sans rien générer gonflerait le dénominateur du seul
+ratio qu'elle lit. Il part du générateur, au démarrage de l'appel.
+
+**LA SOURCE SE LIT SUR L'ADRESSE**, et `"direct"` veut dire "arrivée sans
+paramètres" : ça ne peut se savoir que SUR la page du générateur.
+`parcoursDeLAdresse(window.location.search)` est pure (elle prend la
+chaîne, pas `window`), et `CLE_SOURCE` / `CLE_PROFIL` sont nommées UNE
+fois : le constructeur de lien de la landing (chantier 4) et le lecteur
+doivent écrire le même mot, sinon toutes les générations sortent
+`"direct"` et sans profil, en silence.
+
+**Une source inconnue retombe sur `"direct"`, jamais sur rien** : une
+génération sans source rétrécirait le dénominateur, donc flatterait le
+ratio.
+
+**`compte_cree` NE COMPTE PAS UN REFUS** (adresse déjà prise, mot de
+passe trop court) : le test mesure que l'envoi vient APRÈS le test de la
+réponse. Et côté Google, il ne compte qu'une PREMIÈRE entrée : la route
+d'accueil est la seule à savoir la différence
+(`accueilli: true`), et une reconnexion d'un compte existant n'est pas
+une inscription.
+
+**`avaitQuiz` vient du SERVEUR** sur le chemin Google : le cookie qui le
+porte est retiré dans la même réponse, donc le navigateur ne peut plus
+le lire après coup. La route rend le seul booléen, jamais l'identifiant
+ni le contenu du quiz.
+
+### CE QUI N'EST PAS MESURÉ, ET QUI SE DIT
+
+- **`quiz_demarre` et `quiz_termine` attendent le quiz du hero**, qui
+  arrive avec la landing (chantier 6). Le bloc de qualification actuel
+  n'a AUCUN script, par décision du 2 septembre, et y en ajouter un
+  rejouerait la FAQ cassée du même jour ;
+- **une génération lancée depuis l'IFRAME de la page de vente n'est pas
+  mesurée par GA4** : `chargerAnalytics` refuse les chemins `/embed`
+  (`CHEMINS_DE_NOS_CLIENTES`), et c'est délibéré, ces pages sont celles
+  de ses clientes. Le trou se ferme tout seul quand la landing remplace
+  cette page : son HTML ne porte aucune iframe de générateur ;
+- **une inscription entamée sur `quiz.tipote.com` n'est pas comptée**,
+  parce que GA4 n'est chargé que sur les domaines de vente. Ce n'est pas
+  un choix de ce chantier, et surtout ce n'est pas un trou dans son
+  ratio : la génération qui précède n'y est pas comptée non plus, donc
+  le numérateur et le dénominateur parlent de la même population ;
+- **la durée médiane AVANT le chantier 3 n'est pas encore relevée** :
+  aucune génération ne portait de durée avant aujourd'hui. Le chiffre
+  apparaît dans `/admin` dès que la migration est passée et que dix
+  générations ont eu lieu.
+
+🚨 Migration : `supabase/migrations/20260909_generateur_duree.sql`,
+**sur le Supabase de TIQUIZ**.
+
+Test : `tests/logic/mesure-du-parcours.test.mts` (29 cas), vérifié en
+rejouant SEIZE versions fautives (le `Number(brut)` nu, les paramètres
+vides envoyés, une source qui rend `null`, `avait_quiz` omis quand il
+vaut faux, une durée absente lue comme un zéro, `duree_ms` écrit
+seulement quand l'usage est lisible, le chrono après la lecture du
+corps, la file qui jette le plus ancien, la file qui se vide sans relire
+le consentement, le `select("*")` du lecteur, la médiane calculée et
+jamais montrée, un nom d'événement écrit à la main, le chrono après
+l'appel, `compte_cree` avant le test de la réponse, le callback qui
+compte chaque reconnexion, la route qui ne dit plus si un quiz
+attendait) : les seize rougissent.
+
+**ET MON PREMIER GARDE CRIAIT SUR TROIS FICHIERS INNOCENTS.** Il
+balayait `dataLayer` hors de `lib/analytics/` : il rougissait sur
+`GoogleAnalytics.tsx` (qui EST le shim documenté de Google) et sur
+`TrackingPixels.tsx` plus `lib/clientPixels.ts`, c'est à dire **les
+pixels DES CRÉATRICES sur leurs pages publiques**. Ceux là ne sont pas
+notre mesure, et les faire passer par notre porte les gaterait sur nos
+domaines de vente alors qu'ils vivent chez leurs clientes. Le garde vise
+maintenant les CINQ NOMS d'événement : un composant qui écrirait
+`"generation_reussie"` en dur aurait forcément fabriqué son propre
+envoi. Vingtième fois qu'un contrôle ne distingue pas ce qu'il est censé
+distinguer, et un test qui crie pour rien finit désactivé.
+
+## LA VITESSE : ses deux causes étaient déjà réglées, la vraie était ailleurs (Béné, 9 septembre 2026)
+
+Son chantier 2 nomme deux causes : Cloudflare qui ne met pas les
+fragments JavaScript en cache, et le doublon Supabase (`generateMetadata`
+et la page lisent la même ligne à chaque chargement). Cible : **sous
+1 s**, mesuré avec `npm run check:vitesse-quiz`.
+
+### LES DEUX SONT FAITES, ET C'EST VÉRIFIÉ AVANT D'ÊTRE DIT
+
+| Sa cause | L'état, mesuré le 9 septembre |
+|---|---|
+| Cloudflare | **20 fragments sur 20** servis par le cache, `HIT / HIT / HIT` sur trois chargements de suite |
+| le doublon Supabase | `cache()` de React est bien posé sur `fetchQuizMeta` ET sur `resolveCustomDomainOwner`, avec sa raison écrite à côté |
+
+### ET LA MESURE A REFRAMÉ LE PROBLÈME
+
+Le HTML du quiz met 2153 ms selon le script, et **le script compte la
+résolution DNS, la poignée de main TLS et le téléchargement complet**,
+pas le temps de réponse. Au chronomètre du serveur (`time_starttransfer`),
+c'est 422 à 1027 ms. Un chiffre lu dans un outil n'est pas une mesure
+tant qu'on n'a pas vérifié ce qu'il COMPTE.
+
+**Et le serveur n'est pas le goulot.** Mesure alternée, huit fois, contre
+une route qui ne fait QUE lire un fichier sur disque (`/favicon.ico`) :
+
+| | médiane |
+|---|---|
+| la route qui ne fait rien | **632 ms** |
+| la page du quiz, avec ses 7 requêtes Supabase | **485 ms** |
+
+La page de quiz est donc au PLANCHER du trajet réseau depuis la machine
+de mesure. Le doublon qu'elle nommait était déjà retiré, et ce qui reste
+côté serveur se perd dans le bruit.
+
+### CE QUI COÛTE VRAIMENT, ET IL NE POURRA JAMAIS ÊTRE MIS EN CACHE
+
+```
+1. le HTML          -> puis 2. 1146 Ko de JavaScript
+                    -> puis 3. un appel a /api/quiz/<id>/public
+                    -> ENFIN la premiere question
+```
+
+Trois vagues réseau, l'une après l'autre. La troisième coûte **588 à
+1150 ms** (trois relevés) et c'est là que la trouvaille est :
+
+```
+cache-control:  public, max-age=0, s-maxage=60, stale-while-revalidate=60
+cf-cache-status: DYNAMIC   (trois appels de suite)
+set-cookie:      ui_locale=fr; ...
+set-cookie:      tq_ref=jocelyne; ...   (sur un lien affilie)
+```
+
+**Cloudflare refuse de la mettre en cache, et il a RAISON.** Cette
+réponse porte un `set-cookie` : un cache partagé servirait le `tq_ref`
+d'UNE affiliée, et la langue d'UN visiteur, à tous les suivants. C'est
+exactement la règle `pages` que Béné a supprimée le 7 septembre.
+
+Donc ses en-têtes `s-maxage` sont **une promesse que rien ne peut
+tenir**, et surtout une invitation pour le prochain qui posera une Cache
+Rule dessus. La raison est maintenant écrite dans la route, en toutes
+lettres. **Ne poser AUCUNE Cache Rule sur `/api/quiz/*/public`.**
+
+Conséquence : cet aller-retour coûte une visite complète à l'origine, à
+CHAQUE visiteur, pour toujours. La seule façon de le retirer du chemin
+critique est de livrer la réponse AVEC le HTML.
+
+### LA CHARGE PART AVEC LE HTML, ET UNE SEULE FONCTION LA CALCULE
+
+`lib/quiz/chargerQuizPublic.ts` porte ce qu'un visiteur reçoit ; la page
+publique ET la route d'API l'appellent. Recalculer la charge côté page
+donnerait deux réponses pour le même quiz selon la porte empruntée, et
+c'est le défaut sorti six fois dans ce dépôt (les réseaux de partage, le
+score, l'alignement du sous-titre, la disposition des réponses). Ici
+l'écart coûterait le branding, le footer, les pixels ou la typographie
+d'une créatrice.
+
+**Les en-têtes HTTP restent à la ROUTE.** La fonction rend `prive` (un
+jeton d'embed, ou un brouillon montré à son auteur) ; la route seule
+répond en HTTP, et la page ne doit surtout pas rendre sa réponse
+cacheable.
+
+**Et la recomposition vit dans un module PUR** (`lib/quiz/chargeViewer.ts`).
+`chargerQuizPublic` importe `supabaseAdmin`, qui LÈVE au chargement quand
+les variables d'environnement manquent : aucun test ne peut l'appeler. Une
+règle enfermée dedans ne serait donc pas testée, et c'est exactement là
+que les bugs s'installent (règle du 1er août). Le client l'appelle aussi,
+sur la réponse de l'API : deux recompositions écrites séparément
+finiraient par ne plus rendre le même objet selon la porte.
+
+### CE N'EST PAS `previewData`, ET C'EST LE POINT LE PLUS CHER
+
+Le viewer avait DÉJÀ une prop qui saute l'appel d'API. La réutiliser était
+la solution en une ligne, et elle aurait coûté ceci, **en silence, sur
+tous les quiz en ligne** :
+
+| `previewData` éteint | Ce que ça retire |
+|---|---|
+| `trackedRef` (2 endroits) | les vues, les démarrages, les complétions : **les chiffres de la créatrice** |
+| `sessionKey` (3 endroits) | la reprise après un rafraîchissement |
+| `draftKey` (3 endroits) | le brouillon de réponse (drame Adeline, 1er septembre) |
+| `isPreviewMode` | **la capture du lead** |
+| le bandeau `resumed` | la ligne qui dit que les réponses sont gardées |
+
+Neuf comportements. C'est la faute du 1er août dans sa forme la plus
+littérale : une logique écrite pour un cas, appliquée telle quelle à un
+autre. `donneesServeur` est donc une prop SÉPARÉE qui ne fait QU'UNE
+chose : amorcer l'état et éviter le fetch. Tout le reste du composant
+continue de ne regarder que `previewData`, et le test le vérifie ligne
+par ligne.
+
+### LA PAGE NE SERT JAMAIS UN BROUILLON
+
+Elle appelle avec un jeton d'embed NUL et un utilisateur NUL, et
+n'injecte que quand `meta` existe (donc un quiz ACTIF dont le locataire
+est le bon) et qu'il n'y a pas de `?embed=` dans l'URL. Les aperçus, eux,
+continuent de passer par le client, qui envoie ses cookies : la route est
+la seule à relire une session, parce qu'elle seule a les cookies sous la
+main.
+
+`jetonEmbed` et `utilisateurConnecte` sont des **paramètres
+obligatoires**, jamais devinés : ils décident si un BROUILLON est servi.
+Les déduire de l'environnement marcherait dans la route et mentirait sur
+la page.
+
+### UN ALLER-RETOUR DE PLUS RETIRÉ AU PASSAGE
+
+La page redemandait `created_at, updated_at` à `quizzes` alors qu'elle
+venait de lire la même ligne. Les deux colonnes vivent maintenant dans
+`QUIZ_META_FIELDS` : elles sont aussi vieilles que la table, donc elles ne
+risquent pas de faire refuser le select entier (drame `survey_thanks_*`,
+2 juin).
+
+**Ce qui RESTE en double, et je le dis** : `resolveEffectivePixels` relit
+`profiles` alors que la charge a déjà résolu les mêmes pixels. Les deux
+calculs donnent la même chose aujourd'hui ; les fondre demanderait de
+choisir laquelle des deux formes gagne, et je ne l'ai pas fait.
+
+### CE QUI N'EST PAS MESURÉ, ET QUI SE DIT
+
+- **Le chiffre d'APRÈS n'existe pas encore.** Rien n'est déployé, et il
+  n'y a aucune base dans cet environnement : le gain se lira sur son
+  serveur, avec la même commande.
+- **La cible « sous 1 s » n'est PAS atteinte par ce chantier.** Il retire
+  une vague sur trois. Les 1146 Ko de JavaScript restent devant la
+  première question, et c'est le prochain levier.
+- **Le HTML ne rend toujours aucune balise du quiz** : tout est monté par
+  React. Le script dit donc maintenant DEUX choses différentes, et il ne
+  faut pas les confondre : « contenu du quiz rendu par le serveur »
+  (toujours NON) et « la charge du quiz voyage avec le HTML » (NON avant
+  le déploiement, oui après).
+- **La page a été SERVIE** (dev, base injoignable exprès) : elle répond
+  **200**, le journal ne porte AUCUNE erreur de rendu, la prop traverse
+  la frontière serveur/client, et le client retombe proprement sur son
+  écran d'erreur quand la charge est absente. Un vert local ne prouve
+  rien sur un rendu (leçon `pdf-parse`, 7 août) : celui-là est mesuré.
+
+### LA DÉTECTION DU SCRIPT CHERCHE UNE CLÉ, PAS UN NOM DE PROP
+
+Mesuré sur un rendu où la charge est volontairement nulle : le HTML porte
+quand même `donneesServeur\":null`. Chercher ce nom dirait donc « oui »
+sur une page qui n'a rien reçu. `address_form` sort à ZÉRO dans ce même
+rendu, et le module le pose toujours sur le quiz : sa présence ne peut
+venir que de la charge. **Un contrôle se règle sur son cas NÉGATIF.**
+
+### TROIS GARDES ONT ROUGI SUR UN DÉMÉNAGEMENT
+
+`asset-proxy`, `intro-start` et `other-results` lisaient
+`app/api/quiz/[quizId]/public/route.ts` pour y vérifier des faits qui
+n'ont rien à voir avec ce fichier : que la colonne du jour vit dans le
+select qui peut échouer, que la réponse passe par la réécriture des
+images. Le code a déménagé, les trois sont sortis ROUGES sur une
+correction juste.
+
+**Un chemin sur disque n'est pas un fait**, et c'est la leçon déjà payée
+par `pageDuSite.mts`. `tests/logic/aide/chargePublique.mts` CHERCHE le
+module qui porte le chargement, et refuse les deux cas qui comptent :
+introuvable (il a vraiment disparu), ou trouvé DEUX fois (deux
+implémentations, donc deux réponses possibles pour le même quiz). Vérifié
+en rejouant les deux : il rougit, et il les nomme.
+
+### ET LA FAUSSE ALERTE QUE LA MESURE A ÉVITÉE
+
+En relevant les en-têtes, `quiz.tipote.com` posait `ui_locale=en` sur la
+page publique d'une créatrice française. J'allais l'annoncer comme un
+défaut. Mesuré avec un `Accept-Language` réel : `fr-FR` donne bien `fr`,
+`de-DE` donne `en`. La négociation est juste, et mon relevé n'en portait
+aucun parce que `curl` n'en envoie pas. **Une observation faite avec un
+outil qui ne ressemble pas à un navigateur n'est pas une observation sur
+les navigateurs.**
+
+### DEUX ERREURS NON LUES, TROUVÉES EN CHEMIN, ET LA SECONDE OUVRAIT LE PORTIER
+
+**1. `fetchQuizMeta` jetait son erreur.** Cette seule requête porte
+maintenant le titre, l'image de partage, les dates du JSON-LD ET la
+décision d'injecter la charge dans le HTML : un select refusé (une
+colonne ajoutée sans sa migration) ferait donc disparaître tout ça d'un
+coup, et `maybeSingle` rend `null` sans un mot. C'est exactement ce qui
+a vidé le JSON-LD en silence pendant des mois (mesure du 7 septembre).
+Elle est lue, et elle CRIE.
+
+**2. `resolveCustomDomainOwner` rendait `null` dans DEUX cas
+différents** : "on n'est pas sur un domaine perso" et "la requête a
+échoué". Dans le second, le contrôle de locataire était donc SAUTÉ, donc
+le domaine d'une créatrice pouvait servir le quiz de quelqu'un d'autre.
+C'est mot pour mot ce que le commentaire de `CUSTOM_HOST_HEADER`
+interdit, en nommant l'hameçonnage, et l'erreur n'était même pas lue.
+"Je n'ai pas pu regarder" et "il n'y a rien" sont deux réponses
+différentes (règle du 23 août).
+
+**Trois états maintenant, et le sens du repli est asymétrique** : un 404
+de trop sur un domaine perso pendant une panne de base coûte une page ;
+servir sans vérifier coûte le quiz d'une créatrice affiché chez une
+autre. Un registre illisible ne sert donc RIEN.
+
+**Et le garde qui a trouvé ça figeait un nom de variable.** Il exigeait
+`datesRes.error`, donc il a rougi le jour où cette requête a disparu,
+c'est à dire sur une correction juste. Il vise maintenant le FAIT
+(aucun `const { data } = await supabaseAdmin` dans cette page), et il en
+couvre plus qu'avant : les deux erreurs ci dessus lui échappaient.
+
+Test : `tests/logic/charge-avec-le-html.test.mts` (19 cas), vérifié en
+rejouant SEPT versions fautives (la prop qui gate le suivi comme
+`previewData`, la prop qui entre dans `isPreviewMode`, le client qui
+recompose à la main, la page qui passe une session donc sert un
+brouillon, la route qui reconstruit la charge, le strip de `user_id` /
+`project_id` retiré, le registre de domaines illisible relu comme
+"pas de domaine perso") : les sept rougissent.
+
+## Le contrat d'URL du générateur, et la porte qu'il allait casser (9 septembre 2026)
+
+Béné, chantier 4 : « /generateur-de-quiz ne lit aucun paramètre
+aujourd'hui. Sans ça, les six boutons "Générer ce quiz" de la landing et
+ceux du quiz du hero ne mènent nulle part. »
+
+### CE QUI ÉTAIT VRAI AVANT D'ÉCRIRE UNE LIGNE
+
+| | mesuré le 9 septembre |
+|---|---|
+| `lib/generateur/prefillUrl.ts` | **n'existait pas** |
+| le type de la page | `{ session?, source?, lang? }` : tout autre paramètre jeté par le type |
+| `EmbedPreviewClient` | **aucun lecteur d'adresse au montage** |
+
+Un lien qui portait un brief atterrissait donc sur un formulaire VIDE, et
+le visiteur ne voyait pas que quelque chose s'était perdu.
+
+### 🚨 CE QUE LE CHANTIER ALLAIT CASSER, ET C'EST LA VRAIE TROUVAILLE
+
+**Le mot `source` désignait DEUX choses différentes, et elles lisaient la
+même clé d'URL.**
+
+| | ce que ça veut dire | qui le lit |
+|---|---|---|
+| la PORTE | quelle surface héberge le générateur (`page-generateur`, `tiquiz-fr`) | écrite dans `embed_quiz_sessions.source`, et `construireEntonnoirGenerateur` ne compte QUE `page-generateur` |
+| le PARCOURS | d'où vient le visiteur (`hero`, `modeles`, `direct`) | `parcoursDeLAdresse`, envoyé à GA4 |
+
+Or la page faisait `source={sp?.source ?? SOURCE_GENERATEUR}`. Ses six
+cartes portent `?source=modeles` : **chacune aurait écrit `modeles` dans
+la colonne de la porte, donc toutes ces générations auraient disparu de
+son entonnoir** pendant que les vues de la page, elles, restaient. Le
+seul ratio qu'elle lit se serait effondré, et rien n'aurait cassé.
+
+**Règle : la PORTE est décidée par la ROUTE, jamais par un paramètre.**
+`source={SOURCE_GENERATEUR}`, point. Le parcours se lit sur l'adresse
+côté client et ne touche que GA4. Mesuré au passage : **aucun lien du
+dépôt** ne posait `?source=` sur cette page, donc l'ancienne surcharge ne
+protégeait rien et laissait n'importe qui écrire dans cette colonne.
+
+C'est la règle du 7 septembre ("le numérateur et le dénominateur parlent
+de la même page"), qui allait se faire casser par l'autre bout.
+
+### SA TABLE D'OBJECTIFS VISAIT LES LIBELLÉS, PAS LES CLÉS
+
+Elle l'avait écrit elle même : « Vérifie les deux dernières entrées
+contre les libellés réels de ta liste déroulante "Ton objectif" et
+corrige si besoin. » La correction est plus profonde que ses deux
+dernières entrées : sa table pointait vers des LIBELLÉS français
+("Qualifier mes prospects"), alors que le formulaire stocke une CLÉ
+(`objective: "qualifier"`) dont le libellé est traduit par l'écran.
+**Viser le libellé aurait donné un champ vide sur `/en/`**, sans que rien
+ne le dise.
+
+| son slug | notre clé | pourquoi |
+|---|---|---|
+| `qualifier` | `qualifier` | même mot |
+| `orienter` | `orienter` | « aider mon audience à choisir » |
+| `faire-decouvrir` | `decouvrir` | « me faire découvrir » |
+| `capturer` | `qualifier` | « capturer des leads QUALIFIÉS », ses mots |
+
+Les **huit clés réelles** passent aussi, telles quelles : un lien écrit
+demain avec `objectif=diagnostiquer` marche sans revenir dans ce fichier.
+
+### UN LANCEMENT AUTOMATIQUE NE PEUT PAS SE FAIRE REJETER
+
+C'est sa phrase, « un clic rejeté sur Générer fait partir des gens »,
+appliquée au clic qu'on donne à sa place.
+
+- `pret` est **plus exigeant** que la validation du formulaire (3 et 3,
+  contre 3 et 2) : un lancement automatique ne peut donc jamais tomber
+  sur son propre message d'erreur. Le test lit les DEUX seuils dans la
+  source et refuse qu'ils se croisent ;
+- le lancement **dépend de l'état du formulaire**, jamais d'un délai.
+  `setInputs` ne se voit pas dans le rendu qui l'écrit : lancer dans le
+  même effet enverrait le formulaire VIDE. Un `setTimeout` de 80 ms
+  marcherait la plupart du temps, et c'est exactement ce qui définit une
+  course.
+
+### ET IL NE PART QUE D'UNE NAVIGATION DEPUIS CHEZ NOUS
+
+Béné : « La page est publique, un robot peut lancer autant d'appels IA
+qu'il veut et la facture est pour nous. »
+
+Un robot qui rend le JavaScript et qui suit les six liens de la landing
+ferait partir six générations PAYANTES (le générateur public écrit avec
+le modèle de l'éditeur payant depuis le 8 septembre), et il gonflerait
+`generation_lancee` avec des gens qui n'existent pas.
+`lancementAutomatiqueAutorise` exige donc un referrer de chez nous.
+
+**Le sens de l'erreur est sûr** : un referrer absent ou étranger (un lien
+partagé sur un réseau, une adresse collée à la main) coûte UN CLIC sur un
+formulaire déjà rempli et déjà valide. Jamais un écran vide, jamais un
+refus.
+
+**Ce que je n'ai PAS mesuré, et qui se dit :** le comportement réel d'un
+robot qui rend le JavaScript sur cette page. C'est un garde contre un
+risque identifié, pas contre un fait observé.
+
+### MESURÉ DANS UN NAVIGATEUR, LES DEUX CHEMINS
+
+| | referrer | le formulaire | appels à `/api/embed/quiz/generate` |
+|---|---|---|---|
+| arrivée directe | vide | rempli, objectif « Faire découvrir un sujet » | **0** |
+| vrai clic depuis une de nos pages | notre page | rempli | **1** |
+
+Un vert local ne prouve rien sur un rendu (leçon `pdf-parse`, 7 août) :
+celui là est mesuré, avec les deux étoiles et la légende à l'écran.
+
+### LES DEUX CHAMPS OBLIGATOIRES SE DISENT AVANT LE CLIC
+
+« Le champ "À qui s'adresse-t-il ?" est obligatoire sans que rien ne le
+dise. » Mesuré : le SUJET portait le même défaut, et les deux étaient
+validés au clic depuis le début. Les deux portent maintenant leur étoile,
+`aria-required`, et une légende sous le titre du formulaire, en français
+comme en anglais.
+
+### CE QUI RESTE À FAIRE, ET C'EST LE CHANTIER 6
+
+**Ses douze liens ne portent NI `source` NI `profil`** (mesuré dans
+`copywriting-claude/tiquiz-landing.html` : `sujet`, `audience`,
+`objectif`, et rien d'autre). Portés tels quels, toutes les générations
+de la landing sortiraient en `source: "direct"` et le profil du quiz du
+hero serait perdu, c'est à dire que le chantier 1 ne mesurerait plus rien
+de ce que le chantier 6 apporte. `lienGenerateur` exige donc `source` par
+le compilateur : les six cartes sont `"modeles"`, les six boutons de
+résultat `"hero"` avec leur profil.
+
+**Endroits à respecter :** `lib/generateur/prefillUrl.ts` (pur, il écrit
+le lien ET le relit : deux orthographes rendraient le formulaire vide et
+la mesure aveugle, en silence), `components/embed/EmbedPreviewClient.tsx`
+(la lecture du navigateur, aucune décision),
+`components/embed/EmbedForm.tsx`,
+`app/(site-langues)/generateur-de-quiz/page.tsx`.
+Test : `tests/logic/prefill-generateur.test.mts`, vérifié en rejouant SIX
+versions fautives (la porte relue dans l'URL, `pret` plus permissif que
+le formulaire, le lancement autorisé pour tout le monde, sa table qui
+vise les libellés, les champs qui ne disent plus qu'ils sont
+obligatoires, un `setTimeout` à la place de l'état) : les six rougissent.
+
+**Le débit reste à 2 par 24 h et par IP** (`lib/embed/limites.ts`).
+Tranché par Béné le 9 septembre : son brief demandait 3 par heure, ce qui
+est **plus généreux** que ce qui tourne (72 par jour contre 2), et elle a
+gardé le chiffre en place.
+
+## Le quiz gardé 7 jours, et il n'était perdu qu'à un cheveu près (9 septembre 2026)
+
+Béné, chantier 5 : « Aujourd'hui, quelqu'un qui génère un quiz et ferme
+l'onglet est perdu pour toujours. »
+
+**Mesuré : le quiz ne l'était pas.** `EmbedPreviewClient` ÉCRIT déjà le
+jeton de session dans `localStorage` (clé `tiquiz_embed_session`), la
+ligne est en base, et aucun cron ne purge `embed_quiz_sessions`. Mais
+**personne ne relisait ce jeton sur le générateur** : seul
+`EmbedAutoClaim`, sur le tableau de bord, s'en servait après une
+inscription. Il ne manquait que la porte de retour.
+
+### ON GARDE L'ADRESSE DU QUIZ, PAS LE QUIZ
+
+Le brouillon porte le JETON, pas le contenu. Recopier le quiz dans le
+navigateur donnerait deux versions de la même chose : celle du serveur,
+que l'éditeur modifie à chaque frappe, et une photo prise au moment de
+la génération. **La photo gagnerait à la réouverture et effacerait tout
+ce qui a été corrigé depuis**, sans que rien ne le dise.
+
+### CINQ DÉCISIONS, ET AUCUNE N'EST DÉCORATIVE
+
+1. **Une horloge qui recule ne jette PAS le travail de quelqu'un.** Un
+   changement d'heure ou une machine remise à l'heure met l'horodatage
+   dans le futur ; le périmer perdrait un brouillon vivant, et personne
+   ne saurait pourquoi. Perdre le travail de quelqu'un coûte plus cher
+   que de garder un brouillon un jour de trop.
+2. **Le brouillon est écrit quand le quiz EXISTE**, sur l'événement
+   `result`, jamais au démarrage de la génération : le bandeau de retour
+   rouvrirait sinon un jeton mort.
+3. **« En créer un nouveau » OUBLIE, il ne masque pas.** Un bandeau
+   simplement caché reviendrait au rechargement suivant, et elle aurait
+   à refuser la même proposition tous les jours pendant une semaine.
+4. **Un brouillon COUPE le lancement automatique du chantier 4.** Écrire
+   un deuxième quiz, donc payer, pendant qu'un bandeau annonce que le
+   premier attend, c'est retirer une décision à quelqu'un qui l'a sous
+   les yeux. Le formulaire reste rempli : il reste un clic, de chaque
+   côté.
+5. **Une inscription emporte le brouillon avec le jeton**
+   (`EmbedAutoClaim`). Le quiz est dans son compte : le laisser ferait
+   réapparaître « Ton quiz t'attend. » pendant une semaine, pour un quiz
+   qu'elle a déjà.
+
+### « JAMAIS UNE FENÊTRE MODALE »
+
+C'est en majuscules dans son brief. La sortie est une LIGNE, sous le
+bandeau, qui ne prend le geste de personne. Elle ne part que par le
+HAUT (`sortieParLeHaut`) : le bas c'est la barre des tâches, le côté un
+deuxième écran, et un `relatedTarget` non nul veut dire que la souris
+est simplement passée sur un autre élément.
+
+**Le repli d'un `sessionStorage` qui lève est « déjà vue »**, donc rien
+ne s'affiche. Une ligne qui se réafficherait à chaque mouvement de
+souris serait pire que pas de ligne du tout.
+
+### LES ACCÈS AU NAVIGATEUR SONT TOUS DANS UN TRY/CATCH
+
+« En navigation privée, l'accès peut lever une exception et ça ne doit
+rien casser. » Les décisions vivent dans `lib/generateur/brouillon.ts`,
+pur (il prend la chaîne et l'HEURE, pas `window` ni `Date.now()` : un
+test qui dépend de l'horloge clignote). Le test se sert de Node comme
+fixture : cet environnement n'a ni `localStorage` ni `sessionStorage`,
+donc l'accès y LÈVE vraiment, et c'est la seule façon honnête de
+mesurer ce cas d'ici.
+
+### MESURÉ DANS UN NAVIGATEUR
+
+| | |
+|---|---|
+| brouillon frais | bandeau, titre du quiz, les deux boutons |
+| brouillon de 8 jours | rien du tout |
+| vrai clic depuis chez nous, SANS brouillon | 1 appel IA |
+| vrai clic depuis chez nous, AVEC brouillon | **0 appel** |
+| un vrai mouvement de souris dans la page | ne consomme PAS la ligne de sortie |
+| une sortie par le haut | la ligne s'affiche, une seule fois |
+| « En créer un nouveau » | bandeau parti ET la clé effacée |
+
+**Et ma première sonde a dit « la ligne ne s'affiche pas », à tort :**
+elle dispatchait l'événement avant que l'effet React ne soit attaché.
+Une seconde d'attente en plus, et le comportement était là. **Une sonde
+qui mesure un GESTE doit d'abord attendre que le geste soit
+écoutable** ; sans la refaire, j'allais aller réparer du code qui
+marchait.
+
+### MA FAUTE, ET C'EST LA VINGT ET UNIÈME DE LA SÉRIE
+
+Trois de mes neuf rejeux de versions fautives sont d'abord ressortis
+VERTS. Deux parce que mon `sed` visait une indentation que j'avais
+INVENTÉE (quatre espaces là où le fichier en porte deux) : le motif ne
+trouvait rien, donc rien n'était modifié, donc le test passait sur du
+code intact. **Un rejeu qui ne trouve pas sa cible ne mesure rien**, et
+il ment dans le sens le plus dangereux, celui qui rassure. Chaque
+mutation passe désormais par un `assert s.count(old) == 1`.
+
+Le troisième est pire, parce qu'il visait un vrai bug : mon cas
+« l'horloge recule » posait un brouillon **trois jours** dans le futur,
+c'est à dire DANS la fenêtre de sept jours. Une valeur absolue rendait
+donc exactement le même résultat, et le garde restait vert en ne
+distinguant rien. Le cas couvre maintenant trois jours ET trente.
+
+**Endroits à respecter :** `lib/generateur/brouillon.ts` (pur, les
+décisions), `components/embed/EmbedPreviewClient.tsx` (le bandeau, la
+ligne, l'écriture sur `result`),
+`components/dashboard/EmbedAutoClaim.tsx` (l'oubli après inscription).
+Test : `tests/logic/brouillon-generateur.test.mts`, vérifié en rejouant
+NEUF versions fautives (aucune péremption, le futur périmé, le repli
+non sûr, le bandeau masqué au lieu d'être oublié, le brouillon écrit au
+démarrage, le lancement non coupé, une deuxième hydratation, une
+inscription qui n'oublie pas, une sortie par le bas) : les neuf
+rougissent.
+
+## Le quiz du haut de page, et les six briefs qu'il partage (Béné, 9 septembre 2026)
+
+Chantier 6 : « Reprends-le, ne le réinvente pas », à propos de
+`copywriting-claude/tiquiz-landing.html`. Sa maquette porte quatorze
+sections ; ses onze points de vigilance, eux, ne nomment que ce qui
+n'existait nulle part : le quiz du hero, les six cartes, la section
+blog. C'est donc ça le chantier, et le reste de sa page vit déjà sur
+`/fonctionnalites/<slug>` depuis sa décision du 6 septembre (« rien
+n'est à jeter, tout est à déplacer »).
+
+### UN SEUL TABLEAU DE BRIEFS, DEUX RENDUS
+
+Dans sa maquette, chaque brief est écrit DEUX fois : dans `PROFILS[].u`
+(le bouton du résultat) et dans le `href` de la carte. Mesuré : les six
+couples (sujet, audience, objectif) sont identiques des deux côtés.
+
+Les recopier les laisserait diverger, et le symptôme serait muet : le
+générateur s'ouvrirait avec un sujet que la carte n'annonçait pas.
+`BRIEFS` (`lib/site/quizHero.ts`) est la seule source, et les deux
+écrans la lisent.
+
+**Ce qui DIFFÈRE, c'est la porte, et c'est tout l'intérêt** : le
+résultat porte `source=hero` PLUS le profil obtenu, les six cartes
+portent `source=modeles`. Sans ça, les douze liens de sa maquette
+seraient sortis en `"direct"` et le seul ratio qu'elle lit ne dirait
+plus d'où viennent les gens.
+
+**Les sujets sont écrits EN CLAIR.** Les siens sont déjà encodés
+(`%C3%AA`) : recopiés tels quels, `lienGenerateur` les encoderait une
+seconde fois et la créatrice lirait `%C3%AA` dans son formulaire.
+
+### LES SIX PROFILS SONT TOUS ATTEIGNABLES, ET C'EST MESURÉ
+
+C'est le contrôle de Véronique (1er août) : en mode profils, un résultat
+que le barème ne peut jamais attribuer est un résultat que personne ne
+verra. Les 320 combinaisons ont été jouées :
+
+| acc | for | aff | cre | ven | dem |
+|---|---|---|---|---|---|
+| 18,1 % | 24,1 % | 11,2 % | 14,4 % | 10,9 % | 21,2 % |
+
+Son barème est sain. Le test rejoue les 320 parties, avec des bornes
+LOIN des valeurs mesurées (8 % et 30 %) : il attrape un profil devenu
+inatteignable, il n'arbitre pas à la limite.
+
+**Et le barème anglais est le MÊME que le français**, gain par gain :
+sans ça, deux visiteurs qui cliquent la même chose obtiendraient deux
+profils différents, et personne ne le verrait.
+
+### CE QUI A ÉTÉ MESURÉ DANS UN NAVIGATEUR
+
+Ses trois contraintes de forme, sur la page servie :
+
+| Sa contrainte | Mesuré |
+|---|---|
+| « pas de scroll pour voir la première question et ses options » à 1440x800 | bas des options à **791 px** sur 800 |
+| « le hero est centré, une seule colonne » | une colonne, `tql-hero-centre` |
+| « deux colonnes au-dessus de 660 px, une seule en dessous » | **2 colonnes à 661 px, 1 à 659 px** |
+| aucun débordement horizontal | 0 px à 1440, 900, 700, 661, 659, 390 et 320 |
+
+Et le geste, joué pour de vrai : quatre questions (5, 4, 4, 4 options),
+résultat « L'accompagnateur », bouton vers
+`/generateur-de-quiz?sujet=…&audience=…&objectif=qualifier&source=hero&profil=acc`,
+« Recommencer » qui remet à zéro. Les deux événements partent :
+
+```
+event quiz_demarre  {}
+event quiz_termine  {"profil":"acc"}
+```
+
+`quiz_demarre` part UNE fois pour quatre clics : il marque « quelqu'un a
+commencé », pas « quelqu'un a cliqué ». Le poser à chaque réponse le
+rendrait quatre fois plus gros que le nombre de personnes, dans le sens
+flatteur.
+
+### 🚨 CE GESTE NE SE MESURE PAS EN DÉVELOPPEMENT, ET ON SAIT ENFIN POURQUOI
+
+La note du 8 septembre disait : « le formulaire du générateur ne
+s'hydrate pas dans ce conteneur, c'est identique sur /embed/preview qui
+est en production depuis des mois, je ne sais pas si c'est
+l'environnement ou un vrai bug ». **C'est l'environnement, et c'est
+mesuré.**
+
+| | fibers React sur la page |
+|---|---|
+| `next dev` | **1 / 1030** (le seul est l'overlay de Next) |
+| `next build` puis `next start` | **813 / 1030** |
+
+Le HTML servi par le dev porte pourtant ses 54 poussées `__next_f` : la
+charge RSC est bien émise, c'est le navigateur qui ne l'exécute pas ici.
+Les mêmes 1 fiber sortent sur `/tarifs` et sur `/generateur-de-quiz`,
+deux pages qui tournent en production depuis des semaines.
+
+**Règle : un geste se mesure sur un build de production.** Un
+`next dev` de ce conteneur ne dit rien de l'interactivité, ni en bien ni
+en mal, et un test qui ne distingue pas ce qu'il est censé distinguer
+est pire qu'un test absent.
+
+Le build a demandé un `.env.local` de mesure (trois valeurs bidon) parce
+que `supabaseAdmin` LÈVE au chargement sans variables : il est
+`.gitignore` et il a été SUPPRIMÉ après la mesure.
+
+### CE QUE LA MESURE A CORRIGÉ DANS SA MAQUETTE
+
+**« Et 21 modèles par métier dans ton compte » : il y en a 15.** Compté
+dans `lib/templates/catalog.ts`. Les six autres sont les six cartes
+juste au dessus, et sa propre section « Un quiz, ce n'est que le début »
+le dit d'ailleurs juste : « Quinze modèles métier et six modèles
+phares ». Le compte vient donc du CATALOGUE
+(`nombreDeModelesMetier()`) : un nombre recopié est faux au premier
+modèle ajouté, et il vit à l'endroit exact où un lecteur le vérifie, il
+lui suffit d'ouvrir `/templates` et de compter.
+
+**Ses dix-neuf `href="#"` ne sont pas portés.** Dix-neuf liens morts sur
+la page qui vend.
+
+### 🚨 ET `/templates` SERVAIT 70 TIRETS CADRATINS
+
+Trouvé en allant vérifier le compte. Mesuré EN PRODUCTION, avec l'agent
+de Googlebot :
+
+| | |
+|---|---|
+| `tiquiz.fr/templates` | **200**, 455 mots, `lang="fr"` |
+| son `<title>` | `Modèles de quiz prêts à l'emploi par métier — Tiquiz · Tiquiz` |
+| tirets cadratins dans le HTML servi | **70** |
+
+Deux choses, et la seconde est la plus chère.
+
+**Le titre porte le nom DEUX fois et un tiret cadratin entre les deux**,
+dans la ligne exacte que Google affiche : le gabarit du site ajoute déjà
+` · Tiquiz` (`app/layout.tsx`). Retiré des deux pages de modèles.
+
+**Et 64 tirets cadratins vivaient dans `lib/templates/catalog.ts`**,
+tous dans la forme ` — `, **aucun dans un commentaire** : c'est du texte
+de quiz, servi aux visiteurs des quiz de vraies clientes. Sa règle du
+7 juin est absolue et ce fichier ne l'avait jamais vue.
+
+**Le mot qui suit décide la ponctuation**, parce qu'un `-` simple
+donnerait « stratégie - c'est une première action », qui ne se lit pas :
+
+| ce qui suit | ce qu'on écrit |
+|---|---|
+| `et`, `mais`, `pas`, `sans`, `rien` | `, ` (il coordonne ou il oppose) |
+| tout le reste | ` : ` (il annonce ce qui suit) |
+
+Relu : « Ta force : tu construis des bases solides », « Tu n'as pas
+besoin de travailler plus : tu as besoin de travailler sur le bon
+levier », « Ton succès n'enlève rien à personne, au contraire ». Les
+1950 `─` du fichier sont des séparateurs de commentaire, pas des tirets
+cadratins : `grep -c` comptait des LIGNES, pas des caractères.
+
+### CE QUI A ÉTÉ VÉRIFIÉ ET QUI N'AVAIT RIEN
+
+**J'ai d'abord lu le middleware et conclu que `/templates` était derrière
+`/login`.** C'était faux : mesuré en production, la page répond **200** à
+un navigateur ET à Googlebot. Une lecture de code n'est pas une mesure,
+et cette conclusion aurait envoyé Béné valider un correctif qui ne
+corrigeait rien.
+
+**Le lien du centre d'aide suit déjà la locale.** Sa consigne écrit
+`https://app.tipote.com/support/tiquiz?lang=${locale}` : c'est
+EXACTEMENT ce que rend `helpUrl(locale)` (`lib/help.ts`), branché sur
+les trois écrans qui connaissent la langue. Les deux formes répondent
+200, vérifié.
+
+Le seul `lang=fr` écrit en dur qui reste est `LIEN_SUPPORT`
+(`lib/checkout/brand.ts`), sur la page de retour du bon de commande. Et
+ce n'est pas une fuite de langue : cette page est écrite **entièrement
+en français en dur**, zéro `getTranslations`. Quelqu'un qui achète en
+anglais y lit du français de bout en bout. C'est un autre chantier, il
+est nommé ici pour ne pas être découvert par une cliente.
+
+### CE QUI RESTE DE SA MAQUETTE, ET CE N'EST PAS UN OUBLI
+
+Trois sections de sa page ne sont pas portées : « D'où vient le
+trafic », « Pourquoi Tiquiz et pas un autre outil », « Un quiz, ce n'est
+que le début ». Leur contenu vit sur `/fonctionnalites/<slug>` depuis le
+6 septembre, et le ramener sur la landing déferait sa propre décision
+(« la page actuelle fait 5 000 mots, un visiteur froid décroche au
+troisième écran »). À trancher par elle, pas par du code.
+
+**Endroits à respecter :** `lib/site/quizHero.ts` (pur : les questions,
+les profils, les briefs, le barème), `components/landing/QuizHero.tsx`
+(le rendu et les deux événements, aucune décision),
+`components/landing/cssQuizHero.ts`,
+`app/(site)/apercu-landing-8f2c9d41/page.tsx`.
+Test : `tests/logic/quiz-du-hero.test.mts` (16 cas), vérifié en rejouant
+NEUF versions fautives (le profil retiré du bouton de résultat, un gain
+anglais différent, `dem` rendu inatteignable, un sujet recopié déjà
+encodé, la grille à deux colonnes revenue, une adresse de générateur en
+dur, la section blog non gardée, `revalidate` retiré, un nombre de
+modèles écrit à la main) : les neuf rougissent.
+
+## Le quiz s'affiche pendant qu'il s'écrit, et la route rend une RAISON (chantier 3 + tâche #55, 10 septembre 2026)
+
+Béné : "le streaming de la génération, c'est le chantier qui rapporte
+le plus". Et dans la même mission : sur `/en/generateur-de-quiz`, un
+visiteur anglophone lisait "L'IA a mis trop de temps. Réessaie." Les
+deux vivaient dans `app/api/embed/quiz/generate/route.ts`, donc ils se
+corrigent dans le même passage.
+
+### CE QUI ÉTAIT VRAI AVANT D'ÉCRIRE UNE LIGNE
+
+| | mesuré le 9 et le 10 septembre |
+|---|---|
+| la plomberie SSE vers le navigateur | existait (heartbeat 5 s, `session`, `progress`, `result`, `error`) |
+| l'appel à Anthropic | **pas streamé**, `stream: true` absent, `res.json()` d'un coup |
+| ce que l'écran affichait avant `result` | un spinner, et la phrase `progress` du serveur, en FRANÇAIS |
+| les sorties d'erreur de la route | dix, six phrases françaises distinctes, plus `e.message` brut |
+| l'écran | `setError(payload.error)` et `err.message`, recopiés tels quels |
+| le minuteur de 120 s | ne bornait que les EN-TÊTES : `res.json()` venait après `clearTimeout` |
+
+La dernière ligne n'était pas dans le brief. Un corps qui traînait
+n'était borné par rien, et personne ne l'aurait vu.
+
+### LA STRUCTURE : un module pur décide, la route relaie, l'écran rend
+
+| Le fichier | Ce qu'il fait |
+|---|---|
+| `lib/embed/fluxGeneration.ts` (pur) | lit le flux d'Anthropic morceau par morceau (`LecteurSseAnthropic`), dit ce qui est déjà COMPLET dans le JSON en cours (`progressionDuFlux`), et ce qui est NOUVEAU depuis la dernière lecture (`nouveautes`) |
+| `lib/embed/echecGenerateur.ts` (pur) | traduit une raison en clé du dictionnaire de l'embed, la phrase du quota avec les nombres de la route |
+| `lib/embed/attente.ts` (pur) | les trois cartes (toutes les 4 s), la question Systeme.io et ce qu'on met en avant après la réponse |
+| `components/embed/QuizEnCours.tsx` | l'écran d'attente : aucune décision, il rend |
+| `components/embed/EmbedPreviewClient.tsx` | écoute `titre`, `question`, `resultat`, range par INDEX, traduit les raisons |
+
+**Une question ne part que quand son OBJET est fermé**, jamais à moitié
+écrite : une phrase coupée au milieu d'un mot se lit comme une panne.
+Le titre part dès que sa chaîne est fermée. L'ordre de sortie est
+l'ordre d'écriture, et le client range par index : rien à trier.
+
+**On relit tout le texte accumulé à chaque morceau, et le coût est
+MESURÉ** : un quiz de 10 questions et 5 profils fait 17,9 Ko, relu tous
+les 50 caractères ça fait 358 lectures pour 172 ms de processeur en
+tout. Un lecteur incrémental serait plus difficile à prouver juste pour
+un gain que personne ne verra.
+
+**Ce qui s'affiche est du texte PROPRE, dans la langue du QUIZ** :
+`sanitizeAiText` (le tiret cadratin) puis `applyFrenchTypography`
+(l'espace insécable devant `?`), sur l'aperçu comme sur le quiz final.
+La règle du 7 juin vaut aussi pour les dix secondes d'attente, et
+`locale` est un paramètre OBLIGATOIRE de `progressionDuFlux` : deviner
+la langue ferait afficher "es-tu?" à un visiteur français.
+
+### CE QUI NE BOUGE PAS, ET POURQUOI C'EST TESTÉ
+
+- **`enregistrerUsage` reçoit LA MÊME FORME qu'avant** : la route
+  reconstruit `{ model, usage, stop_reason, content }` depuis les
+  événements `message_start` et `message_delta`. `duree_ms` est écrit
+  même quand le flux se coupe, et AVANT qu'on dise que ça a raté : une
+  génération interrompue a coûté le même temps et les mêmes jetons
+  qu'une génération réussie (règle du 9 septembre).
+- **Le chrono démarre toujours à l'entrée du POST**, et le test de
+  troncature (`stop_reason === "max_tokens"` avant `JSON.parse`) tient
+  toujours.
+- **Le minuteur couvre maintenant la LECTURE** (180 s, `BUDGET_FLUX_MS`)
+  : un `reader.read()` sur un corps abandonné lève `AbortError`, classé
+  `too_long`. 180 et pas 120, parce que pendant tout ce temps le
+  visiteur VOIT les questions arriver.
+- **Une erreur DANS le flux** (`overloaded_error` en cours de route) est
+  lue, journalisée, et rend `busy`.
+
+### LES RAISONS, ET POURQUOI ELLES VIVENT DANS LE DICTIONNAIRE DE L'EMBED
+
+Chaque sortie de la route porte `reason`, jamais une phrase : les neuf
+de `RaisonIa`, plus `sujet`, `audience`, `objectif` pour les refus de
+VALIDATION (qui gardent leur 400 : ils passent intacts à travers
+Cloudflare et disent la bonne chose). Le quota rend `rate_limited` avec
+`parLimite` et `fenetreHeures` en DONNÉES, et l'écran écrit la phrase
+dans sa langue avec ces nombres.
+
+**Pourquoi pas `useEchecIa` et `erreursIa` directement :** ce hook lit
+next-intl, dont la langue vient du cookie ou de l'adresse. Le générateur
+reçoit sa langue en PROP (dans une iframe, c'est la page hôte qui la
+donne). Deux sources de langue sur un même écran, c'est un message
+d'erreur en français sous un formulaire anglais. Les phrases sont donc
+dans `embed-i18n.ts`, et **un test exige qu'elles restent identiques à
+`messages/{fr,en}.json`** : deux copies qui ne peuvent pas diverger.
+
+Au passage, `errGeneric` de l'embed disait "Une erreur est survenue.
+Réessaie." Il dit maintenant la phrase de `erreursIa`, la même que
+partout ailleurs.
+
+### LA QUESTION SYSTEME.IO NE BLOQUE RIEN, ET SA RÉPONSE PART DANS GA4
+
+Oui / Non / Pas encore, sous le quiz qui s'écrit. La réponse est gardée
+d'un essai à l'autre (on ne repose pas une question à quelqu'un qui a
+répondu) et part dans `generation_reussie` sous la clé `systemeio`,
+omise quand personne n'a répondu. "Oui" met en avant la connexion par
+clé API, les deux autres l'export CSV : c'est une LIGNE sous les
+boutons, pas une bascule dans l'éditeur. L'éditeur est
+`QuizDetailClient`, partagé avec l'app, et il n'a pas été touché.
+
+### MESURÉ DANS UN NAVIGATEUR, SUR UN BUILD DE PRODUCTION
+
+Un `next dev` de ce conteneur n'hydrate rien (règle du 9 septembre),
+donc `next build` puis `next start`, avec un mock qui STREAME dans le
+temps sur la même origine (un `route.fulfill` livre tout d'un coup, et
+un `route.continue({ url })` vers une autre origine n'a jamais atteint
+le mock : la première mesure a rendu "unreachable", ce qui est d'ailleurs
+la preuve que ce chemin-là marche).
+
+| t | ce que la page montre |
+|---|---|
+| 0,6 s | la carte 1, la phrase d'attente, aucun blanc |
+| 1,1 s | le titre |
+| 2,1 s puis 3,6 s puis 4,6 s | les questions 1, 2, 3, avec leurs options |
+| 4,1 s | la carte 2 (puis la 3 à 8,2 s : toutes les 4 s) |
+| 5,7 s puis 6,7 s | les profils 1 et 2 |
+
+Clic sur "Oui" : `aria-pressed`, et la ligne sur la clé API. Animation
+du titre : `enter` en temps normal, **`none` sous
+`prefers-reduced-motion`** (c'est `motion-safe:` qui décide). Une erreur
+dans le flux sur `/embed/preview?locale=en` : la phrase ANGLAISE, le
+formulaire toujours là avec le sujet saisi, le bouton "Generate my quiz
+with AI" : jamais un écran blanc. Un 429 avant le flux : "You have
+already generated 2 quizzes... Come back in 24 h", les nombres venus de
+la route.
+
+**CE QUE CETTE MESURE NE DIT PAS, et il faut le dire dans ce sens là :**
+les temps du tableau sont ceux du MOCK, pas ceux d'Anthropic. Ce qui est
+mesuré, c'est que l'écran affiche chaque morceau dès qu'il arrive ; à
+quelle vitesse le modèle écrit, ça se lit dans `/admin` (la médiane de
+`duree_ms`), et le flux réel n'a pas pu être exercé d'ici, faute de clé.
+La médiane d'AVANT n'a pas pu être relevée non plus (aucune base
+joignable) : elle se lit après coup en bornant la période à avant le
+déploiement, les lignes d'avant gardent leur `duree_ms`.
+
+### MES FAUTES DE CE PASSAGE
+
+1. **`pkill -x node -f`, puis un `pgrep -f "next start -p 3000"` dont
+   le motif était DANS ma propre ligne de commande** : deux fois la
+   sortie 144, deux fois le shell tué. La règle est écrite depuis le
+   4 septembre. On tue par PID lu au lancement (`$!`), jamais par un
+   motif qui peut matcher la commande qui le lance.
+2. **Deux gardes sont restés VERTS sur une version fautive** avant d'être
+   resserrés : `stream: true` cherché dans tout le fichier tombait sur
+   `decode(value, { stream: true })` ; `systemeio` cherché après l'appel
+   tombait sur `onSystemeio=` du rendu. Les douze rejeux rougissent
+   maintenant, et c'est le rejeu qui l'a dit, jamais la relecture.
+3. **Mon premier attendu de test portait l'espace ORDINAIRE** devant
+   `?`, donc il a rougi sur une typographie française JUSTE.
+
+Test : `tests/logic/flux-generation.test.mts` (22 cas), vérifié en
+rejouant DOUZE versions fautives (le `stream: true` retiré de la
+requête, une phrase à la place d'une raison, le minuteur retiré avant la
+lecture, la phrase de progression en français, une chaîne ouverte
+acceptée comme titre, l'aperçu sans typographie, `payload.error`
+recopié, `systemeio` oublié, une apparition sans `motion-safe:`, les
+cartes toutes les 3 s, une carte réécrite, une raison inconnue
+recopiée) : les douze rougissent.
+
+**Ce chantier n'a PAS de jumeau chez Tipote** : aucune
+`embed_quiz_sessions` là-bas, vérifié le 9 septembre.
+
+## Une vente encaissée chez nous prévient Béné par email (11 septembre 2026)
+
+Béné : "il me faut aussi une alerte quand je fais une nouvelle vente via
+notre système, par email."
+
+Systeme.io la prévenait de chaque vente faite sur ses tunnels. Depuis que
+le bon de commande est chez nous, une vente ouvrait l'accès, émettait la
+facture, commissionnait l'affilié... et personne ne le lui disait. Elle
+le découvrait dans l'admin, ou pas.
+
+### Le contenu est PUR et jumeau, l'envoi est local
+
+`lib/ventes/alerteVente.ts` décide de l'objet et du corps, et de rien
+d'autre : pas de Resend, pas de `process.env`. Il est identique à
+l'octet près dans les deux dépôts qui encaissent :
+
+```bash
+cmp lib/ventes/alerteVente.ts ../formaquiz/lib/ventes/alerteVente.ts
+```
+
+`lib/email/venteEncaisseeAlerte.ts` le branche sur Tiquiz (le nom, la
+fiche client dans l'admin) et passe par `alerterAdmins`.
+
+### LA NATURE EST UN PARAMÈTRE OBLIGATOIRE
+
+| Nature | Quand | L'objet commence par |
+|---|---|---|
+| `premiere` | achat unique, ou première facture d'un abonnement | « Nouvelle vente Tiquiz » |
+| `echeance` | un renouvellement (`subscription_cycle`, `subscription_update`) | « Échéance encaissée Tiquiz » |
+| `essai` | première facture à ZÉRO : un mois offert démarre | « Nouvel essai Tiquiz » |
+| `inconnue` | PayPal, qui ne distingue pas la première échéance des suivantes | « Encaissement Tiquiz » |
+
+Côté Stripe, `natureDeLaFactureStripe(billing_reason, amount_paid)`
+décide. Côté PayPal, on DIT qu'on ne sait pas au lieu de deviner : une
+première annoncée à tort ferait ouvrir chaque renouvellement comme une
+nouveauté (règle du 1er août, la mécanique est un paramètre).
+
+### Trois points d'encaissement, une alerte chacun, et jamais deux
+
+| Où | Quoi |
+|---|---|
+| Stripe `checkout.session.completed` | UNIQUEMENT un produit sans échéance (`product.interval === null`) |
+| Stripe `invoice.paid` | chaque facture d'abonnement, la première et le mois offert compris |
+| PayPal `PAYMENT.SALE.COMPLETED` | chaque échéance |
+
+Un abonnement n'est PAS annoncé au checkout : sa première facture arrive
+juste derrière sur `invoice.paid`, et l'annoncer aux deux endroits ferait
+deux emails pour une seule vente. **Le montant est celui qui a vraiment
+été encaissé** (la session, la facture, la vente PayPal), jamais le prix
+du catalogue : une remise, un prorata ou un mois offert changent la
+somme.
+
+L'alerte part EN DERNIER, après l'accès, la facture et la commission,
+et ne lève jamais : un échec d'envoi ne change pas la réponse au
+webhook.
+
+### Et les trois alertes existantes partaient en double
+
+`saleRefusedAlert`, `supportAlertEmail` et `commentaireBlogAlerte`
+envoyaient à `[...ADMIN_EMAILS]`, deux adresses qui arrivent dans la
+même boîte : le double que Béné a fait retirer côté Atelier le 25 août
+("je reçois toujours ce genre de mails en double c'est normal ?"). Un
+garde-fou qui ne protège qu'un des jumeaux ne protège personne.
+`ADMIN_ALERT_EMAILS` (une adresse) et `alerterAdmins()` (UN envoi, pas
+de boucle possible) sont portés de l'Atelier, et les quatre alertes
+passent par cette liste.
+
+### Ce qui n'est PAS mesuré, et qui se dit
+
+Aucun de ces emails n'a été envoyé depuis ce dépôt : il n'y a ni clé
+Resend ni vente possible dans cet environnement. Ce qui est vérifié : le
+contenu des quatre natures, l'échappement d'un nom saisi au paiement,
+l'ordre à chacun des trois points, et six versions fautives rejouées qui
+rougissent (l'alerte avant la commission, une nature écrite en dur, une
+première annoncée par PayPal, le retour aux deux adresses, le doublon
+Systeme.io non journalisé, le nom non échappé). La première vraie vente
+dira le reste.
+
+Test : `tests/logic/alerte-vente-encaissee.test.mts`.
+
+## Deux ventes Systeme.io absentes du tableau de bord : ce qui est établi, ce qui ne l'est pas (11 septembre 2026)
+
+Béné, capture de Systeme.io à l'appui : la facture #2036 (Ivan
+Pellegry, 07/09, 17,00 €) et la #2037 (Fatima Mouradi, 10/09, 17,00 €),
+offre « NV tiquiz mensuel », **n'apparaissent pas** dans « Encaissé jour
+par jour » ni dans « Dernières ventes ».
+
+### Ce qui est MESURÉ d'ici
+
+- « NV tiquiz mensuel » est le plan tarifaire **3375217** de son compte
+  (lu par l'API le 11 septembre), c'est à dire le plan de la vente
+  d'Ivan du 7 août. Il est dans `OFFER_TO_PLAN` ET dans `PRICE_PLANS`
+  depuis le 7 août : le routage le connaît, et le tableau de bord
+  saurait le nommer.
+- Le tableau de bord ne compte une ligne de `webhook_logs` que si son
+  type d'événement passe `isConfirmedSaleEvent` (`SALE|ORDER|PURCHASE|
+  VENTE|COMMANDE`). Le seul type de vente jamais OBSERVÉ dans le journal
+  est `customer.sale.completed` (Ivan, 7 août). **Le type d'un
+  RENOUVELLEMENT n'a jamais été observé** : s'il s'appelle
+  `subscription.payment.succeeded` ou approchant, il est journalisé mais
+  jamais compté comme une vente.
+- L'idempotence du webhook Systeme.io est sur `sio_order_<order.id>`.
+  Si un renouvellement porte le MÊME identifiant de commande que la
+  vente d'origine, il était écarté comme « Duplicate retry » **sans
+  laisser AUCUNE ligne** : `check:ventes-sio` et l'écran d'admin
+  répondaient alors « jamais reçu » à un appel bel et bien reçu.
+
+### Ce qui est CORRIGÉ, quelle que soit la cause
+
+Le doublon se journalise (`status: "duplicate"`, verdict « doublon
+écarté » dans le pilotage, ton info, aucune action demandée). "Je n'ai
+pas pu regarder" et "il n'y a rien" sont deux réponses différentes
+(règle du 23 août), et un appel écarté sans trace confondait les deux.
+
+### Ce qui n'est PAS établi, et où ça se tranche
+
+**Je ne sais pas laquelle des deux hypothèses est la bonne, ni si c'en
+est une troisième** (le webhook n'a pas tiré, un type d'événement
+inconnu). Une cause plausible n'est pas une cause (règle du 2
+septembre). Ça se tranche sur le serveur, où vit le journal :
+
+```bash
+npm run check:ventes-sio
+```
+
+dit chaque appel reçu avec son type ; et le journal du processus dit
+ceux qui ont été écartés avant le 11 septembre :
+
+```bash
+pm2 logs tiquiz-prod --nostream --lines 5000 | grep "Tiquiz webhook"
+```
+
+**Ne pas changer la clé d'idempotence ni élargir `isConfirmedSaleEvent`
+avant d'avoir LU le type d'un renouvellement** : c'est le webhook qui
+ouvre les accès et qui fait payer les affiliés, et une règle écrite sur
+une forme supposée de payload est mot pour mot la faute d'Ivan (7
+août).
+
+### LU LE MÊME JOUR, dans le journal du serveur (Béné l'a collé)
+
+`pm2 logs tiquiz-prod` tranche la première hypothèse : **Systeme.io
+rappelle le webhook pour une commande DÉJÀ traitée, avec le MÊME
+identifiant de commande.** `sio_order_11771832` cinq fois,
+`sio_order_11953332` juste après la vente de Fatima du 10 septembre.
+Chacun était écarté comme « Duplicate retry » sans une ligne en base :
+les échéances des abonnements Systeme.io étaient invisibles, et rien ne
+le disait.
+
+Ce que le journal NE dit PAS, et qu'on ne devine toujours pas : le TYPE
+d'événement d'un renouvellement (l'ancienne ligne de journal ne
+l'imprimait pas). La règle ci dessus tient donc : la clé d'idempotence et
+`isConfirmedSaleEvent` ne bougent pas. **Ce qui distingue une échéance
+d'une relivraison, c'est le TEMPS**, et c'est le tableau de bord qui le
+lit, pas le webhook.
+
+**Règle : `echeancesSio()` (`lib/admin/sioSales.ts`).** Un rappel
+journalisé en `duplicate`, qui ne dit ni échec ni annulation, et qui
+tombe au moins `ECART_MIN_JOURS_ECHEANCE` (20) jours après le dernier
+encaissement compté pour cette commande, est une **échéance** : une
+vraie vente dans le chiffre d'affaires, nommée « échéance » dans
+l'onglet Ventes. Le seuil est LOIN des deux groupes (des minutes pour
+une relivraison, 28 jours au moins pour un renouvellement). Les factures
+Stripe portent le même nom (`billing_reason`), pour que « nouvelles
+ventes » et « abonnements récurrents » se lisent pareil quel que soit le
+moyen.
+
+**Le piège que le journalisage du 11 septembre avait créé** : la clé de
+dédoublonnage était l'identifiant de commande et la ligne la plus
+récente gagnait. Une relivraison journalisée aurait donc DÉPLACÉ la vente
+à sa propre date, sans la compter deux fois. Les relivraisons sont lues
+À PART, et la vente d'origine garde sa date (testé).
+
+**Ce qui reste vrai, et qui n'est pas de l'argent perdu** : ces
+échéances ne sont PAS remontées au registre d'affiliés de Tipote. Le
+webhook n'y envoie que la vente d'origine, avec `regle_par:
+"systeme_io"` : c'est Systeme.io qui paie ses affiliés sur ses tunnels,
+pas nous. Un affilié voit donc une seule ligne pour un abonné Systeme.io
+dans son tableau de bord, et son argent arrive quand même. Le jour où
+Béné voudra la ligne par échéance là bas, il faudra une clé par échéance
+chez Tipote (aujourd'hui `(source_app, sio_order_id)` est unique).
+
+**Pourquoi Fatima (10 septembre) restait absente n'est PAS établi
+d'ici.** Son appel a été traité (`plan=monthly order=12384179`), donc sa
+ligne devrait être dans `webhook_logs`. Le script qui le dit ne démarrait
+pas sur le serveur : voir la section suivante.
+
+### `check:ventes-sio` mourait sur le Node 20 du serveur
+
+`node: bad option: --experimental-strip-types` : ce drapeau n'existe qu'à
+partir de Node 22.6, et le serveur est en Node 20. Tous les scripts
+`.mts` destinés au SERVEUR passent par `tsx`, qui est une dépendance
+(installée par `npm ci`, jamais un `npx` qui va sur le réseau). Le
+runner de tests garde `--experimental-strip-types` : il ne tourne
+jamais sur le serveur. Le test refuse le drapeau sur tout script
+`check:`, dans les DEUX dépôts (Tipote porte `check:cta-affilie`).
+
+## L'audit du 11 septembre : « est-ce que je peux envoyer mes affiliés dessus sans risque ? »
+
+Béné : "je veux aussi que tu fasses un audit complet de notre système
+de vente et affiliation : est-ce que je peux envoyer mes affiliés
+dessus sans risque ? Tout va fonctionner correctement ?"
+
+La chaîne a été relue de bout en bout, fichier par fichier, dans les
+trois dépôts : le lien `?ref=` -> le cookie d'un an -> le bon de commande
+-> les metadata Stripe et le `custom_id` PayPal -> les deux webhooks ->
+`commissionnerVente` -> `attribute-sale` chez Tipote -> la maturation à
+J+30 -> le lot -> le fichier SEPA et l'autofacture. **Tout existe, et
+chaque maillon est tenu par un test.** Ce qui manquait n'était pas une
+rupture : c'était des PERTES SILENCIEUSES, et la plus chère est fermée.
+
+### 1. UNE PANNE DE TIPOTE PERDAIT LA COMMISSION POUR TOUJOURS
+
+`commissionnerVente` tourne DANS le webhook de paiement, et il ne doit
+jamais bloquer l'accès du client. Quand Tipote ne répondait pas (panne,
+déploiement, secret manquant, délai dépassé), il écrivait une ligne dans
+le journal et rendait la main. Le webhook répondait 200, la ligne passait
+`processed`, et **aucun réessai ne repassait jamais**. Même chose pour
+l'annulation sur un remboursement : la commission mûrissait et partait au
+lot.
+
+**Règle : `lib/affiliate/filetCommission.ts` décide,
+`filetCommissionStore.ts` écrit, `posterTipote.ts` parle au réseau.**
+Un appel qui échoue est rangé TEL QUEL dans `commissions_en_attente`
+(action, corps, statut de l'échec) et rejoué :
+
+- **après chaque webhook de paiement** (`after()` de Next, une fois la
+  réponse partie) : sans cron sur le serveur, une commission en attente
+  repart dès la vente suivante ;
+- **par `POST /api/cron/rejouer-commissions`** (`X-Cron-Secret`), pour
+  le cas où il n'y a pas de vente pendant que Tipote revient : une
+  ANNULATION en attente doit repasser avant que la commission ne mûrisse.
+
+Le rejeu est SANS DANGER : Tipote répond `duplicate` sur une clé déjà
+connue, donc une commission ne naît jamais deux fois. Ce qui se rejoue
+et ce qui attend un humain est une décision PURE (`classerEchec`) : un
+400 ne se rejoue pas (le même corps échouera pareil), tout le reste oui,
+dix minutes d'écart, 500 essais au plus. Une seule alerte email par ligne
+mise en attente, jamais une par essai.
+
+**Le webhook et le rejeu frappent la MÊME porte** (`posterVersTipote`) :
+deux constructions d'adresse finiraient par diverger, et un rejeu qui
+frappe une autre porte ne rattrape rien. `ownerSale.ts` n'a plus de
+`fetch` à lui, et trois tests qui figeaient cet emplacement ont été
+remis sur le fait.
+
+Le filet vit aussi dans l'Atelier (`formaquiz`), qui poste vers le même
+registre : un garde-fou qui ne protège qu'un des jumeaux ne protège
+personne. Le module pur y est identique à l'octet près.
+
+🚨 Migration : `supabase/migrations/20260911_commissions_en_attente.sql`,
+sur les Supabase de **TIQUIZ** et de **L'ATELIER**. Sans elle le filet
+crie dans le journal avec le corps de l'appel, et rien d'autre ne casse.
+
+### 2. Côté Tipote, une lecture ratée faisait payer quelqu'un d'autre
+
+`lireLigneAffilie` ignorait l'erreur de ses deux selects : une lecture
+qui ratait rendait `null`, donc l'affilié passait pour INCONNU, donc
+`attributeSale` passait au candidat suivant. Et la route répondait 200
+sur un `status: "error"`, donc l'appelant croyait la commission prise.
+Le registre lève maintenant (`RegistreIllisible`), la route répond 503,
+et le filet d'ici rejoue. Détail dans l'`AGENTS.md` de Tipote.
+
+### 3. Ce qui est VÉRIFIÉ et qui n'avait rien
+
+- le cookie dure un an, `?sa=` (anciens liens) marche encore ;
+- l'URL gagne sur le cookie au bon de commande ;
+- les metadata Stripe suivent l'abonnement, y compris à travers un
+  changement de palier (calendrier) ; PayPal recopie le code à la montée ;
+- chaque `invoice.paid` commissionne (récurrent), sur le HT, avec la
+  taxe de la facture ; PayPal pareil, depuis la facture qu'on émet ;
+- un remboursement ou un impayé annule la commission de l'échéance ;
+- l'inscription gratuite rattache à vie, le premier rattachement gagne ;
+- les verrous des deux webhooks laissent repasser un réessai ;
+- les secrets sont comparés en temps constant partout.
+
+### 4. Ce qui reste, et qui n'est PAS du code
+
+- **Aucun cron ne fait mûrir les commissions (`pending` ->
+  `approved`).** C'est le bouton « Approuver » de
+  `affiliate.tipote.com/admin/versements`, à cliquer avant de construire
+  le lot du mois. Ce n'est pas un bug, c'est le process : à faire entre
+  le 10 et le 13.
+- 🚨 **Cette ligne disait que le cron du barème (`recompense-affilies`,
+  Tipote) n'avait de crontab nulle part. C'EST PÉRIMÉ, mesuré le jour
+  même** : Béné a collé son `crontab -l`, et il y est, le 2 de chaque
+  mois à 3 h (`0 3 2 * *`), suivi de `remise-affilies` à 3 h 05. Ce que
+  les trois dépôts ne portent pas, c'est la LIGNE de crontab ; le
+  serveur, lui, la porte. « Je n'ai pas trouvé » n'est pas « il n'y a
+  rien » (règle du 22 août), et je l'ai refaite ici.
+- **`rejouer-commissions` n'a PAS de ligne de crontab** au 11 septembre :
+  le rejeu ne part donc qu'après une vente. La ligne à poser est dans le
+  message du jour ; sans elle, une annulation en attente peut arriver
+  après que la commission a mûri.
+- **Une commission déjà versée qu'un remboursement annule (`trop-tard`)
+  ne vit que dans `pm2 logs`** de Tipote : c'est un cas pour un humain
+  (compenser au lot suivant), et il faut lire le journal pour le savoir.
+- **Une commission en devise étrangère est écartée du lot** (raison
+  `devise`), affichée, jamais convertie : les trois plans en dollars
+  chez Systeme.io restent chez Systeme.io.
+
+Les deux sorties muettes trouvées (une échéance Stripe sans adresse, un
+produit PayPal inconnu) crient maintenant dans le journal.
+
+Tests : `tests/logic/filet-commission.test.mts` (ici et dans l'Atelier),
+`tests/logic/echeances-systeme-io.test.mts`, vérifiés en rejouant onze
+versions fautives (l'annulation sans filet, le rejeu hors `after`, un
+400 rejoué en boucle, le store qui décide seul, une relivraison comptée
+comme échéance, la relivraison qui remplace l'origine, un échec de
+paiement compté, le script mort sur Node 20, le select sans `status`, et
+deux côté Atelier) : toutes rougissent.
+
+## Un paiement sans accès prévient Béné, un accès à moitié ouvert aussi (11 septembre 2026, suite)
+
+Béné : "continue la suite logique, je veux un système ultra fiable de
+l'arrivée sur le site à la commande, en passant par les accès, les
+paiements et l'affiliation."
+
+La règle du 7 août dit « il a payé le client, il doit recevoir ses
+accès, point barre ». Le code la tenait, et il se taisait : un octroi
+raté répond 502 (le fournisseur réessaie), puis Stripe ou PayPal
+s'arrêtent, et personne ne sait que quelqu'un a payé devant une porte
+fermée. Et quand l'accès s'ouvrait mais que l'email de confirmation ne
+partait pas, ou que le tag Systeme.io n'était pas posé, la personne
+avait payé sans le savoir, ou sans jamais recevoir une séquence. Les
+deux vivaient dans `pm2 logs`.
+
+**Règle : `lib/ventes/alerteAcces.ts` décide (faut-il alerter, quoi
+dire), identique à l'octet près dans les deux dépôts qui encaissent :**
+
+```bash
+cmp lib/ventes/alerteAcces.ts ../formaquiz/lib/ventes/alerteAcces.ts
+```
+
+`lib/email/accesAlerte.ts` l'envoie. Les DEUX webhooks (Stripe, PayPal)
+l'appellent AVANT chaque 502 d'octroi et APRÈS chaque octroi réussi,
+sur l'achat, l'abonnement et la montée de palier.
+
+**On alerte sur un échec CONSTATÉ, jamais sur un doute.** `null` veut
+dire « on ne sait pas » : l'Atelier ne dit pas si son email d'accès est
+parti, et Tiquiz rend `tagClientPose: null` quand aucun tag client ne
+s'applique au plan. « Ne s'applique pas » n'est pas « a raté » ; lire ce
+`null` comme un échec ferait crier l'alerte sur chaque vente, et une
+alerte qui crie pour rien finit dans un filtre. `etatOctroiTiquiz`
+(`lib/checkout/etatOctroi.ts`, pur) fait cette traduction.
+
+**Chaque email dit QUOI FAIRE** : ouvrir l'accès à la main si le 502
+revient, renvoyer un lien de connexion depuis la fiche, poser le tag
+dans Systeme.io. Un email d'alerte lu sans savoir quoi faire est un
+email remis à plus tard.
+
+**Ce qui n'est pas mesuré :** aucune de ces alertes n'a été envoyée
+depuis ce dépôt (ni clé Resend ni paiement possible ici). Ce qui est
+vérifié : la décision dans ses cinq cas, le contenu échappé sans tiret
+cadratin, et les deux versions fautives rejouées (un 502 sans alerte,
+le garde du lot retiré côté Tipote) rougissent.
+
+Test : `tests/logic/alerte-acces.test.mts`, ici et dans l'Atelier.
+
+## Les leads partent vers l'outil CHOISI : Systeme.io ou GoHighLevel, et la vente ne bouge pas (Béné, 14 septembre 2026)
+
+"Aujourd'hui j'ai un gros client FR et US qui veut tester, du coup je
+dois connecter gohighlevel pour les automatisations des leads comme
+systemeio. Moi je reste sur systeme io pour les ventes, on ne touche
+surtout pas à ça. Dans la foulée on ajoutera Clickfunnels, Podia,
+Brevo..." Puis : "on doit lui laisser le choix de synchroniser ses leads
+avec l'outil de son choix comme Quizify : dans les paramètres, proposer
+toutes les connexions disponibles, activer ou désactiver synchro, alerte
+mail si déconnecté, pages d'aide", et "une agence et des sous comptes,
+la totale".
+
+### DEUX CHAÎNES, ET ELLES NE SE TOUCHENT PAS
+
+| La chaîne | Ce qu'elle fait | Ce qui a bougé |
+|---|---|---|
+| la VENTE | le bon de commande, les webhooks, `poserTagAchat`, `tiquiz-clients`, le webhook Systeme.io | **rien**, et le test l'exige : ces fichiers n'importent pas `lib/integrations/` |
+| les LEADS | ce qu'un quiz fait de l'adresse qu'il vient de capter | passe par une DESTINATION, qui peut être Systeme.io ou GoHighLevel |
+
+Un client GoHighLevel n'a pas de compte Systeme.io. Ce qui a été
+construit, c'est la couche qui manquait entre le quiz et l'outil, pas un
+deuxième Systeme.io.
+
+### LA DESTINATION EST UNE DÉCISION PURE, ET SON ORDRE NE SE DEVINE PAS
+
+`lib/integrations/decision.ts` (aucune base, aucun réseau) :
+
+1. la connexion CHOISIE sur le quiz (`quizzes.connexion_id`) ;
+2. sinon la connexion PAR DÉFAUT du projet (`connexions_crm.est_defaut`) ;
+3. sinon Systeme.io, par sa cascade historique (`resolveApiKey`), qui
+   n'a pas bougé d'une ligne.
+
+**Une connexion en PAUSE ne retombe sur RIEN.** "En pause" veut dire "ne
+rien envoyer", pas "envoyer ailleurs" : retomber sur Systeme.io
+enverrait les leads d'un client GoHighLevel dans le compte Systeme.io
+de la créatrice, et personne ne le verrait. La route de capture écrit
+`sio_last_error` et rend la main AVANT tout envoi. Une connexion
+DÉCONNECTÉE, elle, est quand même visée : c'est l'envoi qui échouera et
+qui le dira.
+
+**Un 401 / 403 est "déconnecté", et c'est le SEUL cas qui prévient la
+créatrice**, UNE fois par coupure (`alerte_deconnexion_le`), dans sa
+langue, en 7 langues (`lib/integrations/alerteContenu.ts`, pur). Un 5xx,
+un 429 ou une panne réseau sont temporaires : on ne touche pas à l'état,
+parce qu'un email "déconnecté" sur une panne de dix minutes ferait
+ressaisir un jeton valide. Une langue inconnue retombe sur l'ANGLAIS
+(leçon du robot d'aide, 31 août).
+
+### GOHIGHLEVEL : ce qui est MESURÉ, et ce qui ne l'est pas
+
+Mesuré le 14 septembre contre leur API, pas supposé :
+
+| | |
+|---|---|
+| base | `https://services.leadconnectorhq.com` |
+| l'en-tête `Version` | OBLIGATOIRE (`2021-07-28`) : sans lui, 401 |
+| un jeton invalide | 401 "Invalid Private Integration token" |
+
+**LE PIÈGE DE L'UPSERT : `tags` ÉCRASE.** Leur documentation le dit :
+le champ `tags` de `POST /contacts/upsert` remplace tous les tags du
+contact. Un lead qui refait un deuxième quiz PERDRAIT les tags du
+premier, et les automatisations bâties dessus avec. L'adaptateur
+n'envoie donc JAMAIS `tags` dans l'upsert : le contact d'abord, puis
+`POST /contacts/{id}/tags`, qui n'enlève rien. Le test l'exige, et il a
+été vérifié en rejouant la version fautive.
+
+Le téléphone et le pays sont VALIDÉS par leur API (E.164, code pays) :
+une valeur libre peut faire refuser l'upsert entier, donc on retente
+sans eux. Un contact sans téléphone vaut mieux qu'un lead qui n'arrive
+jamais. Le titre du profil part dans un champ personnalisé
+(`tiquiz_resultat`), à part, après les tags, et son échec ne fait que
+journaliser.
+
+**Deux façons de se connecter, et les deux existent :** un jeton
+d'intégration privée collé à la main (marche aujourd'hui), ou le bouton
+OAuth de la Marketplace (le parcours de Quizify : Connect, autoriser,
+choisir le sous-compte, revenir). Le second exige une app déclarée chez
+eux (`GHL_CLIENT_ID`, `GHL_CLIENT_SECRET`, `GHL_APP_ID`, retour
+`/api/connexions/crm-oauth/callback`) : sans ces variables, le bouton
+le DIT au lieu d'échouer en silence. Une AGENCE importe ses sous-comptes
+d'un coup (`/locations/search`, ou `/oauth/installedLocations` en OAuth).
+
+🚨 **CE QUI N'A PAS PU ÊTRE VÉRIFIÉ D'ICI, et qui se tranche sur son
+compte test :** le parcours OAuth de bout en bout (aucune app
+Marketplace n'existe encore), l'ÉCRITURE avec un jeton d'agence
+(`/oauth/locationToken`), et la forme exacte du champ personnalisé
+(`customFields[].key` contre `id`). Le jeton d'intégration privée sur un
+sous-compte est le chemin à tester EN PREMIER.
+
+### CE QUE LES ÉCRANS SAVENT
+
+- **Réglages, onglet Connexions** : une carte par outil du catalogue
+  (`lib/integrations/fournisseurs.ts`). Brevo, ClickFunnels et Podia
+  s'affichent SANS bouton (`disponible: false`) : la carte dit que
+  l'outil arrive, elle ne promet pas une connexion qui n'existe pas. Le
+  garde-fou exige qu'un outil disponible ait une page d'aide qui EXISTE
+  dans le sitemap. L'ancien `?tab=systemeio` ouvre toujours cet onglet.
+- **Le quiz** : le sélecteur de destination écrit les DEUX colonnes
+  (`connexion_id`, `sio_api_key_id`), choisir l'une vide l'autre. Le
+  PATCH refuse une connexion qui n'appartient pas à la personne.
+- **L'onglet Automatiser** écrit la recette GoHighLevel (un workflow par
+  tag) quand la route des tags répond `fournisseur: "gohighlevel"`. Les
+  NOMS de tags restent les mêmes qu'avec Systeme.io : le profil, la
+  capture d'un sondage, la réponse, le score, le partage.
+- **Mes leads, bouton Sync** renvoie vers la destination du quiz et
+  écrit `quiz_leads.sync_fournisseur`.
+- **`/integrations/gohighlevel`**, fr + en, sitemap et pied de page. Ce
+  n'est PAS un enfant du hub (pas un outil de formulaire comparé aux
+  autres) : le test du hub l'exempte parce qu'elle est l'`aide` d'un
+  fournisseur déclaré, et il refuse toute autre page sous `/integrations/`
+  que rien ne nomme.
+
+### DEUX GARDES ONT ROUGI SUR CE CHANTIER, ET ILS AVAIENT RAISON
+
+1. **des chevrons `« »` dans `fr.json`** (la recette GoHighLevel, la
+   confirmation de suppression) : la règle du 7 juin ne vise pas que le
+   tiret cadratin. Remplacés par des guillemets droits, y compris dans
+   l'email d'alerte, dans les six langues qui en portaient ;
+2. **le test du hub comptait `/integrations/gohighlevel` comme un
+   septième enfant.** Il compare maintenant les enfants du hub
+   (`ENFANTS_DU_HUB`) à part, et exige que tout autre chemin sous
+   `/integrations/` soit l'`aide` d'un fournisseur.
+
+🚨 Migration : `supabase/migrations/20260914_connexions_crm.sql`
+(Supabase de TIQUIZ) : la table `connexions_crm`, `quizzes.connexion_id`,
+`quiz_leads.sync_fournisseur`, et `actif` / `deconnecte_le` /
+`alerte_deconnexion_le` sur `sio_api_keys`. Sans elle, l'onglet
+Connexions répond "je n'ai pas pu lire", et la capture Systeme.io
+continue exactement comme avant.
+
+**Tipote n'est PAS porté.** Son module quiz est jumeau, mais sa clé
+Systeme.io vit dans `business_profiles`, pour tout le compte, sans
+table de clés : le chantier y demande une autre plomberie. À faire le
+jour où une créatrice Tipote le demande.
+
+Test : `tests/logic/connexions-crm.test.mts` (22 cas), vérifié en
+rejouant DOUZE versions fautives (la pause qui retombe sur le défaut,
+un 403 lu comme temporaire, l'alerte à chaque lead, `tags` dans
+l'upsert, l'en-tête `Version` retiré, un 401 relu à la main dans
+`envoyer.ts`, le PATCH sans contrôle de propriété, le picker qui garde
+l'ancienne colonne, l'alias `systemeio` retiré, la migration sans
+`connexion_id`, une langue inconnue qui retombe sur le français, un
+chevron remis dans l'alerte) : les douze rougissent.
+
+### Une installation lancée CHEZ GoHighLevel arrive sans notre `state` (14 septembre 2026, le soir)
+
+Béné, en testant le bouton une fois les clés posées :
+`error.noAppVersionIdFound`, puis "je suis bien redirigée vers ghl mais
+ça ne marche pas, même en me reconnectant".
+
+**CE QUE LEUR DOCUMENTATION DIT, et ce que le 400 sur
+`installationDetails?appId=` confirme :** la page de choix du sous-compte
+(`chooselocation`, celle que notre bouton ouvre) exige une version
+PUBLIÉE de l'app. Une version est "Draft" tant qu'elle n'est pas
+publiée ; "Live" veut dire "approuvée et installable". Publier une app
+**Public** l'envoie en relecture Marketplace ; une app **Private** passe
+live immédiatement, sans relecture, avec un plafond de 5 agences. Notre
+bouton ne peut donc rien tant qu'aucune version n'est live, et ce n'est
+pas un bug de notre côté.
+
+**Le chemin qui marche AVANT la publication est le leur** : Manage >
+Versions > le menu à trois points de la version > Test Link, avec le
+Location ID du sous-compte de test. Ce lien installe la version brouillon
+et revient sur notre `callback` avec un `code`... **et sans notre
+`state`**, puisque personne n'est passé par notre bouton. C'est AUSSI le
+chemin d'un client qui installe depuis leur Marketplace, et celui de
+l'installation en masse d'une agence : le parcours "un clic" de Quizify.
+Le callback d'avant refusait tous ces retours ("La connexion a expiré en
+route") : le parcours que Béné demandait le 14 au matin était donc
+impossible par construction, et personne ne l'aurait vu avant le
+premier client.
+
+**Règle : `lib/integrations/retourOauth.ts` (pur) classe le retour, et
+le chemin sans `state` demande UN clic avant d'écrire.**
+
+| `state` | genre | ce que fait le GET |
+|---|---|---|
+| présent et juste | notre bouton | échange tout de suite |
+| présent et faux | invalide | refus, JAMAIS rattrapé par la ligne suivante |
+| absent | depuis le fournisseur | range le code dans un cookie httpOnly de 5 min, renvoie `ghl=confirmer`, n'écrit RIEN |
+
+L'onglet Connexions affiche alors "Relier ce sous-compte", et c'est un
+**POST** sur le même callback, venu de notre page, qui échange le code
+(`relierAvecCode`, la MÊME fonction que le chemin du bouton : deux
+échanges écrits séparément finiraient par ne plus ranger la même chose).
+
+**Pourquoi le clic n'est pas du confort.** Sans `state`, rien ne prouve
+que la personne connectée à Tiquiz est celle qui vient de cliquer chez
+GoHighLevel : n'importe qui peut tirer un code depuis SON sous-compte et
+faire atterrir l'adresse chez quelqu'un d'autre. Sans confirmation, la
+victime se retrouverait avec une connexion vers un sous-compte inconnu,
+et si elle devient celle par défaut, ce sont ses leads qui y partent. Le
+cookie est `SameSite=Lax` et le POST vient d'un `fetch` de notre page :
+un site tiers ne peut ni lire le code ni déclencher l'échange.
+
+**Sans session, le code n'est pas perdu** : la redirection vers `/login`
+porte l'adresse COMPLÈTE, encodée. Un client qui installe depuis
+GoHighLevel n'est pas forcément déjà connecté à Tiquiz.
+
+**Et le menu de l'avatar disait encore "Clé Systeme.io"** : il mène à
+l'onglet Connexions, avec le mot de l'onglet, dans les 7 langues.
+
+**Ce qui reste à trancher par Béné, pas par le code :** publier. Si
+l'app peut encore passer en Private, une publication la rend installable
+tout de suite (5 agences, le client en est une). Sinon, Public exige la
+relecture Marketplace avant que le bouton ne marche chez quiconque ; en
+attendant, le lien de test installe le brouillon sur SON sous-compte.
+Je n'ai pas pu vérifier d'ici si le type Public/Private se change après
+création.
+
+Test : `tests/logic/retour-oauth-ghl.test.mts` (11 cas), vérifié en
+rejouant trois versions fautives (le GET qui échange sans `state`, un
+`state` faux rattrapé comme "depuis le fournisseur", le POST qui accepte
+un cookie vide) : les trois rougissent.
+
+### Le retour OAuth atterrissait sur `localhost`, et la carte demandait deux clics (14 septembre 2026, la nuit)
+
+Béné, après avoir choisi son sous-compte sur la page de GoHighLevel :
+"après je vais sur `https://localhost:3001/settings?tab=connections&ghl=ok&n=1`.
+C'est quoi ce merdier encore ??" Et sur l'onglet : "clic sur bouton =
+connexion. Point barre. Pas de menu en dessous."
+
+**L'ÉCHANGE AVAIT RÉUSSI.** `ghl=ok&n=1` est ce que le callback écrit
+APRÈS avoir échangé le code et enregistré le sous-compte : les clés, le
+`redirect_uri`, les scopes et l'échange sont justes, et **la connexion
+créée pendant son test existe en base**. Seule la redirection FINALE
+était fausse : quatre `NextResponse.redirect(new URL(..., req.nextUrl.origin))`
+dans les deux routes OAuth, et derrière le proxy cette origine vaut
+`localhost:3001`. Une origine présente et fausse traverse tout : c'est
+le `??` du 2 août (les liens `localhost` envoyés à Véronique), dans une
+autre robe, et **`adresseDeRetourGhl` passait DÉJÀ par `resolveAppUrl`**
+dix lignes plus haut. Deux adresses du même parcours, une seule
+protégée.
+
+**Règle : toute redirection de ces routes passe par
+`resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL, req.nextUrl.origin)`**,
+et le test compte les lectures de `req.nextUrl.origin` : chacune doit
+être DANS un `resolveAppUrl`, sinon il rougit.
+
+**Et la carte ne fait plus qu'un clic.** "Connecter" sur GoHighLevel EST
+le départ OAuth (un lien vers `/api/connexions/crm-oauth/oauth`), sans
+panneau ni deuxième bouton, dès que l'OAuth est configuré et qu'aucune
+connexion n'existe encore.
+
+🚨 **Cette ligne disait "Gérer ouvre toujours le panneau [...] et le
+jeton privé y reste, en second. Sans OAuth configuré, la carte retombe
+sur le panneau". C'EST PÉRIMÉ depuis le 15 septembre**, corrigé en place
+plutôt qu'empilé : il n'y a plus de panneau sous la grille, "Gérer"
+ouvre une FENÊTRE, et le jeton privé a disparu de l'écran. Voir la
+section suivante.
+
+Test : les 2 cas ajoutés à `tests/logic/retour-oauth-ghl.test.mts`,
+vérifiés en rejouant les deux versions fautives (la redirection sur
+l'origine brute, la carte qui rouvre le panneau) : les deux rougissent.
+
+### La carte est le geste : une fenêtre, et plus aucun jeton privé (Béné, 15 septembre 2026)
+
+"Ça marche je suis connectée. Par contre je t'ai demandé de supprimer
+la carte dessous : un clic sur la carte du haut ouvre une popup qui
+permet de tout gérer. C'est PAS ergonomique de devoir scroller. Tu as
+toute la procédure sur Quizify, ils ont fait ça très bien. Et tu n'as
+pas besoin de coller plein d'infos inutiles [...]. En plus je vois
+toujours le bouton Connecter alors que je SUIS connectée ! C'est pas
+premium, pas logique, pas bon. Tu supprimes aussi le jeton privé : on
+fait connexion native c'est tout."
+
+Quatre reproches, et le passage du 14 au soir en avait créé deux : la
+carte "Connecter" ouvrait bien l'OAuth, mais le PANNEAU restait affiché
+sous la grille, avec son texte d'explication, son deuxième bouton et
+son formulaire de jeton, et le libellé de la carte ne changeait pas une
+fois connectée.
+
+**Règle : la carte est le SEUL geste, et l'écran de gestion est une
+fenêtre** (`components/connexions/ConnexionsTab.tsx`, un `Dialog`).
+
+| état de GoHighLevel | la carte | ce qu'un clic fait |
+|---|---|---|
+| OAuth configuré, rien de connecté | "Connecter" | un LIEN vers `/api/connexions/crm-oauth/oauth`, aucun écran entre |
+| au moins un sous-compte | "Gérer" | ouvre la fenêtre : la liste, le test, le nom, le défaut, la pause, la suppression, et "Ajouter un sous-compte" qui repart en OAuth |
+| OAuth non configuré | "Connecter" | ouvre la fenêtre, qui DIT ce qui manque (`ghl.oauthAbsent`) |
+
+Le libellé se DÉDUIT du compte (`c.n > 0 ? boutonGerer : boutonConnecter`),
+il n'est plus écrit en dur : un bouton "Connecter" sous une connexion
+établie est ce qu'elle a lu comme "pas premium", et c'est exactement le
+genre de défaut qu'aucun test de logique ne voit sans le nommer.
+
+**Plus rien sous la grille.** Systeme.io passe par la même fenêtre
+(`SioApiKeysManager` prend `sansCadre`, pour ne pas rendre une carte
+dans une carte). Le retour OAuth (`?ghl=`) ouvre la fenêtre de
+GoHighLevel tout seul, et le clic de confirmation du chemin sans
+`state` (14 septembre) y vit aussi, en bandeau.
+
+**Le jeton privé a disparu de l'ÉCRAN, pas du SERVEUR.** Les routes
+`/api/connexions` (POST avec jeton, import d'agence) restent telles
+quelles : elles ne coûtent rien, elles sont testées, et un client qui
+n'aurait pas la Marketplace pourrait un jour en avoir besoin par un
+autre chemin. Ce qui est retiré, c'est l'offre à l'écran : le
+formulaire, le sélecteur sous-compte / agence, les 22 clés de langue
+qui les portaient, dans les 7 langues. Aucune phrase sous `connexions`
+ne dit plus "jeton" ni "token", et le test l'exige langue par langue.
+
+**Quizify est le modèle, et il se lit en trois gestes :** une grille
+d'outils, un clic qui connecte, un clic qui gère. Rien à lire avant de
+cliquer, rien à copier, rien à faire défiler.
+
+Test : les 2 cas réécrits dans `tests/logic/retour-oauth-ghl.test.mts`
+(la carte est le geste, plus aucun jeton privé à l'écran), vérifiés en
+rejouant deux versions fautives (l'ancien gestionnaire avec son
+formulaire de jeton, le libellé "Connecter" figé quelle que soit la
+connexion) : les deux rougissent.
+
+## `&nbsp;` en clair sur la case de consentement (Béné, 15 septembre 2026)
+
+"Putain pourquoi j'ai encore du &nbsp; sur les pages publiques !!!
+Exactement le genre de trucs de merde qui me font perdre des clients
+tous les jours !!!"
+
+Vu pendant le test GoHighLevel, sur un quiz public : la case disait
+`J'accepte la politique de confidentialité&nbsp;` en toutes lettres.
+
+**La cause est celle de Christian (1er septembre), dans une autre robe :
+une chaîne peut porter une ENTITÉ sans porter la moindre balise.** Le
+texte de consentement vient d'un champ riche, et un contentEditable
+colle `&nbsp;` à la place d'une espace de fin sans poser de balise
+autour. `ConsentText` regardait s'il y avait une balise pour choisir
+entre "rendre en HTML" et "rendre en texte" : l'entité partait donc dans
+la branche texte, et React affiche une entité telle quelle dans un noeud
+de texte, puisque rien ne la décode.
+
+**Et c'était la neuvième fois que ce viewer décodait une entité "pour
+ce champ là"** : la description, l'insight, la projection,
+l'introduction, le bonus... chacune ajoutée le jour où quelqu'un l'a vue
+en clair, et la case de consentement oubliée. Une règle recopiée finit
+toujours par en oublier un.
+
+**Règle : `lib/quiz/consentement.ts` décide de la FORME, une fois, et le
+texte brut sort DÉCODÉ.** `formeDuConsentement(raw)` rend `html` (une
+balise, l'écran sanitise) ou `texte` (décodé, l'écran rend un noeud de
+texte). L'écran ne rend plus jamais `raw`, et le test l'exige sur la
+source des deux viewers. `decouperSurLeLibelle` cherche le libellé dans
+le texte DÉCODÉ : avant, un `&nbsp;` collé entre deux mots du libellé
+faisait rater l'aiguille, et le lien partait à côté des mots au lieu de
+dessus.
+
+**Le viewer de Tipote n'avait AUCUN décodeur.** Tiquiz portait
+`decodeHtmlEntities` depuis mai et l'appliquait à neuf champs ; Tipote
+rendait ces neuf champs bruts. Un garde-fou qui ne protège qu'un des
+deux jumeaux ne protège personne.
+
+🚨 **ET CETTE PAGE A ÉCRIT "le décodeur y est porté, et les neuf champs y
+passent". C'ÉTAIT FAUX, mesuré le 16 septembre**, et je le corrige en
+place plutôt que d'empiler. Ni `lib/quiz/consentement.ts`, ni
+`decodeHtmlEntities`, ni le test n'existaient chez Tipote : son
+`ConsentText` rendait encore `{raw}` et ses neuf champs sortaient bruts.
+
+**Pendant 24 heures, cette page a décrit comme actif un garde-fou absent
+de l'autre dépôt.** C'est mot pour mot la faute du 23 août ("un
+garde-fou non fusionné ne protège personne"), à ceci près que là il
+était écrit et pas fusionné, et qu'ici il n'était même pas écrit. Le
+portage a été fait le 16 septembre, avec le reste du chantier `&nbsp;`.
+
+**La règle qui manquait : quand une section annonce un portage, la
+dernière étape n'est pas de l'écrire, c'est d'aller CHERCHER le fichier
+chez le jumeau.** Une commande, dix secondes :
+
+```bash
+ls ../tipote-app/lib/quiz/consentement.ts
+```
+
+Test : `tests/logic/consentement-sans-entite.test.mts`, dans les deux
+dépôts, vérifié en rejouant les deux viewers d'avant (il rougit).
+
+## Le guide GoHighLevel est un pas à pas, et l'éditeur ne dit plus "Tag Systeme.io" (Béné, 15 septembre 2026)
+
+Trois retours pendant son test sur son sous-compte GoHighLevel, et le
+test lui même a réussi : le contact arrive avec son tag, un deuxième
+passage AJOUTE un deuxième tag sans effacer le premier (son journal
+d'audit le montre : `CREATED`, `TAG_ADDED`, `UPDATED`, puis `TAG_ADDED`,
+`UPDATED`).
+
+### 1. "j'ai 'tag systemeio' comme label. Faudra corriger tout ça, dans toutes les langues"
+
+Elle a raison : la destination d'un quiz peut être GoHighLevel depuis
+le 14 septembre, et cinq libellés de l'éditeur disaient encore
+"Systeme.io" (le tag d'un profil, d'une réponse de sondage, du partage,
+des tranches de score, l'aide du tag de sondage), plus la colonne du
+CSV. **Le libellé dit le GESTE, pas l'outil** : "Tag à appliquer aux
+personnes qui ont obtenu ce profil", ses mots. Dans les 7 langues,
+"etiqueta" en espagnol (règle du 1er septembre).
+
+**Ce qui garde son mot, et c'est voulu :** `quizForm.sioTagLabel` (le
+formulaire de création, `SioSelectors`) vit dans un bloc qui n'existe
+QUE quand une clé Systeme.io répond, à côté de "ID Formation Systeme.io"
+et "ID Communauté Systeme.io". Un tag "outil neutre" entre deux champs
+qui n'existent que chez Systeme.io serait faux dans l'autre sens. Et
+l'onglet Automatiser avait déjà ses phrases GoHighLevel (`introGhl`,
+`recetteGhl1..3`) depuis le 14 : rien à toucher.
+
+**Tipote n'est PAS touché** : sa seule destination est Systeme.io, sans
+table de connexions, donc "Tag Systeme.io" y est exact.
+
+### 2. "je ne vois aucun bouton tester t'as fumé"
+
+Il existait : une icône seule (`RefreshCw`, `size="icon"`) avec le mot
+dans `title`, donc lisible au survol seulement. Sur l'écran où l'on
+cherche justement à savoir si ça marche, c'est le bouton qu'on ne
+trouve pas. Il porte son mot. Le garde-fou exige `{t("tester")}` DANS
+le bouton, pas dans un attribut.
+
+### 3. "un lien qui s'ouvre dans une nouvelle fenêtre avec le step by step comme Quizify : illustré, guidé à chaque étape"
+
+Le lien existait sur la carte (`Guide`, `target="_blank"`), et la page
+racontait "les trois étapes" en trois paragraphes : juste, et pas
+suivable clic par clic. Le guide de Quizify qu'elle montre fait UNE
+action par étape, dans l'ordre où on la fait, avec l'écran.
+
+**Règle : `lib/site/outils/gohighlevel.ts` porte des `etapes`, et chaque
+étape dit trois choses** : son titre, `ou` (dans Tiquiz ou dans
+GoHighLevel, sa remarque du 15 en testant : "c'est dans marketplace ou
+dans mon compte test highlevel ?"), et `capture` (l'écran à
+photographier, plus l'image quand elle existe). Huit étapes, fr et en,
+même nombre des deux côtés.
+
+**Les captures ne sont PAS posées, et l'écran le DIT.** Aucune ne peut
+être produite d'ici (ni compte GoHighLevel ni base joignable), et une
+capture reconstituée serait un faux. Tant que `capture.image` est null,
+la page affiche l'encadré qui NOMME l'écran, comme les huit pages de
+fonctionnalités depuis le 5 septembre. Le jour où Béné fournit les
+huit captures, chacune se pose avec ses dimensions et son `alt`, et le
+test vérifie que le fichier existe dans `public/integrations/`.
+
+**Trouvé en réécrivant : le guide décrivait encore le jeton privé**
+("Ou avec un jeton privé : Settings, Private Integrations..."), retiré
+de l'écran le matin même. Un guide qui décrit un bouton disparu envoie
+chercher au mauvais endroit. Le test refuse `jeton`, `token` et
+`Private Integrations` dans les deux langues, et les chevrons `« »`
+dans le français (ils y étaient, dans un fichier que le garde des
+`messages/` ne balaie pas).
+
+**Ce qu'on ne dit PAS :** que GoHighLevel crée un tag inconnu à la
+première pose. Ce n'est pas mesuré (elle a testé avec des tags qui
+existaient déjà). Le guide conseille un tag existant, écrit au
+caractère près.
+
+**Et le lien de la carte Systeme.io mène au hub `/integrations`**, qui
+n'est pas un pas à pas de Tiquiz : c'est le prochain guide à écrire
+dans cette forme.
+
+Test : `tests/logic/guide-pas-a-pas-ghl.test.mts` (7 cas), vérifié en
+rejouant QUATRE versions fautives (l'ancien module en trois paragraphes
+avec le jeton et les chevrons, le bouton Tester en icône seule, les
+libellés Systeme.io dans `fr.json`, le lien du guide sans nouvel
+onglet) : les quatre rougissent.
+
+## Un champ personnalisé dans le formulaire de capture (retour client, 16 septembre 2026)
+
+"Possibilité d'ajouter un champ personnalisé dans la capture des infos
+sur un quiz ou un sondage : l'user ajoute, personnalise le champ et le
+placeholder : la donnée est stockée, exploitée par l'analyse IA, les
+stats et exportée proprement."
+
+**Règle : `lib/quiz/champsPersonnalises.ts` décide, personne d'autre.**
+Module PUR, identique à l'octet près dans les deux dépôts (Tiquiz et
+Tipote), appelé par le serveur (PATCH du quiz, capture d'un lead), les
+deux éditeurs, le viewer public, les exports, les statistiques et les
+deux prompts d'analyse. Une règle recopiée dans chacun de ces endroits
+finirait par en oublier un : c'est le défaut sorti six fois dans ces
+dépôts.
+
+```bash
+cmp lib/quiz/champsPersonnalises.ts ../tipote-app/lib/quiz/champsPersonnalises.ts
+```
+
+**Trois décisions à ne pas défaire :**
+
+1. **UN CHAMP A UNE IDENTITÉ STABLE (`id`, forme `cf_xxxxxx`), et la
+   valeur du lead est rangée sous cet id, jamais sous le libellé.**
+   Renommer "Ta ville" en "Ville" ne perd donc aucune donnée, et la
+   colonne d'export porte le libellé DU JOUR. C'est la règle de
+   `quiz_questions.id` (1er août 2026), transposée au formulaire.
+2. **SANITIZE NE LÈVE JAMAIS.** Ce qui arrive du navigateur (l'éditeur
+   comme le visiteur) est nettoyé et borné (5 champs, 60 caractères de
+   libellé, 300 de valeur) ; l'illisible est ignoré, jamais refusé. Une
+   capture ne doit jamais échouer à cause d'un champ optionnel.
+3. **UN CHAMP SANS LIBELLÉ EST GARDÉ EN BASE ET JAMAIS AFFICHÉ.**
+   L'autosave passe à chaque frappe : jeter un champ que la créatrice
+   n'a pas encore nommé le ferait disparaître sous ses yeux. Le viewer ne
+   montre que `champsVisibles()`, et l'éditeur DIT que le champ est
+   invisible tant qu'il n'a pas de nom.
+
+**La colonne peut ne pas exister encore, et RIEN ne casse :** le PATCH
+rejoue sans `custom_fields` (comme `tie_break`), la capture écrit le lead
+sans ses valeurs et crie, la charge publique tente la colonne dans
+`QUIZ_COLS_NEW` et jamais dans la liste stable, la page des leads et les
+exports retombent sur la liste d'avant. La liste des champs du quiz est
+lue dans une requête À PART par la route de capture : l'ajouter au
+select principal ferait répondre 404 à toutes les captures (drame
+`survey_thanks_*`, 2 juin).
+
+**Les statistiques et l'IA sortent de la MÊME fonction** (`statsChamps`
+puis `lignesPromptChamps`) : taux de remplissage et valeurs fréquentes,
+dans l'onglet Résultats ET dans le prompt d'insights (et celui du
+sondage). Un quiz sans champ n'ajoute rien au modèle.
+
+**Où la valeur vit :** `quiz_leads.custom_fields` ({id: valeur}) dans
+les deux dépôts, et chez Tipote aussi `leads.custom_fields` (le CRM),
+en clair comme `phone`. Le CRM de Tipote résout les libellés en lisant
+`quizzes.custom_fields` de la personne.
+
+🚨 **Ce paragraphe disait "la valeur n'est envoyée ni à Systeme.io ni à
+GoHighLevel, c'est une décision de Béné". C'EST PÉRIMÉ le jour même**
+(Béné : "oui il faut envoyer à systeme io et ghl"), corrigé en place
+plutôt qu'empilé : voir la section suivante.
+
+🚨 Migration : `supabase/migrations/20260916_champs_personnalises.sql`,
+sur les DEUX Supabase.
+
+Test : `tests/logic/champs-personnalises.test.mts`, le même dans les deux
+dépôts, vérifié en rejouant la version d'avant (le viewer qui n'envoie
+plus `custom_fields` : il rougit).
+
+## Les champs personnalisés partent dans la fiche contact (Béné, 16 septembre 2026)
+
+"Oui il faut envoyer à systeme io et ghl."
+
+Le matin, la valeur d'un champ personnalisé vivait chez nous (le lead,
+l'export, les stats, l'IA) et nulle part ailleurs. Le soir, elle part
+dans la fiche contact de l'outil choisi, avec le reste du lead.
+
+### CE QUI A ÉTÉ MESURÉ AVANT D'ÉCRIRE UNE LIGNE
+
+| | |
+|---|---|
+| Systeme.io sait CRÉER un champ de contact | `POST /api/contact_fields` `{fieldName (255), slug (^\w+$)}`, `PATCH /api/contact_fields/{slug}` pour le renommer (lu dans leur OpenAPI le 16 septembre) |
+| son compte porte 28 champs, `{slug, fieldName}` sans `id` | `GET /contact_fields`, mesuré sur son compte |
+| un slug INCONNU est accepté et IGNORÉ | mesuré le 25 août (`lib/sio/contactFields.ts`) : écrire avant de créer perdrait la valeur sans une erreur |
+| GoHighLevel liste et crée les champs | `GET/POST /locations/{id}/customFields`, `{name, dataType: "TEXT", model: "contact"}`, réponse `{customField: {id, fieldKey}}` |
+| le `fieldKey` GoHighLevel est DÉRIVÉ DU NOM | `contact.ta_ville` : on ne peut pas y imposer notre slug |
+| la valeur s'écrit sous **`field_value`** | **12 occurrences dans leur spécification OpenAPI, `fieldValue` zéro** |
+
+**LA DERNIÈRE LIGNE A FAILLI ÊTRE FAUSSE.** Le résumé automatique de
+leur page de documentation rendait `fieldValue`, "verbatim", et je
+l'avais écrit dans l'adaptateur. La spécification brute, lue ensuite
+sur leur dépôt GitHub, dit `field_value`, douze fois. **Un résumé d'une
+page n'est pas la page** : sur un nom de propriété, on lit la source
+brute ou on ne conclut pas. Le test refuse `fieldValue` dans le fichier.
+
+### LA DÉCISION EST PURE, ET LE SLUG EST STABLE
+
+`lib/integrations/champsContact.ts`, identique à l'octet près dans les
+deux dépôts :
+
+```bash
+cmp lib/integrations/champsContact.ts ../tipote-app/lib/integrations/champsContact.ts
+```
+
+- `champsContactPersonnalises(prefixe, champs, valeurs)` : ne part que
+  ce qui a un libellé ET une valeur (jamais un champ vide, Systeme.io
+  traite une chaîne vide comme une valeur et écraserait une saisie
+  manuelle). Le slug est `<prefixe>_cf_xxxxxx`, dérivé de l'IDENTITÉ du
+  champ : renommer "Ta ville" en "Ville" garde le même champ chez
+  Systeme.io, et le `fieldName` (celui qu'on lit dans le tableau de
+  bord) suit le libellé du jour. Un slug dérivé du libellé aurait
+  fabriqué un deuxième champ au premier renommage, en silence.
+- **Le préfixe est un PARAMÈTRE**, jamais deviné : `SIO_PREFIXE_CHAMP`
+  vaut `"tiquiz"` ici (dans l'adaptateur) et `"tipote"` là bas (dans la
+  route), comme `tiquiz_result` et `tipote_quiz_result`. Un préfixe
+  vide est REFUSÉ : ce serait le slug de l'autre app.
+- `planifierChampsGhl(existants, voulus)` : un champ se retrouve par sa
+  CLÉ d'abord (`contact.tiquiz_resultat`, pour un champ créé à la main
+  avant ce chantier), par son NOM ensuite (casse et espaces ignorés) ;
+  ce qui manque se crée UNE fois même si deux voulus portent le même
+  nom.
+
+### CE QUE CHAQUE ADAPTATEUR FAIT, DANS CET ORDRE
+
+**Systeme.io** (`ecrireChampsPersonnalisesSio`) : pour chaque champ,
+`POST /contact_fields` (un 422 veut dire "il existe", et on le RENOMME
+au libellé du jour), PUIS un seul `PATCH /contacts/{id}` avec toutes les
+valeurs. Le résultat est mémorisé par clé et par champ pour la vie du
+processus : un champ ne se crée qu'une fois, pas à chaque lead. Un
+champ qui n'a pu être assuré est écarté et dit dans le journal, les
+autres partent.
+
+**GoHighLevel** (`ecrireChampsGhl`) : LISTER les champs du sous-compte,
+CRÉER ceux qui manquent, écrire par identifiant. Le profil
+(`tiquiz_resultat`) passe par le même chemin : il n'y a plus à le créer
+à la main, et le guide le dit. Tout ça part APRÈS les tags, dans des
+appels à part, et un échec ne fait que journaliser : un champ de
+confort ne coûte jamais un tag.
+
+**Un libellé renommé crée un NOUVEAU champ chez GoHighLevel** (l'ancien
+garde ses valeurs) : c'est leur API qui dérive la clé du nom, et c'est
+écrit dans le guide plutôt que découvert dans un CRM.
+
+### LES SCOPES, ET CE QUI EST À FAIRE CHEZ GOHIGHLEVEL
+
+Lister et créer des champs demande `locations/customFields.readonly` et
+`locations/customFields.write`. `GHL_OAUTH_SCOPES` les porte. **Une
+connexion établie AVANT ne les a pas** : le listage répond 401 ou 403,
+ce qui N'EST PAS lu comme une déconnexion (le contact et les tags
+viennent de passer), l'adaptateur retombe sur l'écriture par clé
+d'avant et NOMME le scope dans le journal. Les deux scopes doivent
+aussi être ajoutés dans l'app du Marketplace, sinon le bouton
+"Connecter" échoue chez GoHighLevel avec un scope invalide.
+
+### CE QUI N'EST PAS MESURÉ, ET QUI SE DIT
+
+Aucun appel n'a été exercé contre un vrai compte : il n'y a ni clé
+Systeme.io ni jeton GoHighLevel joignable d'ici. Ce qui est vérifié :
+l'ORDRE des appels, les corps, les noms de propriétés lus dans les deux
+spécifications, et sept versions fautives rejouées qui rougissent
+(Systeme.io qui écrit avant de créer, `fieldValue`, GoHighLevel qui crée
+sans lister, la route qui n'envoie pas les champs, les scopes retirés,
+et deux côté Tipote). La forme exacte de `customFields` chez GoHighLevel
+(`id` + `field_value`) reste à constater sur son sous-compte de test,
+comme le disait déjà la note du 14 septembre.
+
+Test : `tests/logic/champs-vers-le-crm.test.mts`, le même dans les deux
+dépôts.
+
+## Le bouton "Publier" est un interrupteur Actif / Désactivé (retour client, 16 septembre 2026)
+
+"Clarifier le bouton 'publier' d'un quiz : remplacer par target : actif -
+désactivé avec vert sur activé et grisé sur désactivé. Plus simple, plus
+compréhensible."
+
+Le bouton disait un GESTE ("Publier", puis "Désactiver"), et il fallait
+deviner l'état en lisant le libellé : un bouton qui dit "Publier" veut
+dire que le quiz est... hors ligne. `components/quiz/StatutToggle.tsx`
+(identique dans les deux dépôts) dit l'ÉTAT : vert et "Actif", gris et
+"Désactivé", `role="switch"` avec `aria-checked`.
+
+**Il ne décide de rien** : `actif` vient du statut, `onToggle` est le
+MÊME `handleToggleStatus` qu'avant (PATCH, toast, confettis). Les
+libellés sont des props parce que les deux dépôts n'ont pas le même
+namespace (`quizEditor` chez Tiquiz, `quizDetail` chez Tipote). Le toast
+et l'aide du lien de partage disent "activé" au lieu de "publié" dans les
+7 langues : une aide qui dit "clique sur Publier" pour un bouton qui
+n'existe plus envoie chercher au mauvais endroit.
+
+Test : `tests/logic/statut-toggle.test.mts`, vérifié en rejouant la
+version d'avant (le vert remplacé par la couleur des boutons : il rougit).
+
+## `&nbsp;` en clair : la cause était NOTRE PROPRE sanitize (16 septembre 2026)
+
+Béné, en colère, et elle avait raison de l'être : « j'ai encore des
+putains de "Quelle note donneriez-vous à la structure de
+l'entreprise&nbsp;?" !!! Il faut vraiment faire le tour et supprimer ça
+aussi bien côté users que visiteurs, **sans nicker les espaces
+nécessaires en français**... ça fait des MOIS que j'essaye de régler ce
+problème qui revient toujours quelque part, c'est infernal, donc mal
+géré, tu dois expertiser et régler ça une bonne fois pour toutes. »
+
+### LA PHRASE DE SON CLIENT CONTENAIT LE DIAGNOSTIC
+
+« Y'a que celle-là et c'est pas sur la passation ! »
+
+**MESURÉ, PAS DÉDUIT.** Le sérialiseur de DOMPurify réencode U+00A0 en
+`&nbsp;` **dès que le champ porte UNE balise** :
+
+```
+sanitizeRichText("entreprise ?")          -> "entreprise ?"
+sanitizeRichText("<b>x</b> entreprise ?") -> "<b>x</b> entreprise&nbsp;?"
+```
+
+Or `lib/frenchTypography.ts` INSÈRE ce caractère devant `? ! : ;` à
+chaque enregistrement. Ses quatre observations s'expliquent alors une
+par une :
+
+| Ce qu'elle a vu | Pourquoi |
+|---|---|
+| « y'a que celle-là » | seule une question MISE EN FORME porte une balise, donc l'entité |
+| « c'est pas sur la passation » | le viewer rend `question_text` en HTML : le visiteur ne voit rien |
+| ça se voit dans les stats | `SurveyTrends` le rend en NOEUD DE TEXTE, donc en clair |
+| « ça revient toujours » | nettoyer la base ne servait à rien : l'entité revenait au premier enregistrement |
+
+**C'est nous qui la fabriquions, à chaque sauvegarde.** Aucune créatrice
+n'a jamais tapé `&nbsp;`.
+
+### LA CORRECTION EST EN DEUX MOITIÉS, ET IL FAUT LES DEUX
+
+**1. On ne la FABRIQUE plus.** `sansEntiteInsecable` au sortir de
+DOMPurify. **On rend le CARACTÈRE, jamais une espace ordinaire** : c'est
+sa contrainte (« sans nicker les espaces nécessaires en français »), et
+une espace ordinaire laisserait le `?` tomber seul à la ligne suivante,
+le drame Damien du 27 août.
+
+**2. Il n'y a plus qu'UNE porte vers le texte brut.**
+`lib/texteBrut.ts`, PUR : ni DOMPurify, ni `supabaseAdmin`, ni
+`server-only`. C'est la condition pour que la règle soit la même
+partout : tant que `stripHtml` vivait dans `lib/richText.ts` avec
+DOMPurify, chaque module de décision, chaque email et chaque prompt
+réécrivait son propre `.replace(/<[^>]*>/g, "")`, et **celui-là ne
+décode AUCUNE entité**. `lib/richText.ts` réexporte les trois fonctions :
+tous les imports existants marchent à l'identique.
+
+### UNE SEULE ENTITÉ EST TOUCHÉE, ET C'EST MESURÉ
+
+`&amp;` `&lt;` `&gt;` sont STRUCTURELS : les décoder casserait le HTML.
+Les accents, le `€`, les emoji, les apostrophes et U+202F ne sont pas
+encodés du tout par le sérialiseur. `&nbsp;` est la SEULE entité
+cosmétique qu'il fabrique. Et `&amp;nbsp;` (une créatrice qui écrit
+vraiment le texte `&nbsp;`) n'est PAS touché.
+
+**L'ancienne donnée se répare à l'AFFICHAGE, donc aucune migration** :
+le sanitize convertit au passage, `stripHtml` décode. La base garde sa
+valeur jusqu'au prochain enregistrement du champ.
+
+### LE BUG TROUVÉ EN CHEMIN, ET IL EST DE LA MÊME FAMILLE
+
+`<b>Prêt</b>?` ne recevait **JAMAIS** son espace française. Le découpage
+met le `?` seul en tête de son fragment, et tous les motifs exigent une
+lettre DEVANT. Une question écrite en gras restait donc fautive pour
+toujours, et personne ne pouvait la corriger à la main puisque
+l'enregistrement suivant ne la touchait pas non plus.
+
+`insererApresBalise` garde le dernier caractère VISIBLE, et seulement à
+travers une balise EN LIGNE (`b`, `i`, `span`, `a`...). Un `<br>`, un
+`<div>` ou une image remettent la mémoire à zéro : poser une insécable
+en tête de ligne mettrait une espace au début du paragraphe.
+
+**Encore une fois, ce sont les champs MIS EN FORME qui se comportaient
+autrement que les autres.**
+
+### CE QUE LE BALAYAGE A TROUVÉ
+
+Le garde balaie TOUT le dépôt, il ne surveille pas une liste de
+fichiers : une liste oublie le prochain fichier écrit, et c'est comme ça
+que ces endroits sont arrivés.
+
+| | |
+|---|---|
+| strippers maison routés | 9 chez Tiquiz, 11 chez Tipote |
+| champs riches rendus bruts en JSX | 4 chez Tiquiz, 6 chez Tipote |
+| dont **`SurveyTrends`** | **l'écran exact où son client a vu l'entité**, dans les DEUX dépôts |
+| dont `lib/leadAnswers.ts` (Tipote) | les réponses d'un lead, rendues dans l'admin, les exports et les emails |
+
+**Deux exemptions, avec leur raison écrite à côté** :
+`lib/texteBrut.ts` (c'est LA porte) et `lib/bonus/markdownHtml.ts` (il
+rend du markdown qu'on vient de fabriquer, pas du texte de créatrice).
+Une exemption sans raison est une exemption que le prochain passage
+prend pour un oubli.
+
+### L'ATELIER N'EST PAS DANS LE MÊME CAS, ET C'EST MESURÉ
+
+`formaquiz` n'a **ni DOMPurify, ni `lib/frenchTypography.ts`** : il ne
+peut rien fabriquer. Il ne fait qu'INGÉRER le titre d'un quiz que Tiquiz
+lui envoie, et son `stripTiquizHtml` le décode déjà. Il ne porte donc
+PAS `lib/texteBrut.ts`, et la raison est écrite à côté de la fonction.
+
+Ce qui lui manquait quand même : les formes NUMÉRIQUES. `&#160;` et
+`&#x00a0;` sont le MÊME caractère que `&nbsp;`, et sa liste d'entités,
+recopiée à la main, ne les connaissait pas.
+
+Et `stripTiquizHtml` est sortie dans `lib/integrations/texteTiquiz.ts` :
+elle vivait dans un module qui importe `server-only` et `supabaseAdmin`,
+donc **aucun test ne pouvait la charger**, donc aucun ne l'exerçait
+(règle du 1er août).
+
+### LA LEÇON, ET ELLE EST PLUS GRANDE QUE `&nbsp;`
+
+**« Ça revient toujours » veut dire qu'on corrige le symptôme.** Trois
+passages précédents ont nettoyé un champ, puis un autre, puis un
+troisième, sans jamais demander D'OÙ l'entité venait. Elle venait de
+nous, et chaque correction locale la laissait revenir au prochain
+enregistrement.
+
+Et **une liste d'entités recopiée à la main en oublie toujours une** :
+c'est la mécanique même du problème qui revient. Il n'y a plus qu'une
+liste, dans un module pur, testée.
+
+Tests : `tests/logic/plus-jamais-nbsp.test.mts` (14 cas, le même dans
+les deux dépôts) et `tests/logic/texte-de-tiquiz.test.mts` (6 cas, côté
+Atelier), vérifiés en rejouant SIX versions fautives (le sanitize qui ne
+convertit plus, `decodeHtmlEntities` qui rend une espace ordinaire,
+l'insertion après balise retirée aux DEUX sites d'appel, `SurveyTrends`
+qui rend brut, un `extractResultLabel` qui réécrit son propre strip, les
+formes numériques retirées côté Atelier) : les six rougissent.
+
+## TOUT le formulaire de capture est éditable (Béné, 16 septembre 2026)
+
+« TOUT doit être éditable donc si je clique sur "Prénom" dans le quiz, je
+dois pouvoir écrire "Entre ton prénom" par exemple, avec l'éditeur de
+texte, pour mettre en gras, changer la taille etc ... et il faut mettre un
+placeholder, qu'on peut aussi personnaliser !! Par exemple : "Ex : Jean"
+ou "Ex : jeandupont@gmail.com" ou "Youtube" si c'est un réseau préféré
+demandé en champ personnalisé. »
+
+Jusque là, les cinq champs intégrés (prénom, nom, email, téléphone, pays)
+portaient un libellé FIXE venu des traductions du viewer, sans
+placeholder, et seuls les champs personnalisés avaient les deux, tapés
+dans une colonne de réglages.
+
+**Règle : `lib/quiz/champsCapture.ts` décide, personne d'autre.** Module
+PUR, identique à l'octet près dans les deux dépôts, appelé par le viewer
+public ET par les DEUX aperçus d'éditeur :
+
+```bash
+cmp lib/quiz/champsCapture.ts ../tipote-app/lib/quiz/champsCapture.ts
+```
+
+`resoudreChampsCapture` rend la liste (quels champs, dans quel ordre, avec
+quel libellé et quel placeholder), `grouperEnLignes` dit lesquels se
+partagent une ligne. **Le viewer et l'aperçu appellent les DEUX** :
+septième fois que ce défaut se présente, et c'est la seule protection qui
+tient (les réseaux de partage, l'affichage du score, l'alignement du
+sous-titre, la disposition des réponses, les 4 temps, le nom du profil).
+
+### OÙ VIT QUOI, ET CE N'EST PAS UNIFORME
+
+- `quizzes.capture_labels` (JSONB, `{cle: {label, placeholder}}`) porte le
+  libellé RICHE de tous les champs, intégrés et personnalisés, et le
+  placeholder des champs INTÉGRÉS. Vide = le défaut d'avant, donc **aucun
+  quiz en ligne ne bouge**.
+- un champ personnalisé garde son NOM en texte nu dans
+  `custom_fields[].label` : c'est lui qui nomme la colonne du CSV, le
+  champ de contact chez Systeme.io et GoHighLevel, la ligne des
+  statistiques et du prompt d'analyse. Du HTML n'a rien à faire là.
+
+**`appliquerLibelle` écrit LES DEUX d'un bloc.** Deux écritures séparées
+finiraient par ne plus dire la même chose, et c'est le nom du CSV qui
+mentirait. Même chose pour `appliquerPlaceholder`, qui sait seul que le
+placeholder d'un champ personnalisé vit sur le CHAMP et celui d'un champ
+intégré dans `capture_labels` : l'écran ne choisit pas.
+
+### LA MÉCANIQUE EST UN PARAMÈTRE
+
+`mode: "visiteur" | "apercu"` décide si un champ personnalisé SANS NOM
+s'affiche : jamais chez le visiteur (règle du 16 septembre au matin, un
+champ sans libellé est gardé en base et jamais montré), toujours dans
+l'aperçu, sinon la créatrice ne peut pas lui donner son nom en cliquant
+dessus et le champ qu'elle vient d'ajouter n'apparaît nulle part.
+
+### LA CASE GRISE *EST* LE PLACEHOLDER
+
+Dans l'aperçu, le libellé est un `RichTextEdit` (gras, taille, couleur,
+comme tous les autres champs du quiz) et la case sous lui n'est plus un
+`readOnly` décoratif : ce qu'elle y tape devient exactement ce que le
+visiteur lira dans le champ vide. Une ligne le dit sous le formulaire,
+parce qu'une case qui accepte du texte sans dire à quoi il sert se remplit
+avec une réponse au lieu d'un exemple.
+
+### TROIS DÉFAUTS TROUVÉS EN BRANCHANT, ET LE PREMIER EST LE PLUS CHER
+
+**1. LE MEMO NE SE RECALCULAIT JAMAIS.** `capture_labels` était dans
+l'objet de `autosaveSnapshot` et PAS dans ses dépendances : écrire un
+libellé ne déclenchait donc AUCUN enregistrement, et rien ne le disait.
+Le commentaire posé au dessus de l'état promettait l'inverse ("il entre
+dans l'instantané comme tout réglage éditable, sinon une modification ne
+déclencherait aucun enregistrement"). Onzième fois que ces dépôts paient
+une règle écrite en commentaire et démentie par le code.
+
+**2. La reprise d'un brouillon laissait les libellés derrière.** Le
+brouillon restaurait `custom_fields` et pas `capture_labels` : l'éditeur
+repartait alors avec les champs du brouillon et les libellés du serveur,
+donc la sauvegarde suivante écrasait le travail, en silence.
+
+**3. L'aperçu ne montrait ni le PAYS ni l'astérisque du prénom**, et côté
+sondage il montrait la case Prénom même quand le prénom est demandé sur
+l'écran d'accueil. Le visiteur, lui, ne la voyait pas : c'est
+`lib/quiz/firstNameAsk.ts` qui décide, des deux côtés désormais.
+
+**Et un champ supprimé emporte son libellé** (`elaguerLibelles`) :
+`ChampsPersonnalisesEditor` rend un TABLEAU entier, il n'émet pas
+d'événement "supprimé", donc c'est l'appelant qui rattrape. Sans ça,
+`capture_labels` garde pour toujours l'entrée d'un champ qui n'existe
+plus.
+
+### LE NOM D'UN CHAMP NE S'ÉCRIT PLUS QU'À UN ENDROIT
+
+La colonne de réglages portait un champ texte pour le NOM d'un champ
+personnalisé et un autre pour son EXEMPLE. Depuis que le libellé est du
+texte riche posé sur le formulaire, le riche GAGNE à l'affichage : taper
+dans la colonne n'aurait plus rien changé à l'écran, **en silence**, et
+c'est la forme de panne que ces dépôts paient le plus cher.
+
+`ChampsPersonnalisesEditor` garde donc ce que l'aperçu ne peut pas dire :
+ajouter, retirer, rendre obligatoire, et le rappel qu'un champ sans nom
+n'est pas montré au visiteur. C'est la mécanique WYSIWYG du reste de
+l'éditeur (le titre, le sous-titre, la case de consentement, le bouton),
+posée depuis le 18 mai 2026 par Adeline : « la case à cocher RGPD doit
+être éditée WYSIWYG, dans le preview du quiz, pas dans une sidebar
+Réglages ».
+
+Le test l'exige dans les deux sens : plus aucune écriture de `label` ni
+de `placeholder` depuis la colonne, et l'ajout, le retrait et
+l'obligatoire toujours là.
+
+### CE QUI NE CASSE RIEN SI LA MIGRATION N'EST PAS PASSÉE
+
+Le PATCH rejoue sans `capture_labels` et CRIE ; la charge publique tente
+la colonne dans `QUIZ_COLS_NEW` et jamais dans la liste stable (une
+colonne absente y ferait répondre 404 à TOUS les quiz, drame
+`survey_thanks_*` du 2 juin) ; `sanitizeLibellesCapture` ne lève jamais et
+rend `{}` sur une valeur illisible, c'est à dire les défauts d'avant.
+
+🚨 Migration : `supabase/migrations/20260916_capture_labels.sql`, sur les
+DEUX Supabase.
+
+Test : `tests/logic/champs-capture.test.mts`, le même dans les deux
+dépôts, vérifié en rejouant la version d'avant (le module qui diverge chez
+le jumeau : il rougit).
+
+**Et DEUX garde-fous existants ont rougi sur du code juste** : ils
+figeaient `champsVisibles(quiz.custom_fields)` dans le viewer et
+`champsVisibles(customFields).map` dans l'aperçu, alors que c'est le
+module qui filtre maintenant. Ils visent le FAIT (`mode: "visiteur"`,
+`mode: "apercu"`), pas la forme. **Un garde-fou qui fige une FORMULATION
+empêche de corriger la formulation** : neuvième fois.
+
+## Un seul endroit pour TOUT ce qu'on demande au visiteur (Béné, 17 septembre 2026)
+
+« Au lieu de "ajouter un élément" en haut, tu mets "ajouter un champ" et
+c'est d'office un champ personnalisé qui prend le nom que l'user lui donne
+dans l'éditeur de quiz. Il devient "rendre obligatoire", exactement comme
+le prénom, sur option. Pas besoin d'expliquer [...] ça c'est notre
+tambouille interne, l'user s'en fout. Donc pour les infos demandées : un
+seul endroit où on trouve TOUT : prénom, nom, téléphone, champ
+personnalisé etc. Et bien sûr le nom du champ personnalisé doit faire la
+même taille que le reste dans l'éditeur à gauche, il n'a aucune raison
+d'être écrit en 14px alors que le reste est en 12px. »
+
+La colonne portait DEUX blocs pour une seule question (« qu'est-ce que je
+demande au visiteur ? ») : une rangée de pastilles pour les champs
+intégrés, puis une section « Champs personnalisés » avec son titre, son
+explication, ses cartes et son propre bouton d'ajout.
+
+**Règle : `components/quiz/ChampsCaptureEditor.tsx`, et il n'y a plus
+qu'une rangée.** Les champs personnalisés sont des pastilles comme le
+téléphone ou le pays, leur case « obligatoire » est dans la MÊME liste que
+celle du prénom, et un seul bouton ajoute un champ.
+
+| | avant | après |
+|---|---|---|
+| endroits à lire | 2 | **1** |
+| boutons d'ajout | 2 | **1**, et il ajoute un champ personnalisé |
+| le nom d'un champ | `text-sm` (14px) | `text-xs` (12px), comme tout le reste |
+| l'explication interne | 3 lignes | **retirée** |
+
+**L'ANCIEN BOUTON NE FAISAIT RIEN DE NEUF.** « Ajouter un élément »
+rallumait le premier champ intégré éteint, c'est à dire exactement ce que
+fait déjà la pastille en pointillés juste au dessus. Deux gestes pour une
+seule chose, et le geste qui manquait (ajouter un champ à soi) était
+enterré dans l'autre bloc.
+
+### L'ASTÉRISQUE SE CALCULE, elle ne s'écrit plus dans la traduction
+
+« Nom* » était figé dans `fieldLastNameRequired` alors que le nom n'est
+obligatoire que si la case est cochée : la pastille annonçait une
+contrainte que le visiteur ne subissait pas, pendant que « Téléphone » n'en
+annonçait aucune dans les deux cas. `avecEtoile(label, obligatoire)` la
+pose, pour un champ personnalisé comme pour un champ intégré, et la case à
+cocher la fait apparaître sous les yeux de la créatrice.
+
+Les libellés perdent donc leur étoile dans les 7 langues, et leurs clés
+disent enfin ce qu'elles portent : `fieldEmail`, `fieldFirstName`,
+`fieldLastName`, `fieldPhone`, `fieldCountry`. **Elles sont les MÊMES dans
+les deux dépôts** (Tipote portait `pillEmail` et compagnie), donc le
+composant résout ses libellés lui même et aucun appelant n'écrit de phrase.
+
+### CE QUE LE PORTAGE A TROUVÉ, ET QUI VIVAIT EN QUATRE EXEMPLAIRES
+
+Ce bloc était recopié dans les QUATRE éditeurs (quiz et sondage, des deux
+dépôts), `CapturePill` compris. Une règle recopiée finit toujours par en
+oublier un :
+
+- le pilote du prénom déjà demandé à l'accueil n'existait que côté QUIZ ;
+- et Tipote y portait `label="Prénom (demandé au début)"` **écrit en dur,
+  en français**, dans une interface qui existe en 7 langues. Il lit
+  maintenant `fieldFirstNameFromIntro`, comme Tiquiz.
+
+**Trois choses à ne pas défaire :**
+
+1. **Le nom d'un champ ne se tape QUE dans l'aperçu** (règle du
+   16 septembre). La pastille l'affiche, la croix retire le champ, et c'est
+   tout : un deuxième endroit pour le nommer serait un endroit où taper
+   sans que l'écran change.
+2. **Un champ sans nom est gardé et n'est jamais montré au visiteur**, et
+   la colonne le DIT (l'autosave passe à chaque frappe : le jeter le ferait
+   disparaître sous ses yeux).
+3. **La pastille verrouillée n'a pas de case « obligatoire »** : elle
+   décrirait un champ qui n'est pas sur ce formulaire.
+
+Aucune migration : rien ne change en base, et aucun quiz en ligne ne bouge.
+
+🚨 Fichier SUPPRIMÉ dans les DEUX dépôts :
+`components/quiz/ChampsPersonnalisesEditor.tsx`. Un module mort est un
+piège que le prochain passage rebranche en croyant réparer.
+
+**Et QUATRE garde-fous ont rougi sur du code juste**, parce qu'ils
+figeaient le CHEMIN `components/quiz/ChampsPersonnalisesEditor.tsx`.
+Troisième fois après `pageDuSite.mts` et `chargePublique.mts` : **un chemin
+sur disque n'est pas un fait.** `tests/logic/aide/editeurCapture.mts`
+CHERCHE le composant à son marqueur (`nouvelIdChamp(`) et refuse les deux
+cas qui comptent : introuvable (il a vraiment disparu) ou trouvé DEUX fois
+(deux colonnes de réglages, donc deux endroits pour nommer la même chose,
+ce que ce chantier vient justement de fermer).
+
+Test : `tests/logic/un-seul-endroit-capture.test.mts` (9 cas, le même dans
+les deux dépôts), vérifié en rejouant NEUF versions fautives (les champs
+personnalisés sortis de la rangée, le bouton qui rallume un champ intégré,
+l'explication interne remise, le nom repassé en 14px, l'étoile figée dans
+la traduction, le composant qui diverge chez le jumeau, un éditeur qui
+garde sa propre rangée, le libellé verrouillé écrit en dur, la case
+obligatoire retirée d'un champ personnalisé) : les neuf rougissent.
