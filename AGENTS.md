@@ -55,7 +55,7 @@ fonctionnent encore et **ne commissionnent plus** (voir plus bas).
 ```bash
 npm run test:logic     # runner natif, ~15 s, aucune dependance
 npx tsc --noEmit       # exit 0 obligatoire
-npm run test:visual    # 99/99, UNIQUEMENT si le design ou l'UX bouge
+npm run test:visual    # 209 passes + 4 skippes, SI le design ou l'UX bouge
 ```
 
 Et selon ce qui a été touché : `npm run check:caddy` (un fichier de
@@ -305,7 +305,7 @@ layouts, branding, CSS, composants d'écran), lancer AUTOMATIQUEMENT le
 filet visuel avant de committer, sans que Béné ait à le demander :
 
 ```bash
-npm run test:visual            # doit passer 99/99
+npm run test:visual            # doit passer 209, 4 skippes
 ```
 
 - Échec = un layout a bougé sans intention -> corriger AVANT de pousser.
@@ -313,7 +313,9 @@ npm run test:visual            # doit passer 99/99
   committer les nouvelles références AVEC le changement.
 - Le harness : `playwright.visual.config.ts` + `tests/visual/` + page
   fixture `/visual-test` (gated `VISUAL_TEST=1`, aucune base requise).
-- Couverture, **99 tests** (mesuré le 23 août, pas déduit) :
+- Couverture, **213 tests** dont 4 skippés (mesuré le 17 septembre 2026 en
+  lançant la commande, pas déduit ; c'était 99 le 23 août, le site public et
+  le blog sont arrivés depuis) :
   - **90 CAPTURES** : 5 dispositions x 6 écrans (intro, question, capture,
     bonus, résultat, résultat scoring multi-axes) x 3 viewports (desktop,
     écran haut, mobile). Si une nouvelle disposition/écran apparaît,
@@ -352,7 +354,7 @@ alors que ces trois bugs vivent dans des fonctions.
 
 ```bash
 npm run test:logic     # runner natif Node, ~1s, aucune dependance
-npm run test:visual    # 99/99, uniquement si le design/UX bouge
+npm run test:visual    # 209 passes, uniquement si le design/UX bouge
 npx tsc --noEmit       # exit 0
 ```
 
@@ -765,3 +767,4 @@ Les sections déplacées, dans l'ordre :
 - `&nbsp;` en clair : la cause était NOTRE PROPRE sanitize (16 septembre 2026)
 - TOUT le formulaire de capture est éditable (Béné, 16 septembre 2026)
 - Un seul endroit pour TOUT ce qu'on demande au visiteur (Béné, 17 septembre 2026)
+- La vente qui n'était identifiée nulle part, et l'affilié qu'on ne pouvait pas rassurer (Béné, 17 septembre 2026)

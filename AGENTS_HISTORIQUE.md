@@ -14836,3 +14836,207 @@ l'explication interne remise, le nom repassé en 14px, l'étoile figée dans
 la traduction, le composant qui diverge chez le jumeau, un éditeur qui
 garde sa propre rangée, le libellé verrouillé écrit en dur, la case
 obligatoire retirée d'un champ personnalisé) : les neuf rougissent.
+
+## La vente qui n'était identifiée nulle part, et l'affilié qu'on ne pouvait pas rassurer (Béné, 17 septembre 2026)
+
+Trois captures, et une question qui vaut plus que les trois.
+
+Sur l'accueil du pilotage : **« null a payé 17 € le 17 septembre 2026 et
+n'apparaît dans aucun compte. »** Dans les ventes : une ligne PayPal à
+17,00 € sans nom, « Produit non identifié ». Et cinq échéances carte à
+9,00 €, toutes « Produit non identifié ». Sa phrase : *« j'ai fait une
+vente sur notre nouveau système, mais rien n'est identifié correctement.
+Ni dans pilotage ni dans l'admin de tiquiz. »*
+
+Puis celle qui commande tout le chantier : *« je voudrais être sûre et
+certaine que la dernière cliente est bien arrivée seule et pas via un
+affilié qu'on n'aurait pas vu et qui serait lésé. Il faut être sûre à
+200 % qu'un affilié ne va pas perdre sa com parce que notre système
+aurait foiré. »*
+
+### LA CAUSE : LE WEBHOOK SAVAIT TOUT, ET IL LE JETAIT DANS UN LOG
+
+Le webhook PayPal relit l'abonnement chez PayPal à chaque prélèvement. Il
+en tire l'adresse SAISIE sur notre bon de commande, le produit du
+catalogue et le code de l'affiliée (`readCustomId`). Il ouvre l'accès,
+émet la facture, crée la commission, appelle le registre de Tipote... et
+écrit tout ça dans `console.log`.
+
+Le tableau de bord, lui, relit le payload BRUT de l'événement. Or
+`PAYMENT.SALE.COMPLETED` est le **prélèvement**, pas l'abonnement :
+PayPal n'y recopie pas toujours le `custom_id`. Le lecteur n'avait donc
+ni adresse ni produit, sur une vente dont on connaissait parfaitement la
+propriétaire trente secondes plus tôt.
+
+C'est **le piège numéro 1 de ce dépôt par une porte de plus** : une
+décision prise à un endroit, re-déduite à un autre, et les deux finissent
+par ne plus dire la même chose. Huitième fois.
+
+**Et la conséquence dépassait l'affichage.** `buildPeople` range une
+vente sans adresse dans les ORPHELINES : l'accueil ANNONÇAIT « n'apparaît
+dans aucun compte » sur une cliente qui a son compte. Une alerte d'argent
+fausse est une alerte qu'on arrête de lire, et le jour où une vraie
+apparaît à côté, personne ne la voit.
+
+### LA RÈGLE QUI MANQUAIT
+
+**Ce que le webhook a identifié s'ÉCRIT.** Il est le seul à pouvoir le
+savoir (il interroge le fournisseur, le lecteur ne peut pas), donc il est
+le seul endroit où ça peut être établi.
+
+`ventes_identite` (migration `20260918_ventes_identite.sql`) garde, par
+encaissement : qui, quoi, d'où vient l'abonnement, via quel affilié, et
+**ce que la commission est devenue**. La clé est
+`(provider, reference)`, c'est à dire EXACTEMENT celle que
+`commissionnerVente` envoie à Tipote dans `sio_order_id` : un deuxième
+identifiant à tenir serait un deuxième endroit où se tromper.
+
+`commissionnerVente` **rend** maintenant son verdict au lieu de
+l'imprimer. Chacune de ses cinq sorties rend un statut : une sortie
+muette est une commission perdue sans trace (leçon du 11 septembre).
+
+### ET ON COMPLÈTE AVEC DES FAITS, JAMAIS AVEC DU FLAIR
+
+`completerVentes` (pur, `lib/ventes/identite.ts`) comble les trous avec
+trois sources, la première qui parle gagne, et **aucune n'est une
+devinette** :
+
+1. la **fiche** écrite par le webhook : c'est nous qui l'avons écrite ;
+2. l'**abonnement**. `billing_agreement_id` voyage sur CHAQUE
+   prélèvement, et `profiles.paypal_subscription_id` porte l'adresse
+   depuis l'activation. Là encore, c'est nous qui l'avons écrit ;
+3. le **montant**, pour NOMMER le produit seulement. Jamais pour
+   fabriquer une adresse.
+
+Le point qui compte : **ça marche rétroactivement**. La vente du
+17 septembre retrouve son adresse par son abonnement, sans que la table
+existe, parce que le fil était déjà en base depuis l'activation. Le
+lecteur ne le lisait pas.
+
+### LES CINQ ÉCHÉANCES À 9,00 €, ET LA TABLE QUI SAVAIT DÉJÀ
+
+Ce sont ses abonnements Tiquiz **vendus par Systeme.io**, prélevés sur
+son compte Stripe, à l'ancien prix (9 € avant le 6 août 2026).
+`AMOUNT_TO_PLAN` porte `900: "monthly"` depuis toujours, mais **seul le
+webhook Systeme.io la lisait** : le tableau de bord ne comparait qu'au
+catalogue de notre bon de commande (17, 29, 170, 290).
+`planTiquizParMontant` pose la question à la bonne table.
+
+Attention à l'unité : `inferPlanFromAmount` accepte aussi les euros
+(`17` pour 1700), parce qu'il lit un payload dont l'unité est inconnue.
+Ici elle est certaine, donc **correspondance exacte en centimes** : sans
+ça, un encaissement de 9 CENTIMES (un contrôle de carte, un prorata)
+serait nommé « mensuel ».
+
+**Et leur ORIGINE est un FAIT, pas une inférence.** Notre bon de commande
+pose TOUJOURS `subscription_data[metadata][product]` sur l'abonnement
+qu'il crée. Son absence dit donc que cet abonnement n'a pas été ouvert
+par notre caisse (`marqueurBonDeCommande`). Ce qu'on ne sait pas, et
+qu'on n'écrit donc pas, c'est par quel autre chemin il l'a été.
+
+Conséquence décisive pour l'argent : **ne rien commissionner sur ces
+ventes est le comportement JUSTE**, c'est Systeme.io qui paie l'affilié.
+L'écran le DIT (« commission réglée par Systeme.io ») au lieu de laisser
+la colonne vide : sinon on cherche chaque mois, sur cinq lignes, une
+commission qui n'a jamais eu lieu d'être.
+
+### DIX ÉTATS DE COMMISSION, PARCE QUE DEUX NE SUFFISENT PAS
+
+`etatCommission` (pur) est la réponse à sa question des 200 %. Avant, un
+écran qui recalcule répond « je ne trouve pas d'affilié », et **« personne
+ne l'a amenée » se lit exactement comme « on n'a pas regardé »**. C'est la
+deuxième qui coûte de l'argent à quelqu'un.
+
+Les huit premiers états sont des réponses du registre. Les deux derniers
+sont l'absence de réponse, séparée en deux parce que les causes
+n'appellent pas la même réaction :
+
+- `rien_a_devoir` : encaissement à zéro (le mois offert, un code à
+  100 %). Sans cet état, chaque mois offert remonterait comme une
+  commission manquante ;
+- `sans_trace` : vente antérieure à la table, ou écriture ratée. C'est la
+  SEULE pour laquelle il faut aller regarder.
+
+**Quatre états sur dix appellent un humain**, et l'absence de verdict en
+fait partie. Une vente remboursée n'appelle plus personne : sa commission
+est annulée par construction, et crier dessus serait crier sur du travail
+juste.
+
+### CE QUI RÉPOND POUR LA VENTE DÉJÀ FAITE : `npm run audit:affiliation`
+
+La table ne rattrape pas le passé. Le script le fait, **en lecture
+seule**, en rapprochant trois sources :
+
+1. nos encaissements, avec les MÊMES fonctions que l'écran (un deuxième
+   lecteur écrit à la main finirait par dire autre chose, et on ne
+   saurait plus lequel croire) ;
+2. les commissions de Tipote, par la clé de l'encaissement. Il a fallu
+   ajouter `orderId` à `/api/partner/affiliate-payouts` : sans elle,
+   Tiquiz ne pouvait comparer que des TOTAUX, c'est à dire deviner ;
+3. les rattachements de Tipote (`/api/partner/affilies`), **inscription
+   gratuite comprise**, qui rattache à vie.
+
+**Le cas qu'il existe pour trouver** : une personne RATTACHÉE à un
+affilié, qui a payé, et dont l'encaissement ne porte AUCUNE commission.
+C'est la seule situation où quelqu'un est lésé sans que rien ne le dise.
+
+Deux choix à ne pas défaire. Il **ne poste rien** : réparer une
+commission, c'est rejouer l'attribution, et ça se décide en regardant le
+cas, pas en lançant un audit (un virement ne se reprend pas). Et il dit
+**CE QU'IL N'A PAS PU REGARDER** avant tout le reste : un audit qui
+conclut « tout va bien » alors qu'une de ses trois sources est muette est
+exactement le vert trompeur des quinze jours de statistiques perdues.
+
+### L'ADMIN AGIT, LA CONSOLE SUIT
+
+*« L'admin de tiquiz ne devrait plus suivre les ventes etc qui ne doivent
+être suivis que sur pilotage pour simplifier les choses. »*
+
+La console s'était donné cette règle le 29 août (`sections.ts`, règle 1 :
+« LA CONSOLE PILOTE, ELLE N'ÉDITE PAS »), et **son miroir n'existait
+pas** : l'admin suivait ET éditait. Les ventes, les statistiques d'argent
+et le journal des appels vivaient à DEUX endroits.
+
+Partis de `/admin` : l'onglet « Mes ventes », l'onglet « Statistiques »,
+l'écran des ventes directes. Arrivés dans la console :
+`/pilotage/ventes`, `/pilotage/business`, et le journal complet des
+appels reçus dans `/pilotage/sante`, juste sous la section qui en tirait
+déjà le verdict et qui renvoyait vers l'admin par un lien.
+
+Ce qui RESTE dans `/admin` est uniquement ce qui MODIFIE : inviter,
+changer un palier, renvoyer un accès, contrôler les tags, créer un
+revendeur, répondre à un ticket.
+
+**`/admin/ventes` REDIRIGE, il ne rend pas un 404** : l'adresse est dans
+ses favoris, et un 404 se lit comme une panne alors que la
+fonctionnalité existe.
+
+### LA FAUTE À NE PAS REFAIRE EN NETTOYANT
+
+Supprimer `StatistiquesCard` allait emporter trois garde-fous que
+`admin-tabs.test.mts` tenait : « aucun graphique ne dessine un montant
+qu'on n'a pas », « un écran vide ne veut pas dire zéro vente », « Tiquiz
+et l'Atelier se distinguent ».
+
+Les effacer avec le composant aurait été un **ménage qui retire une
+protection sans le dire**. Ils ont été RETARGETÉS : le premier vise
+maintenant le TYPE `Serie` (plus solide qu'un composant, parce qu'aucun
+écran ne peut le contourner), les deux autres visent les écrans de la
+console qui ont repris le travail. Et un test neuf exige que ce qui est
+parti de l'admin soit bien ARRIVÉ dans la console : un déménagement à
+moitié fait retire l'outil sans donner son remplaçant, et c'est le seul
+cas où on est plus mal qu'avant.
+
+### CE QUI N'A PAS PU ÊTRE MESURÉ, ET QUI RESTE À FAIRE
+
+**Aucune base n'est joignable depuis l'environnement de travail.** Tout
+ce qui précède est établi en lisant le code, pas en regardant sa base :
+le diagnostic est certain (le lecteur ne lit pas
+`billing_agreement_id`, c'est une ligne de code), mais **je n'ai pas
+vérifié que l'affiliée de la vente du 17 septembre a bien été payée.**
+
+C'est `npm run audit:affiliation` qui répond, sur son serveur, et c'est
+la première chose à lancer.
+
+Le filet : `tests/logic/vente-non-identifiee.test.mts` (22 tests), et
+`admin-tabs.test.mts` réécrit.

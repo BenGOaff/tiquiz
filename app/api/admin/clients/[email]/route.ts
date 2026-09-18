@@ -37,6 +37,8 @@ import { fetchAtelier } from "@/lib/admin/atelier";
 import { buildPeople, type ChurnRow, type ProfileRow } from "@/lib/admin/people";
 import { readProvenance, type LigneProvenance } from "@/lib/admin/provenance";
 import { buildSioSales } from "@/lib/admin/sioSales";
+import { completerVentes } from "@/lib/ventes/identite";
+import { lireFiches } from "@/lib/ventes/identiteStore";
 import { buildSales, type EventRow } from "@/lib/checkout/sales";
 import { lireAcheteur, manques } from "@/lib/facture/identite";
 import { ecrireFacturation, facturesDe, lireFacturation } from "@/lib/facture/store";
@@ -133,7 +135,25 @@ export async function GET(
     const paiements = lignes.filter((l) =>
       ["stripe", "paypal", "systeme_io"].includes(String(l.source)),
     );
-    const sales = [...buildSales(paiements), ...buildSioSales(paiements)];
+    // ── LA MÊME COMPLÉTION QUE LA CONSOLE (17 septembre 2026) ──
+    //
+    // Sans elle, la fiche d'un client affiche "1 paiement à cette
+    // adresse ne se rattache à aucun compte" sur SA PROPRE fiche, parce
+    // que l'échéance PayPal ne porte pas son adresse. Deux écrans qui
+    // complètent différemment finissent par se contredire : la
+    // complétion est la MÊME fonction, avec les mêmes deux sources.
+    const fiches = await lireFiches({ debut: null, fin: null });
+    const emailParAbonnement: Record<string, string> = {};
+    {
+      const abo = String(
+        (profil as { paypal_subscription_id?: string | null } | null)?.paypal_subscription_id ?? "",
+      ).trim();
+      if (abo) emailParAbonnement[abo] = email;
+    }
+    const sales = completerVentes(
+      [...buildSales(paiements), ...buildSioSales(paiements)],
+      { fiches: fiches.fiches, emailParAbonnement },
+    );
     const provenance = readProvenance(lignes as unknown as LigneProvenance[], email);
 
     // 5. Ses départs, en soft-fail.

@@ -50,6 +50,7 @@ import {
   verifyOwnerPaypalWebhook,
 } from "@/lib/checkout/paypalOwner";
 import { rememberPaypalSubscription } from "@/lib/checkout/customerLink";
+import { ecrireFiche, ecrireVerdictCommission } from "@/lib/ventes/identiteStore";
 import { construireFacture } from "@/lib/facture/construire";
 import type { FactureAEmettre } from "@/lib/facture/construire";
 import { taxeEstUnRepli, taxePaypalCents } from "@/lib/facture/taxeVentePaypal";
@@ -514,6 +515,40 @@ async function traiterEvenement(
     // Sans facture (cas rarissime, tout a échoué), on ne devine PAS : on
     // le dit fort et on retombe sur le taux du pays du vendeur, qui est
     // le repli conservateur.
+    // ── ON ÉCRIT QUI C'EST, AVANT DE SAVOIR CE QUE LA COMMISSION
+    //    DEVIENDRA (17 septembre 2026) ──
+    //
+    // Béné : "j'ai fait une vente sur notre nouveau système, mais rien
+    // n'est identifié correctement."
+    //
+    // Sa vente PayPal du 17 septembre s'affichait "adresse inconnue,
+    // Produit non identifié", et l'accueil l'annonçait même comme
+    // n'appartenant à aucun compte. Or à CET endroit précis, on connaît
+    // son adresse, son produit et son affiliée : on vient de relire
+    // l'abonnement chez PayPal. C'est l'événement `PAYMENT.SALE.*` qui
+    // ne porte pas ces champs, pas nous qui les ignorons.
+    //
+    // La fiche s'écrit donc ici, AVANT l'appel à Tipote : si le registre
+    // ne répond pas, l'identité est quand même sauvée, et c'est la
+    // moitié la plus utile (l'écran sait enfin qui a payé quoi).
+    if (encaissement) {
+      const produitConnu = findOwnerProduct(abo.productId);
+      await ecrireFiche({
+        provider: "paypal",
+        reference: encaissement.saleRef,
+        email: abo.email,
+        subscriptionId: abonnementId,
+        productId: abo.productId,
+        productLabel: produitConnu?.label ?? null,
+        // Un abonnement PayPal de ce compte vient de NOTRE bon de
+        // commande : Systeme.io n'encaisse pas par là.
+        origine: "bon_de_commande",
+        affiliateRef: abo.affiliateRef,
+        affiliateCode: abo.affiliateCode,
+        paidAt: encaissement.paidAt ?? null,
+      });
+    }
+
     if (encaissement && encaissement.totalCents > 0) {
       const produit = findOwnerProduct(abo.productId);
       if (produit) {
@@ -525,7 +560,7 @@ async function traiterEvenement(
               `A verifier sur sa fiche client.`,
           );
         }
-        await commissionnerVente({
+        const verdict = await commissionnerVente({
           moyen: "paypal",
           email: abo.email,
           reference: encaissement.saleRef,
@@ -535,6 +570,10 @@ async function traiterEvenement(
           amountTaxCents: taxe,
           product: { id: produit.id, label: produit.label },
         });
+        // LE VERDICT SE RANGE. C'est lui qui répond à "est-ce qu'un
+        // affilié a perdu sa com sur cette vente ?", et il ne vivait
+        // que dans la sortie standard du serveur.
+        await ecrireVerdictCommission("paypal", encaissement.saleRef, verdict);
       } else {
         // La branche Stripe le disait deja ; celle ci se taisait (audit
         // du 11 septembre). Un produit inconnu sur un encaissement, c'est
@@ -543,6 +582,13 @@ async function traiterEvenement(
           `[commande/paypal/webhook] vente ${encaissement.saleRef} encaissee mais produit inconnu ` +
             `(${abo.productId}) : commission NON creee.`,
         );
+        // Ça se VOIT sur l'écran, et pas seulement dans le journal : une
+        // commission qui ne naîtra jamais parce qu'on ne sait pas nommer
+        // le produit est exactement ce qu'elle veut pouvoir repérer.
+        await ecrireVerdictCommission("paypal", encaissement.saleRef, {
+          statut: "non_tentee",
+          detail: `produit inconnu (${abo.productId ?? "aucun"})`,
+        });
       }
     }
 

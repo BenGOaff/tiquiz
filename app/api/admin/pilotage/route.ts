@@ -57,6 +57,8 @@ import { lireComptesTipote, lireCoutAffiliation } from "@/lib/pilotage/affilies"
 import { buildMrr, serieChurn } from "@/lib/admin/mrr";
 import { derniersMois } from "@/lib/admin/adminStats";
 import { GENRE_VENTE_ORPHELINE } from "@/lib/pilotage/alertes";
+import { completerVentes } from "@/lib/ventes/identite";
+import { lireFiches } from "@/lib/ventes/identiteStore";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -162,7 +164,41 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     // Deux lecteurs, deux formats de payload, une seule liste ensuite.
     // Chacun ignore ce qui ne le concerne pas (il filtre sur `source`),
     // donc aucune vente ne peut etre comptee deux fois.
-    const sales = [...buildSales(lignesEvents), ...buildSioSales(lignesEvents)];
+    const brutes = [...buildSales(lignesEvents), ...buildSioSales(lignesEvents)];
+
+    // ── ON COMPLÈTE L'IDENTITÉ AVANT TOUT LE RESTE (17 septembre 2026) ──
+    //
+    // Béné : "j'ai fait une vente sur notre nouveau système, mais rien
+    // n'est identifié correctement."
+    //
+    // Sa vente PayPal du 17 septembre est un `PAYMENT.SALE.COMPLETED`,
+    // qui ne porte ni l'adresse ni le produit : PayPal ne recopie pas
+    // toujours le `custom_id` de l'abonnement sur le prélèvement. Le
+    // lecteur rendait donc `email: null`, et TOUT ce qui suit en
+    // dépendait : le nom affiché, la colonne "via qui", et surtout
+    // `buildPeople`, qui range une vente sans adresse dans les
+    // ORPHELINES. L'accueil annonçait "n'apparaît dans aucun compte" sur
+    // une cliente qui a son compte.
+    //
+    // La complétion se fait ICI, une fois, avant `buildPeople` et avant
+    // les totaux. La faire plus tard, à l'écran, laisserait l'alerte
+    // fausse en place et donnerait deux vérités sur la même vente.
+    //
+    // DEUX SOURCES, ET AUCUNE N'EST UNE DEVINETTE : la fiche écrite par
+    // le webhook, et `profiles.paypal_subscription_id`, que notre propre
+    // webhook y a écrit à l'activation. Le montant ne sert qu'à NOMMER
+    // le produit, jamais à inventer une adresse.
+    const fiches = await lireFiches({ debut: periode.debut, fin: periode.fin });
+    const emailParAbonnement: Record<string, string> = {};
+    for (const profil of profiles) {
+      const abo = String(profil.paypal_subscription_id ?? "").trim();
+      const mail = String(profil.email ?? "").trim().toLowerCase();
+      if (abo && mail) emailParAbonnement[abo] = mail;
+    }
+    const sales = completerVentes(brutes, {
+      fiches: fiches.fiches,
+      emailParAbonnement,
+    });
 
     // LES DEPARTS, en soft-fail eux aussi : si la migration du 21 aout
     // n'est pas encore passee, l'ecran doit s'afficher sans eux plutot
@@ -303,6 +339,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       // honnetement "sur les N derniers" au lieu de laisser croire que
       // c'est tout l'historique.
       evenementsLus: events?.length ?? 0,
+      // LES FICHES D'IDENTITÉ ONT-ELLES PU ÊTRE LUES ?
+      //
+      // `false` = la migration 20260918_ventes_identite n'est pas
+      // passée, ou la table est muette. Ce n'est PAS "aucune commission
+      // n'a été créée", et l'écran doit dire la différence : sinon une
+      // migration oubliée se lirait comme un affilié non payé, ce qui
+      // est la pire des deux erreurs possibles ici.
+      identitesLisibles: fiches.lisible,
       // L'ecran DOIT pouvoir dire "il manque l'Atelier". Sans ca, une
       // panne de liaison passerait pour un mois sans ventes.
       atelier: { reachable: atelier.reachable, reason: atelier.reason ?? null },

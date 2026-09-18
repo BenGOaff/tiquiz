@@ -54,6 +54,7 @@ import { alerterAccesIncomplet } from "@/lib/email/accesAlerte";
 import { etatOctroiTiquiz } from "@/lib/checkout/etatOctroi";
 import { natureDeLaFactureStripe } from "@/lib/ventes/alerteVente";
 import { marquerMoisOffertConsomme } from "@/lib/trial/moisOffertCheckout";
+import { ecrireFiche, ecrireVerdictCommission } from "@/lib/ventes/identiteStore";
 import { ouvertureDemandee, type OuvertureDemandee } from "@/lib/checkout/planChange";
 import { estPlanAVie } from "@/lib/checkout/plansAVie";
 import { estAbonnementVivant } from "@/lib/checkout/subscriptionCancel";
@@ -389,7 +390,21 @@ async function traiterEvenement(
   // le premier mois, sous deux cles differentes (le paiement ici, la
   // facture la-bas), donc sans que la contrainte d'unicite les voie.
   if (product.interval === null) {
-    await commissionnerVente({
+    // La fiche d'abord, le verdict ensuite : si Tipote ne repond pas,
+    // l'identite de l'acheteur est quand meme sauvee.
+    await ecrireFiche({
+      provider: "stripe",
+      reference: vente.paymentRef ?? sessionId,
+      email: vente.email,
+      nom: vente.name ?? null,
+      productId: product.id,
+      productLabel: product.label,
+      origine: "bon_de_commande",
+      affiliateRef: vente.affiliateRef,
+      affiliateCode: vente.affiliateCode,
+      paidAt: new Date().toISOString(),
+    });
+    const verdict = await commissionnerVente({
       moyen: "stripe",
       email: vente.email,
       reference: vente.paymentRef,
@@ -399,6 +414,7 @@ async function traiterEvenement(
       amountTaxCents: vente.amountTaxCents,
       product,
     });
+    await ecrireVerdictCommission("stripe", vente.paymentRef ?? sessionId, verdict);
 
     // ── ET BÉNÉ L'APPREND, EN DERNIER ──
     //
@@ -945,15 +961,52 @@ async function commissionnerEcheance(
   // webhook avait répondu 200.
   const meta = metaDeLEcheance(abonnement, facture);
   const produit = findOwnerProduct(String(meta.product ?? ""));
+  const email = String(facture.customer_email ?? "").trim();
+  const abonnementId = abonnementDeLaFacture(facture);
+
+  // ── LA FICHE D'IDENTITÉ, ÉCRITE DANS TOUS LES CAS (17 septembre 2026) ──
+  //
+  // Béné : "je touche encore des abonnements tiquiz via systeme io mais
+  // ce n'est pas non plus identifié dans pilotage."
+  //
+  // Les deux cas s'écrivent, et c'est le POINT : sans notre
+  // `metadata[product]`, cet abonnement n'a pas été ouvert par notre bon
+  // de commande (Systeme.io le prélève sur le même compte Stripe). Ce
+  // n'est PAS une anomalie, et ne rien commissionner est le comportement
+  // juste : c'est EUX qui paient l'affilié sur ces ventes là. L'écran
+  // doit le dire, au lieu d'afficher "Produit non identifié" et de
+  // laisser croire à une commission oubliée.
+  const origine = produit ? "bon_de_commande" : "hors_bon_de_commande";
+  await ecrireFiche({
+    provider: "stripe",
+    reference: factureId,
+    email: email || null,
+    nom: String(facture.customer_name ?? "").trim() || null,
+    subscriptionId: abonnementId,
+    productId: produit?.id ?? null,
+    productLabel: produit?.label ?? null,
+    origine,
+    affiliateRef: String(meta.affiliate_ref ?? "") || null,
+    affiliateCode: String(meta.affiliate_code ?? "") || null,
+    paidAt: new Date().toISOString(),
+  });
+
   if (!produit) {
     console.error(
       `[commande/webhook] echeance ${factureId} encaissee mais produit inconnu ` +
         `(${String(meta.product ?? "?")}) : commission NON creee.`,
     );
+    // `reglee_ailleurs`, PAS `non_tentee` : un abonnement hors de notre
+    // bon de commande est commissionne par Systeme.io. Le faire remonter
+    // comme une anomalie ferait chercher une panne chaque mois, sur
+    // cinq echeances, et l'ecran d'alerte finirait par ne plus etre lu.
+    await ecrireVerdictCommission("stripe", factureId, {
+      statut: "reglee_ailleurs",
+      detail: "abonnement hors de notre bon de commande",
+    });
     return;
   }
 
-  const email = String(facture.customer_email ?? "").trim();
   if (!email) {
     // Une sortie MUETTE ici est une commission perdue sans trace (audit
     // du 11 septembre) : Stripe recopie l'adresse sur chaque facture,
@@ -961,10 +1014,14 @@ async function commissionnerEcheance(
     console.error(
       `[commande/webhook] echeance ${factureId} encaissee sans adresse sur la facture : commission NON creee.`,
     );
+    await ecrireVerdictCommission("stripe", factureId, {
+      statut: "non_tentee",
+      detail: "aucune adresse sur la facture",
+    });
     return;
   }
 
-  await commissionnerVente({
+  const verdict = await commissionnerVente({
     moyen: "stripe",
     email,
     reference: factureId,
@@ -974,4 +1031,5 @@ async function commissionnerEcheance(
     amountTaxCents: taxe,
     product: { id: produit.id, label: produit.label },
   });
+  await ecrireVerdictCommission("stripe", factureId, verdict);
 }

@@ -2,7 +2,34 @@
 
 // components/admin/AdminDashboard.tsx
 //
-// CINQ ONGLETS, ET UNE SEULE LISTE DE PERSONNES.
+// CET ÉCRAN AGIT. IL NE SUIT PLUS LES VENTES (Béné, 17 septembre 2026).
+//
+// "L'admin de tiquiz ne devrait plus suivre les ventes etc qui ne
+// doivent être suivis que sur pilotage pour simplifier les choses."
+//
+// La ligne de partage est celle que la console s'est donnée le 29 août
+// (`lib/pilotage/sections.ts`, règle 1) : **la console PILOTE, elle
+// n'ÉDITE pas.** Le miroir était manquant : cet écran suivait ET
+// éditait, donc les ventes, les statistiques d'argent et le journal des
+// appels existaient en double, à deux endroits qui ne disaient pas
+// toujours la même chose.
+//
+// Ce qui reste ici est donc uniquement ce qui MODIFIE quelque chose :
+// inviter quelqu'un, changer son palier, renvoyer un accès, contrôler
+// ses tags, créer un revendeur, répondre à un ticket. Tout ce qui se
+// REGARDE a déménagé :
+//
+//   - les ventes et leurs commissions -> /pilotage/ventes ;
+//   - les statistiques d'argent       -> /pilotage/business ;
+//   - le journal des appels reçus     -> /pilotage/sante.
+//
+// ET ON N'A RIEN ÉTEINT SANS L'AVOIR REMPLACÉ : les trois sections
+// existent et sont `prete` dans la console. `/admin/ventes` redirige au
+// lieu de disparaître, pour qu'un favori garde son sens.
+//
+// -- CE QUE CE FICHIER PROTÉGEAIT DÉJÀ, ET QUI TIENT TOUJOURS ----------
+//
+// UNE SEULE LISTE DE PERSONNES.
 //
 // Béné, 22 août, deux fois de suite :
 //   "Fais moi un système d'onglets."
@@ -34,10 +61,8 @@ import CommentairesBlogCard from "@/components/admin/CommentairesBlogCard";
 import PilotageCard from "@/components/admin/PilotageCard";
 import ResellerPaymentEventsCard from "@/components/admin/ResellerPaymentEventsCard";
 import ResellersCard from "@/components/admin/ResellersCard";
-import StatistiquesCard from "@/components/admin/StatistiquesCard";
 import SupportCard from "@/components/admin/SupportCard";
 import TagsCard from "@/components/admin/TagsCard";
-import WebhookLogsCard from "@/components/admin/WebhookLogsCard";
 
 /**
  * Les questions que Béné se pose, dans son ordre à elle.
@@ -47,8 +72,6 @@ import WebhookLogsCard from "@/components/admin/WebhookLogsCard";
  */
 const ONGLETS = [
   { id: "clients", label: "Mes clients" },
-  { id: "ventes", label: "Mes ventes" },
-  { id: "stats", label: "Statistiques" },
   { id: "support", label: "Support" },
   { id: "revendeurs", label: "Mes revendeurs" },
   { id: "affilies", label: "Mes affiliés" },
@@ -110,9 +133,11 @@ export default function AdminDashboard() {
         className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/40 bg-primary/5 p-4 text-sm transition-colors hover:bg-primary/10"
       >
         <Gauge className="h-4 w-4 shrink-0 text-primary" />
-        <span className="font-semibold">Le centre de pilotage</span>
+        <span className="font-semibold">Tes ventes sont dans le centre de pilotage</span>
         <span className="text-muted-foreground">
-          Toutes les app au même endroit : clients, ventes, affiliés, business, support, santé.
+          Les ventes, les commissions, les statistiques d&apos;argent et le journal des
+          paiements reçus vivent là, pour les trois app. Cet écran ne garde que ce qui se
+          modifie.
         </span>
         <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-primary" />
       </Link>
@@ -181,38 +206,6 @@ export default function AdminDashboard() {
           <TagsCard />
         </>
       )}
-
-      {/* ── MES VENTES ── */}
-      {onglet === "ventes" && (
-        <>
-          <PilotageCard vue="ventes" />
-
-          {/* Un ecran qu'on ne montre pas n'existe pas (retour Jocelyne,
-              3 aout). Le lien vit ici, au dessus du journal des appels,
-              parce que c'est exactement l'endroit ou on se demande "et
-              cette vente, elle est passee ?". */}
-          <div className="rounded-lg border p-4">
-            <p className="font-semibold">Ventes directes</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Les abonnements encaissés par Tiquiz lui même, avec le bouton pour rembourser
-              sans passer par Stripe.
-            </p>
-            <Link
-              href="/admin/ventes"
-              className="mt-3 inline-block text-sm font-semibold text-primary underline"
-            >
-              Ouvrir mes ventes directes
-            </Link>
-          </div>
-
-          {/* Appels Systeme.io recus : repond a "est-ce que la vente est
-              arrivee jusqu'a nous ?" (drame Ivan, 7 aout 2026). */}
-          <WebhookLogsCard />
-        </>
-      )}
-
-      {/* ── STATISTIQUES : seulement ce qu'on sait juste ── */}
-      {onglet === "stats" && <StatistiquesCard />}
 
       {/* ── SUPPORT : qui attend une reponse, et depuis quand ── */}
       {onglet === "support" && (

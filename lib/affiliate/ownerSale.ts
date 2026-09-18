@@ -58,6 +58,7 @@
 import "server-only";
 
 import { commissionBaseCents } from "@/lib/checkout/commissionBase";
+import { statutDepuisTipote, type VerdictCommission } from "@/lib/ventes/identite";
 import { readSa } from "./sa";
 import { readRef as readRefCode } from "./refLien";
 import { marquerEnvoyee, mettreEnAttente } from "./filetCommissionStore";
@@ -127,15 +128,39 @@ export interface VenteACommissionner {
   product: { id: string; label: string };
 }
 
-export async function commissionnerVente(vente: VenteACommissionner): Promise<void> {
+/**
+ * ON REND LE VERDICT, ON NE LE JETTE PLUS DANS UN LOG (17 septembre 2026).
+ *
+ * Béné : "il faut être sûre à 200 % qu'un affilié ne va pas perdre sa com
+ * parce que notre système aurait foiré."
+ *
+ * Cette garantie ne peut pas venir d'un calcul refait plus tard : elle
+ * vient d'une TRACE par encaissement. Cette fonction était la seule à
+ * connaître la réponse du registre, et elle l'écrivait dans la sortie
+ * standard du serveur, c'est à dire nulle part de consultable. Elle la
+ * RETOURNE, et l'appelant la range dans la fiche de la vente
+ * (`lib/ventes/identiteStore.ts`).
+ *
+ * Elle ne jette toujours jamais et ne bloque toujours rien : un
+ * appelant qui ignore le retour se comporte exactement comme avant.
+ */
+export async function commissionnerVente(
+  vente: VenteACommissionner,
+): Promise<VerdictCommission> {
   try {
     const email = (vente.email ?? "").trim();
     const reference = (vente.reference ?? "").trim();
     if (!email || !reference) {
+      const manque = !email ? "adresse" : "reference";
       console.error(
-        `[commission] vente sans ${!email ? "adresse" : "reference"} : aucune commission possible.`,
+        `[commission] vente sans ${manque} : aucune commission possible.`,
       );
-      return;
+      return {
+        statut: "non_tentee",
+        cents: null,
+        affilie: null,
+        detail: `${manque} manquante`,
+      };
     }
 
     const base = commissionBaseCents(vente.amountTotalCents, vente.amountTaxCents);
@@ -147,7 +172,12 @@ export async function commissionnerVente(vente: VenteACommissionner): Promise<vo
         `[commission] vente ${reference} sans montant exploitable ` +
           `(encaisse ${vente.amountTotalCents} c, taxe ${vente.amountTaxCents} c) : aucune commission.`,
       );
-      return;
+      return {
+        statut: "non_tentee",
+        cents: null,
+        affilie: null,
+        detail: "montant HT nul ou illisible",
+      };
     }
 
     // Prefixe : ce n'est PAS un numero de commande Systeme.io, et deux
@@ -192,7 +222,16 @@ export async function commissionnerVente(vente: VenteACommissionner): Promise<vo
         `[commission] Tipote n'a pas pris ${ref} (${reponse.statut ?? "reseau"}) : ${reponse.detail}`,
       );
       await mettreEnAttente({ action: "attribuer", reference: ref, corps, statut: reponse.statut, detail: reponse.detail });
-      return;
+      return {
+        // `en_attente` et pas `non_tentee` : l'appel est rangé et sera
+        // rejoué avant la maturation, donc rien n'est perdu. Dire
+        // "non tentée" ferait chercher une panne qui n'existe pas.
+        statut: "en_attente",
+        cents: null,
+        affilie: null,
+        detail: `Tipote n'a pas repondu (${reponse.statut ?? "reseau"}), rejeu programme`,
+        baseHtCents: base,
+      };
     }
     await marquerEnvoyee("attribuer", ref);
 
@@ -202,16 +241,37 @@ export async function commissionnerVente(vente: VenteACommissionner): Promise<vo
         `[commission] ${r.commission_cents} c pour ${r.sa} sur ${ref} ` +
           `(base ${base} c, encaisse ${vente.amountTotalCents} c, taxe ${vente.amountTaxCents} c)`,
       );
-      return;
+      return {
+        statut: "attribuee",
+        cents: Number(r.commission_cents) || null,
+        affilie: r.sa ?? null,
+        detail: null,
+        baseHtCents: base,
+      };
     }
     // Les autres cas sont normaux et frequents (pas d'affilie, doublon,
     // affilie inconnu). On les trace quand meme : le jour ou une affiliee
     // dit "je n'ai pas ete payee", c'est cette ligne qui repond.
     console.log(`[commission] ${r.status ?? "reponse illisible"} sur ${ref}`);
+    return {
+      statut: statutDepuisTipote(r.status),
+      cents: null,
+      affilie: r.sa ?? null,
+      detail: r.status ? null : "reponse du registre illisible",
+      baseHtCents: base,
+    };
   } catch (e) {
-    console.error(
-      `[commission] attribution impossible : ${e instanceof Error ? e.message : String(e)}`,
-    );
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[commission] attribution impossible : ${message}`);
+    return {
+      // Une exception ici, c'est un cas qu'on n'a pas compris : il
+      // demande un humain, et `non_tentee` est ce qui le fait remonter
+      // sur l'ecran.
+      statut: "non_tentee",
+      cents: null,
+      affilie: null,
+      detail: message.slice(0, 200),
+    };
   }
 }
 

@@ -1,7 +1,26 @@
 // tests/logic/admin-tabs.test.mts
 //
-// L'ADMIN A CINQ ONGLETS, UNE SEULE LISTE DE PERSONNES, ET UN ÉCRAN VIDE
-// QUI DIT POURQUOI.
+// L'ADMIN AGIT, LA CONSOLE SUIT. ET AUCUN DES DEUX NE FAIT LES DEUX.
+//
+// Béné, 17 septembre 2026 : "l'admin de tiquiz ne devrait plus suivre
+// les ventes etc qui ne doivent être suivis que sur pilotage pour
+// simplifier les choses."
+//
+// La console s'était donné cette règle le 29 août (`sections.ts`,
+// règle 1 : "LA CONSOLE PILOTE, ELLE N'ÉDITE PAS"), et son miroir
+// n'existait pas : l'admin suivait ET éditait. Les ventes, les
+// statistiques d'argent et le journal des appels vivaient donc à DEUX
+// endroits, et deux écrans de la même vente finissent toujours par se
+// contredire.
+//
+// Ce fichier tient la nouvelle frontière dans les deux sens : l'admin
+// n'a plus d'onglet de suivi, et la console a bien récupéré ce qui est
+// parti. Un déménagement à moitié fait retire l'outil sans donner son
+// remplaçant, et c'est le seul cas où on est plus mal qu'avant.
+//
+// -- CE QU'IL PROTÉGEAIT DÉJÀ -----------------------------------------
+//
+// UNE SEULE LISTE DE PERSONNES, ET UN ÉCRAN VIDE QUI DIT POURQUOI.
 //
 // Béné, 22 août, trois demandes qui se suivent :
 //   1. "Je n'ai plus AUCUNE infos sur mes users ! Fais moi un système
@@ -29,16 +48,56 @@ function lire(rel: string): string {
   return fs.readFileSync(path.join(process.cwd(), rel), "utf8");
 }
 
-test("les cinq onglets existent, et Clients est celui qui s'ouvre", () => {
+test("les onglets d'ACTION existent, et Clients est celui qui s'ouvre", () => {
   const src = lire("components/admin/AdminDashboard.tsx");
-  for (const id of ['"clients"', '"ventes"', '"stats"', '"revendeurs"', '"affilies"']) {
-    assert.ok(src.includes(id), `l'onglet ${id} a disparu`);
+  const onglets = src.slice(src.indexOf("const ONGLETS = ["), src.indexOf("] as const;"));
+  for (const id of ['"clients"', '"support"', '"revendeurs"', '"affilies"']) {
+    assert.ok(onglets.includes(id), `l'onglet ${id} a disparu`);
   }
   // Clients par defaut : c'est la question qu'elle se pose en premier.
   assert.ok(
     /useState<OngletId>\("clients"\)/.test(src),
     "l'onglet ouvert par defaut n'est plus Clients",
   );
+});
+
+test("L'ADMIN NE SUIT PLUS LES VENTES (Bene, 17 septembre 2026)", () => {
+  const src = lire("components/admin/AdminDashboard.tsx");
+  const onglets = src.slice(src.indexOf("const ONGLETS = ["), src.indexOf("] as const;"));
+  for (const parti of ['"ventes"', '"stats"']) {
+    assert.ok(
+      !onglets.includes(parti),
+      `l'onglet ${parti} est revenu dans l'admin : les ventes se suivent sur /pilotage`,
+    );
+  }
+  // Et pas seulement l'onglet : les trois blocs de suivi non plus.
+  for (const bloc of ["<StatistiquesCard", "<WebhookLogsCard", 'vue="ventes"']) {
+    assert.ok(!src.includes(bloc), `${bloc} suit encore des ventes dans l'admin`);
+  }
+  // Le lien vers la console reste, et il DIT ou c'est parti : une
+  // fonctionnalite deplacee sans un mot se lit comme une suppression.
+  assert.ok(src.includes('href="/pilotage"'), "l'admin ne mene plus a la console");
+  assert.match(src, /centre de pilotage/i);
+});
+
+test("CE QUI EST PARTI DE L'ADMIN EST BIEN ARRIVE DANS LA CONSOLE", () => {
+  // Le point de cette regle : on n'eteint rien avant d'avoir remplace.
+  // Sans ce test, le menage de l'admin pourrait retirer un ecran dont
+  // le remplacant n'existe pas, et personne ne le verrait avant d'en
+  // avoir besoin.
+  const sections = lire("lib/pilotage/sections.ts");
+  for (const chemin of ['"/ventes"', '"/business"', '"/sante"']) {
+    assert.ok(sections.includes(chemin), `la section ${chemin} n'existe pas dans la console`);
+  }
+  // Le journal complet des appels recus a demenage dans Sante.
+  assert.ok(
+    lire("components/pilotage/SantePilotage.tsx").includes("<WebhookLogsCard />"),
+    "le journal des appels recus n'est arrive nulle part",
+  );
+  // Et l'ancienne adresse REDIRIGE au lieu de rendre un 404 : elle est
+  // dans ses favoris, et un 404 se lit comme une panne.
+  const ancienne = lire("app/admin/ventes/page.tsx");
+  assert.match(ancienne, /permanentRedirect\("\/pilotage\/ventes"\)/);
 });
 
 test("IL N'Y A QU'UNE SEULE LISTE DE PERSONNES", () => {
@@ -111,14 +170,19 @@ test("chaque source de donnee a son onglet, et une seule fois", () => {
   // deux totaux qui finiront par se contredire.
   for (const bloc of [
     "<AffiliesCard />",
-    "<WebhookLogsCard />",
     "<ResellersCard />",
     "<ResellerPaymentEventsCard />",
-    "<StatistiquesCard />",
   ]) {
     assert.equal(src.split(bloc).length - 1, 1, `${bloc} apparait plusieurs fois`);
   }
-  assert.ok(src.includes('<PilotageCard vue="ventes" />'), "l'onglet Ventes n'a plus le pilotage");
+  // `<WebhookLogsCard />` et `<StatistiquesCard />` ne sont plus dans
+  // cette liste : ils ont quitte l'admin le 17 septembre. La regle
+  // "une seule fois" les suit dans la console.
+  assert.equal(
+    lire("components/pilotage/SantePilotage.tsx").split("<WebhookLogsCard />").length - 1,
+    1,
+    "le journal des appels apparait plusieurs fois dans Sante",
+  );
 });
 
 test("les revendeurs ne sont plus enterres sous l'onglet Ventes", () => {
@@ -132,33 +196,29 @@ test("les revendeurs ne sont plus enterres sous l'onglet Ventes", () => {
 test("un ecran qui n'a rien charge le DIT, et ca reste affiche", () => {
   // Un toast disparait en trois secondes. Il restait des zeros, qui se
   // lisent comme "tu n'as aucun client".
-  for (const fichier of [
-    "components/admin/PilotageCard.tsx",
-    "components/admin/StatistiquesCard.tsx",
-  ]) {
-    const src = lire(fichier);
-    assert.ok(src.includes("setPanne("), `${fichier} ne retient plus la panne`);
-  }
+  assert.ok(
+    lire("components/admin/PilotageCard.tsx").includes("setPanne("),
+    "PilotageCard ne retient plus la panne",
+  );
   assert.ok(
     lire("components/admin/PilotageCard.tsx").includes("RAISONS_PANNE"),
     "le pilotage ne traduit plus la raison du serveur",
   );
-  // Et surtout : le bandeau dit que les zeros ne veulent rien dire.
-  assert.ok(
-    lire("components/admin/StatistiquesCard.tsx").includes(
-      "ce n&apos;est pas parce que tu n&apos;as pas de ventes",
-    ),
-    "l'onglet Statistiques laisse croire qu'un ecran vide veut dire zero vente",
-  );
-});
-
-test("un refus d'admin est nomme, pas laisse en 'erreur'", () => {
-  // 401 veut dire "tu n'es pas reconnue comme admin". Afficher "erreur"
-  // enverrait chercher un bug dans le code au lieu de la liste des
-  // admins du serveur.
-  const src = lire("components/admin/StatistiquesCard.tsx");
-  assert.ok(src.includes("res.status === 401"), "le refus d'admin n'est plus distingue");
-  assert.ok(src.includes("administrateur"), "le refus d'admin ne nomme plus ce qu'il faut regarder");
+  // LA MEME GARANTIE, PORTEE PAR LES ECRANS QUI ONT REPRIS LE TRAVAIL.
+  // `StatistiquesCard` disait "ce n'est pas parce que tu n'as pas de
+  // ventes" ; les trois ecrans de la console doivent dire la meme chose
+  // a leur facon, sinon un ecran vide se relit "zero vente".
+  for (const ecran of [
+    "components/pilotage/VentesPilotage.tsx",
+    "components/pilotage/BusinessPilotage.tsx",
+    "components/pilotage/AccueilPilotage.tsx",
+  ]) {
+    assert.match(
+      lire(ecran),
+      /n'ont pas pu être lues|n'ont pas pu être lus|pas pu être lu/,
+      `${ecran} ne distingue plus "je n'ai pas pu lire" de "il n'y a rien"`,
+    );
+  }
 });
 
 test("on voit sur la ligne OU se rembourse l'argent", () => {
@@ -174,17 +234,21 @@ test("on voit sur la ligne OU se rembourse l'argent", () => {
   assert.ok(src.includes("function remboursables("), "la regle du remboursable a disparu");
 });
 
-test("Tiquiz et l'Atelier se distinguent dans les ventes ET dans les stats", () => {
+test("Tiquiz et l'Atelier se distinguent partout ou on voit une vente", () => {
   // "je vois mal les differences entre tiquiz et l'atelier, partout".
-  for (const fichier of [
-    "components/admin/PilotageCard.tsx",
-    "components/admin/StatistiquesCard.tsx",
-  ]) {
-    assert.ok(
-      lire(fichier).includes("NOM_PRODUIT"),
-      `${fichier} ne distingue pas les deux produits`,
-    );
-  }
+  assert.ok(
+    lire("components/admin/PilotageCard.tsx").includes("NOM_PRODUIT"),
+    "la liste des clients ne distingue pas les deux produits",
+  );
+  // L'ecran des ventes de la console a repris la question, et il nomme
+  // MEME ce que `NOM_PRODUIT` ne connait pas (une echeance a l'ancien
+  // prix), grace au repli par le montant.
+  const ventes = lire("components/pilotage/VentesPilotage.tsx");
+  assert.ok(ventes.includes("nomProduitVendu"), "l'ecran des ventes ne nomme plus le produit");
+  assert.ok(
+    ventes.includes("nomProduitComplete"),
+    "l'ecran des ventes a perdu le repli par le montant : les echeances a 9 EUR redeviennent 'non identifie'",
+  );
 });
 
 test("plus de jargon de diagnostic a l'ecran", () => {
@@ -201,14 +265,21 @@ test("plus de jargon de diagnostic a l'ecran", () => {
   }
 });
 
-test("aucun graphique ne dessine un montant qu'on n'a pas", () => {
-  // La parenthese de sa demande : "(uniquement de maniere fiable
-  // aussi...)". Le composant DOIT traiter le cas "je ne sais pas", et
-  // c'est le type Serie qui l'y oblige.
-  const src = lire("components/admin/StatistiquesCard.tsx");
-  assert.ok(src.includes("if (!serie.fiable)"), "les barres ne verifient plus la fiabilite");
+test("aucun ecran ne dessine un montant qu'on n'a pas", () => {
+  // La parenthese de sa demande du 22 aout : "(uniquement de maniere
+  // fiable aussi...)".
+  //
+  // Le garde-fou vivait dans `StatistiquesCard`, qui a quitte l'admin le
+  // 17 septembre. Il ne se perd pas pour autant : la decision est dans
+  // le TYPE, et c'est ce type qui oblige chaque ecran a traiter le cas
+  // "je ne sais pas". Viser le type plutot qu'un composant est plus
+  // solide, parce qu'aucun ecran ne peut le contourner.
+  const serie = lire("lib/admin/adminStats.ts");
+  assert.match(serie, /fiable/, "le type Serie ne porte plus la fiabilite");
+  // Et la ligne de vente dit quand son montant vient du TARIF du plan
+  // et non de la somme encaissee : une remise ne serait pas deduite.
   assert.ok(
-    src.includes("montants-absents"),
-    "l'ecran n'explique plus pourquoi la courbe des euros manque",
+    lire("components/pilotage/VentesPilotage.tsx").includes('amountSource === "plan"'),
+    "l'ecran des ventes ne dit plus quand un montant est estime",
   );
 });

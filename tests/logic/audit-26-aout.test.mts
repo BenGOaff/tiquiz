@@ -142,7 +142,22 @@ describe("On paie chaque mois ou le client reste abonne", () => {
     // Un abonnement est commissionné facture par facture. Commissionner
     // au checkout EN PLUS ferait deux commissions sur le premier mois,
     // sous deux clés différentes, donc sans que l'unicité les voie.
-    assert.match(stripe, /if \(product\.interval === null\) \{[\s\S]{0,400}?commissionnerVente/);
+    // La fenetre est passee de 400 a 1200 caracteres le 17 septembre
+    // 2026 : `ecrireFiche` s'est glissee entre les deux (la fiche
+    // d'identite de l'encaissement s'ecrit AVANT l'appel a Tipote, pour
+    // qu'une panne du registre ne fasse pas perdre l'identite de
+    // l'acheteur). Ce que le test protege n'a pas bouge d'un mot : cet
+    // appel la vit dans la branche des achats SANS echeance, et nulle
+    // part ailleurs.
+    assert.match(stripe, /if \(product\.interval === null\) \{[\s\S]{0,1200}?commissionnerVente/);
+    // Et l'inverse, qui est le vrai garde-fou : il n'y a qu'UN appel a
+    // `commissionnerVente` dans tout le fichier hors `commissionnerEcheance`.
+    const avantEcheance = stripe.slice(0, stripe.indexOf("async function commissionnerEcheance("));
+    assert.equal(
+      avantEcheance.split("await commissionnerVente(").length - 1,
+      1,
+      "le checkout commissionne a plus d'un endroit : le premier mois serait paye deux fois",
+    );
   });
 
   test("CHAQUE FACTURE STRIPE PAYÉE COMMISSIONNE, sur la clé de LA FACTURE", () => {
