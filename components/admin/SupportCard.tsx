@@ -243,7 +243,7 @@ export default function SupportCard({ email }: { email?: string }) {
                       que Bene demandait en liant le compte au support. */}
                   {!email && (
                     <Link
-                      href={`/admin/clients/${encodeURIComponent(t.email)}`}
+                      href={`/pilotage/clients/${encodeURIComponent(t.email)}`}
                       className="text-sm font-semibold text-primary underline"
                     >
                       {t.name ? `${t.name} - ${t.email}` : t.email}

@@ -22,7 +22,7 @@ export async function alerterVenteEncaissee(vente: VenteAAlerter): Promise<boole
     const contenu = contenuAlerteVente({
       ...vente,
       app: "Tiquiz",
-      lienAdmin: `${appUrl}/admin/clients/${encodeURIComponent(vente.email.trim().toLowerCase())}`,
+      lienAdmin: `${appUrl}/pilotage/clients/${encodeURIComponent(vente.email.trim().toLowerCase())}`,
     });
     return await alerterAdmins({
       subject: contenu.subject,

@@ -177,7 +177,12 @@ describe("On paie chaque mois ou le client reste abonne", () => {
     assert.equal(commissionBaseCents(0, 0), 0);
     const bloc = stripe.slice(stripe.indexOf("async function commissionnerEcheance("));
     assert.ok(!bloc.includes("free_month_days"), "la commission depend de nouveau d'un drapeau");
-    assert.match(bloc, /if \(paye <= 0\) return;/);
+    // `return null` depuis le 18 septembre 2026 : le registre n'est pas
+    // appele, donc il n'a rien repondu. C'est l'appelant qui SAIT que
+    // rien n'etait du (il a le montant) et qui le dit dans l'email.
+    // Ce que ce test protege est le meme : a zero euro, pas de
+    // commission, et sans un drapeau de plus.
+    assert.match(bloc, /if \(paye <= 0\) return null;/);
   });
 
   test("UNE FACTURE SANS IDENTIFIANT NE COMMISSIONNE PAS", () => {

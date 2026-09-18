@@ -56,6 +56,7 @@
 import { OWNER_CATALOG, findOwnerProduct } from "@/lib/checkout/catalog";
 import type { Sale } from "@/lib/checkout/sales";
 import { planTiquizParMontant } from "@/lib/sio/webhookInference";
+import type { StatutCommission, VerdictCommission } from "@/lib/ventes/verdictCommission";
 
 /**
  * D'OÙ VIENT L'ABONNEMENT QUI A PRODUIT CET ENCAISSEMENT.
@@ -79,89 +80,25 @@ import { planTiquizParMontant } from "@/lib/sio/webhookInference";
 export type OrigineVente = "bon_de_commande" | "hors_bon_de_commande" | "inconnue";
 
 /**
- * CE QU'EST DEVENUE LA COMMISSION DE CET ENCAISSEMENT.
+ * LE VOCABULAIRE DU VERDICT VIT À CÔTÉ, ET DANS LES DEUX DÉPÔTS.
  *
- * Béné, 17 septembre : "il faut être sûre à 200 % qu'un affilié ne va
- * pas perdre sa com parce que notre système aurait foiré."
+ * `StatutCommission`, `VerdictCommission` et leur traduction vers
+ * l'email sont partagés à l'octet près avec l'Atelier
+ * (`lib/ventes/verdictCommission.ts`) : les deux app appellent le même
+ * registre et doivent en dire la même chose. Ce qui reste ICI est ce
+ * qui parle des VENTES de Tiquiz, et qui n'a pas de jumeau.
  *
- * Cette garantie ne peut pas venir d'un calcul : elle vient d'une TRACE
- * par encaissement. Les statuts recopient ceux du registre de Tipote
- * (`app/api/affiliate/attribute-sale`), avec deux de plus pour ce que
- * Tipote n'a jamais vu.
+ * On re-exporte pour que personne n'ait à savoir lequel des deux
+ * fichiers porte quoi : un import qui marchait le 17 septembre marche
+ * encore.
  */
-export type StatutCommission =
-  /** Tipote a créé la commission. Un affilié est payé. */
-  | "attribuee"
-  /** Tipote a regardé et n'a trouvé aucun affilié. Personne n'est lésé. */
-  | "aucun_affilie"
-  /** Un code a été reçu, mais il ne désigne aucun affilié du registre. */
-  | "affilie_inconnu"
-  /** Cette vente était déjà commissionnée. Le rejeu ne paie pas deux fois. */
-  | "doublon"
-  /** Réglée par Systeme.io : rien à créer chez nous, et c'est normal. */
-  | "reglee_ailleurs"
-  /** L'appel n'est pas passé. Il est rangé pour rejeu, rien n'est perdu. */
-  | "en_attente"
-  /** On n'a pas pu essayer : adresse, produit ou montant manquant. */
-  | "non_tentee"
-  /** Tipote a répondu autre chose. À regarder à la main. */
-  | "reponse_inconnue";
-
-/**
- * Les statuts qui demandent un humain. Les autres sont des fins de
- * course légitimes.
- *
- * `en_attente` n'en fait PAS partie : le filet du 11 septembre rejoue
- * l'appel avant la maturation, donc l'argent n'est pas perdu. Il se
- * compte quand même à part sur l'écran (« en cours »), parce qu'un
- * rejeu qui ne passe jamais finirait par expirer en silence.
- */
-const A_REGARDER: ReadonlySet<StatutCommission> = new Set<StatutCommission>([
-  "affilie_inconnu",
-  "non_tentee",
-  "reponse_inconnue",
-]);
-
-export function commissionAVerifier(statut: StatutCommission | null | undefined): boolean {
-  return statut == null ? true : A_REGARDER.has(statut);
-}
-
-/** Ce que Tipote a répondu, traduit une seule fois. */
-export function statutDepuisTipote(reponse: string | null | undefined): StatutCommission {
-  switch (String(reponse ?? "").trim()) {
-    case "attributed":
-      return "attribuee";
-    case "no_affiliate_match":
-      return "aucun_affilie";
-    case "affiliate_not_registered":
-      return "affilie_inconnu";
-    case "duplicate":
-      return "doublon";
-    default:
-      return "reponse_inconnue";
-  }
-}
-
-export interface VerdictCommission {
-  statut: StatutCommission;
-  /** Ce qui a été créé, en centimes. `null` quand rien ne l'a été. */
-  cents: number | null;
-  /** L'affilié désigné par le registre, quand il y en a un. */
-  affilie: string | null;
-  /** La raison, quand elle explique un statut qui n'a rien payé. */
-  detail: string | null;
-  /**
-   * LA BASE SUR LAQUELLE LA COMMISSION A ÉTÉ DEMANDÉE, EN CENTIMES HT.
-   *
-   * Optionnel, et jamais un chiffre d'affaires : c'est un justificatif.
-   * Le jour où un affilié dit "je n'ai pas été payé le bon montant",
-   * c'est ce nombre qui répond, sans avoir à refaire le calcul de la
-   * TVA d'une vente vieille de trois mois. La commission se calcule
-   * TOUJOURS sur le HT (Béné, 31 août), et l'écart de 1,13 € par vente
-   * mensuelle est né précisément d'une base qu'on ne pouvait pas relire.
-   */
-  baseHtCents?: number | null;
-}
+export {
+  commissionAVerifier,
+  statutDepuisTipote,
+  etatPourAlerte,
+  affiliationPourAlerte,
+} from "@/lib/ventes/verdictCommission";
+export type { StatutCommission, VerdictCommission } from "@/lib/ventes/verdictCommission";
 
 /**
  * LA FICHE D'IDENTITÉ D'UN ENCAISSEMENT, telle que le webhook l'a

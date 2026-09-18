@@ -25,7 +25,7 @@
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { test } from "node:test";
+import { describe, test } from "node:test";
 import { ADMIN_ALERT_EMAILS, ADMIN_EMAILS } from "@/lib/adminEmails";
 import { LIBELLE_VERDICT, demandeUneAction, readCallVerdict } from "@/lib/admin/webhookRows";
 import {
@@ -34,6 +34,7 @@ import {
   natureDeLaFactureStripe,
   type VenteAlertee,
 } from "@/lib/ventes/alerteVente";
+import { affiliationPourAlerte } from "@/lib/ventes/identite";
 import { sansCommentaires } from "./aide/sansCommentaires.mts";
 
 const source = (p: string) => readFileSync(new URL(`../../${p}`, import.meta.url), "utf8");
@@ -54,6 +55,9 @@ const base: VenteAlertee = {
   reference: "in_123",
   compteCree: true,
   lienAdmin: "https://quiz.tipote.com/admin/clients/fatima%40example.com",
+  // Le cas le plus frequent, et celui qu'elle lit le plus souvent : la
+  // personne est arrivee seule, et l'email le DIT au lieu de se taire.
+  affiliation: { etat: "aucun" },
 };
 
 // ── 1. le contenu ──
@@ -143,8 +147,15 @@ test("Stripe : chaque facture payee alerte APRES la commission, avec sa nature",
   const fin = code.indexOf("}", branche);
   const dedans = code.slice(branche, fin);
   const commission = dedans.indexOf("commissionnerEcheance(abonnement, objet)");
-  const alerte = dedans.indexOf("alerterEcheance(abonnement, objet)");
+  // La signature a pris un troisieme argument le 18 septembre 2026 : le
+  // VERDICT de la commission qu'on vient de creer. Ce que ce test
+  // protege ne bouge pas (l'alerte part APRES la commission), et il en
+  // protege une de plus : l'email annonce CE verdict la, il ne le
+  // recalcule pas. Deux lectures de la meme chose finissent toujours
+  // par se contredire.
+  const alerte = dedans.indexOf("alerterEcheance(abonnement, objet, verdict)");
   assert.ok(commission > 0 && alerte > commission);
+  assert.match(dedans, /const verdict = await commissionnerEcheance\(/);
   // La nature vient de la facture, jamais d'une constante.
   const fn = code.indexOf("async function alerterEcheance(");
   const corps = code.slice(fn, code.indexOf("async function commissionnerEcheance(", fn));
@@ -219,4 +230,76 @@ test("une ligne 'duplicate' se lit 'doublon', et ne demande aucune action", () =
   assert.equal(demandeUneAction(v), false);
   assert.equal(LIBELLE_VERDICT.doublon.ton, "info");
   assert.doesNotMatch(LIBELLE_VERDICT.doublon.aide, TIRET_LONG);
+});
+
+// ── 5. « JE VOUDRAIS SAVOIR SI LA VENTE EST LIÉE À UN AFFILIÉ, ET SI
+//       OUI LEQUEL » (Béné, 18 septembre 2026) ────────────────────────
+
+describe("L'email dit toujours ce qu'il en est de l'affilié", () => {
+  test("QUAND QUELQU'UN EST CRÉDITÉ, IL EST NOMMÉ, AVEC SON MONTANT", () => {
+    const c = contenuAlerteVente({
+      ...base,
+      affiliation: { etat: "credite", affilie: "Greg", code: "pereiradelima86", commissionCents: 567 },
+    });
+    assert.match(c.texte, /Affilié.*Greg/);
+    assert.match(c.texte, /pereiradelima86/);
+    assert.match(c.texte, /5,67/);
+  });
+
+  test("LA LIGNE EST TOUJOURS LÀ, MÊME QUAND IL N'Y A PERSONNE", () => {
+    // Une ligne absente se lit "on n'en a pas parlé", et c'est
+    // exactement ce qu'elle a demandé à ne plus avoir. Un "aucun"
+    // explicite est une information, un silence n'en est pas une.
+    for (const etat of ["aucun", "ailleurs", "rien_du", "en_cours", "a_regarder", "inconnu"] as const) {
+      const c = contenuAlerteVente({ ...base, affiliation: { etat } });
+      assert.match(c.texte, /Affilié/, `l'etat ${etat} ne dit rien de l'affilie`);
+    }
+  });
+
+  test("« AUCUN » DIT QU'ON A VÉRIFIÉ, ET « À REGARDER » CRIE", () => {
+    // Les deux se ressemblent et ne demandent pas la meme chose : l'un
+    // se lit et se classe, l'autre appelle une action le jour meme.
+    assert.match(contenuAlerteVente({ ...base, affiliation: { etat: "aucun" } }).texte, /vérifié/);
+    const alerte = contenuAlerteVente({
+      ...base,
+      affiliation: { etat: "a_regarder", code: "pereiradelima86" },
+    });
+    assert.match(alerte.texte, /AUCUNE COMMISSION CRÉÉE/);
+    // Et le code y est : c'est lui qui designe le probleme (un code
+    // recu mais inconnu du registre) plutot qu'une absence de clic.
+    assert.match(alerte.texte, /pereiradelima86/);
+  });
+
+  test("LE CODE PART MÊME SANS COMMISSION, dans les deux webhooks", () => {
+    for (const fichier of [STRIPE, PAYPAL]) {
+      const src = sansCommentaires(source(fichier));
+      assert.match(src, /affiliation: affiliationPourAlerte\(/, `${fichier} ne dit rien de l'affilie`);
+      assert.match(src, /code: /, `${fichier} n'envoie pas le code du lien`);
+    }
+  });
+
+  test("UN STATUT NOUVEAU FAIT ROUGIR LE COMPILATEUR, pas l'email", () => {
+    // `etatPourAlerte` n'a PAS de `default` : un statut ajoute au
+    // registre casse la compilation au lieu de tomber dans un repli qui
+    // dirait "aucun affilie" sur une commission qu'on n'a pas su lire.
+    const src = sansCommentaires(source("lib/ventes/identite.ts"));
+    const bloc = src.slice(src.indexOf("export function etatPourAlerte("));
+    const corps = bloc.slice(0, bloc.indexOf("\n}"));
+    assert.ok(!corps.includes("default:"), "etatPourAlerte a un repli silencieux");
+  });
+
+  test("UN MONTANT NUL N'EST PAS UNE COMMISSION OUBLIÉE", () => {
+    // Le mois offert encaisse zero. Sans ce cas, chaque essai qui
+    // demarre remonterait comme un affilie lese.
+    const zero = affiliationPourAlerte({ verdict: null, rienADevoir: true });
+    assert.equal(zero.etat, "rien_du");
+    // Mais un verdict PRÉSENT gagne toujours sur le montant.
+    const quandMeme = affiliationPourAlerte({
+      verdict: { statut: "attribuee", cents: 567, affilie: "sa1", detail: null },
+      rienADevoir: true,
+    });
+    assert.equal(quandMeme.etat, "credite");
+    // Et sans verdict ni montant nul, on ne conclut RIEN.
+    assert.equal(affiliationPourAlerte({ verdict: null }).etat, "inconnu");
+  });
 });

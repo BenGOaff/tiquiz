@@ -22,7 +22,7 @@ export async function alerterAccesIncomplet(acces: AccesAAlerter): Promise<boole
     const contenu = contenuAlerteAcces({
       ...acces,
       app: "Tiquiz",
-      lienAdmin: `${appUrl}/admin/clients/${encodeURIComponent(acces.email.trim().toLowerCase())}`,
+      lienAdmin: `${appUrl}/pilotage/clients/${encodeURIComponent(acces.email.trim().toLowerCase())}`,
     });
     return await alerterAdmins({
       subject: contenu.subject,

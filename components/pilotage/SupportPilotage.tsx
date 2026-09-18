@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 
 import { CARTE } from "@/components/pilotage/carte";
+import CommentairesBlogCard from "@/components/admin/CommentairesBlogCard";
 import {
   ETATS_FILTRE,
   FILTRE_VIDE,
@@ -456,6 +457,14 @@ export function SupportPilotage() {
           )}
         </>
       )}
+
+      {/* LA MODÉRATION DU BLOG VIT AVEC LE SUPPORT, arrivée ici le
+          18 septembre 2026 avec la disparition de /admin. Ce n'est pas
+          un onglet à elle : les deux sont "quelqu'un attend une réponse
+          de nous", et deux commentaires par semaine ne remplissent pas
+          un écran qu'on ouvrirait exprès. */}
+      <CommentairesBlogCard />
+
     </div>
   );
 }

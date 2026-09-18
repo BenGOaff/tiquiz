@@ -211,9 +211,14 @@ async function main(): Promise<void> {
     string,
     { sa: string; nom: string | null; cents: number; status: string; refundedAt: string | null }
   >();
-  for (const r of payouts?.rows ?? []) {
+  const lignesTipote = payouts?.rows ?? null;
+  let sansCle = 0;
+  for (const r of lignesTipote ?? []) {
     const cle = String(r.orderId ?? "").trim();
-    if (!cle) continue;
+    if (!cle) {
+      sansCle += 1;
+      continue;
+    }
     commissionParCle.set(cle, {
       sa: r.sa,
       nom: r.name,
@@ -223,6 +228,25 @@ async function main(): Promise<void> {
     });
   }
   const rattachements = affilies?.attributions ?? {};
+
+  // ── « AUCUNE COMMISSION NE PORTE DE CLÉ » EST AMBIGU, ET C'ÉTAIT UN
+  //    DÉFAUT DE CE SCRIPT (corrigé le 18 septembre 2026) ──
+  //
+  // Sa première sortie disait cette phrase là, et elle pouvait vouloir
+  // dire DEUX choses opposées :
+  //
+  //   - le registre ne porte aucune commission (une vraie réponse) ;
+  //   - la version de Tipote DÉPLOYÉE ne rend pas encore `orderId`
+  //     (aucune réponse du tout, et le champ est arrivé le même jour).
+  //
+  // Le deuxième cas se lisait comme le premier, c'est à dire comme une
+  // commission manquante. C'est exactement la faute que ce script
+  // existe pour empêcher, commise par le script lui même.
+  //
+  // On DIT laquelle des deux, en comptant : des lignes sans aucune clé,
+  // c'est le déploiement ; zéro ligne, c'est le registre.
+  const cleAbsenteDeTipote = lignesTipote != null && sansCle > 0 && commissionParCle.size === 0;
+  const registreVide = lignesTipote != null && lignesTipote.length === 0;
 
   // ── CE QU'ON N'A PAS PU REGARDER SE DIT AVANT LE RESTE ──
   //
@@ -237,6 +261,13 @@ async function main(): Promise<void> {
   if (!fichesLisibles) {
     muettes.push(
       "la table ventes_identite est absente (migration 20260918_ventes_identite.sql non appliquee)",
+    );
+  }
+  if (cleAbsenteDeTipote) {
+    muettes.push(
+      `Tipote rend ${sansCle} commission(s) SANS leur cle d'encaissement : sa version deployee ` +
+        "n'a pas le champ `orderId` (arrive le 17 septembre 2026). Je ne peux donc PAS rapprocher " +
+        "une vente de sa commission. Deployer tipote-app, puis relancer cet audit.",
     );
   }
   if (muettes.length > 0) {
@@ -275,10 +306,25 @@ async function main(): Promise<void> {
         );
         continue;
       }
-      if (commissionParCle.size === 0 && PARTNER_SECRET && payouts?.rows) {
-        // Tipote a repondu, et il n'a AUCUNE commission avec une cle :
-        // ce n'est pas un cas par vente, c'est un cas global.
-        aRegarder.push(`${entete}\n    !! aucune commission ne porte de cle chez Tipote.`);
+      if (cleAbsenteDeTipote) {
+        // LE RAPPROCHEMENT EST IMPOSSIBLE, ce n'est pas une commission
+        // manquante. La cause est dite une fois en haut ; ici on ne
+        // conclut RIEN sur cette vente.
+        aRegarder.push(
+          `${entete}\n    ?  je ne peux pas dire : Tipote ne rend pas encore la cle des ` +
+            `commissions (voir le haut).` +
+            (rattacheA ? `\n       En revanche, ${rattacheA} a bien amene cette personne.` : ""),
+        );
+        continue;
+      }
+      if (registreVide) {
+        // Le registre a repondu, et il est VIDE : aucune commission
+        // n'existe, pour personne. C'est une vraie reponse.
+        aRegarder.push(
+          `${entete}\n    !! le registre de Tipote ne porte AUCUNE commission : ` +
+            `aucun affilie n'a jamais ete paye sur nos encaissements.` +
+            `\n       Cle a rejouer : ${cle}`,
+        );
         continue;
       }
       // Pas de rattachement connu ET pas de commission : la personne est
@@ -309,6 +355,12 @@ async function main(): Promise<void> {
 
   // ── LE BILAN ──
   console.log(`${ventes.length} encaissement(s) sur la periode.\n`);
+  if (lignesTipote != null) {
+    console.log(
+      `  Chez Tipote : ${lignesTipote.length} commission(s) au registre, ` +
+        `dont ${commissionParCle.size} avec leur cle d'encaissement.\n`,
+    );
+  }
   console.log(`  ${payees} avec une commission creee chez Tipote`);
   console.log(`  ${sansAffilie} sans affilie rattache, et sans commission : arrivees seules`);
   console.log(`  ${ailleurs} hors de notre bon de commande, ou a zero euro (rien n'etait du)`);
@@ -316,7 +368,7 @@ async function main(): Promise<void> {
 
   if (aRegarder.length === 0) {
     console.log(
-      muettes.length === 0
+      muettes.length === 0 && !cleAbsenteDeTipote
         ? "Aucun affilie lese sur la periode. Les trois sources ont repondu.\n"
         : "Rien a regarder dans ce qui a pu etre lu. Voir la liste du haut pour le reste.\n",
     );
