@@ -55,7 +55,7 @@ fonctionnent encore et **ne commissionnent plus** (voir plus bas).
 ```bash
 npm run test:logic     # runner natif, ~15 s, aucune dependance
 npx tsc --noEmit       # exit 0 obligatoire
-npm run test:visual    # 209 passes + 4 skippes, SI le design ou l'UX bouge
+npm run test:visual    # 215 passes + 4 skippes, SI le design ou l'UX bouge
 ```
 
 Et selon ce qui a été touché : `npm run check:caddy` (un fichier de
@@ -305,7 +305,7 @@ layouts, branding, CSS, composants d'écran), lancer AUTOMATIQUEMENT le
 filet visuel avant de committer, sans que Béné ait à le demander :
 
 ```bash
-npm run test:visual            # doit passer 209, 4 skippes
+npm run test:visual            # doit passer 215, 4 skippes
 ```
 
 - Échec = un layout a bougé sans intention -> corriger AVANT de pousser.
@@ -313,7 +313,7 @@ npm run test:visual            # doit passer 209, 4 skippes
   committer les nouvelles références AVEC le changement.
 - Le harness : `playwright.visual.config.ts` + `tests/visual/` + page
   fixture `/visual-test` (gated `VISUAL_TEST=1`, aucune base requise).
-- Couverture, **213 tests** dont 4 skippés (mesuré le 17 septembre 2026 en
+- Couverture, **219 tests** dont 4 skippés (mesuré le 19 septembre 2026 en
   lançant la commande, pas déduit ; c'était 99 le 23 août, le site public et
   le blog sont arrivés depuis) :
   - **90 CAPTURES** : 5 dispositions x 6 écrans (intro, question, capture,
@@ -354,7 +354,7 @@ alors que ces trois bugs vivent dans des fonctions.
 
 ```bash
 npm run test:logic     # runner natif Node, ~1s, aucune dependance
-npm run test:visual    # 209 passes, uniquement si le design/UX bouge
+npm run test:visual    # 215 passes, uniquement si le design/UX bouge
 npx tsc --noEmit       # exit 0
 ```
 
@@ -771,3 +771,4 @@ Les sections déplacées, dans l'ordre :
 - Le live de Greg, l'email qui ne disait rien, et /admin qui s'éteint (Béné, 18 septembre 2026)
 - Le registre devient opposable, et l'Atelier s'offre dans une fenêtre (Béné, 18 septembre 2026)
 - « Mon trafic n'est absolument pas tracké » : Cloudflare répondait avant nous (Béné, 18 septembre 2026)
+- La maquette de Béné prend la place de l'aperçu, avec le VRAI générateur dedans (19 septembre 2026)

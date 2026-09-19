@@ -91,7 +91,7 @@ const CODE = SOURCE.replace(/^\s*\/\/.*$/gm, " ").replace(/\/\*[\s\S]*?\*\//g, "
 // sur sa propre explication (leçon du 3 septembre, trois fois).
 const sansCommentaires = (t: string) =>
   t.replace(/^\s*\/\/.*$/gm, " ").replace(/\{?\/\*[\s\S]*?\*\/\}?/g, " ");
-const PAGE_ACCUEIL = sansCommentaires(racine("app/(site)/apercu-landing-8f2c9d41/page.tsx"));
+const PAGE_ACCUEIL = sansCommentaires(racine("app/(site)/apercu-landing-court/page.tsx"));
 const CHEMIN_TARIFS = cheminPageDuSite("/tarifs");
 const PAGE_TARIFS = sansCommentaires(racine(CHEMIN_TARIFS));
 const MORCEAUX = sansCommentaires(racine("components/landing/morceaux.tsx"));
@@ -1111,7 +1111,7 @@ describe("le corps de texte est aligné à gauche, sans exception à tenir", () 
       "la classe .tql-p-lire est revenue : elle ne ferait plus rien",
     );
     for (const p of [
-      "app/(site)/apercu-landing-8f2c9d41/page.tsx",
+      "app/(site)/apercu-landing-court/page.tsx",
       CHEMIN_TARIFS,
     ]) {
       assert.ok(!/blocLong/.test(racine(p)), `${p} appelle encore blocLong`);
@@ -1131,7 +1131,7 @@ describe("le corps de texte est aligné à gauche, sans exception à tenir", () 
     const css = racine("components/landing/styles.ts");
     assert.ok(/\.tql-intro\{/.test(css), "la boîte .tql-intro a disparu de la feuille");
     for (const p of [
-      "app/(site)/apercu-landing-8f2c9d41/page.tsx",
+      "app/(site)/apercu-landing-court/page.tsx",
       CHEMIN_TARIFS,
     ]) {
       assert.ok(

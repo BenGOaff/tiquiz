@@ -29,7 +29,19 @@ import { test, expect } from "@playwright/test";
 // 8f2 etc pas directement en page d'accueil, on la valide d'abord
 // ensemble." `tiquiz.fr/` sert donc encore sa page de vente ; la
 // landing vit derriere ce slug introuvable, en noindex.
-const LANDING = "/apercu-landing-8f2c9d41?lang=fr";
+// LA COURTE, PAS LA MAQUETTE DU 19 SEPTEMBRE.
+//
+// Tout ce que ce fichier mesure (les 100 px de chaque section, le bord
+// commun du titre et de son corps, l'animation du tag, le carrousel)
+// porte sur le systeme `.tql`. La maquette que Bene a envoyee le 19 a
+// SA PROPRE feuille de style, sans aucune de ces classes : l'y pointer
+// ferait rougir dix mesures sur une page qui n'a jamais promis de les
+// respecter, et un test qui rougit pour rien finit desactive.
+//
+// La courte vit maintenant sous `/apercu-landing-court`, et la maquette
+// a pris `/apercu-landing-8f2c9d41`. Ses propres garde-fous sont dans
+// `tests/logic/apercu-landing-v2.test.mts`.
+const LANDING = "/apercu-landing-court?lang=fr";
 
 // OÙ VIVENT SES ANIMATIONS DEPUIS LE 6 SEPTEMBRE, ET C'EST SA DÉCISION.
 //

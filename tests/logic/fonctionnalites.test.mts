@@ -41,7 +41,7 @@ import { cheminPageDuSite, sourcePageDuSite } from "./aide/pageDuSite.mts";
 // landing courte, `/tarifs` la vraie page de vente : les guards qui
 // portent sur "ce que la landing fait" les lisent tous les deux.
 const PAGE_LANDING =
-  readFileSync("app/(site)/apercu-landing-8f2c9d41/page.tsx", "utf8") +
+  readFileSync("app/(site)/apercu-landing-court/page.tsx", "utf8") +
   "\n" +
   sourcePageDuSite("/tarifs");
 // LES DEUX PAGES SE CHERCHENT, ELLES NE S'ECRIVENT PAS EN DUR : un
