@@ -105,6 +105,21 @@ test("aucun prix Tiquiz n'est ecrit en dur hors du catalogue", () => {
       // avec un prix en dur reste fautif, comme partout ailleurs.
       if (chemin.endsWith("lib/blog/faitsProgramme.ts") && nue.startsWith("de: ")) return;
 
+      // LA MAQUETTE DE BÉNÉ EST UNE COPIE FIGÉE, PAS DU CODE.
+      //
+      // `lib/site/apercuLandingV2.ts` porte son HTML à l'octet près
+      // (19 septembre). Y remplacer les prix par des appels au
+      // catalogue, ce serait la réécrire, c'est à dire lui montrer
+      // autre chose que ce qu'elle a envoyé.
+      //
+      // MAIS L'EXEMPTION NE LAISSE PAS LE TROU OUVERT : le test
+      // "les prix de la maquette sont ceux du catalogue"
+      // (`apercu-landing-v2.test.mts`) compare chaque montant de la
+      // maquette au catalogue et rougit à la première dérive. C'est un
+      // garde-fou PLUS strict que celui-ci, pas un de moins : il vérifie
+      // la valeur, pas seulement l'endroit où elle est écrite.
+      if (chemin.endsWith("lib/site/apercuLandingV2.ts")) return;
+
       // UN PRIX ANNONCE, pas un nombre qui passe. On exige la MONNAIE
       // ET un rythme ou une preposition de prix : ca attrape
       // "29€/mois" et "17 EUR par mois", et ca laisse passer un exemple

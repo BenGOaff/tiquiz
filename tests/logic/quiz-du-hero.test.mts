@@ -220,7 +220,7 @@ import { sansCommentaires } from "./aide/sansCommentaires.mts";
 
 const PAGE = sansCommentaires(
   fs.readFileSync(
-    path.join(process.cwd(), "app/(site)/apercu-landing-8f2c9d41/page.tsx"),
+    path.join(process.cwd(), "app/(site)/apercu-landing-court/page.tsx"),
     "utf8",
   ),
 );

@@ -15537,3 +15537,104 @@ l'Atelier portait exactement le même défaut, et un garde-fou qui ne
 protège qu'un des deux jumeaux ne protège personne. `vueNavigateur.ts`,
 `app/api/public/vue/route.ts` et `lib/rateLimit/parIp.ts` sont jumeaux
 à l'octet (`cmp`).
+
+## La maquette de Béné prend la place de l'aperçu, avec le VRAI générateur dedans (19 septembre 2026)
+
+Béné : "mets à jour la landing page aperçu pour reproduire cette page en
+exemple : fichier joint. Au lieu de 'Écris ton sujet, regarde ce qui
+sort' mets le générateur de quiz qui est actuellement sur la page. Plus
+l'option pour l'importer dans le compte du nouvel user. Et agrandis un
+peu la démo, là elle sera illisible avec cette présentation."
+
+### SON HTML EST GARDÉ À L'OCTET PRÈS, ET C'EST UN CHOIX
+
+`lib/site/apercuLandingV2.ts` porte sa page, découpée par script et
+jamais à la main. La retranscrire en JSX, c'est 230 Ko de copie où
+chaque faute de frappe devient une différence qu'elle prendrait pour une
+décision de design.
+
+C'est un APERÇU, en `noindex`. Le jour où elle valide, le style rejoint
+`components/landing/styles.ts` : une feuille de plus sur le domaine
+serait un troisième système visuel (sa règle du 4 septembre).
+
+### LES QUATRE CHOSES QUI ONT CHANGÉ
+
+1. **La démo est le vrai générateur.** Sa maquette posait un champ qui
+   renvoyait sur `/generateur-de-quiz` : on promettait "fais-en un, là,
+   maintenant" et on faisait changer de page. C'est le MÊME composant
+   que la vraie page (`EmbedPreviewClient`), pas une copie : un aperçu
+   qui recalcule au lieu d'appeler finit toujours par mentir, sorti six
+   fois ici.
+
+2. **`contexte="page"`, et c'est ça "l'option pour l'importer dans le
+   compte".** Hors iframe, `remisePourLeBouton` rend une NAVIGATION vers
+   `/signup?tq_session=…`, et l'inscription rattache le quiz au compte
+   qui vient de naître. Rien à coder de plus, et surtout rien à recoder :
+   un deuxième chemin de reprise finirait par perdre des quiz que le
+   premier sait garder.
+
+3. **La démo prend 1260 px au lieu de 555.** Sa grille `.try` est en deux
+   colonnes sur une page de 1140 px. Elle l'avait vu venir.
+
+4. **Une porte à part pour l'entonnoir.** `source="apercu-landing"`, pas
+   `page-generateur` : chaque essai fait pendant une relecture aurait
+   gonflé le seul ratio qu'elle regarde pour juger le générateur.
+   Symétrique exact du drame de `?source=modeles` (8 septembre).
+
+### LA PAGE EST SORTIE DE `(site)`, ET L'ADRESSE N'A PAS BOUGÉ
+
+Elle vivait sous `SiteShell`, donc avec l'en-tête et le pied du site
+autour. Sa maquette porte LES SIENS : les deux empilés, elle aurait
+regardé deux en-têtes et cru à un bug de design alors que c'était un bug
+de rangement. Les parenthèses d'un groupe de routes ne comptent jamais
+dans l'URL : `/apercu-landing-8f2c9d41` reste `/apercu-landing-8f2c9d41`.
+
+### L'ANCIENNE COURTE EST GARDÉE, ET PAS PAR NOSTALGIE
+
+`/apercu-landing-court`. Trois fichiers de tests logiques ET deux specs
+visuelles lisaient l'aperçu comme "la landing" : les repointer sur la
+maquette aurait fait rougir dix mesures sur une page qui n'a jamais
+promis de respecter le système `.tql`. Et un test qui rougit pour rien
+finit désactivé.
+
+**Ce que la maquette perd, mesuré et pas supposé** (à lui dire, c'est sa
+décision) : aucun lien vers les 8 pages `/fonctionnalites/<slug>`
+(comptés : zéro, alors que ce sont celles qui commencent à ranker), et
+plus de quiz interactif en haut de page.
+
+### LES TROIS PIÈGES DU HTML INJECTÉ
+
+- **Un `<script>` posé par `innerHTML` ne s'exécute JAMAIS.** Laissé dans
+  le corps, il serait là, inerte, et les 112 blocs `.rv` garderaient
+  `opacity:0` : une page BLANCHE, sans rien dans le code qui le laisse
+  voir. Les deux scripts (les FAQ pour Google, l'apparition au
+  défilement) sont donc de vraies balises.
+- **250 Ko d'images en base64, et ça coûtait DOUBLE.** Un composant
+  serveur sérialise son contenu une fois en HTML et une fois dans la
+  charge RSC : la page rendue pesait 451 Ko, mesurés. Le logo était collé
+  deux fois à 68 Ko alors que le dépôt le sert déjà en fichier ; les dix
+  visages des témoignages sont sortis dans `public/apercu-landing/`.
+  **345 Ko après**, et les images se mettent en cache d'une page à
+  l'autre, ce qu'une image en base64 ne fait jamais.
+- **Un prix figé vieillit en silence.** `prix-source-unique` a rougi sur
+  `170 €/an` : c'est le garde-fou qui fait son travail. Il exempte
+  maintenant ce fichier, MAIS le trou n'est pas laissé ouvert :
+  `apercu-landing-v2.test.mts` compare chaque montant de la maquette au
+  catalogue, dans les DEUX SENS (aucun montant inconnu, et les quatre
+  paliers toujours présents). C'est plus strict que ce qui a été
+  exempté, pas moins.
+
+### LA VÉRIFICATION QUI TRANCHE
+
+Pas seulement `tsc` et les tests : la page a été CONSTRUITE et SERVIE,
+et son HTML relu. C'est la règle du 31 août, celle des images en 403 :
+on va chercher l'URL et on lit ce qui sort.
+
+```
+HTTP 200, 345 335 octets
+un seul <header>, un seul <footer>, aucun data:image,
+20 références vers /apercu-landing/, la maquette de démo partie,
+le vrai générateur présent, noindex présent
+```
+
+test:logic 3123/3123, tsc exit 0, test:visual 215 + 4 skippés.

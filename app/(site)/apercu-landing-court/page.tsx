@@ -1,4 +1,24 @@
-// app/(site)/apercu-landing-8f2c9d41/page.tsx
+// app/(site)/apercu-landing-court/page.tsx
+//
+// LA LANDING COURTE, GARDÉE POUR LA COMPARAISON (19 septembre 2026).
+//
+// Elle vivait sous `/apercu-landing-8f2c9d41`, et cette adresse sert
+// maintenant la maquette que Béné a envoyée le 19. Les deux ne disent
+// PAS la même chose, et c'est justement ce qu'elle doit pouvoir
+// regarder côte à côte avant de trancher :
+//
+//   - la courte a un VRAI quiz interactif en haut de page, la maquette
+//     n'en a pas ;
+//   - la courte pointe vers les 8 pages `/fonctionnalites/<slug>`, la
+//     maquette n'y renvoie AUCUN lien (mesuré : zéro). Ce sont les
+//     pages qui commencent à ranker, et elles perdraient leurs liens
+//     internes ;
+//   - la maquette, elle, annonce déjà la nouvelle formule (l'Atelier
+//     offert dans les 7 jours), ce que la courte ne fait pas.
+//
+// Trois fichiers de tests lisent cette page comme "la landing" : les y
+// laisser pointer, c'est garder les garde-fous qu'ils portent au lieu
+// de les supprimer parce qu'une page a bougé.
 //
 // LA LANDING COURTE, EN RELECTURE.
 //

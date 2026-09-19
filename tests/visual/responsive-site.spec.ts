@@ -48,7 +48,11 @@ import { test, expect } from "@playwright/test";
  *    ecrite.
  */
 const PAGES = [
+  // Les DEUX aperçus : celui de Béné du 19 septembre, et la courte
+  // qu'on garde pour comparer. Une page qui déborde sur mobile
+  // déborde, quelle que soit sa feuille de style.
   "/apercu-landing-8f2c9d41",
+  "/apercu-landing-court",
   "/generateur-de-quiz",
   "/tarifs",
   "/fonctionnalites",
