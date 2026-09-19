@@ -321,3 +321,42 @@ describe("La migration", () => {
     assert.match(sql, /notify pgrst, 'reload schema'/);
   });
 });
+
+// ---------------------------------------- le controle avant d'envoyer du monde
+
+test("le controle de la chaine distingue « pas vu » de « casse »", () => {
+  // C'est la faute qui a coute onze jours de compteur de trafic a zero,
+  // et ce script existe justement pour ne pas la refaire : un point qu'on
+  // n'a pas pu mesurer ne doit JAMAIS se lire comme un point conforme,
+  // ni comme une panne.
+  const src = sansCommentaires(lire("scripts/check-cadeau-atelier.mts"));
+  assert.ok(src.includes("function pasVu("), "un troisieme etat existe");
+  assert.ok(src.includes("A VOIR"), "et il se voit a l'ecran");
+  // Le verdict ne peut pas dire « de bout en bout » quand il reste des
+  // points non mesures.
+  const i = src.indexOf("aveugle > 0");
+  assert.ok(i > 0, "le verdict compte les points non mesures");
+  assert.ok(
+    src.indexOf("de bout en bout") > i,
+    "le feu vert vient APRES le cas des points non mesures",
+  );
+  // Trois codes de sortie distincts : 1 casse, 3 incomplet, 0 vert.
+  assert.ok(src.includes("souci > 0 ? 1 : aveugle > 0 ? 3 : 0"), "trois sorties distinctes");
+});
+
+test("le controle ne fait RIEN partir, et n'imprime aucun secret", () => {
+  const src = lire("scripts/check-cadeau-atelier.mts");
+  // Le secret sert a interroger, il ne sort jamais du processus.
+  assert.ok(
+    !/console\.log\([^)]*\bsecret\b[^)]*\)/.test(src),
+    "le secret ne s'imprime pas",
+  );
+  // L'adresse du controle est VOLONTAIREMENT invalide : la porte valide
+  // le secret avant l'adresse, donc aucun acces ne s'ouvre.
+  assert.ok(
+    src.includes("controle-sans-arobase"),
+    "le controle du secret n'ouvre aucun acces a personne",
+  );
+  // Aucune ecriture en base.
+  assert.ok(!/\bupdate\b|\binsert\b|\bupsert\b/i.test(src), "lecture seule");
+});

@@ -48,7 +48,8 @@
     "anims:extraire": "node scripts/extraire-anims-vente.mjs",
     "audit:affiliation": "tsx scripts/audit-affiliation.mts",
     "check:lien-affilie": "tsx scripts/check-lien-affilie.mts",
-    "affilie:crediter": "tsx scripts/crediter-affilie.mts"
+    "affilie:crediter": "tsx scripts/crediter-affilie.mts",
+    "check:cadeau-atelier": "tsx scripts/check-cadeau-atelier.mts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
