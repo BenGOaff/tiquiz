@@ -15638,3 +15638,65 @@ le vrai générateur présent, noindex présent
 ```
 
 test:logic 3123/3123, tsc exit 0, test:visual 215 + 4 skippés.
+
+### Deuxième envoi du même jour : sa page à jour, et le défaut que j'ai failli livrer
+
+Béné, quelques heures plus tard : "Je te renvoie une landing page à
+jour, place bien notre quiz à nous à la place du truc du html de ce
+modèle. Mais applique bien le nouveau style il est cool."
+
+**Elle a corrigé ce que je lui avais signalé** : la nouvelle version
+porte **16 liens vers les pages `/fonctionnalites/<slug>`**, là où la
+précédente n'en avait aucun (compté, pas supposé). Le test les EXIGE
+maintenant, pour qu'une prochaine version ne les reperde pas en silence.
+
+Le nouveau style est appliqué et pas imité : le cadre de l'outil est un
+`.panel` de SA feuille, donc son fond, son `border-radius: 36px` et son
+ombre. Seules la largeur (1180 px au lieu des 820 de son faux panneau,
+sur une page de 1236) et le rembourrage sont à moi.
+
+#### LE DÉFAUT QUE J'AI FAILLI LIVRER, ET IL VAUT PLUS QUE LE RESTE
+
+Son faux formulaire est un panneau AU MILIEU de sa section de démo, entre
+son titre et sa vidéo. J'ai donc coupé là, pour ne retirer que lui et
+garder le reste à l'octet près.
+
+**C'était faux, et ça ne se serait vu sur aucun test.** `HAUT` laissait
+`<section>` et `<div class="wrap">` OUVERTS. Or `dangerouslySetInnerHTML`
+exige un élément hôte : le `<div>` qui porte la moitié du haut aurait
+refermé ces balises tout seul, et la page se serait affichée **de
+travers**, avec la démo et tout ce qui suit hors de leur conteneur.
+
+`tsc` était vert. Les tests logiques étaient verts. Le défaut ne vivait
+ni dans une fonction ni dans un type : il vivait dans l'équilibre de deux
+chaînes de caractères.
+
+La coupe est donc revenue sur la SECTION ENTIÈRE, et sa démo est
+redessinée en JSX à l'identique (ses classes, son titre, son chapeau, sa
+vidéo, mot pour mot). Et il y a maintenant un test qui **compte les
+balises ouvertes et fermées** des deux moitiés, pour `div`, `section`,
+`p`, `ul` et `li`. Il mesure l'équilibre, pas l'intention.
+
+**La règle : du HTML découpé pour être réinjecté se coupe sur une
+frontière FERMÉE, et l'équilibre se mesure.** Un découpage qui « a l'air
+bon » est exactement le genre de chose dont on est sûr jusqu'à la prod.
+
+#### Deux autres corrections du même passage
+
+- **Le logo s'était dupliqué.** Mon extraction transformait toutes les
+  images en fichiers, logo compris : le dépôt se serait retrouvé avec
+  `public/apercu-landing/<hash>.png` À CÔTÉ de `public/logo-tiquiz.webp`,
+  c'est à dire deux fichiers à corriger le jour où il change, et un seul
+  qui le serait. Repointé sur l'original, la copie de 51 Ko supprimée.
+- **Un test a crié sur « 100 € ».** C'était la comparaison avec la pile
+  d'outils d'en face ("Plus de 100 € par mois, ou 17 €"), pas un prix
+  Tiquiz. Ajouté aux montants nommés hors catalogue, avec Typeform à
+  79 $ : chacun est NOMMÉ, jamais une plage, parce qu'une exemption large
+  finirait par couvrir un vrai prix faux.
+
+Vérifié en construisant et en servant la page : HTTP 200, 363 918 octets,
+un seul `<header>`, un seul `<footer>`, aucune image en base64, le faux
+formulaire parti, sa vidéo et son titre gardés, 16 liens vers
+`/fonctionnalites`.
+
+test:logic 3124/3124, tsc exit 0, test:visual 215 + 4 skippés.

@@ -48,7 +48,12 @@ test("les prix de la maquette sont ceux du catalogue", () => {
   // d'abonnement Tiquiz : l'Atelier, et le chiffre d'un témoignage.
   // Chacun est nommé, jamais une plage : une exemption large finirait
   // par couvrir un vrai prix faux.
-  const HORS_CATALOGUE = new Set([47, 850]);
+  const HORS_CATALOGUE = new Set([
+    47, // l'Atelier du Quiz
+    850, // le chiffre d'un témoignage
+    100, // "Plus de 100 € par mois, ou 17 €" : la pile d'outils d'en face,
+    79, //  et Typeform Plus. Ce ne sont pas nos prix.
+  ]);
 
   const inconnus = [...annonces].filter(
     (n) => !duCatalogue.has(n) && !HORS_CATALOGUE.has(n),
@@ -97,6 +102,26 @@ test("la section de démo a bien été retirée du HTML figé", () => {
   // Et elle est bien REMPLACÉE, pas seulement retirée.
   assert.ok(PAGE.includes('<section id="essai">'), "la vraie section de démo a disparu");
   assert.ok(PAGE.includes("<EmbedPreviewClient"), "le vrai générateur n'est pas posé");
+});
+
+test("les deux moitiés injectées sont ÉQUILIBRÉES", () => {
+  // LE DÉFAUT QUE J'AI FAILLI LIVRER (19 septembre, deuxième envoi).
+  //
+  // J'avais coupé au milieu de la section de démo, pour ne retirer que
+  // le faux formulaire. `HAUT` laissait donc `<section>` et
+  // `<div class="wrap">` OUVERTS, et le `<div>` qui héberge le
+  // `innerHTML` les aurait refermés tout seul : la page se serait
+  // affichée, de travers, et aucun test logique ne l'aurait vu.
+  //
+  // La coupe est donc sur la SECTION ENTIÈRE, et sa démo est redessinée
+  // en JSX. Ce test là mesure l'équilibre, pas l'intention.
+  for (const [nom, part] of [["HAUT", HAUT], ["BAS", BAS]] as const) {
+    for (const balise of ["div", "section", "p", "ul", "li"]) {
+      const ouverts = (part.match(new RegExp(`<${balise}[\\s>]`, "g")) ?? []).length;
+      const fermes = (part.match(new RegExp(`</${balise}>`, "g")) ?? []).length;
+      assert.equal(ouverts, fermes, `${nom} : ${ouverts} <${balise}> pour ${fermes} fermeture(s)`);
+    }
+  }
 });
 
 test("AUCUNE image n'est en base64 : ce sont toutes des fichiers", () => {
@@ -163,13 +188,17 @@ test("la démo prend toute la largeur, elle n'est plus dans une colonne", () => 
   // Béné : "agrandis un peu la démo, là elle sera illisible avec cette
   // présentation." Sa grille `.try` est en deux colonnes : sur les
   // 1140 px de la page, ça donne 555 px par colonne.
-  assert.ok(CSS_V2.includes("--maxw:1140px"), "la largeur de sa page a changé, revoir la démo");
+  // Sa page fait 1236 px et son faux panneau etait borne a 820.
+  assert.ok(CSS_V2.includes("max-width:1236px"), "la largeur de sa page a changé, revoir la démo");
   assert.ok(PAGE.includes("apercu-outil"), "le cadre large de l'outil a disparu");
-  assert.ok(PAGE.includes("width:min(1260px, 100%)"), "l'outil doit être plus large que le texte");
+  assert.ok(PAGE.includes("width:min(1180px, 100%)"), "l'outil doit être plus large que 820 px");
+  // ET IL GARDE SON STYLE A ELLE. `panel` porte son fond, son rayon de
+  // 36 px et son ombre : le nouveau style est applique, pas imite.
   assert.ok(
-    !PAGE.includes('className="try'),
-    "l'outil ne doit pas retourner dans la grille à deux colonnes",
+    PAGE.includes('className="panel colc rv apercu-outil"'),
+    "le cadre de l'outil doit être un .panel de SA feuille",
   );
+  assert.ok(CSS_V2.includes(".panel{"), "la classe .panel a disparu de sa feuille");
 });
 
 test("l'aperçu ne s'indexe pas", () => {
@@ -188,9 +217,11 @@ test("l'ancienne landing courte est toujours là, pour comparer", () => {
   // la comparaison ET trois fichiers de garde-fous avec elle.
   const courte = lire("app/(site)/apercu-landing-court/page.tsx");
   assert.ok(courte.length > 10_000, "la landing courte a disparu");
-  assert.equal(
-    (CORPS.match(/\/fonctionnalites/g) ?? []).length,
-    0,
-    "si la maquette gagne des liens vers /fonctionnalites, le dire à Béné : c'était une perte",
-  );
+  // LE PREMIER ENVOI N'EN AVAIT AUCUN, et je le lui avais signalé : ce
+  // sont les 8 pages qui commencent à ranker, et elles perdaient leurs
+  // liens internes. Le deuxième envoi en porte 16. On les EXIGE
+  // maintenant, pour qu'une prochaine version ne les reperde pas en
+  // silence.
+  const liens = (CORPS.match(/\/fonctionnalites\//g) ?? []).length;
+  assert.ok(liens >= 8, `la maquette ne porte plus que ${liens} lien(s) vers /fonctionnalites`);
 });
