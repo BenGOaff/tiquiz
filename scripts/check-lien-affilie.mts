@@ -156,7 +156,13 @@ async function main(): Promise<void> {
         } else if (lui.statut !== "active") {
           mauvais(`Le code existe, mais l'affilie est "${lui.statut}" : rien ne lui sera du.`);
         } else {
-          bon(`Le code est celui de ${lui.nom ?? lui.email} (${lui.sa}), actif.`);
+          // LE `sa` NE S'IMPRIME PAS EN ENTIER. Ce n'est pas un secret au
+          // sens strict (il vivait dans les URL jusqu'au 24 aout), mais
+          // les liens `?sa=` restent LUS pour attribuer : le connaitre
+          // suffit a s'attribuer une vente. Et un terminal se colle dans
+          // une conversation. Les six premiers caracteres suffisent a le
+          // reconnaitre dans le registre.
+          bon(`Le code est celui de ${lui.nom ?? lui.email} (${lui.sa.slice(0, 6)}...), actif.`);
         }
       }
     } catch (e) {

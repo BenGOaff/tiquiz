@@ -211,15 +211,30 @@ test("la reecriture /en/ pose le cookie affilie, et le compteur tourne AVANT ell
     "la reecriture /en/ doit poser le cookie affilie",
   );
 
-  // L'ORDRE : le clic et la vue se comptent sur le chemin RECU, donc
-  // avant que la reecriture ne retire le prefixe.
+  // L'ORDRE : le clic se compte sur le chemin RECU, donc avant que la
+  // reecriture ne retire le prefixe.
   const posClic = src.indexOf("clicASignaler(");
-  const posVue = src.indexOf("vueASignaler(");
   const posReecriture = src.indexOf("langueDuChemin(");
-  assert.ok(posClic > 0 && posVue > 0 && posReecriture > 0);
+  assert.ok(posClic > 0 && posReecriture > 0);
   assert.ok(
-    posClic < posReecriture && posVue < posReecriture,
-    "le compteur doit tourner avant la reecriture, sinon /en/ n'est jamais compte",
+    posClic < posReecriture,
+    "le clic doit tourner avant la reecriture, sinon un lien vers /en/ ne paie personne",
+  );
+
+  // LA VUE, ELLE, N'EST PLUS COMPTEE ICI (18 septembre 2026).
+  //
+  // Cloudflare sert les pages publiques depuis son cache
+  // (`cf-cache-status: HIT`, mesure du 18), donc ce middleware ne tourne
+  // pas et ne comptait rien. Le compteur est passe dans le NAVIGATEUR.
+  //
+  // La regle que ce test protegeait reste la meme, et elle est meme
+  // mieux tenue : le chemin compte est celui de la BARRE D'ADRESSE,
+  // donc `/en/tarifs` et jamais le chemin reecrit. On le verifie sur le
+  // composant, la ou la decision vit maintenant.
+  const beacon = sansCommentaires(lire("components/site/CompteurDeVue.tsx"));
+  assert.ok(
+    beacon.includes("window.location.pathname"),
+    "le chemin compte est celui que le visiteur a dans sa barre d'adresse",
   );
 });
 

@@ -30,6 +30,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { CARTE } from "@/components/pilotage/carte";
+import { AttribuerClient } from "@/components/pilotage/AttribuerClient";
 import { lireFicheAffiliee } from "@/lib/pilotage/affilies";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +52,25 @@ const ETAT: Record<string, { mot: string; ton: string }> = {
   "a-verser": { mot: "à verser", ton: "font-medium" },
   "sous-garantie": { mot: "sous garantie", ton: "text-muted-foreground" },
   annulee: { mot: "annulée", ton: "text-muted-foreground line-through" },
+};
+
+/**
+ * LE MOT DE CHAQUE ORIGINE DE RATTACHEMENT (18 septembre 2026).
+ *
+ * La DÉCISION (ce que chaque origine vaut comme preuve) vit chez
+ * Tipote, dans `forceDeLaPreuve`, pure et testée. Ici il n'y a que la
+ * phrase.
+ *
+ * `null` n'a pas d'entrée, et c'est voulu : une ligne d'avant le
+ * 18 septembre n'a pas d'origine mesurée, et lui en inventer une serait
+ * une affirmation que personne n'a faite.
+ */
+const ORIGINE_FILLEUL: Record<string, string> = {
+  clic: "il a cliqué sur son lien",
+  inscription: "inscrit par son lien",
+  vente: "sa vente portait le code",
+  import_sio: "repris d'un tunnel Systeme.io",
+  manuel: "attribué à la main",
 };
 
 export default async function FicheAffiliePage({
@@ -254,6 +274,12 @@ export default async function FicheAffiliePage({
         </section>
       )}
 
+      {/* LUI ATTRIBUER UN CLIENT, À LA MAIN (Béné, 18 septembre 2026).
+          Placé juste AU DESSUS de ses filleuls : le geste et son
+          résultat se lisent d'un seul coup d'oeil, et on voit tout de
+          suite si la personne y est déjà. */}
+      <AttribuerClient ref={a.ref ?? null} nom={a.display_name ?? a.email} />
+
       {fiche.filleuls.length === 0 ? (
         // LE VIDE PARLE : sans un mot, il se lit "c'est cassé".
         <section className={`${CARTE} p-6`}>
@@ -281,6 +307,12 @@ export default async function FicheAffiliePage({
               </div>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 arrivé le {quand(f.arriveLe)}
+                {/* COMMENT il est arrivé, et ce que ça vaut comme preuve.
+                    "Il a cliqué" et "je l'ai attribué à la main" ne se
+                    défendent pas pareil le jour d'un litige, et sans ce
+                    mot les deux se lisent exactement pareil. */}
+                {f.origine && ` · ${ORIGINE_FILLEUL[f.origine] ?? f.origine}`}
+                {!f.origine && " · origine non mesurée"}
                 {f.achats.length === 0 && " · rien acheté pour l'instant"}
               </p>
               {f.achats.length > 0 && (

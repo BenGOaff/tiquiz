@@ -194,18 +194,30 @@ test("les jours sortent dans l'ordre, additionnés", () => {
 
 // -------------------------------------------------- où vivent les règles
 
-test("le middleware ne décide rien : il appelle le module pur", () => {
+test("le middleware NE COMPTE PLUS les vues, et c'est le correctif", () => {
   const mw = sansCommentaires(lire("middleware.ts"));
-  assert.ok(mw.includes("vueASignaler("), "le middleware doit appeler la décision, pas la refaire");
-  assert.ok(mw.includes("cheminPourStats("), "le chemin vient du module pur");
-  assert.ok(mw.includes("sourceDeLaVue("), "la source vient du module pur");
-  // waitUntil : une statistique ne fait JAMAIS attendre une page de vente.
-  const i = mw.indexOf("signalerVue(");
-  assert.ok(i > 0, "le middleware envoie la vue");
-  assert.ok(
-    mw.slice(Math.max(0, i - 400), i).includes("waitUntil"),
-    "l'envoi doit être dans un waitUntil, hors du chemin de la réponse",
-  );
+  // Mesure du 18 septembre : `curl -D - https://tiquiz.fr/` rend
+  // `cf-cache-status: HIT`. Cloudflare sert la page publique depuis son
+  // cache, donc le middleware ne tourne pas, donc il ne peut RIEN
+  // compter. Il l'a fait croire pendant onze jours.
+  assert.ok(!mw.includes("signalerVue("), "le middleware ne voit pas les pages servies par le cache");
+  assert.ok(!mw.includes("vueASignaler("), "la décision de compter n'est plus prise ici");
+  // Le clic affilié, lui, RESTE : il ne mesure pas une audience, il
+  // rattache une personne, et il doit tourner avant la réponse.
+  assert.ok(mw.includes("signalerClic("), "le clic affilié reste dans le middleware");
+});
+
+test("la porte publique ne décide rien : elle appelle les modules purs", () => {
+  const src = sansCommentaires(lire("app/api/public/vue/route.ts"));
+  assert.ok(src.includes("vueNavigateurASignaler("), "la décision vient du module pur");
+  assert.ok(src.includes("sourceDeLaVue("), "la source vient du module pur");
+  assert.ok(!src.includes("AGENTS_ROBOTS"), "le filtre robot ne se recopie pas ici");
+  // Un refus lu par un NAVIGATEUR répond 200 avec une RAISON :
+  // Cloudflare remplace le corps d'un 5xx (règle du 3 septembre).
+  assert.ok(!/status:\s*(4|5)\d\d/.test(src), "aucun code d'erreur : le navigateur lit la raison");
+  assert.ok(src.includes("reason"), "un refus dit POURQUOI");
+  // Elle écrit dans un compteur et elle est ouverte : elle doit borner.
+  assert.ok(src.includes("creerLimiteur("), "une porte publique qui écrit se limite");
 });
 
 test("l'écrivain en base ne porte aucune décision", () => {
